@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  gateway:
+    build:
+      context: ./services/gateway
+    ports:
+      - "${GATEWAY_PORT:-8080}:8080"
+    environment:
+      - JWT_SECRET=${GATEWAY_JWT_SECRET}
+      - ADMIN_API_KEY=${GATEWAY_ADMIN_API_KEY}
+      - CORE_RPC_URL=http://lib-conxian-core:50051
+    networks:
+      - conxian-network
+    depends_on:
+      - lib-conxian-core
+
+  lib-conxian-core:
+    build:
+      context: ./services/lib-conxian-core
+    environment:
+      - DATABASE_URL=${CORE_DB_URI}
+      - BITCOIN_NETWORK=${CORE_BITCOIN_NETWORK}
+    networks:
+      - conxian-network
+    depends_on:
+      - db
+      - redis
+
+  conxian-ui:
+    build:
+      context: ./services/conxian-ui
+    ports:
+      - "${UI_PORT:-3000}:3000"
+    environment:
+      - VITE_GATEWAY_URL=${VITE_GATEWAY_URL}
+    networks:
+      - conxian-network
+
+  admin-dashboard:
+    build:
+      context: ./services/admin-dashboard
+    ports:
+      - "${ADMIN_PORT:-3001}:3001"
+    environment:
+      - VITE_GATEWAY_URL=${VITE_GATEWAY_URL}
+    networks:
+      - conxian-network
+
+  # Sovereign Nodes (Placeholders)
+  bisq-node:
+    image: bisq/bisq-node:latest
+    networks:
+      - conxian-network
+
+  rgb-node:
+    image: lncm/rgb-node:latest
+    networks:
+      - conxian-network
+
+  bitvm-node:
+    image: conxian/bitvm-node:latest
+    networks:
+      - conxian-network
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - conxian-network
+
+  redis:
+    image: redis:7-alpine
+    networks:
+      - conxian-network
+
+networks:
+  conxian-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

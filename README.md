@@ -1,2 +1,56 @@
 # conxius-platform
-conxius-platform is the full eco system spun up locally for development 
+
+The master control center and operational engine for the Conxian DeFi sovereign autonomous system.
+
+## Overview
+
+This meta-repository orchestrates the Conxian ecosystem using Git submodules and Docker Compose. It serves as the home for centralized configuration and self-hosted CI/CD infrastructure.
+
+## Getting Started
+
+### Prerequisites
+
+- Docker & Docker Compose
+- GitHub CLI (`gh`)
+- Git
+
+### Quick Start
+
+1.  **Clone the repository with submodules:**
+    ```bash
+    git clone --recursive https://github.com/Conxian/conxius-platform.git
+    cd conxius-platform
+    ```
+
+2.  **Initialize environment and authenticate:**
+    ```bash
+    make init
+    make auth
+    ```
+    *Note: `make auth` will prompt you to log in via GitHub CLI to fetch organization secrets and generate local secure keys.*
+
+3.  **Start the platform:**
+    ```bash
+    make start
+    ```
+
+## Service Architecture
+
+- **Gateway**: Unified API and Auth entry point.
+- **Lib-Conxian-Core**: Rust-based primitives engine.
+- **Conxian UI & Admin**: Frontend interfaces for users and administrators.
+- **Sovereign Nodes**: Integrated Bisq, RGB, and BitVM nodes.
+
+## CI/CD Runner
+
+The `ci-runner/` directory contains the configuration for deploying a self-hosted GitHub Actions runner capable of orchestrating the entire stack via Docker-in-Docker.
+
+## Maintenance
+
+- Update all services: `make update-all`
+- Stop the stack: `make stop`
+- View logs: `make logs`
+
+## Security
+
+This repository enforces a Zero-Trust local development flow. Secrets are never committed to Git. The `scripts/provision-secrets.sh` script ensures that every developer has a secure, authenticated environment.

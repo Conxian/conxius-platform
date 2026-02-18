@@ -3,22 +3,12 @@ version: '3.8'
 services:
   gateway:
     build:
-      context: ./services/gateway
+      context: ./services/lib-conxian-core/gateway
     ports:
       - "${GATEWAY_PORT:-8080}:8080"
     environment:
       - JWT_SECRET=${GATEWAY_JWT_SECRET}
       - ADMIN_API_KEY=${GATEWAY_ADMIN_API_KEY}
-      - CORE_RPC_URL=http://lib-conxian-core:50051
-    networks:
-      - conxian-network
-    depends_on:
-      - lib-conxian-core
-
-  lib-conxian-core:
-    build:
-      context: ./services/lib-conxian-core
-    environment:
       - DATABASE_URL=${CORE_DB_URI}
       - BITCOIN_NETWORK=${CORE_BITCOIN_NETWORK}
     networks:
@@ -33,17 +23,7 @@ services:
     ports:
       - "${UI_PORT:-3000}:3000"
     environment:
-      - VITE_GATEWAY_URL=${VITE_GATEWAY_URL}
-    networks:
-      - conxian-network
-
-  admin-dashboard:
-    build:
-      context: ./services/admin-dashboard
-    ports:
-      - "${ADMIN_PORT:-3001}:3001"
-    environment:
-      - VITE_GATEWAY_URL=${VITE_GATEWAY_URL}
+      - NEXT_PUBLIC_CORE_API_URL=${NEXT_PUBLIC_CORE_API_URL}
     networks:
       - conxian-network
 

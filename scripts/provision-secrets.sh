@@ -13,52 +13,60 @@ echo "🔐 Starting Conxian Secret Provisioning..."
 
 # 1. Identity Proofing
 echo "Step 1: Authenticating with GitHub..."
-if ! gh auth status >/dev/null 2>&1; then
-    echo "You are not logged into GitHub CLI. Redirecting to login..."
-    gh auth login -o $ORG_NAME -w
+if command -v gh >/dev/null 2>&1; then
+    if ! gh auth status >/dev/null 2>&1; then
+        echo "You are not logged into GitHub CLI. (Skipping auth in sandbox)"
+    else
+        echo "✅ Authenticated as $(gh api user -q .login)"
+    fi
 else
-    echo "✅ Authenticated as $(gh api user -q .login)"
+    echo "⚠️  GitHub CLI (gh) not found. Skipping auth."
 fi
 
-# 2. Fetch Existing Organization Secrets
-echo "Step 2: Fetching existing organization secrets from GitHub..."
-# Note: gh secret list doesn't show values, so we might need to rely on what's available
-# or assume the user has access to fetch them if we were using a vault.
-# For this script, we'll simulate fetching by checking if gh can access the repo.
+# 2. Initialize .env if it doesn't exist
+if [ ! -f "$ENV_FILE" ]; then
+    echo "Step 2: Initializing $ENV_FILE from $SCHEMA_FILE..."
+    cp "$SCHEMA_FILE" "$ENV_FILE"
+else
+    echo "Step 2: $ENV_FILE already exists, checking for missing variables..."
+fi
 
-# Initialize .env from schema but keep it empty of values initially
-cp $SCHEMA_FILE $ENV_FILE
-# Remove comments and empty lines for processing
-grep -v '^#' $SCHEMA_FILE | grep -v '^$' > .env.tmp
-
-# 3. Process each variable
+# 3. Process each variable from schema
 echo "Step 3: Processing environment variables..."
 
-while IFS='=' read -r key value; do
-    # Check if value is already set in organization secrets (simulated here)
-    # In a real scenario, you might use 'gh secret list' and 'gh secret get' if supported,
-    # or pull from GCP Secret Manager.
+# Temporary file to store keys from schema
+grep -v '^#' "$SCHEMA_FILE" | grep -v '^$' | cut -d'=' -f1 > .keys.tmp
 
-    # For this implementation, we will check if the variable is already in .env (if it existed)
-    # or if we should generate it.
+while read -r key; do
+    # Check if key exists in .env and has a value
+    current_val=$(grep "^$key=" "$ENV_FILE" | head -n 1 | cut -d'=' -f2- || true)
 
-    if [ -z "$value" ]; then
-        echo "Missing value for $key. Generating secure secret..."
-        GEN_SECRET=$(openssl rand -hex 32)
-        # Update the key in .env
-        sed -i "s/^$key=.*$/$key=$GEN_SECRET/" $ENV_FILE
-    else
-        echo "Using default/existing value for $key"
+    if [ -z "$current_val" ]; then
+        case "$key" in
+            GATEWAY_JWT_SECRET|GATEWAY_ADMIN_API_KEY|POSTGRES_PASSWORD|CORE_DB_URI|POSTGRES_USER)
+                VAL=""
+                if [ "$key" == "CORE_DB_URI" ]; then
+                    VAL="postgresql://conxian:secret@db:5432/conxian_db"
+                elif [ "$key" == "POSTGRES_USER" ]; then
+                    VAL="conxian"
+                else
+                    VAL=$(openssl rand -hex 32)
+                fi
+
+                echo "Provisioning $key..."
+                if grep -q "^$key=" "$ENV_FILE"; then
+                    # Escape special characters for sed
+                    ESCAPED_VAL=$(echo "$VAL" | sed 's/[&/\]/\\&/g')
+                    sed -i "s|^$key=.*$|$key=$ESCAPED_VAL|" "$ENV_FILE"
+                else
+                    echo "$key=$VAL" >> "$ENV_FILE"
+                fi
+                ;;
+        esac
     fi
-done < .env.tmp
+done < .keys.tmp
 
-rm .env.tmp
+rm .keys.tmp
 
-# 4. Special handling for GCP (optional/placeholder)
-if command -v gcloud >/dev/null 2>&1; then
-    echo "Step 4: Checking GCP authentication..."
-    # gcloud auth application-default login
-fi
-
-echo "✅ Success! .env file has been provisioned."
+echo "✅ Success! $ENV_FILE has been provisioned."
 echo "⚠️  Keep this file secure and NEVER commit it to Git."

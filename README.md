@@ -2,6 +2,10 @@
 
 The master control center and operational engine for the Conxian DeFi sovereign autonomous system.
 
+## Alignment
+
+See [ALIGNMENT.md](ALIGNMENT.md) for the unified business logic, design, and authority strategy.
+
 ## Overview
 
 This meta-repository orchestrates the Conxian ecosystem using Git submodules and Docker Compose. It serves as the home for centralized configuration and self-hosted CI/CD infrastructure.

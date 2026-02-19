@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   gateway:
     build:
@@ -27,21 +25,21 @@ services:
     networks:
       - conxian-network
 
-  # Sovereign Nodes (Placeholders)
-  bisq-node:
-    image: bisq/bisq-node:latest
-    networks:
-      - conxian-network
+  # Sovereign Nodes (Placeholders - Disabled due to missing images)
+  # bisq-node:
+  #   image: bisq/bisq-node:latest
+  #   networks:
+  #     - conxian-network
 
-  rgb-node:
-    image: lncm/rgb-node:latest
-    networks:
-      - conxian-network
+  # rgb-node:
+  #   image: lncm/rgb-node:latest
+  #   networks:
+  #     - conxian-network
 
-  bitvm-node:
-    image: conxian/bitvm-node:latest
-    networks:
-      - conxian-network
+  # bitvm-node:
+  #   image: conxian/bitvm-node:latest
+  #   networks:
+  #     - conxian-network
 
   db:
     image: postgres:15-alpine

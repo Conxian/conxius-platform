@@ -21,11 +21,11 @@ auth:
 
 start:
 	@echo "Starting Conxian stack..."
-	docker-compose up --build -d
+	docker compose up --build -d
 
 stop:
 	@echo "Stopping Conxian stack..."
-	docker-compose down
+	docker compose down
 
 update-all:
 	@echo "Updating all submodules..."
@@ -33,4 +33,4 @@ update-all:
 
 logs:
 	@echo "Tailing logs (Ctrl+C to exit)..."
-	docker-compose logs -f
+	docker compose logs -f

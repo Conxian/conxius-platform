@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y \
     git \
     jq \
     docker.io \
-    docker-compose \
+    docker-compose-v2 \
     && rm -rf /var/lib/apt/lists/*
 
 # Add a non-root user

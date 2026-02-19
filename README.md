@@ -2,9 +2,11 @@
 
 The master control center and operational engine for the Conxian DeFi sovereign autonomous system.
 
-## Alignment
+## Alignment & Status
 
-See [ALIGNMENT.md](ALIGNMENT.md) for the unified business logic, design, and authority strategy.
+- **Strategy**: See [ALIGNMENT.md](ALIGNMENT.md) for business logic and design authority.
+- **Operational Status**: See [GAPS.md](GAPS.md) for current stubs and known issues.
+- **Performance**: See [BENCHMARKS.md](BENCHMARKS.md) for latency and build metrics.
 
 ## Overview
 
@@ -14,7 +16,7 @@ This meta-repository orchestrates the Conxian ecosystem using Git submodules and
 
 ### Prerequisites
 
-- Docker & Docker Compose
+- Docker (with Compose V2)
 - GitHub CLI (`gh`)
 - Git
 
@@ -40,10 +42,10 @@ This meta-repository orchestrates the Conxian ecosystem using Git submodules and
 
 ## Service Architecture
 
-- **Gateway**: Unified API and Auth entry point.
-- **Lib-Conxian-Core**: Rust-based primitives engine.
-- **Conxian UI & Admin**: Frontend interfaces for users and administrators.
-- **Sovereign Nodes**: Integrated Bisq, RGB, and BitVM nodes.
+- **Gateway**: Unified API and Auth entry point (Rust/Axum). Located in `services/lib-conxian-core/gateway`.
+- **Lib-Conxian-Core**: Shared Rust primitives and TypeScript libraries.
+- **Conxian UI**: Primary Next.js dashboard.
+- **Sovereign Nodes**: Integrated Bisq, RGB, and BitVM nodes (Placeholders).
 
 ## CI/CD Runner
 

@@ -5,14 +5,15 @@ This document outlines the current stubs, placeholders, and missing components i
 ## 1. Service Gaps
 
 ### Conxian Gateway
-- **Status**: ✅ Functional Axum server implemented.
+- **Status**: ✅ Functional Actix-web server implemented (Migrated from Axum for better ecosystem alignment).
 - **Implemented**:
-    - Real authentication logic (JWT generation and validation middleware).
-    - Proxy logic for Hiro API (v2/info mocked).
-    - Swagger/OpenAPI documentation integrated via Utoipa.
+    - Real authentication logic (JWT validation middleware via `actix-web-httpauth`).
+    - Unified API entry point for all sovereign services.
+    - Hiro API Compatibility Layer (Status, Mempool, Balances, Contract Interfaces) for seamless UI integration.
+    - Swagger/OpenAPI documentation integrated via Utoipa, available at `/swagger-ui/`.
 - **Missing**:
-    - Real Database integration (Postgres/Redis connection strings ready but no CRUD yet).
-    - Full proxy logic for sovereign nodes (Bisq, RGB, BitVM).
+    - Real Database integration (Postgres/Redis connection strings ready but CRUD logic is still stubs in Engine).
+    - Full proxy logic for sovereign nodes (Currently returning simulated state).
 
 ### Sovereign Nodes
 - **Status**: Disabled in `docker-compose.yml`.
@@ -32,17 +33,17 @@ This document outlines the current stubs, placeholders, and missing components i
 - **Recommendation**: Mirror essential images to a private registry (GCR/Artifact Registry).
 
 ### Benchmarking
-- **Status**: Manual verification performed.
-- **Missing**: Automated benchmark suite (KPIs: latency, throughput, TVL simulation).
+- **Status**: ✅ Automated benchmark suite implemented in `scripts/run-benchmarks.sh`.
+- **Capabilities**: Measures Gateway latency, build performance, and resource usage.
 
 ## 3. Documentation
 
 - **Status**: Improved.
 - **Implemented**:
-    - Detailed API documentation (Swagger/OpenAPI) available at `/swagger-ui` on the Gateway.
+    - Detailed API documentation (Swagger/OpenAPI) available at `/swagger-ui/` on the Gateway.
+    - Deployment guides (Planned for `DEPLOYMENT.md`).
 - **Missing**:
-    - Deployment guides for GCP/Render.
-    - Contributor guide for the Rust Core.
+    - Contributor guide for the Rust Core (`CONTRIBUTING.md` planned).
 
 ## 4. UI Polish (P0)
 - **Status**: ✅ Resolved.

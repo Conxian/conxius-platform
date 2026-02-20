@@ -5,12 +5,14 @@ This document outlines the current stubs, placeholders, and missing components i
 ## 1. Service Gaps
 
 ### Conxian Gateway
-- **Status**: Basic functional stub (Axum).
--  **Missing**:
-    - Real authentication logic (JWT validation).
-    - Database integration (Postgres/Redis).
-    - Proxy logic for sovereign nodes (Bisq, RGB, BitVM).
-    - Full Hiro API compatibility (currently only status/mempool/info are mocked).
+- **Status**: ✅ Functional Axum server implemented.
+- **Implemented**:
+    - Real authentication logic (JWT generation and validation middleware).
+    - Proxy logic for Hiro API (v2/info mocked).
+    - Swagger/OpenAPI documentation integrated via Utoipa.
+- **Missing**:
+    - Real Database integration (Postgres/Redis connection strings ready but no CRUD yet).
+    - Full proxy logic for sovereign nodes (Bisq, RGB, BitVM).
 
 ### Sovereign Nodes
 - **Status**: Disabled in `docker-compose.yml`.
@@ -19,8 +21,8 @@ This document outlines the current stubs, placeholders, and missing components i
     - Configuration and orchestration for these nodes.
 
 ### Admin Dashboard
-- **Status**: Placeholder directory.
-- **Missing**: All implementation. Logic is currently being consolidated into the Gateway.
+- **Status**: ✅ Consolidated into Conxian UI.
+- **Implemented**: Admin page in UI with infrastructure monitoring and node status visualization.
 
 ## 2. Infrastructure & Operations
 
@@ -35,21 +37,16 @@ This document outlines the current stubs, placeholders, and missing components i
 
 ## 3. Documentation
 
-- **Status**: High-level alignment is good.
+- **Status**: Improved.
+- **Implemented**:
+    - Detailed API documentation (Swagger/OpenAPI) available at `/swagger-ui` on the Gateway.
 - **Missing**:
-    - Detailed API documentation (Swagger/OpenAPI).
     - Deployment guides for GCP/Render.
     - Contributor guide for the Rust Core.
 
-## 4. Next Steps for Sign-off
-1.  Provision/Release public images for sovereign nodes.
-2.  Implement the first "real" feature in the Gateway (e.g., Auth or simple DB CRUD).
-3.  Implement the basic Admin Dashboard or officially deprecate it in favor of UI-integrated admin tools.
-
-## 5. UI Polish (P0)
-- **Status**: Mostly functional but has design-token drift.
-- **Identified Drift**:
-    - Use of `bg-paper` instead of `bg-background-paper`.
-    - Use of `text-light` instead of theme tokens.
-    - Hardcoded gray/white styling in several components (ConnectWallet, Toast, Badge, etc.).
-    - Legacy raster branding still in use in some places (needs full transition to `conxian-mark-b.svg`).
+## 4. UI Polish (P0)
+- **Status**: ✅ Resolved.
+- **Fixed**:
+    - Standardized design tokens for status colors (success, warning, error).
+    - Removed design-token drift and hardcoded styling in ConnectWallet, Toast, Badge, etc.
+    - Full transition to `conxian-mark-b.svg` completed.

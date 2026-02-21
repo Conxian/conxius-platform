@@ -5,13 +5,14 @@ The master control center and operational engine for the Conxian DeFi sovereign 
 ## Alignment & Status
 
 - **Strategy**: See [ALIGNMENT.md](ALIGNMENT.md) for business logic and design authority.
-- **Operational Status**: See [GAPS.md](GAPS.md) for current stubs and known issues.
-- **Performance**: See [BENCHMARKS.md](BENCHMARKS.md) for latency and build metrics.
+- **Synergy**: See [SYNERGY.md](SYNERGY.md) for how the repositories work together.
 - **Architecture**: See [SYSTEM_GRAPH.md](SYSTEM_GRAPH.md) for the full ecosystem mapping.
+- **Operational Status**: See [GAPS.md](GAPS.md) for current stubs and ecosystem-wide technical debt.
+- **Performance**: See [BENCHMARKS.md](BENCHMARKS.md) for latency and build metrics.
 
 ## Overview
 
-This meta-repository orchestrates the Conxian ecosystem using Git submodules and Docker Compose. It serves as the home for centralized configuration and self-hosted CI/CD infrastructure.
+This meta-repository orchestrates the Conxian ecosystem using Git submodules and Docker Compose. It serves as the home for centralized configuration, security alignment, and self-hosted CI/CD infrastructure.
 
 ## Getting Started
 
@@ -43,10 +44,11 @@ This meta-repository orchestrates the Conxian ecosystem using Git submodules and
 
 ## Service Architecture
 
-- **Gateway**: Unified API and Auth entry point (Rust/Axum). Located in `services/lib-conxian-core/gateway`.
-- **Lib-Conxian-Core**: Shared Rust primitives and TypeScript libraries.
-- **Conxian UI**: Primary Next.js dashboard.
-- **Sovereign Nodes**: Integrated Bisq, RGB, and BitVM nodes (Placeholders).
+- **Gateway**: Unified API and Auth entry point (Rust/Actix-web). Located in `services/lib-conxian-core/gateway`.
+- **UI**: Primary Next.js dashboard. Located in `services/conxian-ui`.
+- **Contracts**: Nakamoto-aligned DeFi protocol. (Managed via `Conxian` repository).
+- **Wallet**: Mobile sovereign enclave. (Managed via `conxius-wallet` repository).
+- **Deployment**: TUI-based deployment and monitoring. (Managed via `stacksorbit` repository).
 
 ## CI/CD Runner
 
@@ -60,4 +62,4 @@ The `ci-runner/` directory contains the configuration for deploying a self-hoste
 
 ## Security
 
-This repository enforces a Zero-Trust local development flow. Secrets are never committed to Git. The `scripts/provision-secrets.sh` script ensures that every developer has a secure, authenticated environment.
+This repository enforces a Zero-Trust local development flow. Secrets are never committed to Git. The `scripts/provision-secrets.sh` script ensures that every developer has a secure, authenticated environment following the **Sentinel** and **Fusion** security patterns.

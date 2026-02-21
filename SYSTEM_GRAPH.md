@@ -1,65 +1,90 @@
-# Conxian System Architecture
+# Conxian System Architecture: Full Organization Viewpoint
 
-This graph represents the full viewpoint of the `conxius-platform` and its constituent services.
+This graph represents the holistic viewpoint of the Conxian organization and how `conxius-platform` orchestrates the ecosystem.
 
 ```mermaid
 graph TD
-    subgraph "Orchestration Layer (conxius-platform)"
-        P[Master Makefile / Docker Compose]
+    subgraph "Orchestration & Infrastructure (conxius-platform)"
+        P[Master Control Center]
         S[provision-secrets.sh]
+        CI[CI/CD Runner]
     end
 
-    subgraph "API Layer (lib-conxian-core/gateway)"
+    subgraph "API & Middleware Layer (lib-conxian-core / Nexus)"
         GW[Conxian Gateway - Actix-web]
-        AUTH[JWT Middleware]
+        NX[Conxian Nexus - Glass Node]
+        AUTH[JWT / Enclave Auth]
         HIRO[Hiro API Compatibility]
-        SWAG[Swagger/OpenAPI]
     end
 
-    subgraph "Frontend Layer (conxian-ui)"
+    subgraph "Client Layer (conxian-ui / wallet / orbit)"
         UI[Conxian UI - Next.js]
-        ADM[Admin Dashboard]
-        THEME[Earthy Corporate Theme]
+        W[Conxius Wallet - Android/iOS]
+        ORB[StacksOrbit - TUI Deployer]
     end
 
-    subgraph "Protocol Layer (lib-conxian-core)"
-        CORE[Shared Rust Primitives]
-        SDK[Shared TS Libraries]
+    subgraph "Protocol Layer (Conxian Contracts)"
+        DEX[DEX Factory V2]
+        LAUNCH[Self-Launch Coordinator]
+        GOV[Governance & Reputation]
+        SBTC[sBTC Vaults]
     end
 
-    subgraph "External Nodes (Sovereign Services)"
+    subgraph "External Nodes & Bitcoin Network"
         BISQ[Bisq Node]
         RGB[RGB Node]
         BITVM[BitVM Node]
-        STX[Stacks Node]
+        STX[Stacks Node - Nakamoto]
+        BTC[Bitcoin L1]
     end
 
     P -->|Manages| GW
     P -->|Manages| UI
-    P -->|Manages| External
+    P -->|Manages| NX
     S -->|Configures| GW
     S -->|Configures| UI
+    S -->|Configures| W
 
-    UI -->|API Requests| GW
+    UI -->|Unified API| GW
+    W -->|Secure Signing| GW
+    ORB -->|Deploys| Protocol
+    ORB -->|Monitors| STX
+
     GW -->|Authenticates| AUTH
-    GW -->|Proxies| BISQ
-    GW -->|Proxies| RGB
-    GW -->|Proxies| BITVM
-    GW -->|Wraps| STX
+    GW -->|Proxies| Sovereign
+    GW -->|Queries| NX
+    NX -->|Syncs| STX
 
-    UI -->|Uses| SDK
-    GW -->|Uses| CORE
+    STX -->|Anchored to| BTC
 
-    subgraph External [Sovereign Network]
+    subgraph Protocol [On-Chain Logic]
+        DEX
+        LAUNCH
+        GOV
+        SBTC
+    end
+
+    subgraph Sovereign [Sovereign Services]
         BISQ
         RGB
         BITVM
-        STX
     end
 ```
 
-## Enhancements & Alignment
-- **Unified Entry Point**: All client requests flow through the Gateway.
-- **Shared Primitives**: Both Gateway and UI (via SDK) share logic defined in `lib-conxian-core`.
-- **Theme Consistency**: UI follows the Earthy Corporate Finance palette as defined in `globals.css`.
-- **Sovereign Integration**: Roadmap includes full integration of Bisq, RGB, and BitVM nodes.
+## Enhancements & Roadmap Alignment
+- **Nakamoto Readiness**: All components are aligned with Stacks Epoch 3.1 (Clarity 4).
+- **Institutional Scale**: The Gateway (Gateway/Core) provides the compliance and performance layer for enterprise adoption.
+- **Sovereign Integration**: Roadmap includes native RGB asset support and BitVM-based computation proofs.
+- **Root-Up Ethos**: Reliability is built from the core libraries up to the user interfaces.
+
+## Repository Roles
+| Repository | Role |
+| :--- | :--- |
+| **conxius-platform** | Master Orchestrator |
+| **lib-conxian-core** | Shared Primitives & Gateway |
+| **conxian-ui** | Web Dashboard |
+| **Conxian** | Smart Contracts (L1/L2) |
+| **conxius-wallet** | Mobile Sovereign Enclave |
+| **stacksorbit** | TUI Deployment & Monitoring |
+| **conxian-nexus** | Glass Node / State Sync |
+| **conxian-labs-site** | Public Information |

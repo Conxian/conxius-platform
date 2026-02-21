@@ -4,14 +4,15 @@ This document serves as the authoritative guide for aligning business logic, des
 
 ## 1. Business Logic Alignment (The "Fusion")
 
-- **Single Source of Truth**: The **Conxian Gateway** is the unified entry point for all protocol state and sovereign services (Bisq, RGB, BitVM, Changelly).
+- **Single Source of Truth**: The **Conxian Gateway** (within `lib-conxian-core`) is the unified entry point for all protocol state and sovereign services (Bisq, RGB, BitVM, Changelly).
 - **Core Primitives**: All shared cryptographic and protocol logic resides in `lib-conxian-core`. No duplication of logic across clients.
 - **Protocol State**: Clients (UI, Wallet) should interact with the Gateway for state monitoring and compliance pipes rather than raw contract RPC where possible.
 - **Architecture Visualization**: See [SYSTEM_GRAPH.md](SYSTEM_GRAPH.md) for the full ecosystem mapping.
+- **Interoperability**: Components are designed to be "Root-Up" compliant, following the Clarinet SDK and Vitest standards for reliable contract interactions.
 
 ## 2. Design Alignment (Earthy Corporate Finance)
 
-- **Theme**: All interfaces follow the **Tier0 light theme**.
+- **Theme**: All interfaces (UI, Wallet, Admin) follow the **Tier0 light theme**.
 - **Palette**: Professional, grounded, precise.
   - Primary: `#2E403B` (Forest Green)
   - Accent: `#D4A017` (Gold)
@@ -19,43 +20,37 @@ This document serves as the authoritative guide for aligning business logic, des
   - Text: `#333333`
 - **Typography**: Inter (Sans-serif) for professional clarity.
 - **Assets**: Use `conxian-mark-b.svg` (outlined shield) as the canonical mark.
+- **TUI Alignment**: Even terminal interfaces (StacksOrbit) utilize a compatible professional palette (e.g., warning orange, focused borders).
 
 ## 3. Authority Alignment (Sovereign Autonomous Business)
 
 - **Orchestration**: `conxius-platform` is the master control center. Use it to spin up the entire ecosystem.
 - **Secrets Management**: All sensitive keys must be provisioned via `scripts/provision-secrets.sh`. Zero-trust local development.
-- **Deployment**: Unified deployment via Render (UI/Admin) and GCP (Gateway/Core).
+- **Deployment**: Unified deployment via Render (UI/Admin), GCP (Gateway/Core), and automated TUI tools (StacksOrbit).
 - **Code is Law**: Decisions are encoded in Rust and Clarity. Human discretion is replaced by mathematical certainty.
+
+## 4. Full Bitcoin Network Orientation
+
+- **Bitcoin Anchoring**: All temporal logic is anchored to Bitcoin burn-block-height.
+- **Sovereign Services**: Native integration with Bitcoin-adjacent protocols: Bisq (DEX), RGB (Smart Assets), BitVM (Computation), and Lightning (Payments).
+- **L2 Synergy**: Leveraging Stacks (Nakamoto) as the primary smart contract layer with sBTC for Bitcoin liquidity.
 
 ## Repo-Specific Directives
 
 - **Conxian_UI**: Use canonical components (`Button`, `Input`, `Card`). No design-token drift.
 - **lib-conxian-core**: Maintain audit-ready Rust binaries and shared TypeScript libraries.
 - **conxian-gateway**: Consolidate all sovereign service APIs into the Actix-web backend.
-
-## 4. Resource Registry
-
-- **Conxius Wallet**: Sovereign Android Vault.
-- **Conxian Finance**: Stacks-native DeFi engine.
-- **Conxian Gateway**: Unified institutional backend.
-- **Conxian Nexus**: API bridge for legacy integrations.
-- **lib-conxian-core**: Shared crypto/protocol primitives.
+- **Conxian (Contracts)**: Maintain Nakamoto-readiness (Clarity 4) and Bitcoin-anchored height logic.
+- **conxius-wallet**: Mobile enclave security following the "Fusion" gateway auth standards.
+- **stacksorbit**: Provide secure, TUI-based deployment and monitoring following "Sentinel" security patterns.
 
 ## 📈 Business Model & Market Strategy
 *This section defines the commercial logic that drives our technical architecture, based on 2026 market data.*
 
 ### Market Opportunity (TAM, SAM, SOM)
-- **Total Addressable Market (TAM):** The global Bitcoin Layer 2 market, which has stabilized with over **$10 billion in Total Value Locked (TVL)** in 2026 [citation:1]. This represents the vast pool of Bitcoin capital seeking productive yield.
-- **Serviceable Addressable Market (SAM):** The Stacks ecosystem, a leading Bitcoin L2 for smart contracts. As of early 2026, Stacks has a TVL of approximately **$130 million** and growing demand, evidenced by a futures Open Interest of **$27.8 million** [citation:6].
-- **Serviceable Obtainable Market (SOM):** Our realistic 24-month target. Aligned with sector growth rates of 300-500% for L2s and 40% for DeFi users [citation:5][citation:10], we aim to capture **10%** of the Stacks TVL and **5,000** active users, projecting an initial revenue opportunity of **$1.5 million**.
-
-### Financial Drivers (COGS, OPEX, EBITDA)
-- **Revenue Streams:**
-    - **Protocol Fees (Conxian Finance):** Modeled on standard DeFi fees (e.g., **0.3% per swap**) or variable fees (e.g., **4 bps**) for automated operations [citation:2][citation:7].
-    - **Premium Features (Conxius Wallet):** Freemium model with paid tiers for advanced features, leveraging the Lightning Network's near-zero marginal cost per transaction [citation:3].
-    - **Institutional API (Conxian Gateway):** Tiered subscriptions, potentially exploring "pay-per-request" models with instant stablecoin settlement, or fixed "wholesale" rates (e.g., **$1 per billion Compute Units**) for high-volume access [citation:4][citation:9].
-- **Cost of Goods Sold (COGS):** Direct costs = RPC node infrastructure (benchmarked at **$1 per billion compute units** [citation:4]), cloud hosting, and security audits.
-- **EBITDA Path:** With Bitcoin L2s generating **12–18% APR** on BTC [citation:1], our protocol fee capture on this yield provides a clear path to profitability.
+- **Total Addressable Market (TAM):** The global Bitcoin Layer 2 market, which has stabilized with over **$10 billion in Total Value Locked (TVL)** in 2026.
+- **Serviceable Addressable Market (SAM):** The Stacks ecosystem, a leading Bitcoin L2 for smart contracts. As of early 2026, Stacks has a TVL of approximately **$130 million**.
+- **Serviceable Obtainable Market (SOM):** Our realistic 24-month target. Aim to capture **10%** of the Stacks TVL and **5,000** active users.
 
 ### Alignment with Technical Strategy
 - **Shared Core (`lib-conxian-core`):** Directly improves **Gross Margin** by reducing per-product development COGS.

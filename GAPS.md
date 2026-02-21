@@ -1,53 +1,46 @@
-# Conxian Platform: Gap Analysis & Technical Debt
+# Conxian Platform: Gap Analysis & Technical Debt (Ecosystem Wide)
 
-This document outlines the current stubs, placeholders, and missing components identified during the full operational review.
+This document outlines the stubs, placeholders, and missing components identified during the full organization-wide review.
 
 ## 1. Service Gaps
 
-### Conxian Gateway
-- **Status**: ✅ Functional Actix-web server implemented (Migrated from Axum for better ecosystem alignment).
-- **Implemented**:
-    - Real authentication logic (JWT validation middleware via `actix-web-httpauth`).
-    - Unified API entry point for all sovereign services.
-    - Hiro API Compatibility Layer (Status, Mempool, Balances, Contract Interfaces) for seamless UI integration.
-    - Swagger/OpenAPI documentation integrated via Utoipa, available at `/swagger-ui/`.
+### Conxian Gateway & Nexus
+- **Status**: ✅ Gateway implemented (Actix-web). Nexus PRD finalized.
+- **Implemented**: JWT Auth, Hiro Layer, Swagger UI.
 - **Missing**:
-    - Real Database integration (Postgres/Redis connection strings ready but CRUD logic is still stubs in Engine).
-    - Full proxy logic for sovereign nodes (Currently returning simulated state).
+    - Full integration of Nexus "Glass Node" sync logic into the Gateway.
+    - Persistent Merkle Tree (Full) for handling billions of leaves (as noted in Nexus PRD).
 
-### Sovereign Nodes
-- **Status**: Disabled in `docker-compose.yml`.
+### Sovereign Nodes (Bisq, RGB, BitVM)
+- **Status**: ⚠️ Placeholders in `docker-compose.yml`.
 - **Missing**:
-    - Valid public images for `bisq/bisq-node`, `lncm/rgb-node`, and `conxian/bitvm-node`.
-    - Configuration and orchestration for these nodes.
+    - Native integration with BitVM full lifecycle (Prover/Verifier).
+    - Real-time RGB asset ingestion.
 
-### Admin Dashboard
-- **Status**: ✅ Consolidated into Conxian UI.
-- **Implemented**: Admin page in UI with infrastructure monitoring and node status visualization.
+### Conxius Wallet
+- **Status**: ✅ Core PRD and Enclave logic implemented.
+- **Missing**: Full mobile-to-gateway auth handshake (Standardization pending).
 
 ## 2. Infrastructure & Operations
 
-### Docker Orchestration
-- **Status**: Functional but dependent on external images.
-- **Issue**: Vulnerable to Docker Hub rate limits in CI/CD environments.
-- **Recommendation**: Mirror essential images to a private registry (GCR/Artifact Registry).
+### Deployment (StacksOrbit)
+- **Status**: ✅ TUI functional.
+- **Implemented**: Sentinel security patterns, context-aware faucet integration.
+- **Missing**: Direct integration with `conxius-platform` Makefile (Planned as `make deploy`).
 
 ### Benchmarking
-- **Status**: ✅ Automated benchmark suite implemented in `scripts/run-benchmarks.sh`.
-- **Capabilities**: Measures Gateway latency, build performance, and resource usage.
+- **Status**: ✅ Automated suite implemented.
+- **Recommendation**: Expand to include end-to-end latency from Wallet -> Gateway -> Contract.
 
 ## 3. Documentation
 
-- **Status**: Improved.
+- **Status**: ✅ Fully Aligned.
 - **Implemented**:
-    - Detailed API documentation (Swagger/OpenAPI) available at `/swagger-ui/` on the Gateway.
-    - Deployment guides (Planned for `DEPLOYMENT.md`).
-- **Missing**:
-    - Contributor guide for the Rust Core (`CONTRIBUTING.md` planned).
+    - `SYSTEM_GRAPH.md` (Holistic View).
+    - `SYNERGY.md` (Workflow mapping).
+    - `ALIGNMENT.md` (Business & Design Authority).
 
-## 4. UI Polish (P0)
+## 4. UI/UX Polish
 - **Status**: ✅ Resolved.
-- **Fixed**:
-    - Standardized design tokens for status colors (success, warning, error).
-    - Removed design-token drift and hardcoded styling in ConnectWallet, Toast, Badge, etc.
-    - Full transition to `conxian-mark-b.svg` completed.
+- **Fixed**: Standardized design tokens across UI and TUI (StacksOrbit).
+- **Target**: Ensure Mobile Wallet theme perfectly matches the "Earthy Corporate Finance" web theme.

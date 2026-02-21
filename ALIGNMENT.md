@@ -7,6 +7,7 @@ This document serves as the authoritative guide for aligning business logic, des
 - **Single Source of Truth**: The **Conxian Gateway** is the unified entry point for all protocol state and sovereign services (Bisq, RGB, BitVM, Changelly).
 - **Core Primitives**: All shared cryptographic and protocol logic resides in `lib-conxian-core`. No duplication of logic across clients.
 - **Protocol State**: Clients (UI, Wallet) should interact with the Gateway for state monitoring and compliance pipes rather than raw contract RPC where possible.
+- **Architecture Visualization**: See [SYSTEM_GRAPH.md](SYSTEM_GRAPH.md) for the full ecosystem mapping.
 
 ## 2. Design Alignment (Earthy Corporate Finance)
 
@@ -30,7 +31,7 @@ This document serves as the authoritative guide for aligning business logic, des
 
 - **Conxian_UI**: Use canonical components (`Button`, `Input`, `Card`). No design-token drift.
 - **lib-conxian-core**: Maintain audit-ready Rust binaries and shared TypeScript libraries.
-- **conxian-gateway**: Consolidate all sovereign service APIs.
+- **conxian-gateway**: Consolidate all sovereign service APIs into the Actix-web backend.
 
 ## 4. Resource Registry
 
@@ -53,8 +54,8 @@ This document serves as the authoritative guide for aligning business logic, des
     - **Protocol Fees (Conxian Finance):** Modeled on standard DeFi fees (e.g., **0.3% per swap**) or variable fees (e.g., **4 bps**) for automated operations [citation:2][citation:7].
     - **Premium Features (Conxius Wallet):** Freemium model with paid tiers for advanced features, leveraging the Lightning Network's near-zero marginal cost per transaction [citation:3].
     - **Institutional API (Conxian Gateway):** Tiered subscriptions, potentially exploring "pay-per-request" models with instant stablecoin settlement, or fixed "wholesale" rates (e.g., **$1 per billion Compute Units**) for high-volume access [citation:4][citation:9].
-- **Cost of Goods Sold (COGS):** Direct costs = RPC node infrastructure (benchmarked at **$1 per billion compute units** [citation:4]), cloud hosting, and security audits. The Lightning Network's low fees make micro-transaction COGS negligible [citation:3].
-- **EBITDA Path:** With Bitcoin L2s generating **12–18% APR** on BTC [citation:1], our protocol fee capture on this yield provides a clear path to profitability. We project reaching monthly EBITDA positivity upon achieving **$100,000 in MRR from Gateway or $20 million in TVL on Finance**.
+- **Cost of Goods Sold (COGS):** Direct costs = RPC node infrastructure (benchmarked at **$1 per billion compute units** [citation:4]), cloud hosting, and security audits.
+- **EBITDA Path:** With Bitcoin L2s generating **12–18% APR** on BTC [citation:1], our protocol fee capture on this yield provides a clear path to profitability.
 
 ### Alignment with Technical Strategy
 - **Shared Core (`lib-conxian-core`):** Directly improves **Gross Margin** by reducing per-product development COGS.

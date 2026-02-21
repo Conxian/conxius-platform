@@ -5,14 +5,14 @@ This document outlines the current stubs, placeholders, and missing components i
 ## 1. Service Gaps
 
 ### Conxian Gateway
-- **Status**: ✅ Functional Actix-web server implemented (Migrated from Axum for better ecosystem alignment).
+- **Status**: ✅ Functional Actix-web server implemented.
 - **Implemented**:
     - Real authentication logic (JWT validation middleware via `actix-web-httpauth`).
-    - Unified API entry point for all sovereign services.
-    - Hiro API Compatibility Layer (Status, Mempool, Balances, Contract Interfaces) for seamless UI integration.
+    - Unified API entry point for all sovereign services on `/api/v1`.
+    - Hiro API Compatibility Layer (Status, Balances, Contract Interfaces) implemented as stubs ready for node proxying.
     - Swagger/OpenAPI documentation integrated via Utoipa, available at `/swagger-ui/`.
 - **Missing**:
-    - Real Database integration (Postgres/Redis connection strings ready but CRUD logic is still stubs in Engine).
+    - Real Database integration (Postgres/Redis connection strings ready).
     - Full proxy logic for sovereign nodes (Currently returning simulated state).
 
 ### Sovereign Nodes
@@ -38,9 +38,10 @@ This document outlines the current stubs, placeholders, and missing components i
 
 ## 3. Documentation
 
-- **Status**: Improved.
+- **Status**: ✅ Fully Aligned.
 - **Implemented**:
     - Detailed API documentation (Swagger/OpenAPI) available at `/swagger-ui/` on the Gateway.
+    - System Graph and Architecture mapping in `SYSTEM_GRAPH.md`.
     - Deployment guides (Planned for `DEPLOYMENT.md`).
 - **Missing**:
     - Contributor guide for the Rust Core (`CONTRIBUTING.md` planned).

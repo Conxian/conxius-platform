@@ -7,6 +7,7 @@ The master control center and operational engine for the Conxian DeFi sovereign 
 - **Strategy**: See [ALIGNMENT.md](ALIGNMENT.md) for business logic and design authority.
 - **Operational Status**: See [GAPS.md](GAPS.md) for current stubs and known issues.
 - **Performance**: See [BENCHMARKS.md](BENCHMARKS.md) for latency and build metrics.
+- **Architecture**: See [SYSTEM_GRAPH.md](SYSTEM_GRAPH.md) for the full ecosystem mapping.
 
 ## Overview
 

@@ -1,65 +1,60 @@
-# conxius-platform
+# Conxian Platform: Master Orchestrator
 
-The master control center and operational engine for the Conxian DeFi sovereign autonomous system.
+The `conxius-platform` repository is the central point of orchestration for the Conxian ecosystem. It manages submodules, environment secrets, and Docker-based local development.
 
-## Alignment & Status
+## 🚀 Quick Start
 
-- **Strategy**: See [ALIGNMENT.md](ALIGNMENT.md) for business logic and design authority.
-- **Synergy**: See [SYNERGY.md](SYNERGY.md) for how the repositories work together.
-- **Architecture**: See [SYSTEM_GRAPH.md](SYSTEM_GRAPH.md) for the full ecosystem mapping.
-- **Operational Status**: See [GAPS.md](GAPS.md) for current stubs and ecosystem-wide technical debt.
-- **Performance**: See [BENCHMARKS.md](BENCHMARKS.md) for latency and build metrics.
+Ensure you have Docker and Git installed.
 
-## Overview
+```bash
+make init           # Initialize and update all submodules
+make auth           # Provision .env with secure random secrets
+make start          # Build and start the entire stack
+make bench          # Run performance benchmarks
+```
 
-This meta-repository orchestrates the Conxian ecosystem using Git submodules and Docker Compose. It serves as the home for centralized configuration, security alignment, and self-hosted CI/CD infrastructure.
+## 📂 Repository Structure
 
-## Getting Started
+- **services/lib-conxian-core**: Shared Rust/TS libraries and the **Conxian Gateway**.
+- **services/conxian-ui**: The primary Next.js dashboard for users.
+- **services/admin-dashboard**: Internal telemetry and system monitoring.
+- **ci-runner**: Infrastructure for self-hosted CI/CD runners.
 
-### Prerequisites
+## 🛠️ Management Commands
 
-- Docker (with Compose V2)
-- GitHub CLI (`gh`)
-- Git
+| Command | Description |
+| :--- | :--- |
+| `make init` | Clones and updates all submodules recursively. |
+| `make auth` | Generates a `.env` file from `.env.schema` with secure keys. |
+| `make start` | Starts Gateway, UI, Admin, DB, Redis, and Prometheus. |
+| `make stop` | Stops and removes all containers. |
+| `make update-all` | Pulls the latest `main` branches for all submodules. |
+| `make logs` | Tails logs for the entire stack. |
+| `make bench` | Runs the `scripts/run-benchmarks.sh` suite. |
+| `make deploy` | Triggers the deployment workflow (StacksOrbit/GCP/Render). |
 
-### Quick Start
+## 📊 Monitoring & Observability
 
-1.  **Clone the repository with submodules:**
-    ```bash
-    git clone --recursive https://github.com/Conxian/conxius-platform.git
-    cd conxius-platform
-    ```
+- **Gateway API**: [http://localhost:8080/api/v1/status](http://localhost:8080/api/v1/status)
+- **Conxian UI**: [http://localhost:3000](http://localhost:3000)
+- **Admin Dashboard**: [http://localhost:3002](http://localhost:3002)
+- **Prometheus**: [http://localhost:9090](http://localhost:9090)
+- **Grafana**: [http://localhost:3001](http://localhost:3001)
 
-2.  **Initialize environment and authenticate:**
-    ```bash
-    make init
-    make auth
-    ```
-    *Note: `make auth` will prompt you to log in via GitHub CLI to fetch organization secrets and generate local secure keys.*
+## 📖 Key Documentation
 
-3.  **Start the platform:**
-    ```bash
-    make start
-    ```
+- [SYSTEM_GRAPH.md](SYSTEM_GRAPH.md): Holistic architectural view.
+- [SYNERGY.md](SYNERGY.md): Cross-repo workflow details.
+- [ALIGNMENT.md](ALIGNMENT.md): Authority, design, and business logic standards.
+- [BENCHMARKS.md](BENCHMARKS.md): Current performance metrics and targets.
+- [DEPLOYMENT.md](DEPLOYMENT.md): Production deployment guide.
+- [GAPS.md](GAPS.md): Analysis of technical debt and upcoming features.
 
-## Service Architecture
+## 🛡️ Security (Sentinel & Fusion)
 
-- **Gateway**: Unified API and Auth entry point (Rust/Actix-web). Located in `services/lib-conxian-core/gateway`.
-- **UI**: Primary Next.js dashboard. Located in `services/conxian-ui`.
-- **Contracts**: Nakamoto-aligned DeFi protocol. (Managed via `Conxian` repository).
-- **Wallet**: Mobile sovereign enclave. (Managed via `conxius-wallet` repository).
-- **Deployment**: TUI-based deployment and monitoring. (Managed via `stacksorbit` repository).
+Conxian adheres to strict security patterns:
+- **Sentinel**: Automated filtering and management of secrets in CI/CD.
+- **Fusion**: Unified JWT and Enclave-based authentication across all layers.
 
-## CI/CD Runner
-
-The `ci-runner/` directory contains the configuration for deploying a self-hosted GitHub Actions runner capable of orchestrating the entire stack via Docker-in-Docker.
-
-## Maintenance
-
-- Update all services: `make update-all`
-- Stop the stack: `make stop`
-- View logs: `make logs`
-
-## Security
-
-This repository enforces a Zero-Trust local development flow. Secrets are never committed to Git. The `scripts/provision-secrets.sh` script ensures that every developer has a secure, authenticated environment following the **Sentinel** and **Fusion** security patterns.
+---
+© 2026 Conxian Labs. Sovereign Autonomous Business.

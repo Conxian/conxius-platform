@@ -17,8 +17,9 @@ graph TD
         HIRO[Hiro API Compatibility]
     end
 
-    subgraph "Client Layer (conxian-ui / wallet / orbit)"
+    subgraph "Client Layer (conxian-ui / wallet / orbit / admin)"
         UI[Conxian UI - Next.js]
+        ADM[Admin Dashboard - Next.js]
         W[Conxius Wallet - Android/iOS]
         ORB[StacksOrbit - TUI Deployer]
     end
@@ -40,12 +41,15 @@ graph TD
 
     P -->|Manages| GW
     P -->|Manages| UI
+    P -->|Manages| ADM
     P -->|Manages| NX
     S -->|Configures| GW
     S -->|Configures| UI
+    S -->|Configures| ADM
     S -->|Configures| W
 
     UI -->|Unified API| GW
+    ADM -->|Telemetry| GW
     W -->|Secure Signing| GW
     ORB -->|Deploys| Protocol
     ORB -->|Monitors| STX
@@ -83,6 +87,7 @@ graph TD
 | **conxius-platform** | Master Orchestrator |
 | **lib-conxian-core** | Shared Primitives & Gateway |
 | **conxian-ui** | Web Dashboard |
+| **admin-dashboard** | Internal Telemetry Dashboard |
 | **Conxian** | Smart Contracts (L1/L2) |
 | **conxius-wallet** | Mobile Sovereign Enclave |
 | **stacksorbit** | TUI Deployment & Monitoring |

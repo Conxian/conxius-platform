@@ -15,6 +15,16 @@ services:
       - db
       - redis
 
+  admin-dashboard:
+    build:
+      context: ./services/admin-dashboard
+    ports:
+      - "3002:3001"
+    environment:
+      - NEXT_PUBLIC_CORE_API_URL=${NEXT_PUBLIC_CORE_API_URL}
+    networks:
+      - conxian-network
+
   conxian-ui:
     build:
       context: ./services/conxian-ui

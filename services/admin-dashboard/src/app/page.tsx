@@ -31,56 +31,102 @@ export default function AdminPage() {
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2>System Overview</h2>
-        <button onClick={fetchAll} disabled={loading} style={{ padding: '0.5rem 1rem', cursor: 'pointer' }}>
-          {loading ? "Refreshing..." : "Refresh Now"}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2rem' }}>
+        <div>
+          <h2 style={{ margin: 0, color: '#2E403B' }}>Infrastructure Pulse</h2>
+          <p style={{ margin: '0.5rem 0 0 0', color: '#666', fontSize: '0.9rem' }}>Real-time telemetry from the Unified Gateway Engine.</p>
+        </div>
+        <button
+          onClick={fetchAll}
+          disabled={loading}
+          style={{
+            padding: '0.6rem 1.2rem',
+            cursor: 'pointer',
+            backgroundColor: loading ? '#ccc' : '#2E403B',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            fontWeight: 'bold',
+            transition: 'background-color 0.2s'
+          }}
+        >
+          {loading ? "Refreshing..." : "Trigger Pulse"}
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
-        <Card title="Gateway Status" value={stats?.status || "Unknown"} />
-        <Card title="Gateway Version" value={stats?.version || "N/A"} />
-        <Card title="Total Requests" value={stats?.total_requests || 0} />
-        <Card title="Uptime (sec)" value={stats?.uptime_seconds || 0} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem' }}>
+        <StatCard title="Gateway Health" value={stats?.status || "Unknown"} color="#2E403B" />
+        <StatCard title="Engine Version" value={stats?.version || "N/A"} />
+        <StatCard title="Requests Handled" value={stats?.total_requests || 0} />
+        <StatCard title="Uptime" value={stats?.uptime_seconds ? `${Math.floor(stats.uptime_seconds / 60)}m ${stats.uptime_seconds % 60}s` : "0s"} />
       </div>
 
-      <h2 style={{ marginTop: '2rem' }}>Nexus "Glass Node" State</h2>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-        <Card title="Merkle Root" value={nexus?.merkle_root ? `${nexus.merkle_root.substring(0, 16)}...` : "Not Available"} />
-        <Card title="Sync Status" value={nexus?.sync_status || "Initializing..."} />
-        <Card title="Leaf Count" value={nexus?.leaf_count || 0} />
-      </div>
+      <div style={{ marginTop: '3rem', display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '2rem' }}>
+        <section>
+          <h3 style={{ borderBottom: '2px solid #D4A017', paddingBottom: '0.5rem', color: '#2E403B' }}>Nexus "Glass Node" State</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem', marginTop: '1rem' }}>
+            <div style={{ gridColumn: 'span 2' }}>
+              <DataRow label="Merkle Root" value={nexus?.merkle_root || "Initializing..."} mono />
+            </div>
+            <DataRow label="Sync Status" value={nexus?.sync_status || "Pending"} highlight={nexus?.sync_status === 'synced'} />
+            <DataRow label="Leaf Count" value={nexus?.leaf_count || 0} />
+          </div>
+        </section>
 
-      <h2 style={{ marginTop: '2rem' }}>Sovereign Services</h2>
-      <div style={{ backgroundColor: 'white', padding: '1rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-        <ul style={{ listStyle: 'none', padding: 0 }}>
-          <ServiceItem name="Stacks (L2)" status="Operational" />
-          <ServiceItem name="Bisq (P2P)" status="Operational" />
-          <ServiceItem name="RGB (Client-side)" status="Operational" />
-          <ServiceItem name="BitVM (Optimistic)" status="Operational" />
-          <ServiceItem name="Lightning Network" status="Operational" />
-          <ServiceItem name="Liquid Network" status="Operational" />
-        </ul>
+        <section>
+          <h3 style={{ borderBottom: '2px solid #D4A017', paddingBottom: '0.5rem', color: '#2E403B' }}>Sovereign Services</h3>
+          <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', marginTop: '1rem' }}>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+              <ServiceItem name="Stacks (L2)" status="Operational" />
+              <ServiceItem name="Bisq (P2P)" status="Operational" />
+              <ServiceItem name="RGB (Client-side)" status="Operational" />
+              <ServiceItem name="BitVM (Optimistic)" status="Operational" />
+              <ServiceItem name="Lightning Network" status="Operational" />
+            </ul>
+          </div>
+        </section>
       </div>
     </div>
   );
 }
 
-function Card({ title, value }: { title: string, value: string | number }) {
+function StatCard({ title, value, color }: { title: string, value: string | number, color?: string }) {
   return (
-    <div style={{ padding: '1rem', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-      <h4 style={{ margin: '0 0 0.5rem 0', color: '#666' }}>{title}</h4>
-      <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#333' }}>{value}</div>
+    <div style={{
+      padding: '1.5rem',
+      backgroundColor: 'white',
+      borderRadius: '8px',
+      boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
+      borderLeft: color ? `4px solid ${color}` : 'none'
+    }}>
+      <h4 style={{ margin: '0 0 0.5rem 0', color: '#666', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{title}</h4>
+      <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: color || '#333' }}>{value}</div>
+    </div>
+  );
+}
+
+function DataRow({ label, value, mono, highlight }: { label: string, value: string | number, mono?: boolean, highlight?: boolean }) {
+  return (
+    <div style={{ padding: '1rem', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.03)' }}>
+      <div style={{ fontSize: '0.75rem', color: '#888', marginBottom: '0.25rem' }}>{label}</div>
+      <div style={{
+        fontSize: mono ? '0.85rem' : '1.1rem',
+        fontWeight: 'bold',
+        fontFamily: mono ? 'monospace' : 'inherit',
+        color: highlight ? '#2E403B' : '#333',
+        wordBreak: 'break-all'
+      }}>
+        {value}
+      </div>
     </div>
   );
 }
 
 function ServiceItem({ name, status }: { name: string, status: string }) {
   return (
-    <li style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: '1px solid #eee' }}>
-      <span>{name}</span>
-      <span style={{ color: 'green', fontWeight: 'bold' }}>{status}</span>
+    <li style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem 0', borderBottom: '1px solid #F0F0F0' }}>
+      <span style={{ fontWeight: 500 }}>{name}</span>
+      <span style={{ color: '#2E403B', fontWeight: 'bold', fontSize: '0.9rem' }}>{status}</span>
     </li>
   );
 }

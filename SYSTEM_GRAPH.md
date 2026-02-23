@@ -14,7 +14,7 @@ graph TD
         GW[Conxian Gateway - Actix-web]
         NX[Conxian Nexus - Glass Node]
         AUTH[JWT / Enclave Auth]
-        HIRO[Hiro API Compatibility]
+        HIRO[Hiro API Proxy - /extended/v1]
     end
 
     subgraph "Client Layer (conxian-ui / wallet / orbit / admin)"

@@ -27,3 +27,9 @@
 - **Latency**: <30ms P99 for sovereign node proxies.
 - **Nexus Sync**: Handle 1M+ state updates per hour with <1s Merkle root propagation.
 - **TVL Handling**: Scale to $10B+ TAM support.
+
+## 5. Hiro API Compatibility Layer (Simulated)
+- **Endpoint**: `/v2/contracts/call-read`
+- **Results**:
+    - Average Latency: ~1.5ms (Gateway overhead + mock response)
+    - P95: 2.2ms

@@ -2,30 +2,28 @@
 
 This document tracks the resolution of gaps and identifies new technical requirements.
 
-## 1. Service Gaps (Resolved 2026-02-23)
+## 1. Service Gaps (Resolved 2026-02-24)
 
-### Conxian Gateway & Nexus
-- **Status**: ✅ Gateway v0.1.1 Production-Ready.
+### Conxian Gateway & Nexus (Advanced Implementation)
+- **Status**: ✅ Gateway v0.1.1+ Production-Ready with Core Logic.
 - **Implemented**:
-  - Thread-safe Merkle root tracking with poison handling.
+  - Thread-safe Merkle root tracking using `rs_merkle` and Sha256.
+  - Actual Zero-Knowledge Proof (ZKP) verification logic using `bellman` and `pairing`.
+  - Full persistence layer for Merkle Tree leaves using `sqlx` and PostgreSQL.
+  - Stacks Nakamoto sBTC bridging logic integrated into the Gateway (`/api/v1/stacks/bridge`).
+  - Nexus telemetry endpoints (`/api/v1/nexus`) and proof submission (`/api/v1/nexus/proof`).
   - Hiro API compatibility layer for seamless UI integration.
-  - Nexus telemetry endpoints (/api/v1/nexus).
-  - Shielded Wallets mock endpoints for interface alignment.
-- **Improved**:
-  - Standardized Actix-web request handling and logging.
 
 ### UI/UX Standardization
 - **Status**: ✅ Fully Aligned.
 - **Implemented**:
-  - Unified StatusIndicator component supporting 7 states (success, warning, error, info, operational, degraded, outage).
+  - Unified StatusIndicator component supporting 7 states.
   - Dashboard & Overview pages integrated with real-time Nexus telemetry.
-  - Sidebar navigation updated with full ecosystem access.
 
 ### Admin Dashboard
 - **Status**: ✅ Polished.
 - **Implemented**:
   - Earthy Corporate Finance theme (Forest Green/Gold).
-  - Unified infrastructure pulse monitoring.
 
 ## 2. Infrastructure & Operations
 
@@ -40,9 +38,9 @@ This document tracks the resolution of gaps and identifies new technical require
 ## 3. Documentation
 
 - **Status**: ✅ Fully Aligned.
-- **Updated**: SYSTEM_GRAPH.md, SYNERGY.md, and ALIGNMENT.md reflect the unified gateway and Nexus integration.
+- **Updated**: SYSTEM_GRAPH.md, SYNERGY.md, ALIGNMENT.md, and PRD.md reflect the completed core logic and advanced features.
 
 ## 4. Pending / Next Steps
-- Implement actual zero-knowledge proof verification logic in lib-conxian-core.
-- Full persistence layer for Merkle Tree leaves in the database.
-- Integration of Stacks Nakamoto sBTC bridging logic in the Gateway.
+- Implement real-time polling for Sovereign Node health (Phase 3).
+- Automated risk scoring based on live bridge liquidity and validator counts.
+- Mobile wallet (Conxius Wallet) integration with Gateway ZK proofs.

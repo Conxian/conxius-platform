@@ -26,21 +26,21 @@ jobs:
 
     - name: Start Full System Stack
       run: |
-        docker-compose up -d --build
+        docker compose up -d --build
         echo "Waiting for services to initialize..."
         sleep 30
 
     - name: Run Gateway Health Check
       run: |
-        curl -f http://localhost:8080/health || exit 1
+        curl -f http://localhost:8080/api/v1/health
 
     - name: Run Nexus Diagnostics
       run: |
-        curl -f http://localhost:3000/v1/metrics || exit 1
+        curl -f http://localhost:8080/api/v1/metrics
 
     - name: Run Benchmark Script
       run: bash scripts/run-benchmarks.sh
 
     - name: Tear Down Stack
       if: always()
-      run: docker-compose down -v
+      run: docker compose down -v

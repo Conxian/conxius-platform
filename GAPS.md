@@ -12,6 +12,7 @@ This document tracks the resolution of gaps and identifies new technical require
   - **Wallet Enclave Depth**: Verification of mobile secure enclave-signed intents.
   - **Automated Risk Scoring**: Dynamic integrity assessment based on node health.
   - **Hiro API Compatibility**: Full proxy support for Stacks L1/L2 queries.
+  - **Nexus Glass Node Logic**: Integrated Merkle root management and ZKP verification endpoints.
 
 ### UI/UX Standardization
 - **Status**: ✅ Fully Aligned.
@@ -19,6 +20,8 @@ This document tracks the resolution of gaps and identifies new technical require
   - **Atomic Mesh Dashboard**: Real-time management of cross-chain swaps.
   - **Security Depth**: Visualization of Enclave security and ZK-proof events.
   - **Aggregated Liquidity**: Unified view of Bitcoin L2 pool depth.
+  - **Telemetry Dashboard**: Live system status and Nexus state visualization.
+  - **Earthy Corporate Finance Theme**: Standardized Forest Green (#2E403B) and Gold (#D4A017) tokens.
 
 ## 2. Infrastructure & Operations
 
@@ -35,3 +38,4 @@ This document tracks the resolution of gaps and identifies new technical require
 - Implement Sovereign AI-Driven Asset Allocation.
 - Universal Bitcoin Identity (UBI) integration via RGB/Taproot.
 - Global Liquidity Mesh mainnet deployment.
+- Full "Glass Node" Nexus state synchronization with Stacks L1.

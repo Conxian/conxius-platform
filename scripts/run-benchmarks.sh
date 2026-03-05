@@ -8,13 +8,17 @@ echo "------------------------------------------"
 
 # 1. Build Performance (Gateway)
 echo "Measuring Gateway Build Time..."
-cd services/lib-conxian-core/gateway
-START_TIME=$(date +%s)
-cargo build --quiet
-END_TIME=$(date +%s)
-ELAPSED=$((END_TIME - START_TIME))
-echo "✅ Gateway Build: ${ELAPSED}s"
-cd - > /dev/null
+if command -v cargo >/dev/null 2>&1; then
+    cd services/lib-conxian-core/gateway
+    START_TIME=$(date +%s)
+    cargo build --quiet
+    END_TIME=$(date +%s)
+    ELAPSED=$((END_TIME - START_TIME))
+    echo "✅ Gateway Build: ${ELAPSED}s"
+    cd - > /dev/null
+else
+    echo "⚠️  cargo not found on host, skipping build benchmark."
+fi
 
 # 2. Build Performance (UI)
 echo "Checking UI Build capability (pnpm install)..."
@@ -26,12 +30,13 @@ if command -v pnpm >/dev/null 2>&1; then
     ELAPSED=$((END_TIME - START_TIME))
     echo "✅ UI Dependency Install: ${ELAPSED}s"
 else
-    echo "⚠️  pnpm not found, skipping UI benchmark."
+    echo "⚠️  pnpm not found on host, skipping UI benchmark."
 fi
 cd - > /dev/null
 
 # 3. Latency Check (Requires Gateway running)
 echo "Checking Gateway Latency (requires service to be up)..."
+# Try localhost first, then check docker network if needed (but usually CI maps ports)
 if curl -s http://localhost:8080/api/v1/health > /dev/null 2>&1; then
     echo "Measuring latency to /api/v1/status..."
     for i in {1..5}; do

@@ -1,27 +1,23 @@
-# Agent Instructions: conxius-platform
+# Conxian Labs: Agent Instructions (v2.0 - OpenSpec Aligned)
 
-## Operational Context
-- This is a meta-repository. Most logic resides in submodules under `services/`.
-- **Gateway**: The source of truth for the API is `services/lib-conxian-core/gateway`. Do NOT use the empty `services/gateway` directory.
-- **Docker**: Always use `docker compose` (V2) as reflected in the `Makefile`.
-- **Environment**: Use `make auth` to provision `.env` from `.env.schema`.
+Welcome, Agent. You are tasked with maintaining and extending the Conxian DeFi ecosystem.
 
-## Ecosystem Alignment
-- **Vision**: Follow [ALIGNMENT.md](ALIGNMENT.md) and [SYNERGY.md](SYNERGY.md) for ecosystem-wide rules.
-- **Theme**: "Earthy Corporate Finance" must be maintained across all UIs (Web, Mobile, TUI).
-- **Bitcoin Ethos**: All work should be "Full Bitcoin Network Oriented". Prefer Bitcoin-anchored logic (burn-block-height).
-- **Security**: Adhere to "Sentinel" (secret filtering) and "Fusion" (unified auth) patterns.
+## Core Directives
 
-## Common Tasks
-- **Running Tests**: Run `npm run test:run` in `services/conxian-ui` for frontend verification.
-- **Gateway Dev**: Use `cargo run` in `services/lib-conxian-core/gateway`.
-- **Submodule Updates**: Use `make update-all` to keep everything in sync.
+1.  **OpenSpec First**: All changes must be preceded by an OpenSpec proposal or follow existing change artifacts in `openspec/changes/`.
+2.  **Source of Truth**: The **Conxian Gateway** (`lib-conxian-core/gateway`) is the authoritative source for protocol state and business logic.
+3.  **Bitcoin Native**: Always prioritize Bitcoin-anchored height (`burn-block-height`) and Nakamoto (Stacks 3.0/3.1) readiness.
+4.  **Design Alignment**: Adhere strictly to the **Earthy Corporate Finance** theme (Forest Green `#2E403B`, Gold `#D4A017`).
+5.  **Sentinel Security**: Follow zero-trust patterns. Never hardcode secrets. Use `provision-secrets.sh`.
 
-## Strategic Assets
-- **Contracts**: Located in the `Conxian` repository.
-- **Wallet**: Located in the `conxius-wallet` repository.
-- **TUI**: Located in the `stacksorbit` repository.
+## Implementation Patterns
 
-## Known Stubs
-- Sovereign nodes (Bisq, RGB, BitVM) are currently placeholders in `docker-compose.yml`.
-- Full Nexus "Glass Node" integration is in the roadmap.
+- **Rust (Gateway)**: Use Actix-web for the API and `tokio` for background orchestration. Maintain modular module boundaries (Mesh, Nexus, Compliance).
+- **TypeScript (UI)**: Use the consolidated `coreApi.ts` for all Gateway interactions. Ensure strict type safety and no `any` types.
+- **Clarity (Contracts)**: Prioritize mathematical certainty and sBTC integration.
+
+## Documentation
+Refer to `ALIGNMENT.md` for strategy and `SYNERGY.md` for inter-repo workflows.
+
+---
+© 2026 Conxian Labs. Code is Law.

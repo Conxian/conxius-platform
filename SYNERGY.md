@@ -2,35 +2,32 @@
 
 This document details the interconnected workflows and synergy between the various repositories under the Conxian organization.
 
-## 1. The Core Loop
+## 1. The Core Loop (Refined for Phase 5)
 The primary flow of state and authority follows this hierarchy:
-1.  **Conxian (Contracts)**: Defines the rules and state on-chain (Stacks/Bitcoin).
-2.  **Conxian Gateway (in lib-conxian-core)**: Proxies, aggregates, and authenticates access to the on-chain state and sovereign nodes.
-3.  **Conxian UI / Conxius Wallet**: Provide user-facing interfaces that consume the Gateway APIs for a unified experience.
+1.  **Conxian (Contracts)**: Defines on-chain state; now anchored to Nakamoto/sBTC logic.
+2.  **Conxian Gateway (Middleware)**: The **Unified Orchestrator**. Implements the Global Liquidity Mesh, Risk Oracle, and Nexus state synchronization.
+3.  **Conxian UI / Wallet (Clients)**: Standardized interfaces consuming the Gateway's Phase 5 API for real-time mesh telemetry and compliance.
 
 ## 2. Technical Synergies
 
-### Gateway & Nexus (Glass Node)
-- **Shared Primitives**: Both leverage `lib-conxian-core` for cryptographic verification and Merkle Tree logic.
-- **State Proofs**: Gateway provides the API entry point, while Nexus (or the Nexus module within Core) provides the cryptographic proofs (Merkle roots) to verify state against Stacks L1.
+### Gateway & Nexus (The Glass Node)
+- **State Proofs**: The Gateway exposes Nexus-derived Merkle proofs (\`/api/v1/nexus/state\`) to verify off-chain transactions against Stacks L1.
+- **ZK-Verification**: Direct integration with bellman-based ZKP verification for privacy-preserving compliance.
 
-### StacksOrbit & Conxian (Contracts)
-- **Deployment Loop**: StacksOrbit is the specialized tool for deploying and monitoring the Conxian protocol suite.
-- **Verification**: StacksOrbit uses the "Sentinel" pattern to ensure that secrets are never leaked during deployment and that contract interfaces are verified post-deploy.
+### Global Liquidity Mesh
+- **Atomic Mobility**: Seamlessly moving BTC value between Stacks, Liquid, and Rootstock via HTLCs managed by the Gateway's MeshModule.
+- **Mesh Telemetry**: Live swap tracking available via the Gateway (\`/api/v1/mesh/swaps\`) and visualized in the UI.
 
-### Wallet & Gateway
-- **Mobile Enclave Auth**: The Conxius Wallet uses secure enclave storage to sign requests that are then validated by the Gateway's JWT/Auth middleware.
-- **Institutional Bridge**: The Wallet allows retail users to access the same institutional-grade services (shielded payments, sBTC vaults) exposed by the Gateway.
+### Enclave Security
+- **Intent Signing**: Conxius Wallet signs intents in a mobile secure enclave; Gateway verifies these signatures before dispatching to the Mesh or Contracts.
 
 ## 3. Operational Synergy (conxius-platform)
-The `conxius-platform` repository serves as the "Fusion" point where:
-- **Environment Parity**: `provision-secrets.sh` ensures that local development matches production security requirements.
-- **Orchestration**: Docker Compose spins up the UI, Gateway, and Postgres/Redis dependencies in a unified network (`conxian-network`).
-- **Benchmarking**: Integrated scripts measure the performance of the entire stack, from contract execution to UI latency.
+- **Spec-Driven Design**: Using **OpenSpec** to ensure that every code change is aligned with the unified proposal, specs, and design artifacts.
+- **Unified Deployment**: Docker Compose orchestrates the entire stack, while GCP/Render handle production scaling for the Gateway and UI respectively.
 
 ## 4. Vision Alignment: "Full Bitcoin Network Oriented"
 The synergy is driven by a singular goal: **Making Bitcoin a productive asset.**
 - **Contracts** focus on Bitcoin-anchored DeFi.
-- **Gateway** connects to Bitcoin protocols (Bisq, RGB).
-- **Wallet** secures Bitcoin L1 and L2 assets.
-- **UI** simplifies the Bitcoin-native financial experience.
+- **Gateway** orchestrates cross-chain mobility and verification.
+- **Wallet** secures local private keys and enclave intents.
+- **UI** provides high-fidelity visibility into the global Bitcoin ecosystem.

@@ -7,6 +7,10 @@ This update aligns the **Conxian Gateway** and **Conxian UI** to provide a unifi
 
 ### 1. Gateway Engine (lib-conxian-core)
 - **Enhanced Telemetry**: The Engine now simulates and returns rich system data including:
+  - **Nexus State**: Live Merkle root and synchronization status.
+  - **Global Liquidity Mesh**: Real-time atomic swap telemetry.
+  - **MVCR Compliance**: Mathematically Verifiable Compliance Reports.
+  - **Risk Proofs**: ZK-verified risk assessments per service.
   - **TVL (USD)**: Aggregated across all active L2 layers.
   - **Median APY**: Dynamic yield calculation based on system activity.
   - **Active Vaults**: Real-time tracking of protocol health.
@@ -17,7 +21,11 @@ This update aligns the **Conxian Gateway** and **Conxian UI** to provide a unifi
 - **Unified coreApi.ts**: Consolidated the API client to include Gateway-proprietary endpoints:
   - `getSystemInfo()`: Fetches global telemetry.
   - `getLayers()`: Fetches status for all Bitcoin L2 layers (Stacks, RGB, BitVM, etc.).
-- **Type Safety**: Added TypeScript interfaces (`SystemInfo`, `LayerStatus`) for all new data structures.
+  - `getNexusState()`: Retrieves glass node state proofs.
+  - `getMeshSwaps()`: Tracks active cross-chain atomic swaps.
+  - `getComplianceMVCR()`: Fetches the latest compliance report.
+  - `getRiskProof(service)`: Retrieves ZK risk proofs for specific services.
+- **Type Safety**: Added strict TypeScript interfaces (`NexusState`, `MeshSwap`, `MVCRReport`, `RiskProof`) for all Phase 5 data structures.
 
 ### 3. UI Components & Pages
 - **Network Mesh Dashboard**: Rebuilt the `/network` page to visualize all Bitcoin L2 layers, their trust models, settlement layers, and risk profiles.

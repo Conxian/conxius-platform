@@ -21,3 +21,8 @@ Refer to `ALIGNMENT.md` for strategy and `SYNERGY.md` for inter-repo workflows.
 
 ---
 © 2026 Conxian Labs. Code is Law.
+
+### Phase 6 Implementation Standards
+- **AI Allocation**: Always consume `/api/v1/ai/allocation` for user-facing weightings.
+- **UBI Identity**: Identity hashes must follow the `ubi:btc:{id}` format.
+- **Nexus Sync**: Use `/api/v1/nexus/state` for all L1/L2 synchronization checks.

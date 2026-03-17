@@ -31,8 +31,8 @@ Mobile secure enclave integration for local intent signing, providing hardware-l
 ## 4. Roadmap Alignment
 - **Phase 1-3 (Completed)**: Core Foundation, Monitoring, and Institutional Tiers.
 - **Phase 4 (Completed)**: Liquidity Aggregation and Deep Protocol Handlers.
-- **Phase 5 (Active)**: Global Liquidity Mesh, Risk Oracle, and Wallet Depth.
-- **Phase 6 (Next)**: Sovereign AI-Driven Asset Allocation and Universal Bitcoin Identity.
+- **Phase 5 (Completed)**: Global Liquidity Mesh, Risk Oracle, and Wallet Depth.
+- **Phase 6 (Active)**: Sovereign AI-Driven Asset Allocation and Universal Bitcoin Identity.
 
 ---
 © 2026 Conxian Labs. Sovereign Autonomous Business.

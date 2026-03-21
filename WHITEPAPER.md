@@ -8,7 +8,7 @@ Conxian is a comprehensive DeFi orchestration platform designed to make Bitcoin 
 ### 1.1 Full Bitcoin Network Orientation
 All system states are anchored to Bitcoin burn-block-height. Bitcoin is the ultimate settlement layer and source of truth.
 
-### 1.2 Earthy Corporate Finance
+### 1.2 Earthy Corporate Finance 
 Design language conveying trust, stability, and professional financial orchestration. Palette: Forest Green (#2E403B) and Gold (#D4A017).
 
 ## 2. Technical Architecture

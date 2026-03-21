@@ -22,7 +22,7 @@ This document tracks the resolution of gaps and identifies new technical require
   - **Atomic Mesh Dashboard**: Real-time management of cross-chain swaps.
   - **Security Depth**: Visualization of Enclave security and ZK-proof events.
   - **Telemetry Dashboard**: Live system status and Nexus state visualization.
-  - **Earthy Corporate Finance Theme**: Standardized Forest Green (#2E403B) and Gold (#D4A017) tokens.
+  - **Earthy Corporate Finance Theme: Standardized Forest Green (#2E403B) and Gold (#D4A017) tokens.
 
 ## 2. Infrastructure & Operations
 

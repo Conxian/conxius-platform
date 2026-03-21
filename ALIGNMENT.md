@@ -11,11 +11,11 @@ This document serves as the authoritative guide for aligning business logic, des
 - **Protocol State**: Clients (UI, Wallet) interact with the Gateway for state monitoring and compliance pipes.
 - **Interoperability**: Components are "Root-Up" compliant, following Clarinet SDK and Vitest standards.
 
-## 2. Design Alignment (Sovereign Nakamoto v4.0)
+## 2. Design Alignment (Sovereign Earthy v4.0)
 
-- **Theme**: All interfaces follow the **Tier0 light theme**.
-- **Palette**: Forest Green (#2E403B), Gold (#D4A017), Professional Background (#F5F5F5).
-- **Typography**: Inter (Sans-serif).
+- **Theme**: All interfaces follow the **Earthy Corporate Finance** theme (Professional Light).
+- **Palette**: Forest Green (#2E403B), Nakamoto Gold (#D4A017), Ivory White (#F9FAFB).
+- **Typography**: Outfit / Inter (Sans-serif) for high-fidelity readability.
 - **Assets**: Canonical mark is `conxian-mark-b.svg`.
 
 ## 3. Authority Alignment (Sovereign Autonomous Business)
@@ -25,11 +25,9 @@ This document serves as the authoritative guide for aligning business logic, des
 - **Deployment**: Unified via Render (Pulse), GCP (Sovereign Service), and StacksOrbit (TUI).
 - **Code is Law**: Decisions are encoded in Rust and Clarity.
 
-## 4. Full Bitcoin Network Orientation
-
-- **Anchoring**: All temporal logic is anchored to Bitcoin burn-block-height.
+- **Anchoring**: All temporal logic is anchored to Bitcoin burn-block-height (Nakamoto Consensus).
 - **Sovereign Services**: Native integration with Bisq, RGB, BitVM, and Lightning.
-- **L2 Synergy**: Leveraging Stacks (Nakamoto) and sBTC for liquidity.
+- **L2 Synergy**: Utilizing Stacks L2 and sBTC for trustless liquidity.
 
 ## Repo-Specific Directives
 
@@ -44,7 +42,10 @@ This document serves as the authoritative guide for aligning business logic, des
 - **SAM:** $130M (Stacks TVL).
 - **SOM:** 10% of Stacks TVL within 24 months.
 
-## 5. Phase 6: AI & Identity Synergy
-
-- **Conxius AI**: Gateway Engine calculates optimal asset allocation based on global risk telemetry.
-- **Universal Identity**: UBI provides a unified, BitVM-verified sovereign identity for all Conxian users, anchored to Bitcoin Taproot.
+- **Umbrella Products**:
+  - **Nexus**: The authoritative Glass Node.
+  - **Conxius**: Sovereign Mobile Identity.
+  - **Conclave**: ZK/TEE Enclave SDK.
+  - **StacksOrbit**: Managed Stacks Infrastructure.
+  - **SYI**: Sovereign Yield Index.
+  - **BOS**: Sovereign Business Operations System.

@@ -11,7 +11,7 @@ This document serves as the authoritative guide for aligning business logic, des
 - **Protocol State**: Clients (UI, Wallet) interact with the Gateway for state monitoring and compliance pipes.
 - **Interoperability**: Components are "Root-Up" compliant, following Clarinet SDK and Vitest standards.
 
-## 2. Design Alignment (Earthy Corporate Finance)
+## 2. Design Alignment (Sovereign Nakamoto v4.0)
 
 - **Theme**: All interfaces follow the **Tier0 light theme**.
 - **Palette**: Forest Green (#2E403B), Gold (#D4A017), Professional Background (#F5F5F5).
@@ -20,9 +20,9 @@ This document serves as the authoritative guide for aligning business logic, des
 
 ## 3. Authority Alignment (Sovereign Autonomous Business)
 
-- **Orchestration**: `conxius-platform` is the master control center.
-- **Secrets**: Provisioned via `scripts/provision-secrets.sh`.
-- **Deployment**: Unified via Render (UI), GCP (Gateway), and StacksOrbit (TUI).
+- **Orchestration**: `conxius-platform` is the sovereign command nexus.
+- **Secrets**: Provisioned via `scripts/provision-secrets.sh` (Nakamoto-verified).
+- **Deployment**: Unified via Render (Pulse), GCP (Sovereign Service), and StacksOrbit (TUI).
 - **Code is Law**: Decisions are encoded in Rust and Clarity.
 
 ## 4. Full Bitcoin Network Orientation
@@ -39,10 +39,12 @@ This document serves as the authoritative guide for aligning business logic, des
 - **Conxian (Contracts)**: Nakamoto-readiness (Clarity 4).
 
 ## 📈 Business Model & Market Strategy
+
 - **TAM:** $10B (Global Bitcoin L2, 2026).
 - **SAM:** $130M (Stacks TVL).
 - **SOM:** 10% of Stacks TVL within 24 months.
 
 ## 5. Phase 6: AI & Identity Synergy
-- **Sovereign AI**: Gateway Engine calculates optimal asset allocation based on global risk telemetry.
+
+- **Conxius AI**: Gateway Engine calculates optimal asset allocation based on global risk telemetry.
 - **Universal Identity**: UBI provides a unified, BitVM-verified sovereign identity for all Conxian users, anchored to Bitcoin Taproot.

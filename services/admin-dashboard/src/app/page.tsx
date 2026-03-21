@@ -9,15 +9,51 @@ export default function AdminPage() {
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_CORE_API_URL || "http://localhost:8080";
-      const [sRes, nRes] = await Promise.all([
-        fetch(`${baseUrl}/api/v1/status`),
-        fetch(`${baseUrl}/api/v1/nexus`)
-      ]);
-      setStats(await sRes.json());
-      setNexus(await nRes.json());
+      // Try dedicated port 3000 (Nexus default) first, fallback to 8080 (Gateway)
+      const urls = [
+        process.env.NEXT_PUBLIC_CORE_API_URL,
+        "http://localhost:3000",
+        "http://localhost:8080"
+      ].filter(Boolean) as string[];
+
+      let success = false;
+      for (const baseUrl of urls) {
+        try {
+          const [sRes, nRes] = await Promise.all([
+            fetch(`${baseUrl}/api/v1/status`).catch(() => fetch(`${baseUrl}/v1/status`)),
+            fetch(`${baseUrl}/api/v1/nexus`).catch(() => fetch(`${baseUrl}/v1/metrics`))
+          ]);
+          
+          if (sRes.ok) {
+            const sData = await sRes.json();
+            const nData = nRes.ok ? await nRes.json() : null;
+            
+            setStats({
+              status: sData.safety_mode ? "Degraded" : "Healthy",
+              version: sData.version || "v1.1.0",
+              total_requests: sData.processed_height || 0,
+              uptime_seconds: sData.uptime_seconds || 0
+            });
+            
+            setNexus({
+              merkle_root: sData.state_root || sData.mmr_root || "N/A",
+              sync_status: sData.drift === 0 ? "synced" : "syncing",
+              leaf_count: sData.processed_height || 0
+            });
+            
+            success = true;
+            break;
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+      
+      if (!success) {
+        console.warn("Infrastructure Pulse: Could not connect to Nexus or Gateway. Ensure services are running on port 3000 or 8080.");
+      }
     } catch (err) {
-      console.error(err);
+      console.error("Dashboard fetch error:", err);
     } finally {
       setLoading(false);
     }

@@ -33,7 +33,8 @@ export default function RootLayout({
             }}>TELEMETRY</span>
           </div>
           <nav style={{ fontSize: '0.9rem', fontWeight: 500 }}>
-             System Overview • Infrastructure • Security
+             <a href="/" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Overview</a>
+             <a href="/settings" style={{ color: 'inherit', textDecoration: 'none' }}>Settings</a>
           </nav>
         </header>
         <main style={{ padding: '2rem' }}>

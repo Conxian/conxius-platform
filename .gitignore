@@ -37,6 +37,8 @@ yarn-error.log*
 target/
 **/*.rs.bk
 
+# Keep Cargo.lock tracked for reproducible Rust builds.
+
 # --- Python ---
 __pycache__/
 *.py[cod]

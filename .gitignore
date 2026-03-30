@@ -3,6 +3,7 @@
 .env
 .env.*
 !.env.example
+!.env.schema
 *.log
 *.tmp
 *.bak

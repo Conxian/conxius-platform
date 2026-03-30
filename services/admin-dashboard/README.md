@@ -1,25 +1,44 @@
 # Conxius Admin Dashboard
 
-This service is the internal backend/frontend orchestration layer for the Conxian platform.
+This service is the internal backend/frontend orchestration layer for the Conxian platform. It provides real-time telemetry from the Unified Gateway Engine and allows for management of institutional secrets.
 
-## Proposed Structure
+## Features
 
-Since this is part of `conxius-platform` (the internal backend software), it should be structured as a dedicated service:
+- **Infrastructure Pulse**: Real-time monitoring of Gateway health, Engine version, and request throughput.
+- **Nexus "Glass Node" State**: Visibility into Merkle roots and synchronization status with Stacks L1.
+- **Sovereign Services Tracking**: Status monitoring for Stacks (L2), Bisq (P2P), RGB, BitVM, and Lightning Network.
+- **Secret Management**: Interface for provisioning institutional secrets and BOS wallet mappings (accessible via `/settings`).
 
-- `src/`: Backend logic (Node.js/Rust)
-- `ui/`: Enterprise Management Console (Next.js/React)
-- `Clarinet.toml`: If local contract testing is needed for this service specifically.
+## Tech Stack
 
-## Initialization Recommendations
+- **Framework**: Next.js 15
+- **Language**: TypeScript
+- **State Management**: React Hooks (useState, useEffect)
 
-1. **Option A: Mono-repo Membership**
-   Keep it as a directory in `conxius-platform/services/ admin-dashboard`.
-   Run `npm init` or `npx create-next-app` here to start the UI development.
+## Getting Started
 
-2. **Option B: Separate Repo (Recommended for Security)**
-   If the admin dashboard contains highly sensitive internal logic, isolate it into a separate Git repository and include it as a git-submodule in `conxius-platform`.
+### Local Development
 
-## Next Steps
-- [ ] Initialize `package.json`
-- [ ] Define RBAC (Role Based Access Control) integration with `conxian-access.clar`
-- [ ] Implement secure gRPC/REST connection to the Gateway and Nexus
+1.  Navigate to the service directory:
+    ```bash
+    cd services/admin-dashboard
+    ```
+2.  Install dependencies:
+    ```bash
+    pnpm install
+    ```
+3.  Run the development server:
+    ```bash
+    pnpm dev
+    ```
+    The dashboard will be available at [http://localhost:3001](http://localhost:3001).
+
+## Architecture
+
+- `src/app/`: Next.js App Router for UI components and API routes.
+- `src/app/api/secrets/`: Backend logic for managing `.env.admin` secrets.
+- `src/app/settings/`: Enterprise Management Console settings for high-privilege configuration.
+
+## RBAC & Security
+
+Access to this dashboard is currently intended for internal use. Future iterations will include Role-Based Access Control (RBAC) integrated with `conxian-access.clar`.

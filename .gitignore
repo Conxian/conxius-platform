@@ -1,7 +1,7 @@
 # --- General ---
 .DS_Store
 .env
-.env*
+.env.*
 !.env.example
 *.log
 *.tmp
@@ -34,10 +34,6 @@ yarn-error.log*
 # --- Rust ---
 target/
 **/*.rs.bk
-Cargo.lock
-# Keep Cargo.lock for binary crates, but this is a library/monorepo context often.
-# However, usually for monorepos we might keep it at root if it's a workspace.
-# For now, let's keep it but ignore it if it's in sub-targets.
 
 # --- Python ---
 __pycache__/
@@ -54,7 +50,6 @@ coverage/
 test-results/
 playwright-report/
 blob-report/
-test-results/
 
 # --- IDEs ---
 .idea/
@@ -63,7 +58,6 @@ test-results/
 *.sublime-workspace
 
 # --- Conxian Specific ---
-serve.log
 dev_server.log*
 /services/conxian-ui/src/lib/generated/
 .env.admin

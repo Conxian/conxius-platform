@@ -1,4 +1,4 @@
-import type { Action } from "@elizaos/core";
+import type { Action, ProviderValue } from "@elizaos/core";
 import type { JsonValue } from "@elizaos/core";
 import {
   checkoutCartX402,
@@ -17,6 +17,17 @@ function parameters(options?: unknown): Record<string, JsonValue | undefined> {
   return p as Record<string, JsonValue | undefined>;
 }
 
+function toProviderValue(value: unknown): ProviderValue {
+  if (value === null) return null;
+  if (value === undefined) return undefined;
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return value;
+  if (typeof value === "bigint") return value;
+  if (value instanceof Uint8Array) return value;
+  if (Array.isArray(value)) return value.map((v) => toProviderValue(v));
+  if (typeof value === "object") return value;
+  return String(value);
+}
+
 export const conxianActions: Action[] = [
   {
     name: "CONXIAN_GATEWAY_STATUS",
@@ -27,7 +38,7 @@ export const conxianActions: Action[] = [
       const data = await getGatewayStatus(env);
       const text = JSON.stringify(data, null, 2);
       if (callback) await callback({ text }, "CONXIAN_GATEWAY_STATUS");
-      return { success: true, text, data };
+      return { success: true, text, data: { response: toProviderValue(data) } };
     },
     similes: ["GATEWAY_STATUS", "CONXIAN_STATUS"],
   },
@@ -40,7 +51,7 @@ export const conxianActions: Action[] = [
       const data = await getSbtcYield(env);
       const text = JSON.stringify(data, null, 2);
       if (callback) await callback({ text }, "CONXIAN_SBTC_YIELD");
-      return { success: true, text, data };
+      return { success: true, text, data: { response: toProviderValue(data) } };
     },
     similes: ["SBTC_YIELD", "YIELD_SBTC"],
   },
@@ -65,7 +76,7 @@ export const conxianActions: Action[] = [
       const data = await getCartMandate(env, id);
       const text = JSON.stringify(data, null, 2);
       if (callback) await callback({ text }, "CONXIAN_GET_CART_MANDATE");
-      return { success: true, text, data };
+      return { success: true, text, data: { response: toProviderValue(data) } };
     },
     similes: ["GET_CART_MANDATE"],
   },
@@ -97,7 +108,15 @@ export const conxianActions: Action[] = [
       const res = await checkoutCartX402(env, { id, paymentSignature });
       const text = JSON.stringify(res, null, 2);
       if (callback) await callback({ text }, "CONXIAN_X402_CHECKOUT_CART");
-      return { success: true, text, data: res };
+      return {
+        success: true,
+        text,
+        data: {
+          status: res.status,
+          paymentRequired: toProviderValue(res.paymentRequired),
+          body: toProviderValue(res.body),
+        },
+      };
     },
     similes: ["X402_CHECKOUT", "CHECKOUT_CART"],
   },
@@ -140,7 +159,7 @@ export const conxianActions: Action[] = [
       const data = await submitVote(env, { proposalId, fid, choice });
       const text = JSON.stringify(data, null, 2);
       if (callback) await callback({ text }, "CONXIAN_SUBMIT_VOTE");
-      return { success: true, text, data };
+      return { success: true, text, data: { response: toProviderValue(data) } };
     },
     similes: ["SUBMIT_VOTE", "VOTE"],
   },

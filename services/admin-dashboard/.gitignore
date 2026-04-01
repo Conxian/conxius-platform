@@ -10,3 +10,4 @@ build
 .env.admin
 .DS_Store
 *.log
+*.tsbuildinfo

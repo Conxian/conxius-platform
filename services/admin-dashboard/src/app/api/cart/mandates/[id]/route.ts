@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getCartMandate } from "@/lib/sidl/cart";
 
-export async function GET(_req: Request, ctx: { params: { id: string } }): Promise<NextResponse> {
-  const { id } = ctx.params;
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const { id } = await params;
   const mandate = getCartMandate(id);
 
   if (!mandate) {

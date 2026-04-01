@@ -66,7 +66,7 @@ export async function submitVote(env: ConxianPluginEnv, input: { proposalId: str
 
 export async function checkoutCartX402(env: ConxianPluginEnv, input: { id: string; paymentSignature?: string }): Promise<{
   status: number;
-  paymentRequired?: unknown;
+  paymentRequired?: string;
   body: unknown;
 }> {
   const url = `${env.CONXIAN_SOCIAL_URL.replace(/\/$/, "")}/api/cart/mandates/${encodeURIComponent(input.id)}/checkout`;

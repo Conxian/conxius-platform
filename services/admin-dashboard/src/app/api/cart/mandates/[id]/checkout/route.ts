@@ -6,8 +6,8 @@ function settlementResponse(): string {
   return Buffer.from(JSON.stringify({ ok: true, settledAtIso: new Date().toISOString() }), "utf8").toString("base64");
 }
 
-export async function GET(req: Request, ctx: { params: { id: string } }): Promise<NextResponse> {
-  const { id } = ctx.params;
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const { id } = await params;
   const mandate = getCartMandate(id);
 
   if (!mandate) {

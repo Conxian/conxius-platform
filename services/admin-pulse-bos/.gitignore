@@ -1,0 +1,10 @@
+# Conxian Admin Pulse (BOS)
+node_modules/
+dist/
+build/
+.DS_Store
+*.log
+*.tmp
+.env
+.env.*
+!.env.example

@@ -4,11 +4,9 @@ const DEFAULT_PAY_TO = "0xABCDEF1234567890ABCDEF1234567890ABCDEF12";
 const DEFAULT_USDC = "0xA0b86991C6218b36c1d19D4a2e9Eb0cE3606EB48";
 const DEFAULT_NETWORK = "base-mainnet";
 
-export function getCartMandate(id: string): CartMandate | null {
-  if (id !== "sbtc-yield-frame") return null;
-
-  return {
-    id,
+const CART_MANDATES: Record<string, CartMandate> = {
+  "sbtc-yield-frame": {
+    id: "sbtc-yield-frame",
     title: "SIDL: sBTC yield frame unlock",
     items: [
       {
@@ -19,7 +17,17 @@ export function getCartMandate(id: string): CartMandate | null {
       },
     ],
     totalUsd: "0.10",
-    createdAtIso: new Date().toISOString(),
+    createdAtIso: "2026-04-01T00:00:00.000Z",
+  },
+};
+
+export function getCartMandate(id: string): CartMandate | null {
+  const mandate = CART_MANDATES[id];
+  if (!mandate) return null;
+
+  return {
+    ...mandate,
+    items: mandate.items.map((i) => ({ ...i })),
   };
 }
 

@@ -23,3 +23,14 @@ Since this is part of `conxius-platform` (the internal backend software), it sho
 - [ ] Initialize `package.json`
 - [ ] Define RBAC (Role Based Access Control) integration with `conxian-access.clar`
 - [ ] Implement secure gRPC/REST connection to the Gateway and Nexus
+
+## SIDL social surfaces (CON-64)
+
+This service now hosts a small reference integration for SIDL community interfaces:
+
+- Farcaster Frames
+  - `GET/POST /frames/sbtc`
+  - `GET/POST /frames/vote`
+- Cart Mandates + x402-style checkout
+  - `GET /api/cart/mandates/sbtc-yield-frame`
+  - `GET /api/cart/mandates/sbtc-yield-frame/checkout` (returns `402` with `PAYMENT-REQUIRED` unless `PAYMENT-SIGNATURE` is present)

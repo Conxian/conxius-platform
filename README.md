@@ -18,6 +18,7 @@ make bench          # Run performance benchmarks
 - **services/lib-conxian-core**: Shared Rust/TS libraries and the **Conxian Gateway**.
 - **services/conxian-ui**: The primary Next.js dashboard for users.
 - **services/admin-dashboard**: Internal telemetry and system monitoring.
+- **services/elizaos-plugin-conxian**: ElizaOS plugin for Conxian Gateway + SIDL social interfaces.
 - **ci-runner**: Infrastructure for self-hosted CI/CD runners.
 
 ## 🛠️ Management Commands
@@ -38,6 +39,7 @@ make bench          # Run performance benchmarks
 - **Gateway API**: [http://localhost:8080/api/v1/status](http://localhost:8080/api/v1/status)
 - **Conxian UI**: [http://localhost:3000](http://localhost:3000)
 - **Admin Dashboard**: [http://localhost:3002](http://localhost:3002)
+- **SIDL Frames (Admin Dashboard)**: [http://localhost:3002/frames/sbtc](http://localhost:3002/frames/sbtc)
 - **Prometheus**: [http://localhost:9090](http://localhost:9090)
 - **Grafana**: [http://localhost:3001](http://localhost:3001)
 

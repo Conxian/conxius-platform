@@ -2,6 +2,15 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
+const legacySecretAliases: Record<string, string[]> = {
+  ADMIN_PAT_TOKEN: ["PAT_TOKEN"],
+  ADMIN_NPM_TOKEN: ["NPM_TOKEN"],
+  ADMIN_PYPI_API_TOKEN: ["PYPI_API_TOKEN"],
+  ADMIN_GCP_SA_KEY_JSON: ["GCP_SA_KEY_JSON", "GCP_CREDENTIALS"],
+  ADMIN_CHANGELLY_API_KEY: ["CHANGELLY_API_KEY"],
+  ADMIN_CHANGELLY_API_SECRET: ["CHANGELLY_API_SECRET"],
+};
+
 function escapeEnvValue(rawValue: unknown) {
   const value = rawValue == null ? "" : String(rawValue);
   const escaped = value
@@ -17,12 +26,21 @@ export async function POST(req: Request) {
   try {
     const data = await req.json();
     const { secrets, bosKeys } = data;
+    const secretRecord = secrets as Record<string, unknown>;
 
     // Build .env content
     let envContent = "# Conxian Institutional Secrets\n# Generated via Admin Dashboard\n\n";
     
-    for (const [key, value] of Object.entries(secrets)) {
+    for (const [key, value] of Object.entries(secretRecord)) {
       envContent += `${key}=${escapeEnvValue(value)}\n`;
+
+      const aliases = legacySecretAliases[key];
+      if (!aliases) continue;
+
+      for (const alias of aliases) {
+        if (alias in secretRecord) continue;
+        envContent += `${alias}=${escapeEnvValue(value)}\n`;
+      }
     }
 
     if (bosKeys && bosKeys.length > 0) {

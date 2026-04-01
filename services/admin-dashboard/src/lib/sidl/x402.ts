@@ -18,6 +18,10 @@ function base64DecodeUtf8(b64: string): string {
   return new TextDecoder().decode(bytes);
 }
 
+export function encodeBase64Json(value: unknown): string {
+  return base64EncodeUtf8(JSON.stringify(value));
+}
+
 export function encodePaymentRequiredHeader(payload: X402PaymentRequired): string {
   const json = JSON.stringify(payload);
   return base64EncodeUtf8(json);

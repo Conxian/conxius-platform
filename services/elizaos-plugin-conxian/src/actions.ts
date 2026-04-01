@@ -5,9 +5,9 @@ import {
   getCartMandate,
   getGatewayStatus,
   getSbtcYield,
-  parseConxianEnv,
   submitVote,
 } from "./conxianClient";
+import type { ConxianPluginEnv } from "./conxianClient";
 
 function parameters(options?: unknown): Record<string, JsonValue | undefined> {
   if (!options || typeof options !== "object") return {};
@@ -28,139 +28,136 @@ function toProviderValue(value: unknown): ProviderValue {
   return String(value);
 }
 
-export const conxianActions: Action[] = [
-  {
-    name: "CONXIAN_GATEWAY_STATUS",
-    description: "Fetch Conxian Gateway status (/api/v1/status).",
-    validate: async () => true,
-    handler: async (_runtime, _message, _state, options, callback) => {
-      const env = parseConxianEnv(process.env);
-      const data = await getGatewayStatus(env);
-      const text = JSON.stringify(data, null, 2);
-      if (callback) await callback({ text }, "CONXIAN_GATEWAY_STATUS");
-      return { success: true, text, data: { response: toProviderValue(data) } };
-    },
-    similes: ["GATEWAY_STATUS", "CONXIAN_STATUS"],
-  },
-  {
-    name: "CONXIAN_SBTC_YIELD",
-    description: "Fetch sBTC yield snapshot (via Gateway /api/v1/lorenzo/stats).",
-    validate: async () => true,
-    handler: async (_runtime, _message, _state, _options, callback) => {
-      const env = parseConxianEnv(process.env);
-      const data = await getSbtcYield(env);
-      const text = JSON.stringify(data, null, 2);
-      if (callback) await callback({ text }, "CONXIAN_SBTC_YIELD");
-      return { success: true, text, data: { response: toProviderValue(data) } };
-    },
-    similes: ["SBTC_YIELD", "YIELD_SBTC"],
-  },
-  {
-    name: "CONXIAN_GET_CART_MANDATE",
-    description: "Fetch an x402 Cart Mandate by ID from the SIDL social surface.",
-    validate: async () => true,
-    parameters: [
-      {
-        name: "id",
-        description: "Cart Mandate ID (example: sbtc-yield-frame)",
-        required: true,
-        schema: { type: "string" },
+export function createConxianActions(env: ConxianPluginEnv): Action[] {
+  return [
+    {
+      name: "CONXIAN_GATEWAY_STATUS",
+      description: "Fetch Conxian Gateway status (/api/v1/status).",
+      validate: async () => true,
+      handler: async (_runtime, _message, _state, options, callback) => {
+        const data = await getGatewayStatus(env);
+        const text = JSON.stringify(data, null, 2);
+        if (callback) await callback({ text }, "CONXIAN_GATEWAY_STATUS");
+        return { success: true, text, data: { response: toProviderValue(data) } };
       },
-    ],
-    handler: async (_runtime, _message, _state, options, callback) => {
-      const env = parseConxianEnv(process.env);
-      const p = parameters(options);
-      const id = typeof p.id === "string" ? p.id : "";
-      if (!id) return { success: false, error: "missing-parameter:id" };
-
-      const data = await getCartMandate(env, id);
-      const text = JSON.stringify(data, null, 2);
-      if (callback) await callback({ text }, "CONXIAN_GET_CART_MANDATE");
-      return { success: true, text, data: { response: toProviderValue(data) } };
+      similes: ["GATEWAY_STATUS", "CONXIAN_STATUS"],
     },
-    similes: ["GET_CART_MANDATE"],
-  },
-  {
-    name: "CONXIAN_X402_CHECKOUT_CART",
-    description: "Attempt x402 checkout for a Cart Mandate (returns 402 + PAYMENT-REQUIRED when payment is missing).",
-    validate: async () => true,
-    parameters: [
-      {
-        name: "id",
-        description: "Cart Mandate ID",
-        required: true,
-        schema: { type: "string" },
+    {
+      name: "CONXIAN_SBTC_YIELD",
+      description: "Fetch sBTC yield snapshot (via Gateway /api/v1/lorenzo/stats).",
+      validate: async () => true,
+      handler: async (_runtime, _message, _state, _options, callback) => {
+        const data = await getSbtcYield(env);
+        const text = JSON.stringify(data, null, 2);
+        if (callback) await callback({ text }, "CONXIAN_SBTC_YIELD");
+        return { success: true, text, data: { response: toProviderValue(data) } };
       },
-      {
-        name: "paymentSignature",
-        description: "Optional PAYMENT-SIGNATURE header value (opaque for local testing)",
-        required: false,
-        schema: { type: "string" },
-      },
-    ],
-    handler: async (_runtime, _message, _state, options, callback) => {
-      const env = parseConxianEnv(process.env);
-      const p = parameters(options);
-      const id = typeof p.id === "string" ? p.id : "";
-      const paymentSignature = typeof p.paymentSignature === "string" ? p.paymentSignature : undefined;
-      if (!id) return { success: false, error: "missing-parameter:id" };
-
-      const res = await checkoutCartX402(env, { id, paymentSignature });
-      const text = JSON.stringify(res, null, 2);
-      if (callback) await callback({ text }, "CONXIAN_X402_CHECKOUT_CART");
-      return {
-        success: true,
-        text,
-        data: {
-          status: res.status,
-          paymentRequired: toProviderValue(res.paymentRequired),
-          body: toProviderValue(res.body),
+      similes: ["SBTC_YIELD", "YIELD_SBTC"],
+    },
+    {
+      name: "CONXIAN_GET_CART_MANDATE",
+      description: "Fetch an x402 Cart Mandate by ID from the SIDL social surface.",
+      validate: async () => true,
+      parameters: [
+        {
+          name: "id",
+          description: "Cart Mandate ID (example: sbtc-yield-frame)",
+          required: true,
+          schema: { type: "string" },
         },
-      };
+      ],
+      handler: async (_runtime, _message, _state, options, callback) => {
+        const p = parameters(options);
+        const id = typeof p.id === "string" ? p.id : "";
+        if (!id) return { success: false, error: "missing-parameter:id" };
+
+        const data = await getCartMandate(env, id);
+        const text = JSON.stringify(data, null, 2);
+        if (callback) await callback({ text }, "CONXIAN_GET_CART_MANDATE");
+        return { success: true, text, data: { response: toProviderValue(data) } };
+      },
+      similes: ["GET_CART_MANDATE"],
     },
-    similes: ["X402_CHECKOUT", "CHECKOUT_CART"],
-  },
-  {
-    name: "CONXIAN_SUBMIT_VOTE",
-    description: "Submit a governance vote (reference implementation) to the SIDL social surface.",
-    validate: async () => true,
-    parameters: [
-      {
-        name: "proposalId",
-        description: "Proposal ID",
-        required: true,
-        schema: { type: "string" },
-      },
-      {
-        name: "fid",
-        description: "Farcaster fid (numeric)",
-        required: true,
-        schema: { type: "number" },
-      },
-      {
-        name: "choice",
-        description: "Vote choice (yes|no)",
-        required: true,
-        schema: { type: "string", enum: ["yes", "no"] },
-      },
-    ],
-    handler: async (_runtime, _message, _state, options, callback) => {
-      const env = parseConxianEnv(process.env);
-      const p = parameters(options);
+    {
+      name: "CONXIAN_X402_CHECKOUT_CART",
+      description: "Attempt x402 checkout for a Cart Mandate (returns 402 + PAYMENT-REQUIRED when payment is missing).",
+      validate: async () => true,
+      parameters: [
+        {
+          name: "id",
+          description: "Cart Mandate ID",
+          required: true,
+          schema: { type: "string" },
+        },
+        {
+          name: "paymentSignature",
+          description: "Optional PAYMENT-SIGNATURE header value (opaque for local testing)",
+          required: false,
+          schema: { type: "string" },
+        },
+      ],
+      handler: async (_runtime, _message, _state, options, callback) => {
+        const p = parameters(options);
+        const id = typeof p.id === "string" ? p.id : "";
+        const paymentSignature = typeof p.paymentSignature === "string" ? p.paymentSignature : undefined;
+        if (!id) return { success: false, error: "missing-parameter:id" };
 
-      const proposalId = typeof p.proposalId === "string" ? p.proposalId : "";
-      const fid = typeof p.fid === "number" ? p.fid : NaN;
-      const choice = p.choice === "yes" || p.choice === "no" ? p.choice : null;
-
-      if (!proposalId) return { success: false, error: "missing-parameter:proposalId" };
-      if (!Number.isFinite(fid)) return { success: false, error: "missing-parameter:fid" };
-      if (!choice) return { success: false, error: "missing-parameter:choice" };
-
-      const data = await submitVote(env, { proposalId, fid, choice });
-      const text = JSON.stringify(data, null, 2);
-      if (callback) await callback({ text }, "CONXIAN_SUBMIT_VOTE");
-      return { success: true, text, data: { response: toProviderValue(data) } };
+        const res = await checkoutCartX402(env, { id, paymentSignature });
+        const text = JSON.stringify(res, null, 2);
+        if (callback) await callback({ text }, "CONXIAN_X402_CHECKOUT_CART");
+        return {
+          success: true,
+          text,
+          data: {
+            status: res.status,
+            paymentRequired: toProviderValue(res.paymentRequired),
+            body: toProviderValue(res.body),
+          },
+        };
+      },
+      similes: ["X402_CHECKOUT", "CHECKOUT_CART"],
     },
-    similes: ["SUBMIT_VOTE", "VOTE"],
-  },
-];
+    {
+      name: "CONXIAN_SUBMIT_VOTE",
+      description: "Submit a governance vote (reference implementation) to the SIDL social surface.",
+      validate: async () => true,
+      parameters: [
+        {
+          name: "proposalId",
+          description: "Proposal ID",
+          required: true,
+          schema: { type: "string" },
+        },
+        {
+          name: "fid",
+          description: "Farcaster fid (numeric)",
+          required: true,
+          schema: { type: "number" },
+        },
+        {
+          name: "choice",
+          description: "Vote choice (yes|no)",
+          required: true,
+          schema: { type: "string", enum: ["yes", "no"] },
+        },
+      ],
+      handler: async (_runtime, _message, _state, options, callback) => {
+        const p = parameters(options);
+
+        const proposalId = typeof p.proposalId === "string" ? p.proposalId : "";
+        const fid = typeof p.fid === "number" ? p.fid : NaN;
+        const choice = p.choice === "yes" || p.choice === "no" ? p.choice : null;
+
+        if (!proposalId) return { success: false, error: "missing-parameter:proposalId" };
+        if (!Number.isFinite(fid)) return { success: false, error: "missing-parameter:fid" };
+        if (!choice) return { success: false, error: "missing-parameter:choice" };
+
+        const data = await submitVote(env, { proposalId, fid, choice });
+        const text = JSON.stringify(data, null, 2);
+        if (callback) await callback({ text }, "CONXIAN_SUBMIT_VOTE");
+        return { success: true, text, data: { response: toProviderValue(data) } };
+      },
+      similes: ["SUBMIT_VOTE", "VOTE"],
+    },
+  ];
+}

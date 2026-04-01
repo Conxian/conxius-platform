@@ -1,12 +1,14 @@
 import type { Plugin } from "@elizaos/core";
 import { logger } from "@elizaos/core";
 import { z } from "zod";
-import { conxianActions } from "./actions";
+import { createConxianActions } from "./actions";
 import { parseConxianEnv } from "./conxianClient";
 
+const nullableUrl = z.preprocess((v) => (v === null ? undefined : v), z.string().url().optional());
+
 const configSchema = z.object({
-  CONXIAN_GATEWAY_URL: z.string().url().optional(),
-  CONXIAN_SOCIAL_URL: z.string().url().optional(),
+  CONXIAN_GATEWAY_URL: nullableUrl,
+  CONXIAN_SOCIAL_URL: nullableUrl,
 });
 
 const conxianPlugin: Plugin = {
@@ -21,10 +23,7 @@ const conxianPlugin: Plugin = {
     const validated = await configSchema.parseAsync(config);
     const env = parseConxianEnv(validated);
 
-    process.env.CONXIAN_GATEWAY_URL = env.CONXIAN_GATEWAY_URL;
-    process.env.CONXIAN_SOCIAL_URL = env.CONXIAN_SOCIAL_URL;
-
-    conxianActions.forEach((a) => runtime.registerAction(a));
+    createConxianActions(env).forEach((a) => runtime.registerAction(a));
     logger.info("plugin-conxian initialized");
   },
 

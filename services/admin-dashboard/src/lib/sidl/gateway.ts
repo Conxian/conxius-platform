@@ -1,7 +1,8 @@
+import "server-only";
 import type { YieldSnapshot } from "./types";
 
 function gatewayBaseUrl(): string {
-  return (process.env.NEXT_PUBLIC_CORE_API_URL || "http://localhost:8080").replace(/\/$/, "");
+  return (process.env.CORE_API_URL || process.env.NEXT_PUBLIC_CORE_API_URL || "http://localhost:8080").replace(/\/$/, "");
 }
 
 export async function getSbtcYieldSnapshot(): Promise<YieldSnapshot> {

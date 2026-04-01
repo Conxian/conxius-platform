@@ -17,12 +17,12 @@ export function parseConxianEnv(config: Record<string, string | undefined>): Con
 }
 
 async function fetchJson(url: string, init?: RequestInit): Promise<unknown> {
+  const headers = new Headers(init?.headers);
+  if (!headers.has("Accept")) headers.set("Accept", "application/json");
+
   const r = await fetch(url, {
     ...init,
-    headers: {
-      Accept: "application/json",
-      ...(init?.headers ?? {}),
-    },
+    headers,
   });
 
   const body = await r.text();

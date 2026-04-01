@@ -48,7 +48,7 @@ To maintain the security of this platform:
     ```bash
     cp .env.admin.example .env.admin
     # Edit .env.admin with actual values (DO NOT COMMIT)
-    chmod 600 .env.admin
+    chmod 600 .env.admin  # macOS/Linux only; on Windows, restrict access via file properties or icacls
     ```
 4.  Run the development server:
     ```bash

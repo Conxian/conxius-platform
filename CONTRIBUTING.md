@@ -1,0 +1,31 @@
+# Contributing to Conxian
+
+Welcome! We appreciate your interest in contributing to the Conxian monorepo.
+
+## Monorepo Overview
+
+This repository is organized as a monorepo containing multiple services:
+
+- `services/conxian-ui`: The primary web application (Next.js).
+- `services/lib-conxian-core`: Core business logic and the Gateway Engine (Rust).
+- `services/admin-dashboard`: Administrative monitoring and management tool (Next.js).
+
+## Development Guidelines
+
+- **OpenSpec First**: Before making significant architectural changes, propose them in the `openspec/` directory.
+- **Earthy Corporate Finance Theme**: Adhere to the defined color palette (Forest Green #2E403B, Gold #D4A017) and institutional design patterns.
+- **Type Safety**: No `any` types. Use explicit TypeScript interfaces for all frontend data.
+- **Testing**: Run relevant tests before submitting a PR.
+- **Security**: Never commit real secrets or credentials. Use `.env.example` for configuration templates.
+
+## Pull Request Process
+
+1. Create a descriptive branch for your changes.
+2. Ensure all tests pass.
+3. Update relevant documentation (README, specifications, etc.).
+4. Submit your PR for review.
+5. Once approved, changes will be merged into the main branch.
+
+## Contact
+
+For any questions or feedback, please reach out via GitHub Issues or contact the team at dev@conxian.com.

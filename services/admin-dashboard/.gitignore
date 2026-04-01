@@ -1,5 +1,5 @@
 node_modules
-.next
+.next/
 out
 build
 .env
@@ -10,4 +10,4 @@ build
 .env.admin
 .DS_Store
 *.log
-*.tsbuildinfo
+next-env.d.ts

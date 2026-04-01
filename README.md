@@ -1,6 +1,6 @@
 # Conxian Platform: Master Orchestrator
 
-The `conxius-platform` repository is the central point of orchestration for the Conxian ecosystem. It manages submodules, environment secrets, and Docker-based local development.
+The `conxius-platform` repository is the central point of orchestration for the Conxian ecosystem. It manages services, environment secrets, and Docker-based local development.
 
 ## 🚀 Quick Start
 
@@ -18,45 +18,22 @@ make bench          # Run performance benchmarks
 - **services/lib-conxian-core**: Shared Rust/TS libraries and the **Conxian Gateway**.
 - **services/conxian-ui**: The primary Next.js dashboard for users.
 - **services/admin-dashboard**: Internal telemetry and system monitoring.
-- **services/elizaos-plugin-conxian**: ElizaOS plugin for Conxian Gateway + SIDL social interfaces.
-- **ci-runner**: Infrastructure for self-hosted CI/CD runners.
+- **services/admin-pulse-bos**: Administrative components for fiscal orchestration (SFO).
+- **openspec/**: Specifications for all system changes and Phase 5/6 alignment.
 
-## 🛠️ Management Commands
+## ⚖️ Governance
 
-| Command | Description |
-| :--- | :--- |
-| `make init` | Clones and updates all submodules recursively. |
-| `make auth` | Generates a `.env` file from `.env.schema` with secure keys. |
-| `make start` | Starts Gateway, UI, Admin, DB, Redis, and Prometheus. |
-| `make stop` | Stops and removes all containers. |
-| `make update-all` | Pulls the latest `main` branches for all submodules. |
-| `make logs` | Tails logs for the entire stack. |
-| `make bench` | Runs the `scripts/run-benchmarks.sh` suite. |
-| `make deploy` | Triggers the deployment workflow (StacksOrbit/GCP/Render). |
+- [LICENSE](LICENSE) (MIT)
+- [SECURITY.md](SECURITY.md) - Vulnerability reporting process
+- [CONTRIBUTING.md](CONTRIBUTING.md) - Monorepo development guidelines
+- [CODEOWNERS](CODEOWNERS) - Service-level ownership
 
-## 📊 Monitoring & Observability
+## 🛠️ Operating Model
 
-- **Gateway API**: [http://localhost:8080/api/v1/status](http://localhost:8080/api/v1/status)
-- **Conxian UI**: [http://localhost:3000](http://localhost:3000)
-- **Admin Dashboard**: [http://localhost:3002](http://localhost:3002)
-- **SIDL Frames (Admin Dashboard)**: [http://localhost:3002/frames/sbtc](http://localhost:3002/frames/sbtc)
-- **Prometheus**: [http://localhost:9090](http://localhost:9090)
-- **Grafana**: [http://localhost:3001](http://localhost:3001)
+This repository follows the **OpenSpec First** directive. All architectural changes must be proposed and reviewed within the `openspec/` directory before implementation.
 
-## 📖 Key Documentation
+## 🎨 Design Language
 
-- [SYSTEM_GRAPH.md](SYSTEM_GRAPH.md): Holistic architectural view.
-- [SYNERGY.md](SYNERGY.md): Cross-repo workflow details.
-- [ALIGNMENT.md](ALIGNMENT.md): Authority, design, and business logic standards.
-- [BENCHMARKS.md](BENCHMARKS.md): Current performance metrics and targets.
-- [DEPLOYMENT.md](DEPLOYMENT.md): Production deployment guide.
-- [GAPS.md](GAPS.md): Analysis of technical debt and upcoming features.
-
-## 🛡️ Security (Sentinel & Fusion)
-
-Conxian adheres to strict security patterns:
-- **Sentinel**: Automated filtering and management of secrets in CI/CD.
-- **Fusion**: Unified JWT and Enclave-based authentication across all layers.
-
----
-© 2026 Conxian Labs. Sovereign Autonomous Business.
+Conxian uses the **Earthy Corporate Finance** theme:
+- Primary: **Forest Green** (#2E403B)
+- Secondary: **Gold** (#D4A017)

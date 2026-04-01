@@ -2,6 +2,17 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
+function escapeEnvValue(rawValue: unknown) {
+  const value = rawValue == null ? "" : String(rawValue);
+  const escaped = value
+    .replace(/\\/g, "\\\\")
+    .replace(/\n/g, "\\n")
+    .replace(/\r/g, "\\r")
+    .replace(/"/g, "\\\"");
+
+  return `"${escaped}"`;
+}
+
 export async function POST(req: Request) {
   try {
     const data = await req.json();
@@ -11,7 +22,7 @@ export async function POST(req: Request) {
     let envContent = "# Conxian Institutional Secrets\n# Generated via Admin Dashboard\n\n";
     
     for (const [key, value] of Object.entries(secrets)) {
-      envContent += `${key}=${value}\n`;
+      envContent += `${key}=${escapeEnvValue(value)}\n`;
     }
 
     if (bosKeys && bosKeys.length > 0) {
@@ -19,8 +30,8 @@ export async function POST(req: Request) {
       bosKeys.forEach((key: any, i: number) => {
         const prefix = i < 2 ? "INTERNAL" : "DEPLOY";
         const index = i < 2 ? i + 1 : i - 1;
-        envContent += `BOS_${prefix}_KEY_${index}=${key.privateKey}\n`;
-        envContent += `BOS_${prefix}_ADDR_${index}=${key.testnetAddress}\n`;
+        envContent += `BOS_${prefix}_KEY_${index}=${escapeEnvValue(key.privateKey)}\n`;
+        envContent += `BOS_${prefix}_ADDR_${index}=${escapeEnvValue(key.testnetAddress)}\n`;
       });
     }
 

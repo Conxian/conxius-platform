@@ -57,6 +57,7 @@ jobs:
           blob-report
           coverage
         if-no-files-found: ignore
+        retention-days: 14
 
     - name: Tear Down Stack
       if: always()

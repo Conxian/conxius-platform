@@ -11,12 +11,14 @@ const legacySecretAliases: Record<string, string[]> = {
   ADMIN_CHANGELLY_API_SECRET: ["CHANGELLY_API_SECRET"],
 };
 
+const adminSecretKeys = new Set(Object.keys(legacySecretAliases));
+
 function escapeEnvValue(rawValue: unknown) {
   const value = rawValue == null ? "" : String(rawValue);
-  const escaped = value
+  const normalized = value.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const escaped = normalized
     .replace(/\\/g, "\\\\")
     .replace(/\n/g, "\\n")
-    .replace(/\r/g, "\\r")
     .replace(/"/g, "\\\"");
 
   return `"${escaped}"`;
@@ -32,6 +34,8 @@ export async function POST(req: Request) {
     let envContent = "# Conxian Institutional Secrets\n# Generated via Admin Dashboard\n\n";
     
     for (const [key, value] of Object.entries(secretRecord)) {
+      if (!adminSecretKeys.has(key)) continue;
+
       envContent += `${key}=${escapeEnvValue(value)}\n`;
 
       const aliases = legacySecretAliases[key];

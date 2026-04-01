@@ -2,6 +2,13 @@
 
 This service is the internal backend/frontend orchestration layer for the Conxian platform. It provides real-time telemetry from the Unified Gateway Engine and allows for management of institutional secrets.
 
+## ⚠️ SECURITY WARNING
+
+**This dashboard is for internal, local, or high-privilege administrative use only.**
+- **Secret Exposure**: The `/settings` page allows viewing and modifying institutional secrets.
+- **Access Control**: Currently intended for internal use. Ensure proper network-level and authentication-level security is in place before exposing this service.
+- **Environment**: Use `.env.admin` for local development ONLY. Never commit secret files to Git.
+
 ## Features
 
 - **Infrastructure Pulse**: Real-time monitoring of Gateway health, Engine version, and request throughput.
@@ -49,8 +56,8 @@ This service is the internal backend/frontend orchestration layer for the Conxia
 
 Access to this dashboard is currently intended for internal use. Future iterations will include Role-Based Access Control (RBAC) integrated with `conxian-access.clar`.
 
-### Secret Handling Expectations
+### Governance & Standards
 
-- `.env.admin` is **local development only** and must never be committed.
-- In production, secrets should be provided via environment injection or an approved secret manager (not via filesystem `.env.*` files).
-- `/api/secrets` routes must be protected (authn/authz) and should be auditable.
+- Follows [SECURITY.md](../../SECURITY.md) for reporting.
+- Adheres to [CONTRIBUTING.md](../../CONTRIBUTING.md) monorepo guidelines.
+- Complies with [CODEOWNERS](../../CODEOWNERS) service ownership.

@@ -67,6 +67,9 @@ export default function AdminPage() {
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+      <div style={{ backgroundColor: "#fffbeb", border: "1px solid #fef3c7", padding: "0.75rem 1rem", borderRadius: "8px", marginBottom: "1.5rem", color: "#92400e", fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        <span style={{ fontWeight: "bold" }}>⚠️ INTERNAL USE ONLY:</span> This dashboard provides high-privilege access to platform infrastructure and telemetry.
+      </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2rem' }}>
         <div>
           <h2 style={{ margin: 0, color: '#2E403B' }}>Infrastructure Pulse</h2>

@@ -41,7 +41,7 @@ function escapeEnvValue(rawValue: unknown) {
     /[\s#]/.test(singleLine)
   ) {
     throw new BadRequestError(
-      "Secret value contains characters that require quoting, but cannot be safely single-quoted"
+      "Secret value contains an apostrophe together with whitespace or #, which cannot be safely stored in .env; remove the apostrophe or encode the value"
     );
   }
 
@@ -194,7 +194,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: err.message }, { status: 400 });
     }
 
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    console.error("Failed to write admin secrets", err);
+    return NextResponse.json(
+      { success: false, error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

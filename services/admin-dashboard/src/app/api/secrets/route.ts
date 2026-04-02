@@ -100,7 +100,7 @@ export async function POST(req: Request) {
         return NextResponse.json(
           {
             success: false,
-            error: `Invalid payload: secrets.${key} must be a string when present`,
+            error: `Invalid payload: secrets.${key} must be a string`,
           },
           { status: 400 }
         );

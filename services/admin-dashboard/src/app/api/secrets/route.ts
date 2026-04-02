@@ -12,15 +12,18 @@ const legacySecretAliases: Record<string, string[]> = {
 };
 
 const adminSecretKeys = new Set(Object.keys(legacySecretAliases));
+const adminSecretKeyPattern = /^[A-Z][A-Z0-9_]*$/;
 
 function escapeEnvValue(rawValue: unknown) {
   const value = rawValue == null ? "" : String(rawValue);
   const normalized = value.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-  const escaped = normalized
-    .replace(/\\/g, "\\\\")
-    .replace(/\n/g, "\\n")
-    .replace(/"/g, "\\\"");
+  const singleLine = normalized.replace(/\n/g, "\\n");
 
+  if (!singleLine.includes("'")) {
+    return `'${singleLine}'`;
+  }
+
+  const escaped = singleLine.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
   return `"${escaped}"`;
 }
 
@@ -34,7 +37,12 @@ export async function POST(req: Request) {
     let envContent = "# Conxian Institutional Secrets\n# Generated via Admin Dashboard\n\n";
     
     for (const [key, value] of Object.entries(secretRecord)) {
-      if (!adminSecretKeys.has(key)) continue;
+      if (!adminSecretKeys.has(key) || !adminSecretKeyPattern.test(key)) {
+        return NextResponse.json(
+          { success: false, error: `Invalid secret key: ${key}` },
+          { status: 400 }
+        );
+      }
 
       envContent += `${key}=${escapeEnvValue(value)}\n`;
 
@@ -60,7 +68,13 @@ export async function POST(req: Request) {
     // Save to .env.admin in the workspace root or local service root
     // For now, save to the service root
     const filePath = path.join(process.cwd(), ".env.admin");
-    fs.writeFileSync(filePath, envContent);
+    fs.writeFileSync(filePath, envContent, { mode: 0o600 });
+
+    try {
+      fs.chmodSync(filePath, 0o600);
+    } catch {
+      // Best-effort; some environments (e.g. Windows) may not support chmod.
+    }
 
     return NextResponse.json({ success: true, path: filePath });
   } catch (err: any) {

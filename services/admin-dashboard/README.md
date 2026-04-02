@@ -16,7 +16,7 @@ This service is the internal backend/frontend orchestration layer for the Conxia
 To maintain the security of this platform:
 1. **Local Only**: By default, run the dashboard on `localhost`.
 2. **Template Usage**: Use `.env.admin.example` as a base for your local configuration.
-3. **File Permissions**: Lock down local secret files (e.g., `chmod 600 .env.admin`).
+3. **File Permissions**: For local persistence, restrict `.env.admin` to the current user (e.g., `chmod 600 .env.admin`).
 4. **Audit Logs**: Future versions will include automated logging of all secret modifications to the Nexus Glass Node for auditability.
 5. **Secret Storage**: The dashboard currently saves secrets to `.env.admin` for local persistence. In production environments, it is recommended to use a secure vault (e.g., Vault, AWS Secrets Manager, GCP Secret Manager).
 
@@ -48,8 +48,8 @@ To maintain the security of this platform:
 3.  Configure secrets:
     ```bash
     cp .env.admin.example .env.admin
-    # Edit .env.admin with actual values (DO NOT COMMIT)
     chmod 600 .env.admin  # macOS/Linux only; on Windows, restrict access via file properties or icacls
+    # Edit .env.admin with actual values (DO NOT COMMIT)
     ```
 4.  Run the development server:
     ```bash

@@ -46,6 +46,19 @@ jobs:
     - name: Run Benchmark Script
       run: bash scripts/run-benchmarks.sh
 
+    - name: Upload test artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-artifacts
+        path: |
+          test-results
+          playwright-report
+          blob-report
+          coverage
+        if-no-files-found: ignore
+        retention-days: 14
+
     - name: Tear Down Stack
       if: always()
       run: docker compose down -v

@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
+const adminGcpSaKeyJsonKey = "ADMIN_GCP_SA_KEY_JSON" as const;
+
 const legacySecretAliases: Record<string, string[]> = {
   ADMIN_PAT_TOKEN: ["PAT_TOKEN"],
   ADMIN_NPM_TOKEN: ["NPM_TOKEN"],
   ADMIN_PYPI_API_TOKEN: ["PYPI_API_TOKEN"],
-  ADMIN_GCP_SA_KEY_JSON: ["GCP_SA_KEY_JSON", "GCP_CREDENTIALS"],
+  [adminGcpSaKeyJsonKey]: ["GCP_SA_KEY_JSON", "GCP_CREDENTIALS"],
   ADMIN_CHANGELLY_API_KEY: ["CHANGELLY_API_KEY"],
   ADMIN_CHANGELLY_API_SECRET: ["CHANGELLY_API_SECRET"],
 };
@@ -99,14 +101,14 @@ export async function POST(req: Request) {
         return NextResponse.json(
           {
             success: false,
-            error: `Invalid payload: secrets.${key} must be a string`,
+            error: `Invalid payload: secrets.${key} must be a string when present`,
           },
           { status: 400 }
         );
       }
 
       let normalizedValue = stringValue;
-      if (key === "ADMIN_GCP_SA_KEY_JSON") {
+      if (key === adminGcpSaKeyJsonKey) {
         const rawJson = stringValue.trim();
         if (rawJson.length === 0) {
           normalizedValue = "";

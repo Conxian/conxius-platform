@@ -13,6 +13,8 @@ const legacySecretAliases: Record<string, string[]> = {
 
 const adminSecretKeys = new Set(Object.keys(legacySecretAliases));
 const adminSecretKeyPattern = /^[A-Z][A-Z0-9_]*$/;
+const shouldWriteLegacySecretAliases =
+  process.env.ADMIN_WRITE_LEGACY_SECRET_ALIASES === "true";
 
 class BadRequestError extends Error {
   constructor(message: string) {
@@ -26,10 +28,16 @@ function escapeEnvValue(rawValue: unknown) {
   const normalized = value.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
   const singleLine = normalized.replace(/\n/g, "\\n");
 
-  if (!normalized.includes("'")) {
+  if (!singleLine.includes("'")) {
     return `'${singleLine}'`;
   }
-  if (/[\s#]/.test(singleLine)) {
+
+  if (
+    singleLine.length === 0 ||
+    singleLine.startsWith("\"") ||
+    singleLine.startsWith("'") ||
+    /[\s#]/.test(singleLine)
+  ) {
     throw new BadRequestError(
       "Secret value contains characters that require quoting, but cannot be safely single-quoted"
     );
@@ -58,7 +66,6 @@ export async function POST(req: Request) {
     }
 
     const { secrets, bosKeys } = data as { secrets?: unknown; bosKeys?: unknown };
-
     if (typeof secrets !== "object" || secrets == null || Array.isArray(secrets)) {
       return NextResponse.json(
         { success: false, error: "Invalid payload: secrets must be an object" },
@@ -74,8 +81,6 @@ export async function POST(req: Request) {
     }
 
     const secretRecord = secrets as Record<string, unknown>;
-    const shouldWriteLegacyAliases =
-      process.env.ADMIN_WRITE_LEGACY_SECRET_ALIASES === "true";
     let legacyAliasContent = "";
 
     // Build .env content
@@ -89,16 +94,17 @@ export async function POST(req: Request) {
         );
       }
 
-      envContent += `${key}=${escapeEnvValue(value)}\n`;
+      const escapedValue = escapeEnvValue(value);
+      envContent += `${key}=${escapedValue}\n`;
 
-      if (shouldWriteLegacyAliases) {
-        const aliases = legacySecretAliases[key];
-        if (!aliases) continue;
+      if (!shouldWriteLegacySecretAliases) continue;
 
-        for (const alias of aliases) {
-          if (alias in secretRecord) continue;
-          legacyAliasContent += `${alias}=${escapeEnvValue(value)}\n`;
-        }
+      const aliases = legacySecretAliases[key];
+      if (!aliases) continue;
+
+      for (const alias of aliases) {
+        if (alias in secretRecord) continue;
+        legacyAliasContent += `${alias}=${escapedValue}\n`;
       }
     }
 
@@ -114,22 +120,18 @@ export async function POST(req: Request) {
           return NextResponse.json(
             {
               success: false,
-              error: "Invalid payload: each bosKeys entry must be an object",
+              error: `Invalid payload: bosKeys[${i}] must be an object`,
             },
             { status: 400 }
           );
         }
 
-        const entryRecord = entry as Record<string, unknown>;
-        if (
-          !("privateKey" in entryRecord) ||
-          !("testnetAddress" in entryRecord)
-        ) {
+        const { privateKey, testnetAddress } = entry as Record<string, unknown>;
+        if (typeof privateKey !== "string" || typeof testnetAddress !== "string") {
           return NextResponse.json(
             {
               success: false,
-              error:
-                "Invalid payload: each bosKeys entry must include privateKey and testnetAddress",
+              error: `Invalid payload: bosKeys[${i}] must include privateKey and testnetAddress strings`,
             },
             { status: 400 }
           );
@@ -137,8 +139,8 @@ export async function POST(req: Request) {
 
         const prefix = i < 2 ? "INTERNAL" : "DEPLOY";
         const index = i < 2 ? i + 1 : i - 1;
-        envContent += `BOS_${prefix}_KEY_${index}=${escapeEnvValue(entryRecord.privateKey)}\n`;
-        envContent += `BOS_${prefix}_ADDR_${index}=${escapeEnvValue(entryRecord.testnetAddress)}\n`;
+        envContent += `BOS_${prefix}_KEY_${index}=${escapeEnvValue(privateKey)}\n`;
+        envContent += `BOS_${prefix}_ADDR_${index}=${escapeEnvValue(testnetAddress)}\n`;
       }
     }
 

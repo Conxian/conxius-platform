@@ -43,6 +43,12 @@ function escapeEnvValue(rawValue: unknown) {
     );
   }
 
+  if (singleLine.startsWith("'") && singleLine.endsWith("'")) {
+    throw new BadRequestError(
+      "Secret value cannot start and end with a single quote when saved to .env.admin"
+    );
+  }
+
   return singleLine;
 }
 

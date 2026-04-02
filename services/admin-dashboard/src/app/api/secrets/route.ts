@@ -26,10 +26,9 @@ function escapeEnvValue(rawValue: unknown) {
   const normalized = value.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
   const singleLine = normalized.replace(/\n/g, "\\n");
 
-  if (!singleLine.includes("'")) {
+  if (!normalized.includes("'")) {
     return `'${singleLine}'`;
   }
-
   if (/[\s#]/.test(singleLine)) {
     throw new BadRequestError(
       "Secret value contains characters that require quoting, but cannot be safely single-quoted"

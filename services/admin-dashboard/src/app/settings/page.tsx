@@ -65,6 +65,10 @@ export default function SettingsPage() {
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto' }}>
       <h2 style={{ color: '#2E403B', marginBottom: '1.5rem' }}>Platform Admin Settings</h2>
+      <div style={{ backgroundColor: "#fef2f2", border: "1px solid #fee2e2", padding: "1rem", borderRadius: "8px", marginBottom: "2rem", color: "#b91c1c", fontSize: "0.9rem" }}>
+        <p style={{ margin: 0, fontWeight: "bold" }}>🚨 HIGH PRIVILEGE AREA</p>
+        <p style={{ margin: "0.25rem 0 0 0" }}>Managing these secrets affects automated deployments and exchange integrations. Ensure you are authorized to make these changes.</p>
+      </div>
       
       <section style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', marginBottom: '2rem' }}>
         <h3 style={{ marginTop: 0, color: '#D4A017', fontSize: '1.2rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem' }}>Institutional Secrets</h3>

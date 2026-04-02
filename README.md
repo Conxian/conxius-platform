@@ -2,6 +2,25 @@
 
 The `conxius-platform` repository is the central point of orchestration for the Conxian ecosystem. It manages services, environment secrets, and Docker-based local development.
 
+## Purpose
+
+Make it easy to run, compose, and deploy the Conxian stack (Gateway, UI, and operational services) with consistent local and CI environments.
+
+## Status
+
+Active. The orchestration layer evolves as flagship services mature and new integrations are added.
+
+## Audience
+
+- Platform engineers running the full stack locally or in hosted environments.
+- Contributors who need a single entry point for wiring and dependency management.
+- Operators validating observability, secrets, and deployment workflows.
+
+## Relationship to the Conxian stack
+
+- Pins and coordinates the core services (Gateway, UI, Admin) as a runnable system.
+- Integrates deployment workflows (for example StacksOrbit for contract deployment) and shared libraries like `lib-conxian-core`.
+
 ## 🚀 Quick Start
 
 Ensure you have Docker and Git installed.
@@ -18,6 +37,7 @@ make bench          # Run performance benchmarks
 - **services/lib-conxian-core**: Shared Rust/TS libraries and the **Conxian Gateway**.
 - **services/conxian-ui**: The primary Next.js dashboard for users.
 - **services/admin-dashboard**: Internal telemetry and system monitoring.
+- **services/admin-pulse-bos**: Administrative components for fiscal orchestration (SFO).
 - **openspec/**: Specifications for all system changes and Phase 5/6 alignment.
 
 ## ⚖️ Governance

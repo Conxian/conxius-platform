@@ -5,6 +5,7 @@
 .envrc
 !.env.example
 !.env.schema
+!.env.admin.example
 *.log
 *.tmp
 *.bak

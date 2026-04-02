@@ -19,13 +19,14 @@ This service is intended to be integrated into the Conxian administrative portal
 # Navigate to the service directory
 cd services/admin-pulse-bos
 
-# Install dependencies (managed via root pnpm)
+# Install dependencies
 pnpm install
 
 # Run component-specific tests or linting (if configured)
 pnpm lint
 ```
 
-## 🎨 Theme
+## 🎨 Theme & Governance
 
-Aligned with the **Earthy Corporate Finance** design language, utilizing a high-contrast dark mode aesthetic with Forest Green and Gold accents.
+- **Earthy Corporate Finance**: Aligned design language utilizing a high-contrast dark mode aesthetic with Forest Green (#2E403B) and Gold (#D4A017) accents.
+- **Governance**: Follows global [SECURITY.md](../../SECURITY.md) and [CONTRIBUTING.md](../../CONTRIBUTING.md) guidelines.

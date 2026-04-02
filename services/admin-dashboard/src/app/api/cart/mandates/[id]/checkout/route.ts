@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { getCartMandate, toX402PaymentRequired } from "@/lib/sidl/cart";
-import { encodePaymentRequiredHeader } from "@/lib/sidl/x402";
+import { encodeBase64Json, encodePaymentRequiredHeader } from "@/lib/sidl/x402";
 
 function settlementResponse(): string {
-  return Buffer.from(JSON.stringify({ ok: true, settledAtIso: new Date().toISOString() }), "utf8").toString("base64");
+  return encodeBase64Json({ ok: true, settledAtIso: new Date().toISOString() });
 }
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<NextResponse> {

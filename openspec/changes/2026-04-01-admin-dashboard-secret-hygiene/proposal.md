@@ -10,6 +10,7 @@ Separately, representing GCP service-account credentials as raw multi-line JSON 
 - Avoid listing admin-only tokens in the repo root `.env.schema`; keep that schema focused on platform-wide runtime configuration.
 - Standardize admin-only secret keys with an `ADMIN_` prefix (including `ADMIN_GCP_SA_KEY_JSON`) to reduce ambiguity.
 - When the Admin Dashboard persists `.env.admin`, write values in a dotenv-friendly format (quoted + escaped).
+- For `ADMIN_GCP_SA_KEY_JSON`, canonicalize input by parsing and re-stringifying JSON before writing (keeps pretty-printed JSON safe and consistent).
 
 ## Non-goals
 - Introducing a managed secret store (Vault / cloud secret managers).

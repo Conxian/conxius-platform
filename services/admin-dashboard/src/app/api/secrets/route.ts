@@ -94,7 +94,37 @@ export async function POST(req: Request) {
         );
       }
 
-      const escapedValue = escapeEnvValue(value);
+      if (value != null && typeof value !== "string") {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Invalid payload: secrets.${key} must be a string`,
+          },
+          { status: 400 }
+        );
+      }
+
+      let normalizedValue = value;
+      if (key === "ADMIN_GCP_SA_KEY_JSON") {
+        const rawJson = typeof value === "string" ? value.trim() : "";
+        if (rawJson.length === 0) {
+          normalizedValue = "";
+        } else {
+          try {
+            normalizedValue = JSON.stringify(JSON.parse(rawJson));
+          } catch {
+            return NextResponse.json(
+              {
+                success: false,
+                error: "Invalid payload: ADMIN_GCP_SA_KEY_JSON must be valid JSON",
+              },
+              { status: 400 }
+            );
+          }
+        }
+      }
+
+      const escapedValue = escapeEnvValue(normalizedValue);
       envContent += `${key}=${escapedValue}\n`;
 
       if (!shouldWriteLegacySecretAliases) continue;

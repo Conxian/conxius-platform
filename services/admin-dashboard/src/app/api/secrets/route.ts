@@ -96,8 +96,7 @@ export async function POST(req: Request) {
         );
       }
 
-      const stringValue = value == null ? "" : value;
-      if (typeof stringValue !== "string") {
+      if (typeof value !== "string") {
         return NextResponse.json(
           {
             success: false,
@@ -107,6 +106,7 @@ export async function POST(req: Request) {
         );
       }
 
+      const stringValue = value;
       let normalizedValue = stringValue;
       if (key === adminGcpSaKeyJsonKey) {
         const rawJson = stringValue.trim();

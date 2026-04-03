@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Established **Earthy Corporate Finance** theme (Forest Green/Gold) across all UI platforms.
 - Introduced **Admin Dashboard** for institutional system monitoring.
 - Created `admin-pulse-bos` service for Fiscal Orchestration (SFO).
+- Integrated **ElizaOS Plugin** for Conxian Gateway and social interface orchestration.
 
 ### Fixed
 - Resolved Phase 5 implementation drift for Fiat routing and A2P OTP messaging.

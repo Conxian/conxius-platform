@@ -1,6 +1,3 @@
-[submodule "services/lib-conxian-core"]
-	path = services/lib-conxian-core
-	url = https://github.com/Conxian/lib-conxian-core.git
 [submodule "services/conxian-ui"]
 	path = services/conxian-ui
 	url = https://github.com/Conxian/Conxian_UI.git

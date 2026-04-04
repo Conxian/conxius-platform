@@ -6,6 +6,7 @@
 # Services
 /services/conxian-ui/ @conxian/ui-devs
 /services/lib-conxian-core/ @conxian/core-devs
+/services/elizaos-plugin-conxian/ @conxian/core-devs
 /services/admin-dashboard/ @conxian/admin-devs
 /services/admin-pulse-bos/ @conxian/admin-devs
 

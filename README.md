@@ -38,6 +38,7 @@ make bench          # Run performance benchmarks
 - **services/conxian-ui**: The primary Next.js dashboard for users.
 - **services/admin-dashboard**: Internal telemetry and system monitoring.
 - **services/admin-pulse-bos**: Administrative components for fiscal orchestration (SFO).
+- **services/elizaos-plugin-conxian**: ElizaOS plugin for Conxian Gateway and social interfaces.
 - **openspec/**: Specifications for all system changes and Phase 5/6 alignment.
 
 ## ⚖️ Governance

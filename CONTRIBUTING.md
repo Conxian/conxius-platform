@@ -22,13 +22,13 @@ This repository is organized as a monorepo containing multiple services:
 
 ## Node/TypeScript services
 
-The Node/TypeScript services in `services/` are managed as a `pnpm` workspace with a single root `pnpm-lock.yaml`.
+The Node/TypeScript services listed in `pnpm-workspace.yaml` are managed as a `pnpm` workspace with a single root `pnpm-lock.yaml`.
 
 ```bash
 pnpm install
 
-pnpm --filter admin-dashboard test
-pnpm --filter @conxian/elizaos-plugin-conxian test
+pnpm --filter ./services/admin-dashboard test
+pnpm --filter ./services/elizaos-plugin-conxian test
 ```
 
 ## Pull Request Process

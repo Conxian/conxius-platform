@@ -43,7 +43,7 @@ function escapeEnvValue(rawValue: unknown) {
     /[\s#$]/.test(singleLine)
   ) {
     throw new BadRequestError(
-      "Secret value contains an apostrophe together with whitespace, #, or $, which cannot be safely stored in .env without risking parsing or variable expansion; remove the apostrophe or encode the value"
+      "Secret value contains an apostrophe in a form that cannot be safely stored in .env (for example, combined with whitespace, #, $, or leading quotes); remove the apostrophe or encode the value"
     );
   }
 
@@ -191,7 +191,7 @@ export async function POST(req: Request) {
     }
 
     const fileName = path.basename(filePath);
-    return NextResponse.json({ success: true, file: fileName, path: fileName });
+    return NextResponse.json({ success: true, file: fileName });
   } catch (err: unknown) {
     if (err instanceof BadRequestError) {
       return NextResponse.json({ success: false, error: err.message }, { status: 400 });

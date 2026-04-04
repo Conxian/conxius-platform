@@ -1,3 +1,4 @@
 packages:
   - "services/admin-dashboard"
+  - "services/conxian-ui"
   - "services/elizaos-plugin-conxian"

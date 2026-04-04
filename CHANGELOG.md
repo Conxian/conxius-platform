@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Adopted a root `pnpm` workspace and `pnpm-lock.yaml` for Node/TypeScript services.
+- Documented ownership and repository structure for `services/elizaos-plugin-conxian`.
+
 ## [0.1.0] - 2024-11-20
 
 ### Added
@@ -15,7 +21,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Established **Earthy Corporate Finance** theme (Forest Green/Gold) across all UI platforms.
 - Introduced **Admin Dashboard** for institutional system monitoring.
 - Created `admin-pulse-bos` service for Fiscal Orchestration (SFO).
-- Integrated **ElizaOS Plugin** for Conxian Gateway and social interface orchestration.
 
 ### Fixed
 - Resolved Phase 5 implementation drift for Fiat routing and A2P OTP messaging.

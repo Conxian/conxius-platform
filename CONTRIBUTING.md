@@ -20,6 +20,17 @@ This repository is organized as a monorepo containing multiple services:
 - **Testing**: Run relevant tests before submitting a PR.
 - **Security**: Never commit real secrets or credentials. Use `.env.example` for configuration templates.
 
+## Node/TypeScript services
+
+The Node/TypeScript services in `services/` are managed as a `pnpm` workspace with a single root `pnpm-lock.yaml`.
+
+```bash
+pnpm install
+
+pnpm --filter admin-dashboard test
+pnpm --filter @conxian/elizaos-plugin-conxian test
+```
+
 ## Pull Request Process
 
 1. Create a descriptive branch for your changes.

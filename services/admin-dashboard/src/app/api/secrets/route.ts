@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
+export const runtime = "nodejs";
+
 const adminGcpSaKeyJsonKey = "ADMIN_GCP_SA_KEY_JSON" as const;
 
 const legacySecretAliases: Record<string, string[]> = {

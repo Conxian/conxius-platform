@@ -1,4 +1,8 @@
 {
   "name": "conxius-platform",
-  "private": true
+  "private": true,
+  "packageManager": "pnpm@9.15.5",
+  "engines": {
+    "node": ">=18.17.0"
+  }
 }

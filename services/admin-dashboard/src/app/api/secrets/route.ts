@@ -40,8 +40,7 @@ function escapeEnvValue(rawValue: unknown) {
     singleLine.length === 0 ||
     singleLine.startsWith("\"") ||
     singleLine.startsWith("'") ||
-    /[\s#]/.test(singleLine) ||
-    singleLine.includes("$")
+    /[\s#$]/.test(singleLine)
   ) {
     throw new BadRequestError(
       "Secret value contains an apostrophe together with whitespace, #, or $, which cannot be safely stored in .env without risking parsing or variable expansion; remove the apostrophe or encode the value"
@@ -191,7 +190,8 @@ export async function POST(req: Request) {
       // Best-effort; some environments (e.g. Windows) may not support chmod.
     }
 
-    return NextResponse.json({ success: true, file: ".env.admin" });
+    const fileName = path.basename(filePath);
+    return NextResponse.json({ success: true, file: fileName, path: fileName });
   } catch (err: unknown) {
     if (err instanceof BadRequestError) {
       return NextResponse.json({ success: false, error: err.message }, { status: 400 });

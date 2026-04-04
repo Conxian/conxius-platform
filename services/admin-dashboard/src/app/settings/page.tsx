@@ -29,12 +29,12 @@ function SecretInput({ label, name, value, onChange }: { label: string, name: st
 
 export default function SettingsPage() {
   const [secrets, setSecrets] = useState({
-    PAT_TOKEN: "",
-    NPM_TOKEN: "",
-    PYPI_API_TOKEN: "",
-    GCP_CREDENTIALS: "",
-    CHANGELLY_API_KEY: "",
-    CHANGELLY_API_SECRET: ""
+    ADMIN_PAT_TOKEN: "",
+    ADMIN_NPM_TOKEN: "",
+    ADMIN_PYPI_API_TOKEN: "",
+    ADMIN_GCP_SA_KEY_JSON: "",
+    ADMIN_CHANGELLY_API_KEY: "",
+    ADMIN_CHANGELLY_API_SECRET: ""
   });
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -75,22 +75,22 @@ export default function SettingsPage() {
         <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1.5rem' }}>These secrets are required for automated deployments (NPM, PyPI, GCP) and exchange integrations.</p>
         
         <div style={{ display: 'grid', gap: '1rem' }}>
-          <SecretInput label="GitHub PAT Token" name="PAT_TOKEN" value={secrets.PAT_TOKEN} onChange={handleChange} />
-          <SecretInput label="NPM Token" name="NPM_TOKEN" value={secrets.NPM_TOKEN} onChange={handleChange} />
-          <SecretInput label="PyPI API Token" name="PYPI_API_TOKEN" value={secrets.PYPI_API_TOKEN} onChange={handleChange} />
+          <SecretInput label="GitHub PAT Token" name="ADMIN_PAT_TOKEN" value={secrets.ADMIN_PAT_TOKEN} onChange={handleChange} />
+          <SecretInput label="NPM Token" name="ADMIN_NPM_TOKEN" value={secrets.ADMIN_NPM_TOKEN} onChange={handleChange} />
+          <SecretInput label="PyPI API Token" name="ADMIN_PYPI_API_TOKEN" value={secrets.ADMIN_PYPI_API_TOKEN} onChange={handleChange} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-            <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#444' }}>GCP Credentials (JSON)</label>
+            <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#444' }}>GCP Service Account Key (JSON)</label>
             <textarea 
-              name="GCP_CREDENTIALS" 
-              value={secrets.GCP_CREDENTIALS} 
+              name="ADMIN_GCP_SA_KEY_JSON" 
+              value={secrets.ADMIN_GCP_SA_KEY_JSON} 
               onChange={handleChange}
               rows={4}
               style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', fontFamily: 'monospace', fontSize: '0.8rem' }}
-              placeholder='{ "type": "service_account", ... }'
+              placeholder='{ "type": "service_account", "project_id": "..." }'
             />
           </div>
-          <SecretInput label="Changelly API Key" name="CHANGELLY_API_KEY" value={secrets.CHANGELLY_API_KEY} onChange={handleChange} />
-          <SecretInput label="Changelly API Secret" name="CHANGELLY_API_SECRET" value={secrets.CHANGELLY_API_SECRET} onChange={handleChange} />
+          <SecretInput label="Changelly API Key" name="ADMIN_CHANGELLY_API_KEY" value={secrets.ADMIN_CHANGELLY_API_KEY} onChange={handleChange} />
+          <SecretInput label="Changelly API Secret" name="ADMIN_CHANGELLY_API_SECRET" value={secrets.ADMIN_CHANGELLY_API_SECRET} onChange={handleChange} />
         </div>
       </section>
 

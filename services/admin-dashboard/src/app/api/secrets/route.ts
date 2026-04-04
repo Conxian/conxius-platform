@@ -191,7 +191,7 @@ export async function POST(req: Request) {
     }
 
     const fileName = path.basename(filePath);
-    return NextResponse.json({ success: true, file: fileName });
+    return NextResponse.json({ success: true, file: fileName, path: fileName });
   } catch (err: unknown) {
     if (err instanceof BadRequestError) {
       return NextResponse.json({ success: false, error: err.message }, { status: 400 });

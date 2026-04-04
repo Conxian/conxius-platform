@@ -22,7 +22,7 @@ This repository is organized as a monorepo containing multiple services:
 
 ## Node/TypeScript services
 
-The Node/TypeScript services listed in `pnpm-workspace.yaml` are managed as a `pnpm` workspace with a single root `pnpm-lock.yaml`.
+The Node/TypeScript services under `services/` (as configured in `pnpm-workspace.yaml`) are managed as a `pnpm` workspace with a single root `pnpm-lock.yaml`.
 
 ```bash
 pnpm install

@@ -44,7 +44,7 @@ function escapeEnvValue(rawValue: unknown) {
     singleLine.includes("$")
   ) {
     throw new BadRequestError(
-      "Secret value contains an apostrophe together with whitespace, #, or $, which cannot be safely stored in .env; remove the apostrophe or encode the value"
+      "Secret value contains an apostrophe together with whitespace, #, or $, which cannot be safely stored in .env without risking parsing or variable expansion; remove the apostrophe or encode the value"
     );
   }
 

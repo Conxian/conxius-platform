@@ -25,6 +25,9 @@ This repository is organized as a monorepo containing multiple services:
 The Node/TypeScript services under `services/` (as configured in `pnpm-workspace.yaml`) are managed as a `pnpm` workspace with a single root `pnpm-lock.yaml`.
 
 ```bash
+corepack enable
+corepack prepare pnpm@9.15.5 --activate
+
 pnpm install
 
 pnpm --filter ./services/admin-dashboard test

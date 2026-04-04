@@ -37,7 +37,6 @@ function escapeEnvValue(rawValue: unknown) {
   }
 
   if (
-    singleLine.length === 0 ||
     singleLine.startsWith("\"") ||
     singleLine.startsWith("'") ||
     /[\s#$]/.test(singleLine)
@@ -191,7 +190,8 @@ export async function POST(req: Request) {
     }
 
     const fileName = path.basename(filePath);
-    return NextResponse.json({ success: true, file: fileName });
+    const relativePath = `./${fileName}`;
+    return NextResponse.json({ success: true, file: fileName, path: relativePath });
   } catch (err: unknown) {
     if (err instanceof BadRequestError) {
       return NextResponse.json({ success: false, error: err.message }, { status: 400 });

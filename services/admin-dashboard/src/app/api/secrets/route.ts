@@ -189,7 +189,7 @@ export async function POST(req: Request) {
       // Best-effort; some environments (e.g. Windows) may not support chmod.
     }
 
-    return NextResponse.json({ success: true, path: filePath });
+    return NextResponse.json({ success: true, file: ".env.admin" });
   } catch (err: unknown) {
     if (err instanceof BadRequestError) {
       return NextResponse.json({ success: false, error: err.message }, { status: 400 });

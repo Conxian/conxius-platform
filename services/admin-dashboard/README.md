@@ -9,7 +9,7 @@ This service is the internal backend/frontend orchestration layer for the Conxia
 - **Secret Exposure**: The `/settings` page allows viewing and modifying institutional secrets (NPM, GCP, GitHub, etc.).
 - **Access Control**: Currently intended for internal, local-only use. DO NOT expose this service to the public internet without implementing a robust authentication layer (e.g., VPN, mTLS, or RBAC).
 - **Environment Hygiene**: Use `.env.admin` for local development ONLY. This file is intentionally ignored by Git to prevent accidental leakage of institutional credentials.
-- **Next.js Env Exposure**: Never store institutional secrets in `NEXT_PUBLIC_*` env vars. Ensure secrets are only read in server-only contexts (Route Handlers / Server Components) and never referenced from Client Components.
+- **Next.js Env Exposure**: Never store institutional secrets in `NEXT_PUBLIC_*` env vars and never read secrets from client-side code. Keep secret access server-side only (Route Handlers / Server Components).
 
 ## 🔐 Security Hardening
 

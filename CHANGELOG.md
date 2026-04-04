@@ -7,10 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Documented ownership and repository structure for `services/elizaos-plugin-conxian`.
+
 ### Changed
 - Adopted a root `pnpm` workspace and `pnpm-lock.yaml` for Node/TypeScript services.
 - Updated `services/admin-dashboard` to `next@15.1.12`.
-- Documented ownership and repository structure for `services/elizaos-plugin-conxian`.
 
 ## [0.1.0] - 2024-11-20
 

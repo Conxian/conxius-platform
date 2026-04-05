@@ -25,7 +25,7 @@ To maintain the security of this platform:
 - **Infrastructure Pulse**: Real-time monitoring of Gateway health, Engine version, and request throughput.
 - **Nexus "Glass Node" State**: Visibility into Merkle roots and synchronization status with Stacks L1.
 - **Sovereign Services Tracking**: Status monitoring for Stacks (L2), Bisq (P2P), RGB, BitVM, and Lightning Network.
-- **Secret Management**: Interface for provisioning institutional secrets and BOS wallet mappings (accessible via `/settings`).
+- **Secret Management**: Interface for provisioning institutional secrets (accessible via `/settings`).
 
 ## Tech Stack
 

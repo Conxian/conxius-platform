@@ -50,6 +50,17 @@ function escapeEnvValue(rawValue: unknown) {
 }
 
 export async function POST(req: Request) {
+  // --- Security: API Key Authentication ---
+  const apiKeyHeader = req.headers.get("X-Admin-API-Key");
+  const expectedApiKey = process.env.ADMIN_DASHBOARD_API_KEY;
+
+  if (!expectedApiKey || apiKeyHeader !== expectedApiKey) {
+    return NextResponse.json(
+      { success: false, error: "Unauthorized: Invalid or missing X-Admin-API-Key" },
+      { status: 401 }
+    );
+  }
+
   try {
     let data: unknown;
     try {

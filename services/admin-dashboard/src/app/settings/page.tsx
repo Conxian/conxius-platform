@@ -36,6 +36,7 @@ export default function SettingsPage() {
     ADMIN_CHANGELLY_API_KEY: "",
     ADMIN_CHANGELLY_API_SECRET: ""
   });
+  const [adminApiKey, setAdminApiKey] = useState("");
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -44,11 +45,19 @@ export default function SettingsPage() {
   };
 
   const handleSave = async () => {
+    if (!adminApiKey) {
+      alert("Please provide the Admin Dashboard API Key.");
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch("/api/secrets", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Admin-API-Key": adminApiKey
+        },
         body: JSON.stringify({ secrets })
       });
       if (res.ok) {
@@ -71,7 +80,18 @@ export default function SettingsPage() {
       </div>
       
       <section style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', marginBottom: '2rem' }}>
-        <h3 style={{ marginTop: 0, color: '#D4A017', fontSize: '1.2rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem' }}>Institutional Secrets</h3>
+        <h3 style={{ marginTop: 0, color: '#D4A017', fontSize: '1.2rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem' }}>Authentication</h3>
+        <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1.5rem' }}>Provide the management API key to authorize changes.</p>
+        <div style={{ marginBottom: '1.5rem' }}>
+          <SecretInput
+            label="Admin Dashboard API Key"
+            name="adminApiKey"
+            value={adminApiKey}
+            onChange={(e) => setAdminApiKey(e.target.value)}
+          />
+        </div>
+
+        <h3 style={{ marginTop: '2rem', color: '#D4A017', fontSize: '1.2rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem' }}>Institutional Secrets</h3>
         <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1.5rem' }}>These secrets are required for automated deployments (NPM, PyPI, GCP) and exchange integrations.</p>
         
         <div style={{ display: 'grid', gap: '1rem' }}>

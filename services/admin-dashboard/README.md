@@ -7,7 +7,7 @@ This service is the internal backend/frontend orchestration layer for the Conxia
 **This dashboard is for internal, local, or high-privilege administrative use only.**
 
 - **Secret Exposure**: The `/settings` page allows viewing and modifying institutional secrets (NPM, GCP, GitHub, etc.).
-- **Access Control**: Currently intended for internal, local-only use. DO NOT expose this service to the public internet without implementing a robust authentication layer (e.g., VPN, mTLS, or RBAC).
+- **Access Control**: The management API requires a valid `ADMIN_DASHBOARD_API_KEY` for writing secrets. This should be used in conjunction with network-level isolation (e.g., VPN, mTLS) and local-only access where possible.
 - **Environment Hygiene**: Use `.env.admin` for local development ONLY. This file is intentionally ignored by Git to prevent accidental leakage of institutional credentials.
 - **Next.js Env Exposure**: Never store institutional secrets in `NEXT_PUBLIC_*` env vars and never read secrets from client-side code. Keep secret access server-side only (Route Handlers / Server Components).
 
@@ -49,7 +49,11 @@ To maintain the security of this platform:
     ```bash
     cp .env.admin.example .env.admin
     chmod 600 .env.admin  # macOS/Linux only; on Windows, restrict access via file properties or icacls
-    # Edit .env.admin with actual values (DO NOT COMMIT)
+
+    # Generate a secure API key for the dashboard management
+    openssl rand -hex 32
+
+    # Edit .env.admin with the generated key and actual secret values (DO NOT COMMIT)
     ```
 4.  Run the development server:
     ```bash

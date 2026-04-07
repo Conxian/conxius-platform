@@ -1,16 +1,23 @@
 import "server-only";
 import type { YieldSnapshot } from "./types";
 
-function gatewayBaseUrl(): string {
-  return (process.env.CORE_API_URL || process.env.NEXT_PUBLIC_CORE_API_URL || "http://localhost:8080").replace(/\/$/, "");
+function gatewayBaseUrl(): string | null {
+  const raw = process.env.CORE_API_URL || process.env.NEXT_PUBLIC_CORE_API_URL;
+  if (!raw) return null;
+  return raw.replace(/\/$/, "");
 }
 
 export async function getSbtcYieldSnapshot(): Promise<YieldSnapshot> {
   const updatedAtIso = new Date().toISOString();
+  const baseUrl = gatewayBaseUrl();
+
+  if (!baseUrl) {
+    return { token: "sBTC", apy: null, updatedAtIso };
+  }
 
   try {
     // Gateway currently exposes a yield-oriented shape via lorenzo staking stats.
-    const r = await fetch(`${gatewayBaseUrl()}/api/v1/lorenzo/stats`, { cache: "no-store" });
+    const r = await fetch(`${baseUrl}/api/v1/lorenzo/stats`, { cache: "no-store" });
     if (!r.ok) return { token: "sBTC", apy: null, updatedAtIso };
 
     const j = (await r.json().catch(() => null)) as unknown;

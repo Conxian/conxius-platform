@@ -1,7 +1,7 @@
 services:
   gateway:
     build:
-      context: ../conxian-gateway
+      context: ./services/lib-conxian-core/gateway
     ports:
       - "${GATEWAY_PORT:-8080}:8080"
     environment:

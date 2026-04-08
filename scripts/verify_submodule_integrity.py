@@ -10,7 +10,28 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+def compute_repo_root() -> Path:
+    try:
+        out = subprocess.check_output(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=Path(__file__).resolve().parent,
+            text=True,
+            encoding="utf-8",
+        )
+    except FileNotFoundError:
+        print(
+            "verify_submodule_integrity.py requires `git` to be installed and on PATH.",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
+    except subprocess.CalledProcessError:
+        print(
+            "verify_submodule_integrity.py must be run from within a Git working tree.",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
+
+    return Path(out.strip())
 
 
 @dataclass(frozen=True)
@@ -20,9 +41,14 @@ class SubmoduleMapping:
     url: str | None
 
 
-def git_gitlink_paths() -> set[str]:
-    out = subprocess.check_output(["git", "ls-files", "-s", "-z"], cwd=REPO_ROOT)
-    entries = [e for e in out.decode("utf-8").split("\0") if e]
+def git_gitlink_paths(repo_root: Path) -> set[str]:
+    out = subprocess.check_output(
+        ["git", "ls-files", "-s", "-z"],
+        cwd=repo_root,
+        text=True,
+        encoding="utf-8",
+    )
+    entries = [e for e in out.split("\0") if e]
 
     gitlinks: set[str] = set()
     for entry in entries:
@@ -38,64 +64,73 @@ def git_gitlink_paths() -> set[str]:
 
     return gitlinks
 
-
-SUBMODULE_HEADER_RE = re.compile(r'^\[submodule\s+"(?P<name>.+)"\]\s*$')
-
-
-def parse_gitmodules() -> list[SubmoduleMapping]:
-    gitmodules_path = REPO_ROOT / ".gitmodules"
+def parse_gitmodules(repo_root: Path) -> list[SubmoduleMapping]:
+    gitmodules_path = repo_root / ".gitmodules"
     if not gitmodules_path.is_file():
         return []
 
-    mappings: list[SubmoduleMapping] = []
+    try:
+        raw = subprocess.check_output(
+            [
+                "git",
+                "config",
+                "--file",
+                ".gitmodules",
+                "--get-regexp",
+                r"^submodule\..*\.(path|url)$",
+            ],
+            cwd=repo_root,
+            text=True,
+            encoding="utf-8",
+        )
+    except subprocess.CalledProcessError as exc:
+        if exc.returncode == 1:
+            return []
+        raise
 
-    current_name: str | None = None
-    current_path: str | None = None
-    current_url: str | None = None
+    entry_re = re.compile(r"^submodule\.(?P<name>.+)\.(?P<field>path|url)$")
+    by_name: dict[str, dict[str, str]] = {}
 
-    def flush() -> None:
-        nonlocal current_name, current_path, current_url
-        if current_name and current_path:
-            mappings.append(
-                SubmoduleMapping(name=current_name, path=current_path, url=current_url)
-            )
-        current_name = None
-        current_path = None
-        current_url = None
-
-    for raw_line in gitmodules_path.read_text("utf-8").splitlines():
-        line = raw_line.strip()
-        if not line:
-            continue
-
-        header_match = SUBMODULE_HEADER_RE.match(line)
-        if header_match:
-            flush()
-            current_name = header_match.group("name")
-            continue
-
-        if current_name is None:
-            continue
-
-        key, has_sep, value = line.partition("=")
+    for raw_line in raw.splitlines():
+        key, has_sep, value = raw_line.partition(" ")
         if not has_sep:
             continue
 
-        key = key.strip()
-        value = value.strip()
+        match = entry_re.match(key)
+        if not match:
+            continue
 
-        if key == "path":
-            current_path = value
-        elif key == "url":
-            current_url = value
+        name = match.group("name")
+        field = match.group("field")
+        by_name.setdefault(name, {})[field] = value.strip()
 
-    flush()
+    invalid_missing_path = sorted(
+        name
+        for name, fields in by_name.items()
+        if fields.get("url") is not None and not fields.get("path")
+    )
+    if invalid_missing_path:
+        print(
+            "Invalid .gitmodules entries missing a path:\n"
+            + "\n".join(f"- {name}" for name in invalid_missing_path),
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
+
+    mappings: list[SubmoduleMapping] = []
+    for name, fields in by_name.items():
+        path = fields.get("path")
+        if not path:
+            continue
+        mappings.append(SubmoduleMapping(name=name, path=path, url=fields.get("url")))
+
     return mappings
 
 
 def main() -> int:
-    gitlinks = git_gitlink_paths()
-    mappings = parse_gitmodules()
+    repo_root = compute_repo_root()
+    gitlinks = git_gitlink_paths(repo_root)
+    mappings = parse_gitmodules(repo_root)
     mapped_paths = {m.path for m in mappings}
 
     failures: list[str] = []
@@ -113,6 +148,14 @@ def main() -> int:
         failures.append(
             "Found duplicate .gitmodules paths:\n"
             + "\n".join(f"- {p}" for p in duplicate_paths)
+        )
+
+    name_counts = Counter(m.name for m in mappings)
+    duplicate_names = sorted(n for n, count in name_counts.items() if count > 1)
+    if duplicate_names:
+        failures.append(
+            "Found duplicate .gitmodules names:\n"
+            + "\n".join(f"- {n}" for n in duplicate_names)
         )
 
     missing_mappings = sorted(gitlinks - mapped_paths)

@@ -1,4 +1,5 @@
 services:
+  # Requires `git submodule update --init --recursive` so services/lib-conxian-core is present
   gateway:
     build:
       context: ./services/lib-conxian-core/gateway

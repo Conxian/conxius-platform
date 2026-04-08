@@ -90,6 +90,7 @@ def parse_gitmodules(repo_root: Path) -> list[SubmoduleMapping]:
 
     entry_re = re.compile(r"^submodule\.(?P<name>.+)\.(?P<field>path|url)$")
     by_name: dict[str, dict[str, str]] = {}
+    key_counts: Counter[str] = Counter()
 
     for raw_line in raw.splitlines():
         try:
@@ -101,9 +102,19 @@ def parse_gitmodules(repo_root: Path) -> list[SubmoduleMapping]:
         if not match:
             continue
 
+        key_counts[key] += 1
         name = match.group("name")
         field = match.group("field")
         by_name.setdefault(name, {})[field] = value.strip()
+
+    duplicate_keys = sorted(k for k, count in key_counts.items() if count > 1)
+    if duplicate_keys:
+        print(
+            "Duplicate .gitmodules keys found (same submodule field defined multiple times):\n"
+            + "\n".join(f"- {k}" for k in duplicate_keys),
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
 
     invalid_missing_path = sorted(
         name
@@ -149,14 +160,6 @@ def main() -> int:
         failures.append(
             "Found duplicate .gitmodules paths:\n"
             + "\n".join(f"- {p}" for p in duplicate_paths)
-        )
-
-    name_counts = Counter(m.name for m in mappings)
-    duplicate_names = sorted(n for n, count in name_counts.items() if count > 1)
-    if duplicate_names:
-        failures.append(
-            "Found duplicate .gitmodules names:\n"
-            + "\n".join(f"- {n}" for n in duplicate_names)
         )
 
     missing_mappings = sorted(gitlinks - mapped_paths)

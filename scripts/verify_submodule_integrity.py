@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import subprocess
 import sys
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -106,8 +107,8 @@ def main() -> int:
             + "\n".join(f"- {p}" for p in missing_urls)
         )
 
-    path_list = [m.path for m in mappings]
-    duplicate_paths = sorted({p for p in path_list if path_list.count(p) > 1})
+    path_counts = Counter(m.path for m in mappings)
+    duplicate_paths = sorted(p for p, count in path_counts.items() if count > 1)
     if duplicate_paths:
         failures.append(
             "Found duplicate .gitmodules paths:\n"

@@ -76,13 +76,17 @@ def parse_gitmodules() -> list[SubmoduleMapping]:
         if current_name is None:
             continue
 
-        if line.startswith("path ="):
-            current_path = line.split("=", 1)[1].strip()
+        key, has_sep, value = line.partition("=")
+        if not has_sep:
             continue
 
-        if line.startswith("url ="):
-            current_url = line.split("=", 1)[1].strip()
-            continue
+        key = key.strip()
+        value = value.strip()
+
+        if key == "path":
+            current_path = value
+        elif key == "url":
+            current_url = value
 
     flush()
     return mappings
@@ -94,6 +98,21 @@ def main() -> int:
     mapped_paths = {m.path for m in mappings}
 
     failures: list[str] = []
+
+    missing_urls = sorted(m.path for m in mappings if not m.url)
+    if missing_urls:
+        failures.append(
+            "Found .gitmodules entries without a url:\n"
+            + "\n".join(f"- {p}" for p in missing_urls)
+        )
+
+    path_list = [m.path for m in mappings]
+    duplicate_paths = sorted({p for p in path_list if path_list.count(p) > 1})
+    if duplicate_paths:
+        failures.append(
+            "Found duplicate .gitmodules paths:\n"
+            + "\n".join(f"- {p}" for p in duplicate_paths)
+        )
 
     missing_mappings = sorted(gitlinks - mapped_paths)
     if missing_mappings:

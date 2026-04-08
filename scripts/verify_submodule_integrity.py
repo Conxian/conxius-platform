@@ -92,8 +92,9 @@ def parse_gitmodules(repo_root: Path) -> list[SubmoduleMapping]:
     by_name: dict[str, dict[str, str]] = {}
 
     for raw_line in raw.splitlines():
-        key, has_sep, value = raw_line.partition(" ")
-        if not has_sep:
+        try:
+            key, value = raw_line.split(None, 1)
+        except ValueError:
             continue
 
         match = entry_re.match(key)

@@ -10,6 +10,10 @@ Make it easy to run, compose, and deploy the Conxian stack (Gateway, UI, and ope
 
 Active. The orchestration layer evolves as flagship services mature and new integrations are added.
 
+## Ownership
+
+Ownership and review requirements are defined in [`CODEOWNERS`](./CODEOWNERS).
+
 ## Audience
 
 - Platform engineers running the full stack locally or in hosted environments.

@@ -90,6 +90,7 @@ def parse_gitmodules(repo_root: Path) -> list[SubmoduleMapping]:
 
     entry_re = re.compile(r"^submodule\.(?P<name>.+)\.(?P<field>path|url)$")
     by_name: dict[str, dict[str, str]] = {}
+    invalid_missing_values: set[tuple[str, str]] = set()
 
     for raw_line in raw.splitlines():
         parts = raw_line.split(None, 1)
@@ -97,15 +98,29 @@ def parse_gitmodules(repo_root: Path) -> list[SubmoduleMapping]:
             continue
 
         key = parts[0]
-        value = parts[1] if len(parts) == 2 else ""
-
         match = entry_re.match(key)
         if not match:
             continue
 
         name = match.group("name")
         field = match.group("field")
+
+        if len(parts) == 1:
+            invalid_missing_values.add((name, field))
+            continue
+
+        value = parts[1]
         by_name.setdefault(name, {})[field] = value.strip()
+
+    failures: list[str] = []
+
+    if invalid_missing_values:
+        failures.append(
+            "Invalid .gitmodules config entries missing a value:\n"
+            + "\n".join(
+                f"- {name} ({field})" for name, field in sorted(invalid_missing_values)
+            )
+        )
 
     invalid_missing_path = sorted(
         name
@@ -113,11 +128,13 @@ def parse_gitmodules(repo_root: Path) -> list[SubmoduleMapping]:
         if fields.get("url") is not None and not fields.get("path")
     )
     if invalid_missing_path:
-        print(
+        failures.append(
             "Invalid .gitmodules entries missing a path:\n"
-            + "\n".join(f"- {name}" for name in invalid_missing_path),
-            file=sys.stderr,
+            + "\n".join(f"- {name}" for name in invalid_missing_path)
         )
+
+    if failures:
+        print("\n\n".join(failures), file=sys.stderr)
         raise SystemExit(1)
 
     mappings: list[SubmoduleMapping] = []

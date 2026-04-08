@@ -31,11 +31,21 @@ def main() -> int:
             + "\n".join(f"- {p}" for p in stub_files)
         )
 
-    docker_compose = (REPO_ROOT / "docker-compose.yml").read_text("utf-8")
-    if "admin-pulse-bos" in docker_compose:
+    compose_path = REPO_ROOT / "docker-compose.yml"
+    if not compose_path.is_file():
         failures.append(
-            "services/admin-pulse-bos is dev-only and must not be wired into docker-compose.yml"
+            "Missing docker-compose.yml (required to verify dev-only services are not wired)"
         )
+    else:
+        try:
+            docker_compose = compose_path.read_text("utf-8")
+        except OSError as exc:
+            failures.append(f"Unable to read docker-compose.yml: {exc}")
+        else:
+            if "admin-pulse-bos" in docker_compose:
+                failures.append(
+                    "services/admin-pulse-bos is dev-only and must not be wired into docker-compose.yml"
+                )
 
     if failures:
         print("BOS production boundary verification failed:\n", file=sys.stderr)

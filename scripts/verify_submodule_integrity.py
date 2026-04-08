@@ -93,6 +93,7 @@ def parse_gitmodules(repo_root: Path) -> list[SubmoduleMapping]:
     invalid_missing_values: set[tuple[str, str]] = set()
 
     for raw_line in raw.splitlines():
+        # Format from `git config --get-regexp`: "<key><whitespace><value>".
         parts = raw_line.split(None, 1)
         if not parts:
             continue
@@ -122,10 +123,15 @@ def parse_gitmodules(repo_root: Path) -> list[SubmoduleMapping]:
             )
         )
 
+    missing_path_value_names = {
+        name for name, field in invalid_missing_values if field == "path"
+    }
     invalid_missing_path = sorted(
         name
         for name, fields in by_name.items()
-        if fields.get("url") is not None and not fields.get("path")
+        if fields.get("url") is not None
+        and not fields.get("path")
+        and name not in missing_path_value_names
     )
     if invalid_missing_path:
         failures.append(

@@ -93,10 +93,11 @@ def parse_gitmodules(repo_root: Path) -> list[SubmoduleMapping]:
 
     for raw_line in raw.splitlines():
         parts = raw_line.split(None, 1)
-        if len(parts) != 2:
+        if not parts:
             continue
 
-        key, value = parts
+        key = parts[0]
+        value = parts[1] if len(parts) == 2 else ""
 
         match = entry_re.match(key)
         if not match:

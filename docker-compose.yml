@@ -1,7 +1,8 @@
 services:
+  # Requires `git submodule update --init --recursive` so services/lib-conxian-core is present
   gateway:
     build:
-      context: ../conxian-gateway
+      context: ./services/lib-conxian-core/gateway
     ports:
       - "${GATEWAY_PORT:-8080}:8080"
     environment:

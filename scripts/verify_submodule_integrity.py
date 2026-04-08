@@ -92,10 +92,11 @@ def parse_gitmodules(repo_root: Path) -> list[SubmoduleMapping]:
     by_name: dict[str, dict[str, str]] = {}
 
     for raw_line in raw.splitlines():
-        try:
-            key, value = raw_line.split(None, 1)
-        except ValueError:
+        parts = raw_line.split(None, 1)
+        if len(parts) != 2:
             continue
+
+        key, value = parts
 
         match = entry_re.match(key)
         if not match:

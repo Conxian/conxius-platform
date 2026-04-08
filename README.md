@@ -37,9 +37,10 @@ make bench          # Run performance benchmarks
 - **services/lib-conxian-core**: Shared Rust/TS libraries and the **Conxian Gateway**.
 - **services/conxian-ui**: The primary Next.js dashboard for users.
 - **services/admin-dashboard**: Internal telemetry and system monitoring.
-- **services/admin-pulse-bos**: Administrative components for fiscal orchestration (SFO).
+- **services/admin-pulse-bos**: Dev-only BOS pulse prototype (not production-wired).
 - **services/elizaos-plugin-conxian**: ElizaOS plugin for Conxian Gateway and social interfaces.
 - **openspec/**: Specifications for all system changes and Phase 5/6 alignment.
+- **docs/PRODUCTION_BOUNDARY.md**: Owner surface + production boundary for BOS-related work in this repo.
 
 ## ⚖️ Governance
 

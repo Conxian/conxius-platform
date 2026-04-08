@@ -115,7 +115,7 @@ export default function SettingsPage() {
       </section>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', alignItems: 'center' }}>
-        {saved && <span style={{ color: '#2E403B', fontWeight: 'bold' }}>✓ Settings Saved Successfully</span>}
+        {saved && <span style={{ color: '#2E403B', fontWeight: 'bold' }}>Settings saved successfully</span>}
         <button 
           onClick={handleSave}
           disabled={loading}

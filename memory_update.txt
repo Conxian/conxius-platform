@@ -1,0 +1,1 @@
+Implemented HSM FIPS 140-2 Level 3 status tracking in Conxian Gateway (Rust) to resolve Phase 6 implementation drift. Added /api/v1/hsm/status endpoint and verified with actix-web tests.

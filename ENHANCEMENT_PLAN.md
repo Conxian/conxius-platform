@@ -6,8 +6,8 @@ This plan outlines the sequential steps required to reconcile the current codeba
 **Goal**: Bring the Conxian Gateway into parity with documented "Done" features and Phase 6 specifications.
 
 1.  **HSM & Security Wiring (CON-34)**:
-    *   Implement HSM FIPS 140-2 Level 3 status tracking in the Engine.
-    *   Add `/api/v1/hsm/status` endpoint.
+    *   [DONE] Implement HSM FIPS 140-2 Level 3 status tracking in the Engine.
+    *   [DONE] Add `/api/v1/hsm/status` endpoint.
 2.  **ISO 20022 & Institutional Bridge (CON-76, CON-63)**:
     *   Implement OData v4 parsers and pacs.008 wrapper in the Gateway.
     *   Add `/api/v1/erp/sync` and `/api/v1/iso2022/pacs008` endpoints.

@@ -10,6 +10,10 @@ Make it easy to run, compose, and deploy the Conxian stack (Gateway, UI, and ope
 
 Active. The orchestration layer evolves as flagship services mature and new integrations are added.
 
+## Ownership
+
+Ownership and review requirements are defined in [`CODEOWNERS`](./CODEOWNERS).
+
 ## Audience
 
 - Platform engineers running the full stack locally or in hosted environments.
@@ -37,9 +41,10 @@ make bench          # Run performance benchmarks
 - **services/lib-conxian-core**: Shared Rust/TS libraries and the **Conxian Gateway**.
 - **services/conxian-ui**: The primary Next.js dashboard for users.
 - **services/admin-dashboard**: Internal telemetry and system monitoring.
-- **services/admin-pulse-bos**: Administrative components for fiscal orchestration (SFO).
+- **services/admin-pulse-bos**: Dev-only BOS pulse prototype (not production-wired).
 - **services/elizaos-plugin-conxian**: ElizaOS plugin for Conxian Gateway and social interfaces.
 - **openspec/**: Specifications for all system changes and Phase 5/6 alignment.
+- **docs/PRODUCTION_BOUNDARY.md**: Owner surface + production boundary for BOS-related work in this repo.
 
 ## ⚖️ Governance
 

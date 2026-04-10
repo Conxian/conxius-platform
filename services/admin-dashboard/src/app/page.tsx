@@ -1,59 +1,111 @@
 "use client";
 import React, { useEffect, useState } from "react";
 
+type GatewayStats = {
+  status: "Healthy" | "Degraded" | "Unknown";
+  version: string | null;
+  processedHeight: number | null;
+  uptimeSeconds: number | null;
+};
+
+type NexusState = {
+  merkleRoot: string | null;
+  syncStatus: "synced" | "syncing" | "unknown";
+  leafCount: number | null;
+};
+
+async function fetchJsonWithFallback(baseUrl: string, paths: string[]): Promise<unknown | null> {
+  for (const path of paths) {
+    try {
+      const res = await fetch(`${baseUrl}${path}`, { cache: "no-store" });
+      if (!res.ok) continue;
+
+      const json = await res.json().catch(() => undefined);
+      if (json === undefined) continue;
+      return json as unknown;
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+}
+
+function getNumber(obj: unknown, key: string): number | null {
+  if (typeof obj !== "object" || obj === null) return null;
+  if (!(key in (obj as Record<string, unknown>))) return null;
+  const v = (obj as Record<string, unknown>)[key];
+  return typeof v === "number" && Number.isFinite(v) ? v : null;
+}
+
+function getString(obj: unknown, key: string): string | null {
+  if (typeof obj !== "object" || obj === null) return null;
+  if (!(key in (obj as Record<string, unknown>))) return null;
+  const v = (obj as Record<string, unknown>)[key];
+  return typeof v === "string" ? v : null;
+}
+
+function getBoolean(obj: unknown, key: string): boolean | null {
+  if (typeof obj !== "object" || obj === null) return null;
+  if (!(key in (obj as Record<string, unknown>))) return null;
+  const v = (obj as Record<string, unknown>)[key];
+  return typeof v === "boolean" ? v : null;
+}
+
 export default function AdminPage() {
-  const [stats, setStats] = useState<any>(null);
-  const [nexus, setNexus] = useState<any>(null);
+  const [stats, setStats] = useState<GatewayStats | null>(null);
+  const [nexus, setNexus] = useState<NexusState | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchAll = async () => {
     setLoading(true);
+    setError(null);
     try {
-      // Try dedicated port 3000 (Nexus default) first, fallback to 8080 (Gateway)
-      const urls = [
-        process.env.NEXT_PUBLIC_CORE_API_URL,
-        "http://localhost:3000",
-        "http://localhost:8080"
-      ].filter(Boolean) as string[];
+      const rawBaseUrl = process.env.NEXT_PUBLIC_CORE_API_URL;
+      if (!rawBaseUrl) {
+        setStats(null);
+        setNexus(null);
+        setError("NEXT_PUBLIC_CORE_API_URL is not configured.");
+        return;
+      }
 
-      let success = false;
-      for (const baseUrl of urls) {
-        try {
-          const [sRes, nRes] = await Promise.all([
-            fetch(`${baseUrl}/api/v1/status`).catch(() => fetch(`${baseUrl}/v1/status`)),
-            fetch(`${baseUrl}/api/v1/nexus`).catch(() => fetch(`${baseUrl}/v1/metrics`))
-          ]);
-          
-          if (sRes.ok) {
-            const sData = await sRes.json();
-            const nData = nRes.ok ? await nRes.json() : null;
-            
-            setStats({
-              status: sData.safety_mode ? "Degraded" : "Healthy",
-              version: sData.version || "v1.1.0",
-              total_requests: sData.processed_height || 0,
-              uptime_seconds: sData.uptime_seconds || 0
-            });
-            
-            setNexus({
-              merkle_root: sData.state_root || sData.mmr_root || "N/A",
-              sync_status: sData.drift === 0 ? "synced" : "syncing",
-              leaf_count: sData.processed_height || 0
-            });
-            
-            success = true;
-            break;
-          }
-        } catch (e) {
-          continue;
-        }
+      const baseUrl = rawBaseUrl.replace(/\/$/, "");
+
+      const statusJson = await fetchJsonWithFallback(baseUrl, ["/api/v1/status", "/v1/status"]);
+      if (statusJson === null) {
+        setStats(null);
+        setNexus(null);
+        setError("Could not fetch /api/v1/status from the configured CORE API URL.");
+        return;
       }
-      
-      if (!success) {
-        console.warn("Infrastructure Pulse: Could not connect to Nexus or Gateway. Ensure services are running on port 3000 or 8080.");
-      }
+
+      const safetyMode = getBoolean(statusJson, "safety_mode");
+      const drift = getNumber(statusJson, "drift");
+
+      setStats({
+        status: safetyMode === null ? "Unknown" : safetyMode ? "Degraded" : "Healthy",
+        version: getString(statusJson, "version"),
+        processedHeight: getNumber(statusJson, "processed_height"),
+        uptimeSeconds: getNumber(statusJson, "uptime_seconds"),
+      });
+
+      const nexusJson = await fetchJsonWithFallback(baseUrl, ["/api/v1/nexus/state"]);
+      const merkleRoot =
+        getString(nexusJson, "merkle_root") ??
+        getString(statusJson, "state_root") ??
+        getString(statusJson, "mmr_root");
+
+      setNexus({
+        merkleRoot,
+        syncStatus: drift === null ? "unknown" : drift === 0 ? "synced" : "syncing",
+        leafCount:
+          getNumber(nexusJson, "leaf_count") ??
+          getNumber(statusJson, "processed_height"),
+      });
     } catch (err) {
       console.error("Dashboard fetch error:", err);
+      setError("Unexpected error while fetching status.");
     } finally {
       setLoading(false);
     }
@@ -68,8 +120,13 @@ export default function AdminPage() {
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
       <div style={{ backgroundColor: "#fffbeb", border: "1px solid #fef3c7", padding: "0.75rem 1rem", borderRadius: "8px", marginBottom: "1.5rem", color: "#92400e", fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-        <span style={{ fontWeight: "bold" }}>⚠️ INTERNAL USE ONLY:</span> This dashboard provides high-privilege access to platform infrastructure and telemetry.
+        <span style={{ fontWeight: "bold" }}>INTERNAL USE ONLY:</span> This dashboard provides high-privilege access to platform infrastructure and telemetry.
       </div>
+      {error && (
+        <div style={{ backgroundColor: "#fef2f2", border: "1px solid #fee2e2", padding: "0.75rem 1rem", borderRadius: "8px", marginBottom: "1.5rem", color: "#b91c1c", fontSize: "0.85rem" }}>
+          {error}
+        </div>
+      )}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2rem' }}>
         <div>
           <h2 style={{ margin: 0, color: '#2E403B' }}>Infrastructure Pulse</h2>
@@ -94,10 +151,10 @@ export default function AdminPage() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem' }}>
-        <StatCard title="Gateway Health" value={stats?.status || "Unknown"} color="#2E403B" />
-        <StatCard title="Engine Version" value={stats?.version || "N/A"} />
-        <StatCard title="Requests Handled" value={stats?.total_requests || 0} />
-        <StatCard title="Uptime" value={stats?.uptime_seconds ? `${Math.floor(stats.uptime_seconds / 60)}m ${stats.uptime_seconds % 60}s` : "0s"} />
+        <StatCard title="Gateway Health" value={stats?.status ?? "Unknown"} color="#2E403B" />
+        <StatCard title="Engine Version" value={stats?.version ?? "N/A"} />
+        <StatCard title="Requests Handled" value={stats?.processedHeight ?? 0} />
+        <StatCard title="Uptime" value={stats?.uptimeSeconds ? `${Math.floor(stats.uptimeSeconds / 60)}m ${stats.uptimeSeconds % 60}s` : "0s"} />
       </div>
 
       <div style={{ marginTop: '3rem', display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '2rem' }}>
@@ -105,10 +162,10 @@ export default function AdminPage() {
           <h3 style={{ borderBottom: '2px solid #D4A017', paddingBottom: '0.5rem', color: '#2E403B' }}>Nexus "Glass Node" State</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem', marginTop: '1rem' }}>
             <div style={{ gridColumn: 'span 2' }}>
-              <DataRow label="Merkle Root" value={nexus?.merkle_root || "Initializing..."} mono />
+              <DataRow label="Merkle Root" value={nexus?.merkleRoot ?? "Initializing..."} mono />
             </div>
-            <DataRow label="Sync Status" value={nexus?.sync_status || "Pending"} highlight={nexus?.sync_status === 'synced'} />
-            <DataRow label="Leaf Count" value={nexus?.leaf_count || 0} />
+            <DataRow label="Sync Status" value={nexus?.syncStatus ?? "Pending"} highlight={nexus?.syncStatus === 'synced'} />
+            <DataRow label="Leaf Count" value={nexus?.leafCount ?? 0} />
           </div>
         </section>
 
@@ -116,11 +173,11 @@ export default function AdminPage() {
           <h3 style={{ borderBottom: '2px solid #D4A017', paddingBottom: '0.5rem', color: '#2E403B' }}>Sovereign Services</h3>
           <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', marginTop: '1rem' }}>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-              <ServiceItem name="Stacks (L2)" status="Operational" />
-              <ServiceItem name="Bisq (P2P)" status="Operational" />
-              <ServiceItem name="RGB (Client-side)" status="Operational" />
-              <ServiceItem name="BitVM (Optimistic)" status="Operational" />
-              <ServiceItem name="Lightning Network" status="Operational" />
+              <ServiceItem name="Stacks (L2)" status="Unknown" />
+              <ServiceItem name="Bisq (P2P)" status="Unknown" />
+              <ServiceItem name="RGB (Client-side)" status="Unknown" />
+              <ServiceItem name="BitVM (Optimistic)" status="Unknown" />
+              <ServiceItem name="Lightning Network" status="Unknown" />
             </ul>
           </div>
         </section>
@@ -162,10 +219,11 @@ function DataRow({ label, value, mono, highlight }: { label: string, value: stri
 }
 
 function ServiceItem({ name, status }: { name: string, status: string }) {
+  const statusColor = status === "Unknown" ? "#666" : "#2E403B";
   return (
     <li style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem 0', borderBottom: '1px solid #F0F0F0' }}>
       <span style={{ fontWeight: 500 }}>{name}</span>
-      <span style={{ color: '#2E403B', fontWeight: 'bold', fontSize: '0.9rem' }}>{status}</span>
+      <span style={{ color: statusColor, fontWeight: 'bold', fontSize: '0.9rem' }}>{status}</span>
     </li>
   );
 }

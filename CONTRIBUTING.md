@@ -26,10 +26,10 @@ The Node/TypeScript services under `services/` (as configured in `pnpm-workspace
 
 Note: `services/conxian-ui` is a git submodule and is currently excluded from the `pnpm` workspace to avoid lockfile churn when it’s initialized locally.
 
-### Prereqs
+### Prerequisites
 
-- `Node.js >= 20.19.0` (see `package.json#engines`)
-- `pnpm` (via Corepack; see `package.json#packageManager`)
+- Node.js >= 20.19.0 (see `package.json#engines`)
+- pnpm (managed via Corepack; version pinned in `package.json#packageManager`)
 
 ```bash
 corepack enable

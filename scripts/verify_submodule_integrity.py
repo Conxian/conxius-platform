@@ -91,13 +91,15 @@ def parse_gitmodules(repo_root: Path) -> list[SubmoduleMapping]:
     entry_re = re.compile(r"^submodule\.(?P<name>.+)\.(?P<field>path|url)$")
     by_name: dict[str, dict[str, str]] = {}
     key_counts: Counter[str] = Counter()
+    invalid_missing_values: set[tuple[str, str]] = set()
 
     for raw_line in raw.splitlines():
-        try:
-            key, value = raw_line.split(None, 1)
-        except ValueError:
+        # Format from `git config --get-regexp`: "<key><whitespace><value>".
+        parts = raw_line.split(None, 1)
+        if not parts:
             continue
 
+        key = parts[0]
         match = entry_re.match(key)
         if not match:
             continue
@@ -105,28 +107,49 @@ def parse_gitmodules(repo_root: Path) -> list[SubmoduleMapping]:
         key_counts[key] += 1
         name = match.group("name")
         field = match.group("field")
+
+        if len(parts) == 1:
+            invalid_missing_values.add((name, field))
+            continue
+
+        value = parts[1]
         by_name.setdefault(name, {})[field] = value.strip()
+
+    failures: list[str] = []
+
+    if invalid_missing_values:
+        failures.append(
+            "Invalid .gitmodules config entries missing a value:\n"
+            + "\n".join(
+                f"- {name} ({field})" for name, field in sorted(invalid_missing_values)
+            )
+        )
 
     duplicate_keys = sorted(k for k, count in key_counts.items() if count > 1)
     if duplicate_keys:
-        print(
+        failures.append(
             "Duplicate .gitmodules keys found (same submodule field defined multiple times):\n"
-            + "\n".join(f"- {k}" for k in duplicate_keys),
-            file=sys.stderr,
+            + "\n".join(f"- {k}" for k in duplicate_keys)
         )
-        raise SystemExit(1)
 
+    missing_path_value_names = {
+        name for name, field in invalid_missing_values if field == "path"
+    }
     invalid_missing_path = sorted(
         name
         for name, fields in by_name.items()
-        if fields.get("url") is not None and not fields.get("path")
+        if fields.get("url") is not None
+        and not fields.get("path")
+        and name not in missing_path_value_names
     )
     if invalid_missing_path:
-        print(
+        failures.append(
             "Invalid .gitmodules entries missing a path:\n"
-            + "\n".join(f"- {name}" for name in invalid_missing_path),
-            file=sys.stderr,
+            + "\n".join(f"- {name}" for name in invalid_missing_path)
         )
+
+    if failures:
+        print("\n\n".join(failures), file=sys.stderr)
         raise SystemExit(1)
 
     mappings: list[SubmoduleMapping] = []

@@ -33,7 +33,6 @@ Note: `services/conxian-ui` is a git submodule and is currently excluded from th
 
 ```bash
 corepack enable
-corepack prepare pnpm@9.15.5 --activate
 
 pnpm install
 

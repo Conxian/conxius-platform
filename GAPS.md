@@ -2,7 +2,7 @@
 
 This document tracks the resolution of gaps and identifies new technical requirements.
 
-## 1. Service Gaps (Resolved 2026-03-29)
+## 1. Service Gaps (Resolved 2026-04-10)
 
 ### Conxian Gateway & Nexus (Phase 5 & 6 Core Alignment)
 - **Status**: ✅ Production-Grade Orchestrator (v0.2.1-aligned).
@@ -16,13 +16,17 @@ This document tracks the resolution of gaps and identifies new technical require
   - **Hiro API Compatibility**: Full proxy support for Stacks L1/L2 queries via Gateway.
   - **Enterprise Connectors**: Actual OData/ERP translation layers (`/api/v1/erp/sync`) and ISO 20022 bridging (`/api/v1/iso2022/pacs008`).
   - **Hardware Security**: HSM FIPS 140-2 Level 3 status tracking (`/api/v1/hsm/status`).
+  - **ALEX Readiness (Method B)**: Direct contract-call transaction construction for sovereign custody (`/api/v1/alex/*`).
+  - **Structured Finance**: Ops Loans with Junior/Senior tranches and Guardian intent verification (`/api/v1/finance/ops-loans`).
+  - **Offline-First POS**: TEE-cached transaction queue and local mesh gossip (Bluetooth/WiFi) for load-shedding resilience (`/api/v1/pos/*`).
 
 ### UI/UX Standardization
 - **Status**: ✅ Fully Aligned & Integrated.
 - **Implemented**:
-  - **Unified Core API Client**: Native support for all Gateway proprietary endpoints, reducing reliance on slow contract queries.
-  - **Real-time Telemetry**: `SystemStatus` component now consumes high-fidelity Gateway telemetry for TVL, nodes, and mesh activity.
-  - **Earthy Corporate Finance Theme**: Standardized across all dashboard components.
+  - **Unified Core API Client**: Native support for all Gateway proprietary endpoints, including Phase 6 AI Allocation, UBI, ALEX Method B, and POS Sync.
+  - **Real-time Telemetry**: `SystemStatus` component consumes high-fidelity Gateway telemetry.
+  - **Production Sanitization**: Removed all hardcoded testnet principals (`ST...`); environment-aware principal management now active org-wide.
+  - **Sovereign Dashboard**: Integrated `AiAllocationCard`, `NexusSyncStatus`, `UbiIdentityCard`, `AlexMethodB`, `OpsLoansCard`, and `PosSyncStatus`.
 
 ## 2. Tooling Integration
 
@@ -35,3 +39,4 @@ This document tracks the resolution of gaps and identifies new technical require
 - Expansion of BitVM2 verification verifiers to 50+ nodes.
 - Mainnet launch of the 5-5-5 Autonomous Referral Engine.
 - Integration of jurisdictional sharding for ZAR-linked settlements (Guardian: Sovereignty).
+- SAB-owned wallet architecture transition (DAO handoff).

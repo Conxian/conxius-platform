@@ -29,7 +29,7 @@ Note: `services/conxian-ui` is a git submodule and is currently excluded from th
 ### Prereqs
 
 - `Node.js >= 20.19.0` (see `package.json#engines`)
-- `pnpm 9.15.5` (via Corepack)
+- `pnpm` (via Corepack; see `package.json#packageManager`)
 
 ```bash
 corepack enable

@@ -10,7 +10,7 @@ This document tracks the resolution of gaps and identifies new technical require
   - **Kwil Transactional State**: Full migration from Neon to Kwil as the backing store for Nexus Glass Node state and history (public API: `/api/v1/nexus/state`). Kwil adapter diagnostics: `/api/v1/kwil/info`.
   - **Self-Healing Nexus**: Autonomous reconciliation against on-chain checkpoints every 144 blocks.
   - **Sovereign AI Allocation**: Real-time compute weighting and status monitoring (`/api/v1/ai/allocation`).
-  - **Universal Bitcoin Identity (UBI)**: DID-linked sovereign identity management (`/api/v1/identity/ubi/{address}`).
+  - **Universal Bitcoin Identity (UBI)**: DID-linked sovereign identity management (address-scoped) (`/api/v1/identity/ubi/{address}`).
   - **Global Liquidity Mesh**: Active HTLC-based atomic swap orchestration with live telemetry (`/api/v1/mesh/swaps`).
   - **Decentralized Risk Oracle**: Cryptographically signed Risk Proofs and assessments for all layers (`/api/v1/risk-assessment`).
   - **Mathematically Verifiable Compliance (MVCR)**: Hardware-enclave attested report generation (`/api/v1/compliance`).

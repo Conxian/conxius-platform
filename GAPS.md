@@ -7,7 +7,7 @@ This document tracks the resolution of gaps and identifies new technical require
 ### Conxian Gateway & Nexus (Phase 5 & 6 Core Alignment)
 - **Status**: ✅ Production-Grade Orchestrator (v0.2.1-aligned).
 - **Implemented & Audited**:
-  - **Kwil Transactional State**: Full migration from Neon to Kwil as the backing store for Nexus Glass Node state and history (see **Nexus Glass Node State** below for the public API). Kwil adapter diagnostics: `/api/v1/kwil/info`.
+  - **Kwil Transactional State**: Full migration from Neon to Kwil as the backing store for Nexus Glass Node state and history (public API: `/api/v1/nexus/state`). Kwil adapter diagnostics: `/api/v1/kwil/info`.
   - **Self-Healing Nexus**: Autonomous reconciliation against on-chain checkpoints every 144 blocks.
   - **Sovereign AI Allocation**: Real-time compute weighting and status monitoring (`/api/v1/ai/allocation`).
   - **Universal Bitcoin Identity (UBI)**: DID-linked sovereign identity management (`/api/v1/identity/ubi/{address}`).

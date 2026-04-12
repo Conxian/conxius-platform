@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 
 function SecretInput({
   label,
@@ -34,7 +34,10 @@ export default function SettingsPage() {
     ADMIN_PYPI_API_TOKEN: "",
     ADMIN_GCP_SA_KEY_JSON: "",
     ADMIN_CHANGELLY_API_KEY: "",
-    ADMIN_CHANGELLY_API_SECRET: ""
+    ADMIN_CHANGELLY_API_SECRET: "",
+    SUPPORT_IMAP_PASSWORD: "",
+    SUPPORT_SMTP_PASSWORD: "",
+    SUPPORT_LINEAR_API_KEY: ""
   });
   const [adminApiKey, setAdminApiKey] = useState("");
   const [loading, setLoading] = useState(false);
@@ -76,7 +79,7 @@ export default function SettingsPage() {
       <h2 style={{ color: '#2E403B', marginBottom: '1.5rem' }}>Platform Admin Settings</h2>
       <div style={{ backgroundColor: "#fef2f2", border: "1px solid #fee2e2", padding: "1rem", borderRadius: "8px", marginBottom: "2rem", color: "#b91c1c", fontSize: "0.9rem" }}>
         <p style={{ margin: 0, fontWeight: "bold" }}>HIGH PRIVILEGE AREA</p>
-        <p style={{ margin: "0.25rem 0 0 0" }}>Managing these secrets affects automated deployments and exchange integrations. Ensure you are authorized to make these changes.</p>
+        <p style={{ margin: "0.25rem 0 0 0" }}>Managing these secrets affects automated deployments, support intake, and exchange integrations. Ensure you are authorized to make these changes.</p>
       </div>
       
       <section style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', marginBottom: '2rem' }}>
@@ -111,6 +114,15 @@ export default function SettingsPage() {
           </div>
           <SecretInput label="Changelly API Key" name="ADMIN_CHANGELLY_API_KEY" value={secrets.ADMIN_CHANGELLY_API_KEY} onChange={handleChange} />
           <SecretInput label="Changelly API Secret" name="ADMIN_CHANGELLY_API_SECRET" value={secrets.ADMIN_CHANGELLY_API_SECRET} onChange={handleChange} />
+        </div>
+
+        <h3 style={{ marginTop: '2rem', color: '#D4A017', fontSize: '1.2rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem' }}>Support & Intake</h3>
+        <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1.5rem' }}>Configuration for the automated support mailbox and Linear integration.</p>
+
+        <div style={{ display: 'grid', gap: '1rem' }}>
+          <SecretInput label="Support IMAP Password" name="SUPPORT_IMAP_PASSWORD" value={secrets.SUPPORT_IMAP_PASSWORD} onChange={handleChange} />
+          <SecretInput label="Support SMTP Password" name="SUPPORT_SMTP_PASSWORD" value={secrets.SUPPORT_SMTP_PASSWORD} onChange={handleChange} />
+          <SecretInput label="Support Linear API Key" name="SUPPORT_LINEAR_API_KEY" value={secrets.SUPPORT_LINEAR_API_KEY} onChange={handleChange} />
         </div>
       </section>
 

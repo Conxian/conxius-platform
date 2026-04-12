@@ -53,6 +53,7 @@ export class ImapWorker {
       // Search for unread messages
       for await (const message of this.client.fetch({ seen: false }, { source: true })) {
         if (!message.source) {
+          console.warn(`[IMAP] Skipping message ${message.uid}: missing source`);
           continue;
         }
         const parsed = await simpleParser(message.source);

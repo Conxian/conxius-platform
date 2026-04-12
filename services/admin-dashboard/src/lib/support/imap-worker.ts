@@ -52,6 +52,9 @@ export class ImapWorker {
     try {
       // Search for unread messages
       for await (const message of this.client.fetch({ seen: false }, { source: true })) {
+        if (!message.source) {
+          continue;
+        }
         const parsed = await simpleParser(message.source);
 
         const email: SupportEmail = {

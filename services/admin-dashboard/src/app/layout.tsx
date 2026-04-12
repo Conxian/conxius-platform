@@ -34,6 +34,7 @@ export default function RootLayout({
           </div>
           <nav style={{ fontSize: '0.9rem', fontWeight: 500 }}>
              <a href="/" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Overview</a>
+             <a href="/support" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Support</a>
              <a href="/settings" style={{ color: 'inherit', textDecoration: 'none' }}>Settings</a>
           </nav>
         </header>

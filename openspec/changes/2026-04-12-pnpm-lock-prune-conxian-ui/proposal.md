@@ -9,6 +9,19 @@ The current root `pnpm-lock.yaml` includes an `importers.services/conxian-ui` bl
 - Regenerate the root lockfile from the workspace root so it only reflects packages included by `pnpm-workspace.yaml`.
 - Ensure `services/conxian-ui` is not present under `importers:` in the root `pnpm-lock.yaml`.
 
+## Reproduction
+From the repo root (after applying this change):
+
+```bash
+corepack pnpm -w install --lockfile-only
+
+# Should return no matches
+grep -n "services/conxian-ui" pnpm-lock.yaml || true
+
+# Should show no diff
+git diff -- pnpm-lock.yaml
+```
+
 ## Non-goals
 - Changing `services/conxian-ui` dependencies (that belongs in the submodule repository).
 - Aligning/normalizing `next`, `react`, `tailwindcss`, etc. versions across packages.

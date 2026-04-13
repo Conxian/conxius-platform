@@ -14,7 +14,7 @@ This repository is organized as a monorepo containing multiple services:
 
 ## Development Guidelines
 
-- **OpenSpec First**: Before making significant architectural changes, propose them in the `openspec/` directory.
+- **OpenSpec First**: Before making significant architectural changes, propose them in the `openspec/` directory. All changes must be preceded by an OpenSpec proposal or follow existing change artifacts in `openspec/changes/`.
 - **Earthy Corporate Finance Theme**: Adhere to the defined color palette (Forest Green #2E403B, Gold #D4A017) and institutional design patterns.
 - **Type Safety**: No `any` types. Use explicit TypeScript interfaces for all frontend data.
 - **Testing**: Run relevant tests before submitting a PR.
@@ -24,7 +24,7 @@ This repository is organized as a monorepo containing multiple services:
 
 The Node/TypeScript services under `services/` (as configured in `pnpm-workspace.yaml`) are managed as a `pnpm` workspace with a single root `pnpm-lock.yaml`.
 
-Note: `services/conxian-ui` is a git submodule and is currently excluded from the `pnpm` workspace to avoid lockfile churn when it’s initialized locally.
+Note: `services/conxian-ui` and `services/lib-conxian-core` are git submodules. `conxian-ui` is currently excluded from the root `pnpm` workspace to avoid lockfile churn when it’s initialized locally.
 
 ### Prerequisites
 

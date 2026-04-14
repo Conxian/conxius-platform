@@ -15,6 +15,10 @@ Separately, `GAPS.md` references endpoints that don’t match the intended Gatew
 - Update `GAPS.md` to reference the address-scoped UBI route and the Nexus state/sync endpoints.
 - Regenerate `pnpm-lock.yaml` from the root workspace so it matches `pnpm-workspace.yaml` (i.e. no `services/conxian-ui` importer).
 
+## Implementation
+
+Implemented in #481 (`a587102`).
+
 ## Non-goals
 
 - Changing the pinned `services/conxian-ui` submodule SHA.

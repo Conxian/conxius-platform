@@ -14,11 +14,14 @@ export interface SupportEmail {
 }
 
 export class ImapWorker {
+  private static readonly MAX_SUPPRESSED_MISSING_SOURCE_UIDS = 1000;
+
   private client: ImapFlow;
   private linearApiKey: string;
   private teamId: string;
   private labelCache: Map<string, string> = new Map();
   private transporter: nodemailer.Transporter;
+  private suppressedMissingSourceUids: Set<number> = new Set();
 
   constructor() {
     this.client = new ImapFlow({
@@ -52,19 +55,12 @@ export class ImapWorker {
     try {
       // Search for unread messages
       for await (const message of this.client.fetch({ seen: false }, { source: true })) {
-        if (!message.source) {
-          console.warn(`[IMAP] Skipping message ${message.uid}: missing source`);
-          try {
-            await this.client.messageFlagsAdd({ uid: message.uid }, ['\\Seen']);
-          } catch (e) {
-            console.warn(
-              `[IMAP] Failed to mark message ${message.uid} as seen after missing source`,
-              e,
-            );
-          }
+        const source = await this.getMessageSource(message.uid, message.source);
+        if (!source) {
           continue;
         }
-        const parsed = await simpleParser(message.source);
+
+        const parsed = await simpleParser(source);
 
         const email: SupportEmail = {
           id: message.uid.toString(),
@@ -91,6 +87,72 @@ export class ImapWorker {
       lock.release();
       await this.client.logout();
     }
+  }
+
+  private async getMessageSource(
+    uid: number,
+    initialSource: Buffer | string | null | undefined,
+  ): Promise<Buffer | string | null> {
+    if (typeof initialSource === 'string' || Buffer.isBuffer(initialSource)) {
+      this.clearMissingSourceSuppression(uid);
+      return initialSource;
+    }
+
+    const isSuppressed = this.isMissingSourceSuppressed(uid);
+
+    if (!isSuppressed) {
+      console.warn(`[IMAP] Missing source for message ${uid}; retrying fetchOne()`);
+      try {
+        const refetched = await this.client.fetchOne(uid, { source: true }, { uid: true });
+        if (refetched !== false && refetched.source) {
+          return refetched.source;
+        }
+      } catch (e) {
+        console.warn(`[IMAP] Failed to refetch message ${uid} source`, e);
+      }
+    }
+
+    if (!isSuppressed) {
+      console.error(`[IMAP] Skipping message ${uid}: missing source after retry`);
+
+      try {
+        await this.client.messageFlagsAdd({ uid }, ['\\Flagged']);
+      } catch (e) {
+        console.warn(`[IMAP] Failed to flag message ${uid} after missing source`, e);
+      }
+    }
+
+    try {
+      await this.client.messageFlagsAdd({ uid }, ['\\Seen']);
+      this.clearMissingSourceSuppression(uid);
+    } catch (e) {
+      this.suppressMissingSource(uid);
+      if (!isSuppressed) {
+        console.warn(`[IMAP] Failed to mark message ${uid} as seen after missing source; suppressing logs/refetch`, e);
+      }
+    }
+
+    return null;
+  }
+
+  private isMissingSourceSuppressed(uid: number): boolean {
+    return this.suppressedMissingSourceUids.has(uid);
+  }
+
+  private suppressMissingSource(uid: number): void {
+    this.suppressedMissingSourceUids.delete(uid);
+    this.suppressedMissingSourceUids.add(uid);
+
+    if (this.suppressedMissingSourceUids.size > ImapWorker.MAX_SUPPRESSED_MISSING_SOURCE_UIDS) {
+      const oldestUid = this.suppressedMissingSourceUids.values().next().value;
+      if (typeof oldestUid === 'number') {
+        this.suppressedMissingSourceUids.delete(oldestUid);
+      }
+    }
+  }
+
+  private clearMissingSourceSuppression(uid: number): void {
+    this.suppressedMissingSourceUids.delete(uid);
   }
 
   private scrubContent(text: string): string {

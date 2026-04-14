@@ -23,3 +23,9 @@ Implemented in #481 (`a587102`).
 
 - Changing the pinned `services/conxian-ui` submodule SHA.
 - Managing `services/conxian-ui` dependencies from this repo (those belong in the submodule’s own repository).
+
+## Implementation
+
+- `GAPS.md` endpoint corrections: implemented via PRs #478 and #479 (commits `2dc6fb4`, `124a7e4`).
+- `pnpm-lock.yaml` drift cleanup (remove `services/conxian-ui` importer): implemented via PR #480 (commit `fc94804`).
+- This proposal document was added later in PR #481 (commit `f05ab6c`) to preserve an auditable decision record.

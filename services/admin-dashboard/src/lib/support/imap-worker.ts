@@ -92,6 +92,7 @@ export class ImapWorker {
     initialSource: unknown,
   ): Promise<Buffer | string | null> {
     if (typeof initialSource === 'string' || Buffer.isBuffer(initialSource)) {
+      this.suppressedMissingSourceUids.delete(uid);
       return initialSource;
     }
 

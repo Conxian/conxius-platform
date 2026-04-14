@@ -62,7 +62,7 @@ export class ImapWorker {
 
           console.warn(`[IMAP] Missing source for message ${uid}; retrying fetchOne()`);
           try {
-            const refetched = await this.client.fetchOne(uid, { source: true });
+            const refetched = await this.client.fetchOne(uid, { source: true }, { uid: true });
             if (refetched !== false && refetched.source) {
               source = refetched.source;
             }

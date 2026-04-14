@@ -14,12 +14,14 @@ export interface SupportEmail {
 }
 
 export class ImapWorker {
+  private static readonly MAX_SUPPRESSED_MISSING_SOURCE_UIDS = 1000;
+
   private client: ImapFlow;
   private linearApiKey: string;
   private teamId: string;
   private labelCache: Map<string, string> = new Map();
   private transporter: nodemailer.Transporter;
-  private suppressedMissingSourceUids: Set<number> = new Set();
+  private suppressedMissingSourceUids: Map<number, true> = new Map();
 
   constructor() {
     this.client = new ImapFlow({
@@ -92,11 +94,11 @@ export class ImapWorker {
     initialSource: unknown,
   ): Promise<Buffer | string | null> {
     if (typeof initialSource === 'string' || Buffer.isBuffer(initialSource)) {
-      this.suppressedMissingSourceUids.delete(uid);
+      this.clearMissingSourceSuppression(uid);
       return initialSource;
     }
 
-    const isSuppressed = this.suppressedMissingSourceUids.has(uid);
+    const isSuppressed = this.isMissingSourceSuppressed(uid);
 
     if (!isSuppressed) {
       console.warn(`[IMAP] Missing source for message ${uid}; retrying fetchOne()`);
@@ -122,15 +124,35 @@ export class ImapWorker {
 
     try {
       await this.client.messageFlagsAdd({ uid }, ['\\Seen']);
-      this.suppressedMissingSourceUids.delete(uid);
+      this.clearMissingSourceSuppression(uid);
     } catch (e) {
-      this.suppressedMissingSourceUids.add(uid);
+      this.suppressMissingSource(uid);
       if (!isSuppressed) {
         console.warn(`[IMAP] Failed to mark message ${uid} as seen after missing source; suppressing logs/refetch`, e);
       }
     }
 
     return null;
+  }
+
+  private isMissingSourceSuppressed(uid: number): boolean {
+    return this.suppressedMissingSourceUids.has(uid);
+  }
+
+  private suppressMissingSource(uid: number): void {
+    this.suppressedMissingSourceUids.delete(uid);
+    this.suppressedMissingSourceUids.set(uid, true);
+
+    if (this.suppressedMissingSourceUids.size > ImapWorker.MAX_SUPPRESSED_MISSING_SOURCE_UIDS) {
+      const oldestUid = this.suppressedMissingSourceUids.keys().next().value;
+      if (typeof oldestUid === 'number') {
+        this.suppressedMissingSourceUids.delete(oldestUid);
+      }
+    }
+  }
+
+  private clearMissingSourceSuppression(uid: number): void {
+    this.suppressedMissingSourceUids.delete(uid);
   }
 
   private scrubContent(text: string): string {

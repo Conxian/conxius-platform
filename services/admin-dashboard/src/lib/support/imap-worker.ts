@@ -56,37 +56,44 @@ export class ImapWorker {
         let source = message.source;
         if (!source) {
           const uid = message.uid;
-          if (this.suppressedMissingSourceUids.has(uid)) {
-            continue;
-          }
+          const isSuppressed = this.suppressedMissingSourceUids.has(uid);
 
-          console.warn(`[IMAP] Missing source for message ${uid}; retrying fetchOne()`);
-          try {
-            const refetched = await this.client.fetchOne(uid, { source: true }, { uid: true });
-            if (refetched !== false && refetched.source) {
-              source = refetched.source;
+          if (!isSuppressed) {
+            console.warn(`[IMAP] Missing source for message ${uid}; retrying fetchOne()`);
+            try {
+              const refetched = await this.client.fetchOne(uid, { source: true }, { uid: true });
+              if (refetched !== false && refetched.source) {
+                source = refetched.source;
+              }
+            } catch (e) {
+              console.warn(`[IMAP] Failed to refetch message ${uid} source`, e);
             }
-          } catch (e) {
-            console.warn(`[IMAP] Failed to refetch message ${uid} source`, e);
           }
 
           if (!source) {
-            console.error(`[IMAP] Skipping message ${uid}: missing source after retry`);
+            if (!isSuppressed) {
+              console.error(`[IMAP] Skipping message ${uid}: missing source after retry`);
+            }
 
-            try {
-              await this.client.messageFlagsAdd({ uid }, ['\\Flagged']);
-            } catch (e) {
-              console.warn(`[IMAP] Failed to flag message ${uid} after missing source`, e);
+            if (!isSuppressed) {
+              try {
+                await this.client.messageFlagsAdd({ uid }, ['\\Flagged']);
+              } catch (e) {
+                console.warn(`[IMAP] Failed to flag message ${uid} after missing source`, e);
+              }
             }
 
             try {
               await this.client.messageFlagsAdd({ uid }, ['\\Seen']);
+              this.suppressedMissingSourceUids.delete(uid);
             } catch (e) {
               this.suppressedMissingSourceUids.add(uid);
-              console.warn(
-                `[IMAP] Failed to mark message ${uid} as seen after missing source; suppressing for worker lifetime`,
-                e,
-              );
+              if (!isSuppressed) {
+                console.warn(
+                  `[IMAP] Failed to mark message ${uid} as seen after missing source; suppressing logs/refetch`,
+                  e,
+                );
+              }
             }
 
             continue;

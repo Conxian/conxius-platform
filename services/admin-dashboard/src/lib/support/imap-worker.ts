@@ -91,7 +91,7 @@ export class ImapWorker {
 
   private async getMessageSource(
     uid: number,
-    initialSource: unknown,
+    initialSource: Buffer | string | null | undefined,
   ): Promise<Buffer | string | null> {
     if (typeof initialSource === 'string' || Buffer.isBuffer(initialSource)) {
       this.clearMissingSourceSuppression(uid);

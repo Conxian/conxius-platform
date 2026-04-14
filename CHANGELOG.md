@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Integrated jurisdictional sharding for ZAR-linked settlements.
+- Expanded BitVM2 verification verifiers.
+
+## [0.2.1] - 2026-04-10
+
+### Added
+- **ALEX Readiness (Method B)**: Direct contract-call transaction construction for sovereign custody and enclave-backed signing.
+- **Structured Finance**: Implemented Ops Loans with Junior/Senior tranches and Guardian intent verification.
+- **Offline-First POS**: TEE-cached transaction queue and local mesh gossip (Bluetooth/WiFi) for load-shedding resilience.
+- **Universal Bitcoin Identity (UBI)**: DID-linked sovereign identity management via RGB/Taproot and BitVM proofs.
+- **Nexus Glass Node State**: Full state synchronization and Merkle root management for L1/L2 parity.
+- **Enterprise Connectors**: Native OData/ERP translation layers and ISO 20022 bridging (pacs.008, pacs.009).
+
+### Improved
+- **Phase 6 UI Components**: Launched `AiAllocationCard`, `NexusSyncStatus`, `UbiIdentityCard`, and `AlexMethodB` in `conxian-ui`.
+- **Core API Client**: Standardized all Gateway proprietary endpoints with strict typing and resilient skeleton loaders.
+
+## [0.2.0] - 2025-10-15
+
+### Added
+- **Global Liquidity Mesh**: HTLC-based atomic swap orchestration across Stacks, Liquid, and Rootstock.
+- **Decentralized Risk Oracle**: Cryptographically signed Risk Proofs and assessments for all layers.
+- **Kwil Transactional State**: Migrated Nexus Glass Node state and history storage to Kwil.
+- **Sovereign AI Allocation**: Real-time compute weighting and risk-optimized asset management.
+- **Hardware Security**: Integrated HSM FIPS 140-2 Level 3 status tracking.
+
 ### Changed
 - Adopted a root `pnpm` workspace and `pnpm-lock.yaml` for Node/TypeScript services.
 - Updated `services/admin-dashboard` to `next@15.1.12`.

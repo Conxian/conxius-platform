@@ -21,7 +21,7 @@ export class ImapWorker {
   private teamId: string;
   private labelCache: Map<string, string> = new Map();
   private transporter: nodemailer.Transporter;
-  private suppressedMissingSourceUids: Map<number, true> = new Map();
+  private suppressedMissingSourceUids: Set<number> = new Set();
 
   constructor() {
     this.client = new ImapFlow({
@@ -141,10 +141,10 @@ export class ImapWorker {
 
   private suppressMissingSource(uid: number): void {
     this.suppressedMissingSourceUids.delete(uid);
-    this.suppressedMissingSourceUids.set(uid, true);
+    this.suppressedMissingSourceUids.add(uid);
 
     if (this.suppressedMissingSourceUids.size > ImapWorker.MAX_SUPPRESSED_MISSING_SOURCE_UIDS) {
-      const oldestUid = this.suppressedMissingSourceUids.keys().next().value;
+      const oldestUid = this.suppressedMissingSourceUids.values().next().value;
       if (typeof oldestUid === 'number') {
         this.suppressedMissingSourceUids.delete(oldestUid);
       }

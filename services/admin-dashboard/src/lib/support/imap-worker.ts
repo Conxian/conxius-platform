@@ -19,6 +19,7 @@ export class ImapWorker {
   private teamId: string;
   private labelCache: Map<string, string> = new Map();
   private transporter: nodemailer.Transporter;
+  private suppressedMissingSourceUids: Set<number> = new Set();
 
   constructor() {
     this.client = new ImapFlow({
@@ -52,19 +53,47 @@ export class ImapWorker {
     try {
       // Search for unread messages
       for await (const message of this.client.fetch({ seen: false }, { source: true })) {
-        if (!message.source) {
-          console.warn(`[IMAP] Skipping message ${message.uid}: missing source`);
-          try {
-            await this.client.messageFlagsAdd({ uid: message.uid }, ['\\Seen']);
-          } catch (e) {
-            console.warn(
-              `[IMAP] Failed to mark message ${message.uid} as seen after missing source`,
-              e,
-            );
+        let source = message.source;
+        if (!source) {
+          const uid = message.uid;
+          if (this.suppressedMissingSourceUids.has(uid)) {
+            continue;
           }
-          continue;
+
+          console.warn(`[IMAP] Missing source for message ${uid}; retrying fetchOne()`);
+          try {
+            const refetched = await this.client.fetchOne(uid, { source: true });
+            if (refetched !== false && refetched.source) {
+              source = refetched.source;
+            }
+          } catch (e) {
+            console.warn(`[IMAP] Failed to refetch message ${uid} source`, e);
+          }
+
+          if (!source) {
+            console.error(`[IMAP] Skipping message ${uid}: missing source after retry`);
+
+            try {
+              await this.client.messageFlagsAdd({ uid }, ['\\Flagged']);
+            } catch (e) {
+              console.warn(`[IMAP] Failed to flag message ${uid} after missing source`, e);
+            }
+
+            try {
+              await this.client.messageFlagsAdd({ uid }, ['\\Seen']);
+            } catch (e) {
+              this.suppressedMissingSourceUids.add(uid);
+              console.warn(
+                `[IMAP] Failed to mark message ${uid} as seen after missing source; suppressing for worker lifetime`,
+                e,
+              );
+            }
+
+            continue;
+          }
         }
-        const parsed = await simpleParser(message.source);
+
+        const parsed = await simpleParser(source);
 
         const email: SupportEmail = {
           id: message.uid.toString(),

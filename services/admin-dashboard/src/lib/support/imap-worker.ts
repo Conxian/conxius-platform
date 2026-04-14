@@ -53,44 +53,9 @@ export class ImapWorker {
     try {
       // Search for unread messages
       for await (const message of this.client.fetch({ seen: false }, { source: true })) {
-        let source = message.source;
+        const source = message.source ?? (await this.tryRecoverMissingSource(message.uid));
         if (!source) {
-          const uid = message.uid;
-          if (this.suppressedMissingSourceUids.has(uid)) {
-            continue;
-          }
-
-          console.warn(`[IMAP] Missing source for message ${uid}; retrying fetchOne()`);
-          try {
-            const refetched = await this.client.fetchOne(uid, { source: true });
-            if (refetched !== false && refetched.source) {
-              source = refetched.source;
-            }
-          } catch (e) {
-            console.warn(`[IMAP] Failed to refetch message ${uid} source`, e);
-          }
-
-          if (!source) {
-            console.error(`[IMAP] Skipping message ${uid}: missing source after retry`);
-
-            try {
-              await this.client.messageFlagsAdd({ uid }, ['\\Flagged']);
-            } catch (e) {
-              console.warn(`[IMAP] Failed to flag message ${uid} after missing source`, e);
-            }
-
-            try {
-              await this.client.messageFlagsAdd({ uid }, ['\\Seen']);
-            } catch (e) {
-              this.suppressedMissingSourceUids.add(uid);
-              console.warn(
-                `[IMAP] Failed to mark message ${uid} as seen after missing source; suppressing for worker lifetime`,
-                e,
-              );
-            }
-
-            continue;
-          }
+          continue;
         }
 
         const parsed = await simpleParser(source);
@@ -120,6 +85,57 @@ export class ImapWorker {
       lock.release();
       await this.client.logout();
     }
+  }
+
+  private async tryRecoverMissingSource(uid: number): Promise<Buffer | null> {
+    if (this.suppressedMissingSourceUids.has(uid)) {
+      return null;
+    }
+
+    console.warn(`[IMAP] Missing source for message ${uid}; retrying fetchOne()`);
+
+    try {
+      const refetched = await this.client.fetchOne(uid.toString(), { source: true }, { uid: true });
+      if (refetched && refetched.source) {
+        return refetched.source;
+      }
+    } catch (e) {
+      console.warn(`[IMAP] Failed to refetch message ${uid} source`, e);
+    }
+
+    await this.quarantineMissingSourceMessage(uid);
+    return null;
+  }
+
+  private async quarantineMissingSourceMessage(uid: number): Promise<void> {
+    const quarantineMailbox = process.env.SUPPORT_IMAP_QUARANTINE_MAILBOX;
+    if (quarantineMailbox) {
+      try {
+        const moved = await this.client.messageMove(uid.toString(), quarantineMailbox, { uid: true });
+        if (moved) {
+          console.error(`[IMAP] Quarantined message ${uid} to ${quarantineMailbox}: missing source after retry`);
+          return;
+        }
+      } catch (e) {
+        console.warn(`[IMAP] Failed to move message ${uid} to quarantine mailbox`, e);
+      }
+    }
+
+    try {
+      await this.client.messageFlagsAdd(uid.toString(), ['\\Flagged'], { uid: true });
+    } catch (e) {
+      console.warn(`[IMAP] Failed to flag message ${uid} after missing source`, e);
+    }
+
+    try {
+      await this.client.messageFlagsAdd(uid.toString(), ['\\Seen'], { uid: true });
+    } catch (e) {
+      this.suppressedMissingSourceUids.add(uid);
+      console.warn(`[IMAP] Failed to mark message ${uid} as seen after missing source`, e);
+      return;
+    }
+
+    console.error(`[IMAP] Ignored message ${uid}: missing source after retry`);
   }
 
   private scrubContent(text: string): string {

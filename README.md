@@ -2,13 +2,23 @@
 
 The `conxius-platform` repository is the central point of orchestration for the Conxian ecosystem. It manages services, environment secrets, and Docker-based local development.
 
+## 📖 Technical Documentation Map
+
+For deep technical insights into the Conxian architecture, refer to the following authoritative documents:
+
+- [**Whitepaper**](./WHITEPAPER.md) - Vision, ethos, and core Bitcoin sovereign finance layer.
+- [**System Architecture Graph**](./SYSTEM_GRAPH.md) - Holistic organization-wide component mapping.
+- [**Alignment Strategy**](./ALIGNMENT.md) - Unified strategy for business logic, design, and authority.
+- [**Ecosystem Synergy**](./SYNERGY.md) - Details on inter-repository workflows and the "Core Loop."
+- [**Gap Analysis (GAPS.md)**](./GAPS.md) - Real-time tracking of Phase 6 implementation and technical debt.
+
 ## Purpose
 
 Make it easy to run, compose, and deploy the Conxian stack (Gateway, UI, and operational services) with consistent local and CI environments.
 
 ## Status
 
-Active. The orchestration layer evolves as flagship services mature and new integrations are added.
+**Production-Ready (v0.2.1-aligned).** The platform is fully aligned with Phase 6 sovereign primitives including AI Allocation, Universal Bitcoin Identity (UBI), and the Global Liquidity Mesh.
 
 ## Ownership
 
@@ -22,8 +32,10 @@ Ownership and review requirements are defined in [`CODEOWNERS`](./CODEOWNERS).
 
 ## Relationship to the Conxian stack
 
-- Pins and coordinates the core services (Gateway, UI, Admin) as a runnable system.
-- Integrates deployment workflows (for example StacksOrbit for contract deployment) and shared libraries like `lib-conxian-core`.
+- **Core Orchestrator**: Pins and coordinates the core services (Gateway, UI, Admin) as a runnable system.
+- **Sovereign Primitives**: Facilitates Phase 6 features including **AI-Driven Asset Allocation**, **Universal Bitcoin Identity (UBI)**, and **Nexus Glass Node** synchronization.
+- **Market Readiness**: Integrates **ALEX Method B** (sovereign custody) and **Structured Finance** (Ops Loans) capabilities.
+- **Deployment & Ops**: Integrates deployment workflows (StacksOrbit/GCP/Render) and shared institutional libraries like `lib-conxian-core`.
 
 ## 🚀 Quick Start
 

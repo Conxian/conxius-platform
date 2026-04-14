@@ -20,6 +20,7 @@ export class ImapWorker {
   private labelCache: Map<string, string> = new Map();
   private transporter: nodemailer.Transporter;
   private suppressedMissingSourceUids: Set<number> = new Set();
+  private readonly maxSuppressedMissingSourceUids = 1000;
 
   constructor() {
     this.client = new ImapFlow({
@@ -96,11 +97,16 @@ export class ImapWorker {
 
     try {
       const refetched = await this.client.fetchOne(uid.toString(), { source: true }, { uid: true });
-      if (refetched && refetched.source) {
+      if (refetched === false) {
+        return null;
+      }
+
+      if (refetched.source) {
         return refetched.source;
       }
     } catch (e) {
       console.warn(`[IMAP] Failed to refetch message ${uid} source`, e);
+      return null;
     }
 
     await this.quarantineMissingSourceMessage(uid);
@@ -130,8 +136,18 @@ export class ImapWorker {
     try {
       await this.client.messageFlagsAdd(uid.toString(), ['\\Seen'], { uid: true });
     } catch (e) {
-      this.suppressedMissingSourceUids.add(uid);
-      console.warn(`[IMAP] Failed to mark message ${uid} as seen after missing source`, e);
+      if (this.suppressedMissingSourceUids.size < this.maxSuppressedMissingSourceUids) {
+        this.suppressedMissingSourceUids.add(uid);
+      } else {
+        console.error(
+          `[IMAP] Suppression set is at capacity (max=${this.maxSuppressedMissingSourceUids}); not adding UID ${uid}`,
+          e,
+        );
+      }
+      console.warn(
+        `[IMAP] Failed to mark message ${uid} as seen after missing source; suppressing for worker lifetime`,
+        e,
+      );
       return;
     }
 

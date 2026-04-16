@@ -52,6 +52,40 @@ function getBoolean(obj: unknown, key: string): boolean | null {
   return typeof v === "boolean" ? v : null;
 }
 
+function BlueprintCard() {
+  const [blueprint, setBlueprint] = useState<any>(null);
+  const [show, setShow] = useState(false);
+
+  const fetchBlueprint = async () => {
+    const res = await fetch("/api/deployment/blueprint");
+    const data = await res.json();
+    setBlueprint(data);
+    setShow(true);
+  };
+
+  return (
+    <section style={{ marginTop: '2rem' }}>
+      <h3 style={{ borderBottom: '2px solid #D4A017', paddingBottom: '0.5rem', color: '#2E403B' }}>Agentic Audit (Blueprint)</h3>
+      <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', marginTop: '1rem' }}>
+        <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
+          Deterministic deployment export for autonomous auditors and AI orchestrators.
+        </p>
+        <button
+          onClick={fetchBlueprint}
+          style={{ padding: '0.5rem 1rem', backgroundColor: '#D4A017', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+        >
+          {show ? "Refresh Blueprint" : "Export Blueprint"}
+        </button>
+        {show && blueprint && (
+          <pre style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#f9f9f9', borderRadius: '4px', fontSize: '0.8rem', overflowX: 'auto', border: '1px solid #eee' }}>
+            {JSON.stringify(blueprint, null, 2)}
+          </pre>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export default function AdminPage() {
   const [stats, setStats] = useState<GatewayStats | null>(null);
   const [nexus, setNexus] = useState<NexusState | null>(null);
@@ -182,6 +216,8 @@ export default function AdminPage() {
           </div>
         </section>
       </div>
+
+      <BlueprintCard />
     </div>
   );
 }

@@ -3,6 +3,13 @@
 This document tracks the resolution of gaps and identifies new technical requirements.
 
 ## 1. Service Gaps (Resolved 2026-04-10)
+### Agentic Orchestration & Auditability (Phase 6 Additive)
+- **Status**: ✅ Production-Aligned.
+- **Implemented**:
+  - **Read-First Agentic Surface**: MCP-compatible endpoints for system auditability (`/api/v1/mcp/tools`).
+  - **Agent Intent Drafting**: Standardized payload drafting for autonomous financial maneuvers (`/api/v1/agent/intent/draft`).
+  - **Sovereign Handshake**: UI component for human-in-the-loop verification and signing of agent-drafted transactions.
+  - **Deterministic Blueprints**: Agent-readable deployment metadata export from the admin dashboard.
 
 ### Conxian Gateway & Nexus (Phase 5 & 6 Core Alignment)
 - **Status**: ✅ Production-Grade Orchestrator (v0.2.1-aligned).

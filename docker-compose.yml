@@ -36,21 +36,47 @@ services:
     networks:
       - conxian-network
 
-  # Sovereign Nodes (Placeholders - Disabled due to missing images)
-  # bisq-node:
-  #   image: bisq/bisq-node:latest
-  #   networks:
-  #     - conxian-network
+  bisq-node:
+    profiles:
+      - bisq
+    image: nginx:1.27-alpine
+    environment:
+      - RPC_STUB_PACK=bisq
+      - RPC_STUB_PORT=${BISQ_RPC_PORT:-9999}
+    volumes:
+      - ./docker/addons/rpc-stub.conf.template:/etc/nginx/templates/default.conf.template:ro
+    expose:
+      - "${BISQ_RPC_PORT:-9999}"
+    networks:
+      - conxian-network
 
-  # rgb-node:
-  #   image: lncm/rgb-node:latest
-  #   networks:
-  #     - conxian-network
+  rgb-node:
+    profiles:
+      - rgb
+    image: nginx:1.27-alpine
+    environment:
+      - RPC_STUB_PACK=rgb
+      - RPC_STUB_PORT=${RGB_RPC_PORT:-9999}
+    volumes:
+      - ./docker/addons/rpc-stub.conf.template:/etc/nginx/templates/default.conf.template:ro
+    expose:
+      - "${RGB_RPC_PORT:-9999}"
+    networks:
+      - conxian-network
 
-  # bitvm-node:
-  #   image: conxian/bitvm-node:latest
-  #   networks:
-  #     - conxian-network
+  bitvm-node:
+    profiles:
+      - bitvm
+    image: nginx:1.27-alpine
+    environment:
+      - RPC_STUB_PACK=bitvm
+      - RPC_STUB_PORT=${BITVM_RPC_PORT:-9999}
+    volumes:
+      - ./docker/addons/rpc-stub.conf.template:/etc/nginx/templates/default.conf.template:ro
+    expose:
+      - "${BITVM_RPC_PORT:-9999}"
+    networks:
+      - conxian-network
 
   db:
     image: postgres:15-alpine

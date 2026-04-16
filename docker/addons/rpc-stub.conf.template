@@ -1,0 +1,8 @@
+server {
+  listen ${RPC_STUB_PORT};
+  default_type text/plain;
+
+  location / {
+    return 503 "${RPC_STUB_PACK} RPC stub: configure an external endpoint or swap in a real node image.";
+  }
+}

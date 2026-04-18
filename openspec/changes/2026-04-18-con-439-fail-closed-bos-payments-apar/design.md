@@ -97,6 +97,22 @@ Rail selection MUST be deterministic from policy-approved inputs and tie-broken 
 
 Execution MUST complete in a T+0 bounded window (same UTC settlement day as approval finalization). Missing deadline evidence transitions to `FAILED_CLOSED`.
 
+### 8.1 Rail-by-rail finality matrix
+
+`RailPlan.planned_finality_target` MUST be derived deterministically and MUST map to the selected row below.
+
+| Rail family | Deterministic finality evidence/signals (all required) | Timeout/SLA bound | Fail-closed behavior when finality is not provable |
+| --- | --- | --- | --- |
+| `ON_CHAIN` | 1) `rail_reference_id` is the submitted transaction hash; 2) inclusion proof includes canonical `block_height` and `block_hash`; 3) `confirmations_observed >= required_confirmations` from policy snapshot; 4) no conflicting spend/reorg evidence at verification point. | `finality_timeout_utc = min(execution_deadline_utc, rail_submitted_at + PT90M)` | MUST transition to `FAILED_CLOSED` with reason `FINALITY_TIMEOUT`, `FINALITY_SIGNAL_MISSING`, or `FINALITY_EVIDENCE_MISMATCH`; `SETTLED` is forbidden. |
+| `ISO_20022` | 1) terminal `pacs.002` status `ACSC`; 2) `uetr`, `pacs002_message_id`, and `instr_id` match the issued envelope; 3) counterparty participant identity matches policy-approved route metadata. | `finality_timeout_utc = min(execution_deadline_utc, rail_submitted_at + PT30M)` | MUST transition to `FAILED_CLOSED` with reason `FINALITY_TIMEOUT`, `FINALITY_SIGNAL_MISSING`, or `FINALITY_EVIDENCE_MISMATCH`; `SETTLED` is forbidden. |
+| `PAPSS` | 1) PAPSS settlement reference and cycle identifier present; 2) PAPSS terminal success code equals policy-configured `papss_final_success_code`; 3) PAPSS settlement timestamp is attested by the integration adapter. | `finality_timeout_utc = min(execution_deadline_utc, rail_submitted_at + PT45M)` | MUST transition to `FAILED_CLOSED` with reason `FINALITY_TIMEOUT`, `FINALITY_SIGNAL_MISSING`, or `FINALITY_EVIDENCE_MISMATCH`; `SETTLED` is forbidden. |
+
+### 8.2 Finality enforcement notes
+
+- `SETTLED` is only reachable if all required evidence signals from the selected rail row are present and internally consistent.
+- Any evidence arriving after `finality_timeout_utc` is audit-only and MUST NOT reopen terminal state.
+- Corridor-level policy MAY tighten these SLA bounds, but MUST NOT relax beyond the defaults in this matrix.
+
 ## 9) Reconciliation model
 
 `SettlementReceipt` and reconciliation entries are append-only artifacts. Corrections MUST be represented as linked compensating entries that reference prior receipt hashes; in-place mutation is prohibited.

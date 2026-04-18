@@ -54,9 +54,15 @@ The key words **MUST**, **MUST NOT**, **SHOULD**, and **MAY** are to be interpre
 - `selection_policy_version`
 - `selection_inputs_hash`
 - `planned_fees`
-- `planned_finality_target`
+- `planned_finality_target`, containing:
+  - `rail_family` (`ON_CHAIN` | `ISO_20022` | `PAPSS`)
+  - `evidence_signals_required` (ordered, non-empty)
+  - `finality_timeout_utc` (MUST be `<= execution_deadline_utc`)
+  - `max_settlement_latency_seconds` (positive integer)
 
 `selected_rail` MUST be reproducible from `selection_inputs_hash` and policy version.
+
+`planned_finality_target` MUST be reproducible from the same deterministic inputs and MUST map to the selected rail's row in the finality matrix defined in Section 10.1.
 
 ### 3.4 `CustodyPlan`
 
@@ -125,6 +131,14 @@ The key words **MUST**, **MUST NOT**, **SHOULD**, and **MAY** are to be interpre
 - `finality_reference`
 - `status` (`SETTLED` only for final success)
 - `reconciliation_entry_id`
+
+`finality_reference` MUST contain rail-specific deterministic proof fields:
+
+- For `ON_CHAIN`: `chain_id`, `tx_id`, `inclusion_block_height`, `inclusion_block_hash`, `confirmations_observed`.
+- For `ISO_20022`: `pacs002_message_id`, `uetr`, `instr_id`, `transaction_status_code`, `settlement_time_utc`.
+- For `PAPSS`: `papss_settlement_reference`, `papss_cycle_id`, `papss_status_code`, `settlement_time_utc`.
+
+The engine MUST NOT emit `status=SETTLED` unless all required proof fields for the selected rail are present and validated.
 
 ## 4. Canonical hash bindings
 
@@ -240,6 +254,22 @@ Requested mutations MUST be rejected. To change these values, the caller MUST cr
 - Reserved liquidity MUST cover amount + fees + policy buffer and remain valid through execution deadline.
 - Execution deadline MUST be bounded to T+0 (same UTC settlement day as approval finalization).
 - If compliance status cannot be refreshed or verified at required checkpoints, execution MUST fail closed.
+
+### 10.1 Rail-by-rail finality matrix
+
+| Rail family | Deterministic finality evidence/signals (all required) | Timeout/SLA bound | Required behavior when finality is not provable |
+| --- | --- | --- | --- |
+| `ON_CHAIN` | 1) `rail_reference_id` equals submitted `tx_id`; 2) inclusion proof provides canonical block height/hash; 3) `confirmations_observed >= required_confirmations` from policy snapshot; 4) no conflicting spend/reorg evidence at verification. | `finality_timeout_utc = min(execution_deadline_utc, rail_submitted_at + PT90M)` | MUST transition to `FAILED_CLOSED` with reason `FINALITY_TIMEOUT`, `FINALITY_SIGNAL_MISSING`, or `FINALITY_EVIDENCE_MISMATCH`; `SETTLED` is forbidden. |
+| `ISO_20022` | 1) terminal `pacs.002` status `ACSC`; 2) `uetr`, `pacs002_message_id`, and `instr_id` match issued envelope identifiers; 3) counterparty participant identity matches policy-approved route metadata. | `finality_timeout_utc = min(execution_deadline_utc, rail_submitted_at + PT30M)` | MUST transition to `FAILED_CLOSED` with reason `FINALITY_TIMEOUT`, `FINALITY_SIGNAL_MISSING`, or `FINALITY_EVIDENCE_MISMATCH`; `SETTLED` is forbidden. |
+| `PAPSS` | 1) PAPSS settlement reference and cycle identifier present; 2) terminal success code equals policy-configured `papss_final_success_code`; 3) PAPSS settlement timestamp is attested by the PAPSS adapter. | `finality_timeout_utc = min(execution_deadline_utc, rail_submitted_at + PT45M)` | MUST transition to `FAILED_CLOSED` with reason `FINALITY_TIMEOUT`, `FINALITY_SIGNAL_MISSING`, or `FINALITY_EVIDENCE_MISMATCH`; `SETTLED` is forbidden. |
+
+### 10.2 Finality enforcement
+
+1. The engine MUST evaluate finality only against the selected rail row in Section 10.1.
+2. If complete finality evidence is not verified by `finality_timeout_utc`, the engine MUST transition to `FAILED_CLOSED`.
+3. Contradictory or mismatched evidence MUST transition execution to `FAILED_CLOSED`.
+4. Evidence arriving after terminal failure MUST be stored as audit/reconciliation data and MUST NOT reopen terminal state.
+5. Corridor-level policy MAY tighten per-rail SLA bounds but MUST NOT relax beyond the defaults in Section 10.1.
 
 ## 11. Exception and retry rules
 

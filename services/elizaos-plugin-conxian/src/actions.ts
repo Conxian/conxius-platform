@@ -5,6 +5,8 @@ import {
   getCartMandate,
   getGatewayStatus,
   getSbtcYield,
+  getAiAllocation,
+  getUbiIdentity,
   submitVote,
 } from "./conxianClient";
 import type { ConxianPluginEnv } from "./conxianClient";
@@ -53,6 +55,51 @@ export function createConxianActions(env: ConxianPluginEnv): Action[] {
         return { success: true, text, data: { response: toProviderValue(data) } };
       },
       similes: ["SBTC_YIELD", "YIELD_SBTC"],
+    },
+    {
+      name: "CONXIAN_AI_ALLOCATION",
+      description: "Fetch AI-optimized asset weights for a profile (aggressive|conservative|balanced).",
+      validate: async () => true,
+      parameters: [
+        {
+          name: "profile",
+          description: "Portfolio profile",
+          required: true,
+          schema: { type: "string" },
+        },
+      ],
+      handler: async (_runtime, _message, _state, options, callback) => {
+        const p = parameters(options);
+        const profile = typeof p.profile === "string" ? p.profile : "balanced";
+        const data = await getAiAllocation(env, profile);
+        const text = JSON.stringify(data, null, 2);
+        if (callback) await callback({ text }, "CONXIAN_AI_ALLOCATION");
+        return { success: true, text, data: { response: toProviderValue(data) } };
+      },
+      similes: ["AI_ALLOCATION", "PORTFOLIO_WEIGHTS"],
+    },
+    {
+      name: "CONXIAN_UBI_IDENTITY",
+      description: "Fetch UBI identity details for a Bitcoin address or DID.",
+      validate: async () => true,
+      parameters: [
+        {
+          name: "id",
+          description: "Address or UBI ID",
+          required: true,
+          schema: { type: "string" },
+        },
+      ],
+      handler: async (_runtime, _message, _state, options, callback) => {
+        const p = parameters(options);
+        const id = typeof p.id === "string" ? p.id : "";
+        if (!id) return { success: false, error: "missing-parameter:id" };
+        const data = await getUbiIdentity(env, id);
+        const text = JSON.stringify(data, null, 2);
+        if (callback) await callback({ text }, "CONXIAN_UBI_IDENTITY");
+        return { success: true, text, data: { response: toProviderValue(data) } };
+      },
+      similes: ["UBI_IDENTITY", "SOVEREIGN_ID"],
     },
     {
       name: "CONXIAN_GET_CART_MANDATE",

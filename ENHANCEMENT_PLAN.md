@@ -13,7 +13,7 @@ This plan outlines the sequential steps required to reconcile the current codeba
     *   Add `/api/v1/erp/sync` and `/api/v1/iso2022/pacs008` endpoints.
 3.  **Revenue & Financial Intelligence (CON-68, CON-60)**:
     *   [DONE] Implement the .Revenue Intelligence. module for real-time attribution.
-    *   Add persistence logic for ARR/MRR/Churn metrics.
+    *   [DONE] Add persistence logic for ARR/MRR/Churn metrics.
 4.  **Phase 6 Sovereign Primitives (Alignment)**:
     *   [DONE] Implement Sovereign AI Allocation logic (`/api/v1/ai/allocation`).
     *   [DONE] Implement Universal Bitcoin Identity (UBI) management (`/api/v1/identity/ubi`).

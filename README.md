@@ -12,6 +12,7 @@ For deep technical insights into the Conxian architecture, refer to the followin
 - [**Ecosystem Synergy**](./SYNERGY.md) - Details on inter-repository workflows and the "Core Loop."
 - [**Gap Analysis (GAPS.md)**](./GAPS.md) - Real-time tracking of Phase 6 implementation and technical debt.
 - [**Fail-Closed BOS Payments + AP/AR Spec (CON-439)**](./openspec/specs/fail-closed-bos-payments-apar.spec.md) - Normative fail-closed control model including rail-by-rail finality controls for on-chain, ISO 20022, and PAPSS settlement.
+- [**SIDL Release Readiness Runbook (CON-355)**](./docs/runbooks/SIDL_RELEASE_READINESS_RUNBOOK.md) - Maintainer rollout and verification guidance for SIDL Frames, ElizaOS plugin actions, and x402 cart checkout reference flows.
 
 ## Purpose
 

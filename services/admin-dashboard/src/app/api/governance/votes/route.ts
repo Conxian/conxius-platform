@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import type { VoteChoice } from "@/lib/sidl/types";
 import { recordVote } from "@/lib/sidl/voteStore";
 
+export const runtime = "nodejs";
+
 type VoteRequestBody = {
   proposalId: string;
   fid: number;

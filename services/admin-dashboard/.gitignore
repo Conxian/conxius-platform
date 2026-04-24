@@ -8,6 +8,7 @@ build
 .env.test.local
 .env.production.local
 .env.admin
+.sidl-state.json
 .DS_Store
 *.log
 next-env.d.ts

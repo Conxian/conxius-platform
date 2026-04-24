@@ -2,6 +2,8 @@ import { renderFarcasterFrameHtml } from "@/lib/sidl/frameHtml";
 import { getVoteTally, recordVote } from "@/lib/sidl/voteStore";
 import type { FarcasterFrameActionPayload, VoteChoice } from "@/lib/sidl/types";
 
+export const runtime = "nodejs";
+
 const PROPOSAL_ID = "conxian-sbtc-yield-policy";
 
 function originFromRequest(req: Request): string {

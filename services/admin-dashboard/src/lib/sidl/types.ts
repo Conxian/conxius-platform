@@ -39,6 +39,23 @@ export type VoteTally = {
   no: number;
 };
 
+export type SidlProposal = {
+  id: string;
+  title: string;
+  description?: string;
+  status: "open" | "closed";
+  createdAtIso: string;
+  updatedAtIso: string;
+};
+
+export type VoteEvent = {
+  id: string;
+  proposalId: string;
+  fid: number;
+  choice: VoteChoice;
+  recordedAtIso: string;
+};
+
 export type CartItem = {
   sku: string;
   name: string;
@@ -61,4 +78,29 @@ export type X402PaymentRequired = {
   payTo: string;
   asset: string;
   network: string;
+};
+
+export type CheckoutEventType = "payment-required" | "payment-attempted" | "payment-settled";
+
+export type CheckoutEvent = {
+  id: string;
+  mandateId: string;
+  type: CheckoutEventType;
+  occurredAtIso: string;
+  resource: string;
+  paymentSignaturePresent: boolean;
+  paymentSignatureSha256?: string;
+  paymentRequired?: X402PaymentRequired;
+};
+
+export type CheckoutLifecycleState = {
+  mandateId: string;
+  status: "not-started" | "payment-required" | "payment-attempted" | "settled";
+  challengeCount: number;
+  paymentAttemptCount: number;
+  settledCount: number;
+  lastEventAtIso: string;
+  lastPaymentRequiredAtIso?: string;
+  lastPaymentAttemptAtIso?: string;
+  lastSettledAtIso?: string;
 };

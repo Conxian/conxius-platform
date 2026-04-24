@@ -49,7 +49,7 @@ export async function GET(req: Request): Promise<ImageResponse> {
         ) : null}
 
         <div style={{ fontSize: 22, marginTop: 24, color: "#555555" }}>
-          This vote tally is in-memory (reference implementation).
+          Vote state is persisted locally with an auditable trail.
         </div>
       </div>
     ),

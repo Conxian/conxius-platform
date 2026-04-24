@@ -33,7 +33,7 @@ Implement a small, end-to-end “SIDL social surface” that attaches to existin
 ## 4. Non-goals
 - Onchain settlement or production facilitator integration for x402.
 - Cryptographic verification of Farcaster Frame payloads.
-- Long-lived vote persistence (this is a reference integration; persistence can be added via Gateway state commitments later).
+- External state commitments for SIDL persistence (local file-backed audit persistence is supported; Gateway/onchain commitments remain future work).
 
 ## 5. Risks & Mitigations
 - **Risk**: Frames may evolve (Frames v1 vs Mini Apps v2).

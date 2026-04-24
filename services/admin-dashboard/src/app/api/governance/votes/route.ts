@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { observeSidlException, observeSidlResponse, startSidlTimer } from "@/lib/sidl/observability";
 import type { VoteChoice } from "@/lib/sidl/types";
 import { recordVote } from "@/lib/sidl/voteStore";
 
@@ -8,17 +9,36 @@ type VoteRequestBody = {
   choice: VoteChoice;
 };
 
+const ENDPOINT = "/api/governance/votes";
+
 function isVoteChoice(value: unknown): value is VoteChoice {
   return value === "yes" || value === "no";
 }
 
 export async function POST(req: Request): Promise<NextResponse> {
-  const body = (await req.json().catch(() => null)) as VoteRequestBody | null;
+  const startedAt = startSidlTimer();
 
-  if (!body || typeof body.proposalId !== "string" || typeof body.fid !== "number" || !isVoteChoice(body.choice)) {
-    return NextResponse.json({ ok: false, error: "invalid-body" }, { status: 400 });
+  try {
+    const body = (await req.json().catch(() => null)) as VoteRequestBody | null;
+
+    if (!body || typeof body.proposalId !== "string" || typeof body.fid !== "number" || !isVoteChoice(body.choice)) {
+      const response = NextResponse.json({ ok: false, error: "invalid-body" }, { status: 400 });
+      observeSidlResponse({
+        endpoint: ENDPOINT,
+        method: "POST",
+        startedAt,
+        status: response.status,
+        errorCategory: "invalid-body",
+      });
+      return response;
+    }
+
+    const receipt = recordVote({ proposalId: body.proposalId, fid: body.fid, choice: body.choice });
+    const response = NextResponse.json({ ok: true, receipt });
+    observeSidlResponse({ endpoint: ENDPOINT, method: "POST", startedAt, status: response.status });
+    return response;
+  } catch (error) {
+    observeSidlException({ endpoint: ENDPOINT, method: "POST", startedAt, error });
+    throw error;
   }
-
-  const receipt = recordVote({ proposalId: body.proposalId, fid: body.fid, choice: body.choice });
-  return NextResponse.json({ ok: true, receipt });
 }

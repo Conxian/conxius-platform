@@ -102,11 +102,13 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus-alerts.yml:/etc/prometheus/prometheus-alerts.yml:ro
       - prometheus_data:/prometheus
     networks:
       - conxian-network
     depends_on:
       - gateway
+      - admin-dashboard
 
   grafana:
     image: grafana/grafana:latest

@@ -2,9 +2,19 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
+rule_files:
+  - prometheus-alerts.yml
+
 scrape_configs:
   - job_name: 'conxian-gateway'
     static_configs:
       - targets: ['gateway:8080']
         labels:
           group: 'gateway-api'
+
+  - job_name: 'conxian-admin-dashboard'
+    metrics_path: /api/metrics
+    static_configs:
+      - targets: ['admin-dashboard:3001']
+        labels:
+          group: 'admin-dashboard-api'

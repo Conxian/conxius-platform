@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Integrated jurisdictional sharding for ZAR-linked settlements.
 - Expanded BitVM2 verification verifiers.
+- Added SIDL social release notes for the reference rollout: Farcaster frame routes (`/frames/sbtc`, `/frames/vote`), ElizaOS plugin actions for yield/vote/cart flows, and x402 cart mandate checkout (`/api/cart/mandates/sbtc-yield-frame/checkout`) with documented 402 (`PAYMENT-REQUIRED`) to settlement (`PAYMENT-RESPONSE`) behavior.
+- Published readiness caveats for SIDL as a locally runnable reference implementation (not production-ready): no onchain/production facilitator settlement integration, no cryptographic frame payload verification, and vote tallies remain in-memory.
 
 ## [0.2.1] - 2026-04-10
 

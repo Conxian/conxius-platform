@@ -1,6 +1,9 @@
 import { renderFarcasterFrameHtml } from "@/lib/sidl/frameHtml";
 import { getSbtcYieldSnapshot } from "@/lib/sidl/gateway";
+import { observeSidlException, observeSidlResponse, startSidlTimer } from "@/lib/sidl/observability";
 import type { FarcasterFrameActionPayload } from "@/lib/sidl/types";
+
+const ENDPOINT = "/frames/sbtc";
 
 function originFromRequest(req: Request): string {
   return new URL(req.url).origin;
@@ -37,17 +40,37 @@ async function render(req: Request): Promise<Response> {
 }
 
 export async function GET(req: Request): Promise<Response> {
-  return render(req);
+  const startedAt = startSidlTimer();
+
+  try {
+    const response = await render(req);
+    observeSidlResponse({ endpoint: ENDPOINT, method: "GET", startedAt, status: response.status });
+    return response;
+  } catch (error) {
+    observeSidlException({ endpoint: ENDPOINT, method: "GET", startedAt, error });
+    throw error;
+  }
 }
 
 export async function POST(req: Request): Promise<Response> {
-  const payload = (await req.json().catch(() => null)) as FarcasterFrameActionPayload | null;
-  const buttonIndex = payload?.untrustedData?.buttonIndex;
+  const startedAt = startSidlTimer();
 
-  // Button 1 is "Refresh"; for any other value, just re-render.
-  if (buttonIndex !== 1) {
-    return render(req);
+  try {
+    const payload = (await req.json().catch(() => null)) as FarcasterFrameActionPayload | null;
+    const buttonIndex = payload?.untrustedData?.buttonIndex;
+
+    // Button 1 is "Refresh"; for any other value, just re-render.
+    if (buttonIndex !== 1) {
+      const response = await render(req);
+      observeSidlResponse({ endpoint: ENDPOINT, method: "POST", startedAt, status: response.status });
+      return response;
+    }
+
+    const response = await render(req);
+    observeSidlResponse({ endpoint: ENDPOINT, method: "POST", startedAt, status: response.status });
+    return response;
+  } catch (error) {
+    observeSidlException({ endpoint: ENDPOINT, method: "POST", startedAt, error });
+    throw error;
   }
-
-  return render(req);
 }

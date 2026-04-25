@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
 import { getCartMandate, toX402PaymentRequired } from "@/lib/sidl/cart";
 import { observeSidlException, observeSidlResponse, startSidlTimer } from "@/lib/sidl/observability";
+import { recordCheckoutPaymentAttempt, recordCheckoutPaymentRequired } from "@/lib/sidl/stateStore";
 import { encodeBase64Json, encodePaymentRequiredHeader } from "@/lib/sidl/x402";
 
 const ENDPOINT = "/api/cart/mandates/[id]/checkout";
 const PAYMENT_SIGNATURE_PATTERN = /^[A-Za-z0-9+/=_-]{16,}$/;
 
-function settlementResponse(): string {
-  return encodeBase64Json({ ok: true, settledAtIso: new Date().toISOString() });
+export const runtime = "nodejs";
+
+function settlementResponse(settledAtIso: string): string {
+  return encodeBase64Json({ ok: true, settledAtIso });
 }
 
 function classifyPaymentSignatureHeader(value: string | null): "missing" | "invalid" | "accepted" {
@@ -48,6 +51,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       const resource = new URL(req.url).pathname;
       const required = toX402PaymentRequired({ mandate, resource });
       const headerValue = encodePaymentRequiredHeader(required);
+
+      recordCheckoutPaymentRequired({
+        mandateId: mandate.id,
+        resource,
+        paymentRequired: required,
+      });
 
       const response = NextResponse.json(
         { ok: false, error: "payment-required", paymentRequired: required },
@@ -95,12 +104,23 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       return response;
     }
 
+    const resource = new URL(req.url).pathname;
+    const paymentSignature = req.headers.get("payment-signature")!.trim();
+    const settledAtIso = new Date().toISOString();
+
+    recordCheckoutPaymentAttempt({
+      mandateId: mandate.id,
+      resource,
+      paymentSignature,
+      settledAtIso,
+    });
+
     const response = NextResponse.json(
       { ok: true, mandateId: mandate.id, note: "Payment signature accepted (reference implementation)." },
       {
         status: 200,
         headers: {
-          "PAYMENT-RESPONSE": settlementResponse(),
+          "PAYMENT-RESPONSE": settlementResponse(settledAtIso),
           "Cache-Control": "no-store",
         },
       }

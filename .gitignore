@@ -68,6 +68,7 @@ blob-report/
 dev_server.log*
 /services/conxian-ui/src/lib/generated/
 .env.admin
+**/.sidl-state.json
 
 # --- Verification Artifacts ---
 capture.js

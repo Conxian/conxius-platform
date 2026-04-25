@@ -4,6 +4,8 @@ import { getVoteTally } from "@/lib/sidl/voteStore";
 
 const ENDPOINT = "/api/governance/votes/[proposalId]";
 
+export const runtime = "nodejs";
+
 export async function GET(_req: Request, { params }: { params: Promise<{ proposalId: string }> }): Promise<NextResponse> {
   const startedAt = startSidlTimer();
 

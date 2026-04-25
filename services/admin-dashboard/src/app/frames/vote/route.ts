@@ -3,6 +3,8 @@ import { observeSidlException, observeSidlResponse, startSidlTimer } from "@/lib
 import type { FarcasterFrameActionPayload, VoteChoice } from "@/lib/sidl/types";
 import { getVoteTally, recordVote } from "@/lib/sidl/voteStore";
 
+export const runtime = "nodejs";
+
 const PROPOSAL_ID = "conxian-sbtc-yield-policy";
 const ENDPOINT = "/frames/vote";
 

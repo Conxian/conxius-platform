@@ -45,3 +45,15 @@ This plan outlines the sequential steps required to reconcile the current codeba
 2.  **Verification Sweep**:
     *   Execute `clarinet check` and Vitest/Playwright suites across all business units.
     *   Verify Zero Secret Egress (ZSE) compliance.
+
+## Phase 5: Institutional & Research-Driven Enhancements (v0.2.2-aligned)
+**Goal**: Integrate research findings from top-tier decentralized node and autonomous business systems.
+
+1.  **Gateway Enhancements**:
+    *   [DONE] **Execution Simulation**: Implemented `/api/v1/settlement/simulate` for pre-execution cost and policy validation (Avail Nexus pattern).
+    *   [TODO] **Unified Cross-Chain Balance API**: Develop a single entry point for multi-chain liquidity visibility.
+2.  **Nexus (Glass Node) Roadmap**:
+    *   [TODO] **zkVM State Transitions**: Transition from Merkle-only tracking to RISC-V proven state transitions for 100% decentralized trust.
+3.  **BOS & Settlement**:
+    *   [DONE] **Deterministic Supply Chain**: Implemented deterministic commitment window and manifest generation (CON-505).
+    *   [TODO] **Nostr P&L Telemetry**: Transition multi-business P&L tracking to Nostr Kind 20626 for decentralized auditability.

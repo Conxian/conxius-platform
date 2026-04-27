@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Execution Simulation**: Pre-execution cost and policy validation for institutional settlement.
+- **Deterministic BOS Supply Chain**: Commitment window and manifest generation logic for immutable verification.
 - **Institutional Treasury Enhancements**: Integrated Glassnode API for real-time Profit Ratio and Unrealized PnL metrics.
 - **Multi-Sig Intent Drafting**: Implemented Safe{Core} compatible treasury intent drafting for autonomous rebalancing with human-in-the-loop approval.
 - **BOS Invoicing**: Integrated Request Network for decentralized business-to-business invoicing and payment tracking.
@@ -20,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.1] - 2026-04-10
 
 ### Added
+- **Execution Simulation**: Pre-execution cost and policy validation for institutional settlement.
+- **Deterministic BOS Supply Chain**: Commitment window and manifest generation logic for immutable verification.
 - **ALEX Readiness (Method B)**: Direct contract-call transaction construction for sovereign custody and enclave-backed signing.
 - **Structured Finance**: Implemented Ops Loans with Junior/Senior tranches and Guardian intent verification.
 - **Offline-First POS**: TEE-cached transaction queue and local mesh gossip (Bluetooth/WiFi) for load-shedding resilience.
@@ -34,6 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.0] - 2025-10-15
 
 ### Added
+- **Execution Simulation**: Pre-execution cost and policy validation for institutional settlement.
+- **Deterministic BOS Supply Chain**: Commitment window and manifest generation logic for immutable verification.
 - **Global Liquidity Mesh**: HTLC-based atomic swap orchestration across Stacks, Liquid, and Rootstock.
 - **Decentralized Risk Oracle**: Cryptographically signed Risk Proofs and assessments for all layers.
 - **Kwil Transactional State**: Migrated Nexus Glass Node state and history storage to Kwil.

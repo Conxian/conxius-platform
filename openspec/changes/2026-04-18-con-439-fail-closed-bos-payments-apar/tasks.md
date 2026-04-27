@@ -13,19 +13,19 @@
 
 ## Acceptance criteria (testable)
 
-- [ ] **AC-1 (matrix coverage):** `openspec/specs/fail-closed-bos-payments-apar.spec.md` SHALL define a rail-by-rail finality matrix with explicit rows for `ON_CHAIN`, `ISO_20022`, and `PAPSS`.
+- [x] **AC-1 (matrix coverage):** `openspec/specs/fail-closed-bos-payments-apar.spec.md` SHALL define a rail-by-rail finality matrix with explicit rows for `ON_CHAIN`, `ISO_20022`, and `PAPSS`.
   - **Pass when:** each row includes deterministic evidence/signals, timeout/SLA bound, and fail-closed behavior.
   - **Fail when:** any required rail row or required column content is missing.
-- [ ] **AC-2 (deterministic finality target binding):** `RailPlan.planned_finality_target` SHALL include `rail_family`, `evidence_signals_required`, `finality_timeout_utc`, and `max_settlement_latency_seconds`.
+- [x] **AC-2 (deterministic finality target binding):** `RailPlan.planned_finality_target` SHALL include `rail_family`, `evidence_signals_required`, `finality_timeout_utc`, and `max_settlement_latency_seconds`.
   - **Pass when:** all fields are required and constrained to deterministic derivation from policy snapshot + selected rail.
   - **Fail when:** any field is optional/undefined or can be mutated by non-deterministic callbacks.
-- [ ] **AC-3 (receipt finality evidence):** `SettlementReceipt.finality_reference` SHALL enforce rail-specific proof fields.
+- [x] **AC-3 (receipt finality evidence):** `SettlementReceipt.finality_reference` SHALL enforce rail-specific proof fields.
   - **Pass when:** the spec defines mandatory fields for each rail family and forbids `SETTLED` without complete proof.
   - **Fail when:** generic evidence is allowed without rail-specific validation.
-- [ ] **AC-4 (timeout fail-closed):** execution SHALL transition to `FAILED_CLOSED` if finality is unproven by `finality_timeout_utc`.
+- [x] **AC-4 (timeout fail-closed):** execution SHALL transition to `FAILED_CLOSED` if finality is unproven by `finality_timeout_utc`.
   - **Pass when:** timeout behavior and fail-closed reason handling are normative (`MUST`/`SHALL`).
   - **Fail when:** timeout behavior is advisory (`SHOULD`) or permits fail-open fallback.
-- [ ] **AC-5 (terminal-state safety):** late or contradictory external finality callbacks SHALL be recorded for audit only and MUST NOT reopen terminal state.
+- [x] **AC-5 (terminal-state safety):** late or contradictory external finality callbacks SHALL be recorded for audit only and MUST NOT reopen terminal state.
   - **Pass when:** this behavior is explicitly normative in the spec/design.
   - **Fail when:** callbacks can mutate terminal records to `SETTLED` after fail-close.
 

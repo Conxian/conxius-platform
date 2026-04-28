@@ -6,7 +6,7 @@ This document serves as the authoritative guide for aligning business logic, des
 
 ## 1. Business Logic Alignment (The "Fusion")
 
-- **Single Source of Truth**: The **Conxian Gateway** (within `lib-conxian-core`) is the unified entry point for all protocol state and sovereign services (Bisq, RGB, BitVM, Changelly).
+- **Single Source of Truth**: The **Conxian Gateway** is being refactored into a domain-specific Backend-for-Frontend (BFF) topology for all protocol state and sovereign services (Bisq, RGB, BitVM, Changelly).
 - **Core Primitives**: All shared cryptographic and protocol logic resides in `lib-conxian-core`. No duplication of logic across clients.
 - **Protocol State**: Clients (UI, Wallet) interact with the Gateway for state monitoring and compliance pipes.
 - **Interoperability**: Components are "Root-Up" compliant, following Clarinet SDK and Vitest standards.
@@ -20,8 +20,8 @@ This document serves as the authoritative guide for aligning business logic, des
 
 ## 3. Authority Alignment (Sovereign Autonomous Business)
 
-- **Orchestration**: `conxius-platform` is the sovereign command nexus.
-- **Secrets**: Provisioned via `scripts/provision-secrets.sh` (Nakamoto-verified).
+- **Orchestration**: `conxius-platform` is transitioning to a NixOS-driven declarative control plane.
+- **Secrets**: Moving toward decentralized secret management (DSM); `provision-secrets.sh` is deprecated.
 - **Deployment**: Unified via Render (Pulse), GCP (Sovereign Service), and StacksOrbit (TUI).
 - **Code is Law**: Decisions are encoded in Rust and Clarity.
 

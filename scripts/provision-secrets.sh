@@ -1,3 +1,4 @@
+# [DEPRECATED] Transitioning to NixOS/Declarative State. See docs/architecture/SOVEREIGN_REPR_2026.md
 #!/bin/bash
 
 # scripts/provision-secrets.sh

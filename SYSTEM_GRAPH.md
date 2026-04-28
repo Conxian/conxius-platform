@@ -1,95 +1,110 @@
-# Conxian System Architecture: Full Organization Viewpoint
+# Conxian System Architecture: Holistic Viewpoint
 
-This graph represents the holistic viewpoint of the Conxian organization and how `conxius-platform` orchestrates the ecosystem.
+> [!IMPORTANT]
+> **Architectural Transition in Progress**: The platform is migrating from a centralized orchestration model to a decentralized, local-first, BFF-driven topology. See [SOVEREIGN_REPR_2026.md](./docs/architecture/SOVEREIGN_REPR_2026.md) for the authoritative redesign specification.
+
+## 1. Proposed Sovereign Architecture (Target State)
+The target architecture dismantling the "Master Control Center" in favor of declarative NixOS configuration and Backend-for-Frontend (BFF) routing.
 
 ```mermaid
 graph TD
-    subgraph "Orchestration & Infrastructure (conxius-platform)"
-        P[Master Control Center]
-        S[provision-secrets.sh]
-        CI[CI/CD Runner]
+    subgraph "Infrastructure (Declarative NixOS)"
+        NIX[nix-bitcoin / NixOS]
+        REPO[Declarative Repo - Source of Truth]
     end
 
-    subgraph "API & Middleware Layer (lib-conxian-core / Nexus)"
-        GW[Conxian Gateway - Actix-web]
-        NX[Conxian Nexus - Glass Node]
-        AUTH[JWT / Enclave Auth]
-        HIRO[Hiro API Proxy - /extended/v1]
+    subgraph "Middleware (BFF Topology)"
+        UI_BFF[UI BFF - High Throughput]
+        WAL_BFF[Wallet BFF - Hardened / PSBT]
+        SOV_PRX[Sovereign Proxy - Isolated]
+        NX_OS[Nexus OS - IVC Indexer]
     end
 
-    subgraph "Client Layer (conxian-ui / wallet / orbit / admin)"
-        UI[Conxian UI - Next.js]
-        ADM[Admin Dashboard - Next.js]
-        W[Conxius Wallet - Android/iOS]
-        ORB[StacksOrbit - TUI Deployer]
+    subgraph "Client Layer (Local-First)"
+        UI[Conxian UI - Wasm lib-core]
+        W[Conxius Wallet - Local Enclave]
+        ADM[Admin Dashboard]
     end
 
-    subgraph "Protocol Layer (Conxian Contracts)"
+    subgraph "Protocol Layer (Nakamoto / sBTC)"
         DEX[DEX Factory V2]
         LAUNCH[Self-Launch Coordinator]
-        GOV[Governance & Reputation]
         SBTC[sBTC Vaults]
     end
 
-    subgraph "External Nodes & Bitcoin Network"
-        BISQ[Bisq Node]
-        RGB[RGB Node]
-        BITVM[BitVM Node]
-        STX[Stacks Node - Nakamoto]
+    subgraph "Bitcoin Sovereign Layers"
+        BISQ[Bisq P2P]
+        RGB[RGB Client-Side]
+        BITVM[BitVM Optimistic]
+        LN[Lightning Network]
         BTC[Bitcoin L1]
     end
 
-    P -->|Manages| GW
-    P -->|Manages| UI
-    P -->|Manages| ADM
-    P -->|Manages| NX
-    S -->|Configures| GW
-    S -->|Configures| UI
-    S -->|Configures| ADM
-    S -->|Configures| W
+    REPO -->|Nix Pull| NIX
+    NIX -->|Builds| UI_BFF
+    NIX -->|Builds| WAL_BFF
+    NIX -->|Builds| SOV_PRX
+    NIX -->|Builds| NX_OS
 
-    UI -->|Unified API| GW
-    ADM -->|Telemetry| GW
-    W -->|Secure Signing| GW
-    ORB -->|Deploys| Protocol
-    ORB -->|Monitors| STX
+    UI -->|Local Logic| UI
+    UI -->|Telemetry| UI_BFF
+    UI_BFF -->|Query| NX_OS
 
-    GW -->|Authenticates| AUTH
-    GW -->|Proxies| Sovereign
-    GW -->|Queries| NX
-    NX -->|Syncs| STX
+    W -->|Local Signing| W
+    W -->|Restricted PSBT| WAL_BFF
+    WAL_BFF -->|Bridge| SOV_PRX
 
-    STX -->|Anchored to| BTC
-
-    subgraph Protocol [On-Chain Logic]
-        DEX
-        LAUNCH
-        GOV
-        SBTC
-    end
+    SOV_PRX -->|Protected Traffic| Sovereign
 
     subgraph Sovereign [Sovereign Services]
         BISQ
         RGB
         BITVM
     end
+
+    NX_OS -->|Nakamoto Sync| BTC
+    Sovereign -->|Anchored| BTC
 ```
 
-## Enhancements & Roadmap Alignment
-- **Nakamoto Readiness**: All components are aligned with Stacks Epoch 3.1 (Clarity 4).
-- **Institutional Scale**: The Gateway (Gateway/Core) provides the compliance and performance layer for enterprise adoption.
-- **Sovereign Integration**: Roadmap includes native RGB asset support and BitVM-based computation proofs.
-- **Root-Up Ethos**: Reliability is built from the core libraries up to the user interfaces.
+## 2. Legacy Orchestration (Deprecated)
+The following graph represents the legacy hub-and-spoke model which is being phased out due to centralization risks.
+
+```mermaid
+graph TD
+    subgraph "Orchestration & Infrastructure (Legacy)"
+        P[Master Control Center]
+        S[provision-secrets.sh]
+        CI[CI/CD Runner]
+    end
+
+    subgraph "API & Middleware Layer"
+        GW[Conxian Gateway - Monolithic]
+        NX[Conxian Nexus - Glass Node]
+    end
+
+    subgraph "Client Layer"
+        UI[Conxian UI]
+        W[Conxius Wallet]
+    end
+
+    P -->|Manages| GW
+    P -->|Manages| UI
+    S -->|Configures| GW
+    S -->|Configures| W
+
+    UI -->|Unified API| GW
+    W -->|Secure Signing| GW
+    GW -->|Proxies| Sovereign
+    GW -->|Queries| NX
+```
 
 ## Repository Roles
 | Repository | Role |
 | :--- | :--- |
-| **conxius-platform** | Master Orchestrator |
-| **lib-conxian-core** | Shared Primitives & Gateway |
-| **conxian-ui** | Web Dashboard |
-| **admin-dashboard** | Internal Telemetry Dashboard |
-| **Conxian** | Smart Contracts (L1/L2) |
+| **conxius-platform** | Control Plane (Migrating to NixOS) |
+| **lib-conxian-core** | Shared Primitives (Wasm-ready) |
+| **conxian-ui** | Web Dashboard (Local-first) |
 | **conxius-wallet** | Mobile Sovereign Enclave |
-| **stacksorbit** | TUI Deployment & Monitoring |
-| **conxian-nexus** | Glass Node / State Sync |
-| **conxian-labs-site** | Public Information |
+| **conxian-nexus** | Nexus OS / IVC Indexer |
+
+For full details, see [REPOSITORY_TAXONOMY](docs/REPOSITORY_TAXONOMY.md).

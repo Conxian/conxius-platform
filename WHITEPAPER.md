@@ -12,6 +12,8 @@ All system states are anchored to Bitcoin burn-block-height. Bitcoin is the ulti
 Design language conveying trust, stability, and professional financial orchestration. Palette: Forest Green (#2E403B) and Gold (#D4A017).
 
 ## 2. Technical Architecture
+### 2.0 Sovereign Redesign (2026)
+The platform is undergoing a fundamental redesign to replace centralized orchestration with a local-first, BFF-driven topology. See [SOVEREIGN_REPR_2026.md](./docs/architecture/SOVEREIGN_REPR_2026.md).
 ### 2.1 Conxian Gateway (The Orchestrator)
 The primary orchestrator for cross-chain atomic swaps (Global Liquidity Mesh) and tiered institutional access. Consolidates all sovereign service APIs.
 

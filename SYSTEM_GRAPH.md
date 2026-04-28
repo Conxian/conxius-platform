@@ -1,5 +1,9 @@
 # Conxian System Architecture: Sovereign Declarative Topology
 
+> [!IMPORTANT]
+> **Architectural Transition in Progress**: The platform is migrating from a centralized orchestration model to a decentralized, local-first, BFF-driven topology. See [SOVEREIGN_REPR_2026.md](./docs/architecture/SOVEREIGN_REPR_2026.md) for the authoritative redesign specification.
+
+## 1. Proposed Sovereign Architecture (Target State)
 This graph represents the holistic viewpoint of the Conxian organization, transitioning from centralized orchestration to a decentralized NixOS control plane.
 
 ```mermaid
@@ -16,7 +20,7 @@ graph TD
             WBFF[Wallet BFF]
             SP[Sovereign Proxy]
         end
-        NX[Conxian Nexus - Glass Node]
+        NX[Conxian Nexus / Nexus OS - IVC Indexer]
         AUTH[Enclave Auth / ZKC]
     end
 
@@ -27,7 +31,7 @@ graph TD
         ORB[StacksOrbit - TUI Deployer]
     end
 
-    subgraph "Protocol Layer (Conxian Contracts)"
+    subgraph "Protocol Layer (Nakamoto / sBTC)"
         DEX[DEX Factory V2]
         LAUNCH[Self-Launch Coordinator]
         GOV[Governance & Reputation]
@@ -35,11 +39,12 @@ graph TD
         MEV[PVDE MEV Protection]
     end
 
-    subgraph "External Nodes & Bitcoin Network"
-        BISQ[Bisq Node]
-        RGB[RGB Node]
-        BITVM[BitVM Node]
+    subgraph "Bitcoin Sovereign Layers"
+        BISQ[Bisq P2P]
+        RGB[RGB Client-Side]
+        BITVM[BitVM Optimistic]
         STX[Stacks Node - Nakamoto]
+        LN[Lightning Network]
         BTC[Bitcoin L1]
     end
 
@@ -47,6 +52,8 @@ graph TD
     P -->|Defines| UI
     P -->|Defines| ADM
     P -->|Defines| NX
+    CI -->|Validates| P
+
     S -->|Cryptographic Provisioning| GW
     S -->|Cryptographic Provisioning| UI
     S -->|Cryptographic Provisioning| ADM
@@ -78,6 +85,40 @@ graph TD
         RGB
         BITVM
     end
+
+    Sovereign -->|Anchored| BTC
+```
+
+## 2. Legacy Orchestration (Deprecated)
+The following graph represents the legacy hub-and-spoke model which is being phased out due to centralization risks.
+
+```mermaid
+graph TD
+    subgraph "Orchestration & Infrastructure (Legacy)"
+        P[Master Control Center]
+        S[provision-secrets.sh]
+        CI[CI/CD Runner]
+    end
+
+    subgraph "API & Middleware Layer"
+        GW[Conxian Gateway - Monolithic]
+        NX[Conxian Nexus - Glass Node]
+    end
+
+    subgraph "Client Layer"
+        UI[Conxian UI]
+        W[Conxius Wallet]
+    end
+
+    P -->|Manages| GW
+    P -->|Manages| UI
+    S -->|Configures| GW
+    S -->|Configures| W
+
+    UI -->|Unified API| GW
+    W -->|Secure Signing| GW
+    GW -->|Proxies| Sovereign
+    GW -->|Queries| NX
 ```
 
 ## Enhancements & Roadmap Alignment
@@ -89,11 +130,13 @@ graph TD
 ## Repository Roles
 | Repository | Role |
 | :--- | :--- |
-| **conxius-platform** | Declarative Control Plane |
+| **conxius-platform** | Declarative Control Plane (Migrating to NixOS) |
 | **lib-conxian-core** | Shared Primitives & Wasm SDK |
 | **conxian-ui** | Local-First Web Dashboard |
 | **admin-dashboard** | Infrastructure Monitoring |
 | **Conxian** | Smart Contracts (L1/L2) |
 | **conxius-wallet** | Mobile Sovereign Enclave |
 | **stacksorbit** | TUI Deployment & Monitoring |
-| **conxian-nexus** | Glass Node / State Sync |
+| **conxian-nexus** | Nexus OS / Glass Node / State Sync |
+
+For full details, see [REPOSITORY_TAXONOMY](docs/REPOSITORY_TAXONOMY.md).

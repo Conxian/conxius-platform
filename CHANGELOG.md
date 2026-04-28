@@ -1,3 +1,11 @@
+## [0.2.2-aligned] - 2026-05-20
+### Fixed
+- **System Drift Remediation**: Restored massive missing Phase 6 logic in the Gateway Engine and UI after an audit revealed significant discrepancy between Linear status and codebase.
+- **Gateway Engine**: Rebuilt `engine/mod.rs` and `api/mod.rs` to support AI Allocation, UBI Identity, Nexus State, and Nostr Telemetry.
+- **Frontend Restoration**: Rebuilt and integrated 8 missing Phase 6 dashboard components in `conxian-ui`.
+- **API Tests**: Aligned implementation with tests, achieving 100% pass rate (26/26 tests).
+- **TypeScript Alignment**: Fixed strict typing and BigInt constructor issues for Next.js 15 compatibility.
+- **Security**: Implemented `hygiene-drift-guard.yml` to prevent future implementation drift.
 # Changelog
 
 All notable changes to this project will be documented in this file.

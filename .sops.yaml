@@ -1,0 +1,8 @@
+# .sops.yaml
+# Initial sops configuration for Conxius Platform
+
+creation_rules:
+  - path_regex: nixos/secrets/.*
+    # Placeholder for developer keys and machine keys
+    # age_key: age1...
+    # pgp: ...

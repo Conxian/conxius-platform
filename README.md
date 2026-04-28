@@ -35,7 +35,7 @@ Ownership and review requirements are defined in [`CODEOWNERS`](./CODEOWNERS).
 
 ## Relationship to the Conxian stack
 
-- **Core Orchestrator**: Pins and coordinates the core services (Gateway, UI, Admin) as a runnable system.
+- **Declarative Control Plane**: Defines and coordinates the core services (Gateway, UI, Admin) as a runnable system.
 - **Sovereign Primitives**: Facilitates Phase 6 features including **AI-Driven Asset Allocation**, **Universal Bitcoin Identity (UBI)**, and **Nexus Glass Node** synchronization.
 - **Market Readiness**: Integrates **ALEX Method B** (sovereign custody) and **Structured Finance** (Ops Loans) capabilities.
 - **Deployment & Ops**: Integrates deployment workflows (StacksOrbit/GCP/Render) and shared institutional libraries like `lib-conxian-core`.
@@ -81,7 +81,7 @@ Conxian uses the **Earthy Corporate Finance** theme:
 | Repository | Classification | Role |
 | :--- | :--- | :--- |
 | **Conxian/Conxian** | Flagship | Master Orchestrator |
-| **conxius-platform** | Control Plane | BOS Orchestration |
+| **conxius-platform** | Control Plane | Declarative Control Plane |
 | **conxian-ui** | Product UI | Institutional Dashboard |
 | **conxius-wallet** | Sovereign Access | Mobile Secure Enclave |
 | **lib-conxian-core** | Core SDK | Gateway & Primitives |

@@ -19,7 +19,7 @@ The primary orchestrator for cross-chain atomic swaps (Global Liquidity Mesh) an
 Provides verifiable state proofs (Merkle roots) and acts as a **Decentralized Risk Oracle** for the Bitcoin ecosystem, verifying off-chain state against Stacks L1.
 
 ### 2.3 Global Liquidity Mesh
-Active orchestration of atomic swaps across Stacks, Liquid, and Rootstock, ensuring seamless sovereign asset mobility via HTLC state machines.
+Active orchestration of atomic swaps across entire Bitcoin Stack, ensuring seamless sovereign asset mobility via HTLC state machines.
 
 ## 3. Advanced Features
 ### 3.1 Decentralized Risk Oracle

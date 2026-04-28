@@ -1,26 +1,29 @@
-# Conxian System Architecture: Full Organization Viewpoint
+# Conxian System Architecture: Sovereign Declarative Topology
 
-This graph represents the holistic viewpoint of the Conxian organization and how `conxius-platform` orchestrates the ecosystem.
+This graph represents the holistic viewpoint of the Conxian organization, transitioning from centralized orchestration to a decentralized NixOS control plane.
 
 ```mermaid
 graph TD
-    subgraph "Orchestration & Infrastructure (conxius-platform)"
-        P[Master Control Center]
-        S[provision-secrets.sh]
-        CI[CI/CD Runner]
+    subgraph "NixOS Control Plane (conxius-platform)"
+        P[Declarative Flake State]
+        S[sops-nix / age]
+        CI[NixOS Rebuild / CI]
     end
 
-    subgraph "API & Middleware Layer (lib-conxian-core / Nexus)"
-        GW[Conxian Gateway - Actix-web]
+    subgraph "Middleware (Backend-for-Frontend)"
+        subgraph GW [Conxian Gateway]
+            UBFF[UI BFF]
+            WBFF[Wallet BFF]
+            SP[Sovereign Proxy]
+        end
         NX[Conxian Nexus - Glass Node]
-        AUTH[JWT / Enclave Auth]
-        HIRO[Hiro API Proxy - /extended/v1]
+        AUTH[Enclave Auth / ZKC]
     end
 
-    subgraph "Client Layer (conxian-ui / wallet / orbit / admin)"
-        UI[Conxian UI - Next.js]
-        ADM[Admin Dashboard - Next.js]
-        W[Conxius Wallet - Android/iOS]
+    subgraph "Client Layer (Local-First)"
+        UI[Conxian UI - Next.js / Wasm]
+        ADM[Admin Dashboard - NixOS Status]
+        W[Conxius Wallet - Secure Enclave]
         ORB[StacksOrbit - TUI Deployer]
     end
 
@@ -29,6 +32,7 @@ graph TD
         LAUNCH[Self-Launch Coordinator]
         GOV[Governance & Reputation]
         SBTC[sBTC Vaults]
+        MEV[PVDE MEV Protection]
     end
 
     subgraph "External Nodes & Bitcoin Network"
@@ -39,23 +43,23 @@ graph TD
         BTC[Bitcoin L1]
     end
 
-    P -->|Manages| GW
-    P -->|Manages| UI
-    P -->|Manages| ADM
-    P -->|Manages| NX
-    S -->|Configures| GW
-    S -->|Configures| UI
-    S -->|Configures| ADM
-    S -->|Configures| W
+    P -->|Defines| GW
+    P -->|Defines| UI
+    P -->|Defines| ADM
+    P -->|Defines| NX
+    S -->|Cryptographic Provisioning| GW
+    S -->|Cryptographic Provisioning| UI
+    S -->|Cryptographic Provisioning| ADM
+    S -->|Cryptographic Provisioning| W
 
-    UI -->|Unified API| GW
-    ADM -->|Telemetry| GW
-    W -->|Secure Signing| GW
+    UI -->|Telemetry / Wasm| UBFF
+    ADM -->|System Status| P
+    W -->|PSBT Hand-off| WBFF
     ORB -->|Deploys| Protocol
     ORB -->|Monitors| STX
 
     GW -->|Authenticates| AUTH
-    GW -->|Proxies| Sovereign
+    GW -->|Routes| Sovereign
     GW -->|Queries| NX
     NX -->|Syncs| STX
 
@@ -66,6 +70,7 @@ graph TD
         LAUNCH
         GOV
         SBTC
+        MEV
     end
 
     subgraph Sovereign [Sovereign Services]
@@ -76,20 +81,19 @@ graph TD
 ```
 
 ## Enhancements & Roadmap Alignment
-- **Nakamoto Readiness**: All components are aligned with Stacks Epoch 3.1 (Clarity 4).
-- **Institutional Scale**: The Gateway (Gateway/Core) provides the compliance and performance layer for enterprise adoption.
-- **Sovereign Integration**: Roadmap includes native RGB asset support and BitVM-based computation proofs.
-- **Root-Up Ethos**: Reliability is built from the core libraries up to the user interfaces.
+- **NixOS Control Plane**: Transitioned from Master Control Center to a declarative, reproducible state model.
+- **BFF Topology**: Gateway refactored into domain-specific BFFs for improved security and isolation.
+- **Local-First Execution**: Clients leverage Wasm-compiled lib-conxian-core for local cryptographic validation.
+- **MEV Protection**: Implementation of Practical Verifiable Delay Encryption (PVDE) to neutralize front-running.
 
 ## Repository Roles
 | Repository | Role |
 | :--- | :--- |
-| **conxius-platform** | Master Orchestrator |
-| **lib-conxian-core** | Shared Primitives & Gateway |
-| **conxian-ui** | Web Dashboard |
-| **admin-dashboard** | Internal Telemetry Dashboard |
+| **conxius-platform** | Declarative Control Plane |
+| **lib-conxian-core** | Shared Primitives & Wasm SDK |
+| **conxian-ui** | Local-First Web Dashboard |
+| **admin-dashboard** | Infrastructure Monitoring |
 | **Conxian** | Smart Contracts (L1/L2) |
 | **conxius-wallet** | Mobile Sovereign Enclave |
 | **stacksorbit** | TUI Deployment & Monitoring |
 | **conxian-nexus** | Glass Node / State Sync |
-| **conxian-labs-site** | Public Information |

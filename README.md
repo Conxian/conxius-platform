@@ -8,7 +8,8 @@ For deep technical insights into the Conxian architecture, refer to the followin
 
 - [**Whitepaper**](./WHITEPAPER.md) - Vision, ethos, and core Bitcoin sovereign finance layer.
 - [**System Architecture Graph**](./SYSTEM_GRAPH.md) - Holistic organization-wide component mapping.
-- [**Alignment Strategy**](./ALIGNMENT.md) - Unified strategy for business logic, design, and authority.
+- [**Sovereign Computing Redesign (2026)**](./docs/architecture/SOVEREIGN_REPR_2026.md) - Paradigmatic shift to local-first, BFF-driven architecture.
+- [**Alignment Strategy**]( ./ALIGNMENT.md) - Unified strategy for business logic, design, and authority.
 - [**Ecosystem Synergy**](./SYNERGY.md) - Details on inter-repository workflows and the "Core Loop."
 - [**Gap Analysis (GAPS.md)**](./GAPS.md) - Real-time tracking of Phase 6 implementation and technical debt.
 - [**Fail-Closed BOS Payments + AP/AR Spec (CON-439)**](./openspec/specs/fail-closed-bos-payments-apar.spec.md) - Normative fail-closed control model including rail-by-rail finality controls for on-chain, ISO 20022, and PAPSS settlement.

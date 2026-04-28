@@ -49,3 +49,22 @@ This document tracks the resolution of gaps and identifies new technical require
 - Mainnet launch of the 5-5-5 Autonomous Referral Engine.
 - Integration of jurisdictional sharding for ZAR-linked settlements (Guardian: Sovereignty).
 - SAB-owned wallet architecture transition (DAO handoff).
+
+## 4. Phase 7: Sovereign Redesign (2026-Q3 Target)
+Following the "Sovereign Computing Redesign" audit, the following new gaps have been identified for the next generation of the platform:
+
+### Orchestration & Infrastructure
+- [ ] **Declarative NixOS Migration**: Deprecate Master Control Center and `provision-secrets.sh` in favor of NixOS/nix-bitcoin declarative state.
+- [ ] **Decentralized Secret Management (DSM)**: Implement commit-and-reveal (F3B) or committee-based secret management to eliminate centralized trust anchors.
+
+### Middleware (Gateway refactor)
+- [ ] **BFF Topology**: Split monolithic Gateway into:
+    - `UI-BFF`: High-throughput telemetry/caching.
+    - `Wallet-BFF`: Hardened PSBT/Attestation pipe.
+    - `Sovereign-Proxy`: Isolated internal routing.
+- [ ] **Nexus OS**: Transition indexer to an IVC machine design for verifiable off-chain computation.
+
+### Client & Protocol
+- [ ] **Local-First UI**: Port state transition logic to Wasm `lib-conxian-core` for execution in the browser.
+- [ ] **Micro-Frontend Federation**: Decompose `conxian-ui` into federated modules (DEX, BitVM, sBTC).
+- [ ] **Lightning-RGB Bridge**: Native RGB asset mobility over Lightning channels.

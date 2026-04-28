@@ -76,3 +76,22 @@ This repository follows the **OpenSpec First** directive. All architectural chan
 Conxian uses the **Earthy Corporate Finance** theme:
 - Primary: **Forest Green** (#2E403B)
 - Secondary: **Gold** (#D4A017)
+## 📁 Repository Taxonomy & Roles
+| Repository | Classification | Role |
+| :--- | :--- | :--- |
+| **Conxian/Conxian** | Flagship | Master Orchestrator |
+| **conxius-platform** | Control Plane | BOS Orchestration |
+| **conxian-ui** | Product UI | Institutional Dashboard |
+| **conxius-wallet** | Sovereign Access | Mobile Secure Enclave |
+| **lib-conxian-core** | Core SDK | Gateway & Primitives |
+| **conxian-nexus** | Glass Node | State & Risk Oracle |
+| **admin-dashboard** | Internal | Telemetry & Operations |
+
+For full details, see [REPOSITORY_TAXONOMY](docs/REPOSITORY_TAXONOMY.md).
+
+## 📖 Technical Documentation Map
+- [ENHANCEMENT_STRATEGY_APRIL_2026](docs/ENHANCEMENT_STRATEGY_APRIL_2026.md)
+- [REPOSITORY_TAXONOMY](docs/REPOSITORY_TAXONOMY.md)
+- [WHITEPAPER](WHITEPAPER.md)
+- [SYSTEM_GRAPH](SYSTEM_GRAPH.md)
+- [ALIGNMENT](ALIGNMENT.md)

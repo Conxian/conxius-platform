@@ -11,8 +11,8 @@ const legacySecretAliases: Record<string, string[]> = {
   ADMIN_NPM_TOKEN: ["NPM_TOKEN"],
   ADMIN_PYPI_API_TOKEN: ["PYPI_API_TOKEN"],
   [adminGcpSaKeyJsonKey]: ["GCP_SA_KEY_JSON", "GCP_CREDENTIALS"],
-  ADMIN_CHANGELLY_API_KEY: ["CHANGELLY_API_KEY"],
-  ADMIN_CHANGELLY_API_SECRET: ["CHANGELLY_API_SECRET"],
+  ADMIN_CHANGELLY_API_ID: ["CHANGELLY_API_KEY"],
+  ADMIN_CHANGELLY_API_SEC: ["CHANGELLY_API_SECRET"],
 };
 
 const adminSecretKeys = new Set(Object.keys(legacySecretAliases));

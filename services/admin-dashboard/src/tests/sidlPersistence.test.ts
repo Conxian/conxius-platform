@@ -78,7 +78,7 @@ describe("SIDL persistent state", () => {
     const successResponse = await GET(
       new Request("http://localhost/api/cart/mandates/sbtc-yield-frame/checkout", {
         headers: {
-          "PAYMENT-SIGNATURE": "mock-signature",
+          "PAYMENT-SIGNATURE": "0123456789abcdef",
         },
       }),
       {

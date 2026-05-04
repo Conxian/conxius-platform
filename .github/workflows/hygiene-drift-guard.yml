@@ -1,0 +1,40 @@
+name: Implementation Alignment Guard
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  alignment-audit:
+    name: System Alignment Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Run System Audit
+        run: |
+          python3 scripts/maintenance/system_audit.py
+
+      - name: Report Failure
+        if: failure()
+        run: |
+          echo "::error::Implementation drift detected! The codebase is no longer aligned with the documented Phase 6 requirements or the system audit suite."

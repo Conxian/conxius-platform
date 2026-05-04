@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **RGB Stack Upgrade**: Upgraded core protocol stack to version 0.12.0 for improved scalability and security.
 - **Execution Simulation**: Pre-execution cost and policy validation for institutional settlement.
 - **Deterministic BOS Supply Chain**: Commitment window and manifest generation logic for immutable verification.
 - **Institutional Treasury Enhancements**: Integrated Glassnode API for real-time Profit Ratio and Unrealized PnL metrics.
@@ -24,8 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sovereign Handshake v2**: Enhanced handshake logic for multi-sig execution of agent-drafted financial maneuvers.
 
 ### Improved
-- **UI/UX Polish**: Integrated `InstitutionalMetricsCard`, `TreasuryHandshake`, and `FinanceInvoices` into the System Overview dashboard.
-- **Gateway Robustness**: Completed full Phase 6 backend logic restoration, remediating drift in AI allocation, UBI, and Nexus state sync.
+- **System Drift Remediation**: Restored critical missing Phase 6 logic in the Gateway Engine and UI.
+- **UI Restoration**: Rebuilt and integrated 7 missing Phase 6 dashboard components in `conxian-ui`.
+- **Gateway Engine**: Injected missing logic for AI Allocation, UBI Identity, Nexus State, and ALEX Method B.
+- **CI Hygiene**: Implemented `hygiene-drift-guard.yml` to prevent future implementation drift and ensure 100% audit alignment.
 
 ## [0.2.1] - 2026-04-10
 

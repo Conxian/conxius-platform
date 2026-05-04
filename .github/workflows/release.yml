@@ -28,6 +28,20 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Guard release tags to commits in main
+        env:
+          TAG_SHA: ${{ github.sha }}
+        run: |
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$TAG_SHA" "origin/main"; then
+            echo "Tagged commit '$TAG_SHA' is not contained in origin/main."
+            echo "Release tags must point to commits already merged into main."
+            exit 1
+          fi
+
+      - name: Validate production environment template
+        run: ./scripts/validate-production-env.sh .env.production.schema
+
       - name: Verify matching changelog section exists
         env:
           VERSION: ${{ github.ref_name }}

@@ -1,11 +1,12 @@
 # Makefile for conxius-platform
 
-.PHONY: init auth start stop update-all logs bench deploy help
+.PHONY: init auth auth-prod start stop update-all logs bench deploy help
 
 help:
 	@echo "Conxian Platform Management Commands:"
 	@echo "  make init        - Initialize and update Git submodules"
-	@echo "  make auth        - Provision local .env with secrets"
+	@echo "  make auth        - Provision local .env (development profile)"
+	@echo "  make auth-prod   - Provision local .env.production (production profile)"
 	@echo "  make start       - Build and start the entire stack in detached mode"
 	@echo "  make stop        - Stop and remove the stack"
 	@echo "  make update-all  - Pull the latest main branches for all submodules"
@@ -20,6 +21,10 @@ init:
 auth:
 	@echo "Provisioning secrets..."
 	./scripts/provision-secrets.sh
+
+auth-prod:
+	@echo "Provisioning production secrets..."
+	CONXIAN_ENV_PROFILE=production ./scripts/provision-secrets.sh
 
 start:
 	@echo "Starting Conxian stack..."

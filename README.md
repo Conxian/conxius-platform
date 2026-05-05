@@ -21,7 +21,7 @@ Make it easy to run, compose, and deploy the Conxian stack (Gateway, UI, and ope
 
 ## Status
 
-**Production-Ready (v0.2.1-aligned).** The platform is fully aligned with Phase 6 sovereign primitives including AI Allocation, Universal Bitcoin Identity (UBI), and the Global Liquidity Mesh.
+**SDK-First Pivot (v0.2.3-aligned).** The platform has transitioned to an SDK-first model. Core Gateway and Protocol components have been demoted to supporting infrastructure for the Unified Vault SDK, which provides the first sellable primitive: hardware-backed Bitcoin signing plus policy enforcement.
 
 ## Ownership
 
@@ -35,10 +35,10 @@ Ownership and review requirements are defined in [`CODEOWNERS`](./CODEOWNERS).
 
 ## Relationship to the Conxian stack
 
-- **Declarative Control Plane**: Defines and coordinates the core services (Gateway, UI, Admin) as a runnable system.
-- **Sovereign Primitives**: Facilitates Phase 6 features including **AI-Driven Asset Allocation**, **Universal Bitcoin Identity (UBI)**, and **Nexus Glass Node** synchronization.
-- **Market Readiness**: Integrates **ALEX Method B** (sovereign custody) and **Structured Finance** (Ops Loans) capabilities.
-- **Deployment & Ops**: Integrates deployment workflows (StacksOrbit/GCP/Render) and shared institutional libraries like `lib-conxian-core`.
+- **Unified Vault SDK**: The primary commercial primitive for secure signing and policy orchestration.
+- **Bitcoin Native Application Infrastructure**: Tools for building on the existing Bitcoin stack without requiring new layers.
+- **Supporting Infrastructure**: The Gateway and Nexus OS provide state sync and telemetry as downstream consumers of the SDK core.
+- **Sovereign Reference Client**: A minimalist wallet proving the SDK and security model without competing with integrators.
 
 ## 🚀 Quick Start
 

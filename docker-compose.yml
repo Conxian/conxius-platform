@@ -95,7 +95,7 @@ services:
       - conxian-network
 
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.55.1
     ports:
       - "9090:9090"
     command:
@@ -111,11 +111,11 @@ services:
       - admin-dashboard
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.2.2
     ports:
       - "3001:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:?GRAFANA_PASSWORD must be set to a non-default secret}
     volumes:
       - grafana_data:/var/lib/grafana
     networks:

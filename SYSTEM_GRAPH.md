@@ -12,6 +12,7 @@ graph TD
         P[Declarative Flake State]
         S[sops-nix / age]
         CI[NixOS Rebuild / CI]
+        SDK[Unified Vault SDK - Core SDK]
     end
 
     subgraph "Middleware (Backend-for-Frontend)"
@@ -53,6 +54,9 @@ graph TD
     P -->|Defines| ADM
     P -->|Defines| NX
     CI -->|Validates| P
+    SDK -->|Powers| W
+    SDK -->|Powers| UI
+    SDK -->|Library| GW
 
     S -->|Cryptographic Provisioning| GW
     S -->|Cryptographic Provisioning| UI
@@ -131,7 +135,7 @@ graph TD
 | Repository | Role |
 | :--- | :--- |
 | **conxius-platform** | Declarative Control Plane (Migrating to NixOS) |
-| **lib-conxian-core** | Shared Primitives & Wasm SDK |
+| **lib-conxian-core** | **Unified Vault SDK** (Core Primitive) |
 | **conxian-ui** | Local-First Web Dashboard |
 | **admin-dashboard** | Infrastructure Monitoring |
 | **Conxian** | Smart Contracts (L1/L2) |

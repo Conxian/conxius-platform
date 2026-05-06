@@ -29,5 +29,7 @@ Use the PR checks UI as the final source of truth for required status checks.
 [`release.yml`](./workflows/release.yml) runs on `vX.Y.Z` tags and:
 
 1. Validates the tag format.
-2. Verifies the matching changelog section exists.
-3. Creates a GitHub Release for the tag.
+2. Verifies the tagged commit is contained in `origin/main`.
+3. Validates `.env.production.schema` is production-safe (no `development` / `testnet` defaults).
+4. Verifies the matching changelog section exists.
+5. Creates a GitHub Release for the tag.

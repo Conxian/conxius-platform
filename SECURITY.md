@@ -15,7 +15,7 @@ We take the security of Conxian very seriously. If you believe you've found a se
 
 **Do not report security vulnerabilities through public GitHub issues.**
 
-Instead, please send an email to security@conxian.com with the following information:
+Instead, please send an email to [security@conxian.com](mailto:security@conxian.com) with the following information:
 
 - The repository and branch affected
 - A description of the vulnerability and its potential impact

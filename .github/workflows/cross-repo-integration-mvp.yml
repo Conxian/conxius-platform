@@ -1,0 +1,74 @@
+name: Cross-Repo Integration Harness MVP
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  cross-repo-integration-harness-mvp:
+    runs-on: self-hosted
+    timeout-minutes: 45
+    env:
+      POSTGRES_USER: conxian
+      POSTGRES_PASSWORD: test-only-insecure
+      POSTGRES_DB: conxian_db
+      CORE_DB_URI: postgresql://conxian:test-only-insecure@db:5432/conxian_db
+      GATEWAY_JWT_SECRET: ci-gateway-jwt-secret
+      GATEWAY_ADMIN_API_KEY: ci-gateway-admin-api-key
+      ADMIN_DASHBOARD_API_KEY: ci-admin-dashboard-api-key
+      NEXT_PUBLIC_CORE_API_URL: http://127.0.0.1:8080
+      GRAFANA_PASSWORD: ci-grafana-password
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify submodule mappings
+        run: python3 scripts/verify_submodule_integrity.py
+
+      - name: Bring up compose dependencies
+        run: docker compose up -d db redis
+
+      - name: Run cross-repo harness script (MVP)
+        run: bash scripts/ci/run-cross-repo-harness-mvp.sh
+
+      - name: Collect compose logs
+        if: always()
+        run: |
+          mkdir -p test-results/cross-repo-harness-mvp
+          docker compose logs db > test-results/cross-repo-harness-mvp/docker-db.log || true
+          docker compose logs redis > test-results/cross-repo-harness-mvp/docker-redis.log || true
+
+      - name: Upload harness artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cross-repo-integration-harness-mvp-artifacts
+          path: test-results/cross-repo-harness-mvp
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Tear down compose services
+        if: always()
+        run: docker compose down -v

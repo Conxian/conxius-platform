@@ -94,8 +94,10 @@ export async function checkoutCartX402(env: ConxianPluginEnv, input: { id: strin
   };
 }
 
-export async function getAiAllocation(env: ConxianPluginEnv): Promise<unknown> {
-  return fetchJson(`${env.CONXIAN_GATEWAY_URL.replace(/\/$/, "")}/api/v1/ai/allocation`, { cache: "no-store" });
+export async function getAiAllocation(env: ConxianPluginEnv, profile?: string): Promise<unknown> {
+  const url = new URL(`${env.CONXIAN_GATEWAY_URL.replace(/\/$/, "")}/api/v1/ai/allocation`);
+  if (profile) url.searchParams.set("profile", profile);
+  return fetchJson(url.toString(), { cache: "no-store" });
 }
 
 export async function getUbiIdentity(env: ConxianPluginEnv, address: string): Promise<unknown> {

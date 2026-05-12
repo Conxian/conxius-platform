@@ -5,13 +5,23 @@
   "engines": {
     "node": ">=20.19.0"
   },
+  "scripts": {
+    "lint": "pnpm -r --if-present run lint",
+    "test": "pnpm -r --if-present run test",
+    "build": "pnpm -r --if-present run build",
+    "typecheck": "pnpm -r --if-present run typecheck"
+  },
+  "devDependencies": {
+    "vite": "8.0.5"
+  },
   "pnpm": {
     "overrides": {
       "next": "15.5.18",
       "ip-address": ">=10.1.1",
       "postcss": ">=8.5.10",
       "langsmith": ">=0.5.19",
-      "uuid": ">=13.0.1"
+      "uuid": ">=13.0.1",
+      "vite": "8.0.5"
     }
   }
 }

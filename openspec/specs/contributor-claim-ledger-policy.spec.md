@@ -1,137 +1,241 @@
-# Specification: Contributor Claim Ledger Policy
+# Specification: Contributor Claim Ledger and Activation Policy
 
 ## 1. Overview
 
-This specification defines normative requirements for contributor claim recognition and post-activation conversion.
+This specification defines normative requirements for contributor claim recognition and post-activation conversion in the Conxius platform.
 
-Before activation, Claim Units (CU) are recognition-only and non-monetary. Monetary conversion is permitted only after all activation gates are satisfied and a governance snapshot height `H_activate` is recorded.
+Before activation, Claim Units (CU) are recognition-only and non-monetary. Monetary conversion is permitted only after all activation gates are satisfied and governance records activation snapshot coordinates (`H_activate`, optional `T_activate`).
 
-## 2. Normative language
+The policy provides deterministic scoring, append-only auditability, and a fail-closed activation boundary between:
 
-The key words **MUST**, **MUST NOT**, **SHOULD**, and **MAY** are interpreted as normative requirements.
+- pre-activation recognition accounting, and
+- post-activation conversion to governance-ratified payout allocations.
 
-## 3. Taxonomy and CU calculation
+## 2. Normative terms
 
-### 3.1 Base CU by category
+The key words **MUST**, **MUST NOT**, **SHOULD**, and **MAY** indicate normative requirements.
 
-Implementations MUST use these base CU values:
+## 3. Contribution taxonomy and base CU
 
-- `code = 8`
-- `security = 12`
-- `reliability_ops = 6`
-- `product_docs_research = 4`
-- `community = 3`
+### 3.1 Category constants
+
+The policy MUST define the following contribution categories with fixed base Claim Units (`baseCu`):
+
+| Category key            | Description                                               | Base CU |
+| ----------------------- | --------------------------------------------------------- | ------- |
+| `CORE_PROTOCOL_CODE`    | Core protocol/code delivery (merged PRs with tests)       | `8`     |
+| `SECURITY_HARDENING`    | Accepted vulnerability fix/report                         | `12`    |
+| `RELIABILITY_OPS`       | Incident mitigation, reliability fixes, runbooks          | `6`     |
+| `PRODUCT_DOCS_RESEARCH` | Accepted specs, architecture docs, research docs          | `4`     |
+| `COMMUNITY_ENABLEMENT`  | Support/onboarding/QA coordination with accepted outcomes | `3`     |
+
+Category constants MUST be treated as versioned policy data and MUST NOT be modified without governance ratification.
 
 Each artifact MUST map to exactly one primary category.
 
-### 3.2 Formula
+## 4. Eligibility and evidence requirements
 
-CU awards MUST be computed as:
+A claim MUST be eligible only when all conditions are satisfied:
 
-`awardedCU = baseCU(category) × impactMultiplier × qualityMultiplier`
+1. Claim links to a tracked artifact (`GitHub`, `Linear`, or approved runbook/spec task).
+2. Claim includes at least one verifiable evidence record.
+3. Claim completes maintainer verification workflow (`proposed -> verified -> approved`).
+4. Claim is attributed to normalized contributor identity format `ubi:btc:{id}`.
 
-Allowed multipliers:
+### 4.1 Evidence payload minimum
 
-- `impactMultiplier ∈ {0.5, 1.0, 1.5, 2.0}`
-- `qualityMultiplier ∈ {0.0, 0.7, 1.0, 1.2}`
+`evidence[]` MUST be non-empty. Each evidence object MUST include:
 
-`qualityMultiplier=0.0` MUST NOT produce recognized CU.
+- `type` (`commit` | `pull_request` | `review` | `issue` | `incident_report` | `doc` | `runbook`),
+- `uri` (canonical permalink),
+- `capturedAt` (UTC timestamp).
 
-## 4. Eligibility and workflow
+Each evidence object MAY include `digest` for immutable archival proofs.
 
-A claim MUST include all of the following:
+## 5. Deterministic claim-unit formula
 
-1. Tracked artifact reference (`artifactRef`) with stable identifier/permalink.
-2. Auditable evidence bundle (`evidenceRefs`).
-3. Maintainer review workflow completion: `proposed -> verified -> approved`.
-4. Normalized contributor identity `contributorId` in `ubi:btc:{id}` format.
+### 5.1 Multiplier constants
 
-Claims missing any required element MUST NOT transition to `recognized`.
+`impactMultiplierBps`:
 
-## 5. Pre-activation guardrails
+- `MINOR = 50` (`0.5`)
+- `STANDARD = 100` (`1.0`)
+- `HIGH = 150` (`1.5`)
+- `CRITICAL = 200` (`2.0`)
 
-Before activation:
+`qualityMultiplierBps`:
 
-1. CU MUST be recognition-only and MUST NOT be represented as a payout commitment.
-2. Recognized CU per contributor MUST NOT exceed `40 CU` per UTC calendar month.
-3. One artifact MUST NOT receive CU under more than one primary category.
+- `REJECTED = 0` (`0.0`)
+- `PARTIAL_REWORK = 70` (`0.7`)
+- `ACCEPTED = 100` (`1.0`)
+- `ACCEPTED_REUSED = 120` (`1.2`)
 
-## 6. Append-only ledger requirements
+### 5.2 Exact calculation
 
-The claim ledger MUST be append-only.
+To prevent floating-point drift, implementations MUST compute claim units in integer hundredths:
 
-Required fields per entry:
+- `awardedCuHundredths = (baseCu * impactMultiplierBps * qualityMultiplierBps) / 100`
+- `awardedCU = awardedCuHundredths / 100`
 
-- `ledgerEntryId`
+`qualityMultiplierBps = 0` MUST NOT produce recognized CU.
+
+Implementations MUST NOT use discretionary overrides outside defined constants.
+
+## 6. Anti-concentration and anti-double-counting guardrails
+
+### 6.1 Pre-activation monthly concentration cap
+
+Before global activation, recognized CU for a contributor MUST be capped to `40.00 CU` per UTC calendar month.
+
+Implementations MUST apply:
+
+- `monthlyCapHundredths = 4000`
+- `remainingCap = max(0, monthlyCapHundredths - recognizedMonthToDateHundredths)`
+- `recognizedCuHundredths = min(awardedCuHundredths, remainingCap)`
+- `deferredCuHundredths = awardedCuHundredths - recognizedCuHundredths`
+
+If `deferredCuHundredths > 0`, implementation MUST append a `CAP_DEFERRED` event with month key and deferred amount.
+
+### 6.2 Anti-double-counting
+
+- A contributor MUST have only one primary category per `(contributorId, artifactRef)`.
+- A second claim for the same `(contributorId, artifactRef)` with different category MUST be rejected unless prior claim is terminal `REVOKED`.
+- Multiple contributors MAY reference the same artifact only if each claim has independently verifiable evidence.
+
+## 7. Append-only ledger schema
+
+### 7.1 `ClaimLedgerEntry`
+
+Each claim entry MUST include:
+
+- `entryId` (or implementation-equivalent `ledgerEntryId`)
 - `claimId`
 - `contributorId`
 - `artifactRef`
-- `primaryCategory`
-- `baseCU`
-- `impactMultiplier`
-- `qualityMultiplier`
-- `awardedCU`
-- `state`
+- `category` (or implementation-equivalent `primaryCategory`)
+- `baseCu`
+- `impactMultiplierBps`
+- `qualityMultiplierBps`
+- `awardedCuHundredths` (or implementation-equivalent `awardedCU`)
+- `recognizedCuHundredths`
+- `status` (or implementation-equivalent `state`)
 - `stateReason`
-- `evidenceRefs`
-- `reviewerIds`
+- `reviewers` (or implementation-equivalent `reviewerIds`)
+- `timestamps`
+- `evidence[]` (or implementation-equivalent `evidenceRefs`)
 - `createdAt`
 - `createdBy`
+- `notes`
 
-Optional activation/conversion/settlement fields:
+### 7.2 Activation/conversion/settlement fields
 
-- `supersedesLedgerEntryId`
+Implementations MAY include:
+
+- `supersedesEntryId` (or implementation-equivalent `supersedesLedgerEntryId`)
 - `activationSnapshotHeight`
 - `conversionRate`
 - `convertedAmount`
 - `settlementRef`
 
-Corrections and dispute outcomes MUST be recorded as new ledger events referencing prior entries; in-place edits are forbidden.
+### 7.3 Sub-objects
 
-## 7. State machine
+`artifactRef` MUST include `system`, `id`, `url`.
 
-Canonical state flow:
+`reviewers` MUST include `proposedBy`, `verifiedBy`, `approvedBy`; it MAY include `revokedBy`.
 
-`proposed -> verified -> approved -> recognized -> convertible -> converted -> settled`
+`timestamps` MUST include `proposedAt`; it MUST include additional transition times when corresponding transitions occur (`verifiedAt`, `approvedAt`, `recognizedAt`, `convertedAt`, `settledAt`, `revokedAt`).
 
-Exception state: `revoked`
+### 7.4 Append-only mutation model
 
-State requirements:
+Implementations MUST NOT overwrite prior state transitions.
 
-- `recognized` is pre-activation recognition state.
-- `convertible` is reachable only after activation.
-- `revoked` MAY be entered from any non-settled state when invalidity or policy breach is proven.
-- Terminal settlement state is `settled`.
+Every transition, dispute, cap deferment, correction, and revocation MUST be represented by an appended event record with:
 
-## 8. Challenge and dispute policy
+- `eventId`
+- `entryId`
+- `eventType`
+- `actorId`
+- `occurredAt`
+- `payload`
 
-- Every `recognized` claim MUST support a 14-day challenge window.
-- Disputes MUST produce auditable outcomes with explicit decision (`upheld`, `adjusted`, `revoked`) and evidence references.
+## 8. Claim state machine
+
+### 8.1 Primary path
+
+`proposed -> verified -> approved -> recognized(pre-activation) -> convertible(post-activation) -> converted -> settled`
+
+### 8.2 Dispute/revocation path
+
+Allowed dispute transitions:
+
+- `approved -> disputed`
+- `recognized -> disputed`
+- `convertible -> disputed`
+
+Dispute resolution transitions:
+
+- `disputed -> approved` (claim upheld)
+- `disputed -> approved` with corrective event payload (claim adjusted)
+- `disputed -> revoked` (claim revoked)
+
+`revoked` is a terminal exception state.
+
+### 8.3 Transition safeguards
+
+- A claim MUST NOT transition to `approved` unless Section 4 requirements are satisfied.
+- A claim MUST NOT transition to `convertible` before global activation gates are all true.
+- Revoked claims MUST NOT transition to `converted` or `settled`.
+
+## 9. Disputes and revocations
+
+- Challenge window MUST be `14 days` from `approvedAt`.
+- Dispute submission MUST append `CLAIM_DISPUTED` with rationale and challenger identity.
+- Dispute outcomes MUST be auditable with explicit decision: `upheld`, `adjusted`, or `revoked`.
+- Revocation MUST append `CLAIM_REVOKED` with reason code and evidence.
+- Allowed reason codes MUST include at least: `FRAUD`, `PLAGIARISM`, `SYBIL_CONFIRMED`, `EVIDENCE_FALSIFIED`.
 - `adjusted` or `revoked` outcomes MUST create append-only corrective ledger events.
+- Revoked claims MUST be excluded from conversion eligibility and settlement.
 
-## 9. Activation gates
+## 10. Activation gates (fail-closed)
 
-Activation MUST require all conditions:
+Global conversion activation MUST remain blocked unless all gates are true:
 
-1. mainnet stability of at least 60 days,
-2. audited payout path enabled with `BOUNTY_PAYOUT_ACTIVE=true`,
-3. treasury runway approval confirming at least 6 months runway post-allocation,
-4. governance ratification that records `H_activate`.
+1. Mainnet stability has been continuously satisfied for at least `60` days.
+2. Payout routing path has current audit evidence and runtime gate `BOUNTY_PAYOUT_ACTIVE=true`.
+3. Treasury attestation confirms at least `6` months operating runway after proposed allocation.
+4. Governance ratifies activation and snapshot coordinates (`H_activate`, optional `T_activate`).
 
-If any gate is unmet, conversion MUST NOT be enabled.
+If any gate is false or unverifiable, conversion MUST remain disabled.
 
-## 10. Conversion model
+## 11. Snapshot-based post-activation conversion
 
-Upon activation:
+At ratified activation:
 
-- Governance MUST define a fixed conversion pool `P`.
-- `totalEligibleCU_at_snapshot` MUST be computed at `H_activate` from non-revoked eligible CU.
-- Conversion rate MUST be:
+1. Freeze eligible recognized CU at snapshot (`H_activate`, optional `T_activate`).
+2. Ratify fixed conversion pool `P`.
+3. Compute global conversion rate:
+   - `conversionRate = P / totalEligibleCuAtSnapshot`
+4. Compute each contributor allocation:
+   - `allocationContributor = eligibleCuContributor * conversionRate`
+5. Compute per-claim converted amount:
+   - `convertedAmount = eligibleCuClaimAtSnapshot * conversionRate`
 
-`conversionRate = P / totalEligibleCU_at_snapshot`
+`totalEligibleCuAtSnapshot` MUST include only non-revoked, recognized CU at snapshot boundaries.
 
-Per-claim conversion MUST use snapshot CU:
+### 11.1 Post-snapshot integrity
 
-`convertedAmount = eligibleCU_at_snapshot × conversionRate`
+- Implementations MUST NOT retroactively rewrite categories after snapshot.
+- Post-snapshot dispute outcomes MUST be represented via append-only compensating records.
+- Conversion calculations MUST NOT consume mutable post-snapshot CU changes.
 
-Pre-activation CU records MUST NOT be interpreted as guaranteed payout amounts.
+## 12. Pre-activation non-binding language
+
+Before activation, CU MUST be treated as recognition-only accounting units.
+
+Pre-activation CU MUST NOT be interpreted as:
+
+- guaranteed bounty payouts,
+- enforceable token or fiat payment obligations,
+- treasury commitments before governance-ratified activation.
+
+Historical pre-activation bounty wording is non-binding unless explicitly ratified during activation governance.

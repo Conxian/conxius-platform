@@ -1,21 +1,23 @@
 #!/bin/bash
-# Conxian Repository Maintenance Utility
-# Prunes and cleans merged branches for the root and submodules.
+REPO_PATH=${1:-"."}
+echo "--- Cleaning repo at $REPO_PATH ---"
+cd "$REPO_PATH" || return 1
 
-echo "--- Cleaning Main Repository ---"
-git fetch -p --all --recurse-submodules
-git branch --merged | grep -v "\*" | grep -vE "^(main|master|develop)$" | xargs -n 1 git branch -d 2>/dev/null || echo "No merged branches to delete in root."
+PRIMARY="main"
+git show-ref --verify --quiet refs/heads/main || PRIMARY="master"
+CURRENT=$(git rev-parse --abbrev-ref HEAD)
 
-echo -e "\n--- Cleaning Submodule: lib-conxian-core ---"
-cd services/lib-conxian-core
-git fetch -p --all
-git branch --merged | grep -v "\*" | grep -vE "^(main|master|develop)$" | xargs -n 1 git branch -d 2>/dev/null || echo "No merged branches to delete in core."
-cd ../..
+# Clean merged
+git branch --merged "$PRIMARY" | grep -v "^\*" | grep -vE "^(\s*)($PRIMARY|master)$" | xargs -r git branch -d
 
-echo -e "\n--- Cleaning Submodule: conxian-ui ---"
-cd services/conxian-ui
-git fetch -p --all
-git branch --merged | grep -v "\*" | grep -vE "^(main|master|develop)$" | xargs -n 1 git branch -d 2>/dev/null || echo "No merged branches to delete in UI."
-cd ../..
-
-echo -e "\nDone."
+# Clean stale (> 90 days: before 2026-02-12)
+CUTOFF_TS=1770768000
+for branch in $(git for-each-ref --format="%(refname:short)" refs/heads/); do
+  if [[ "$branch" == "$PRIMARY" || "$branch" == "master" || "$branch" == "$CURRENT" ]]; then continue; fi
+  LAST_TS=$(git log -1 --format=%ct "$branch")
+  if [ "$LAST_TS" -lt "$CUTOFF_TS" ]; then
+    echo "Deleting stale branch: $branch"
+    git branch -D "$branch"
+  fi
+done
+cd - > /dev/null

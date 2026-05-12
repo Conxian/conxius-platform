@@ -39,7 +39,7 @@ export function createConxianActions(env: ConxianPluginEnv): Action[] {
       handler: async (_runtime, _message, _state, options, callback) => {
         const data = await getGatewayStatus(env);
         const text = JSON.stringify(data, null, 2);
-        if (callback) await callback({ text }, "CONXIAN_GATEWAY_STATUS");
+        if (callback) await callback({ text });
         return { success: true, text, data: { response: toProviderValue(data) } };
       },
       similes: ["GATEWAY_STATUS", "CONXIAN_STATUS"],
@@ -51,7 +51,7 @@ export function createConxianActions(env: ConxianPluginEnv): Action[] {
       handler: async (_runtime, _message, _state, _options, callback) => {
         const data = await getSbtcYield(env);
         const text = JSON.stringify(data, null, 2);
-        if (callback) await callback({ text }, "CONXIAN_SBTC_YIELD");
+        if (callback) await callback({ text });
         return { success: true, text, data: { response: toProviderValue(data) } };
       },
       similes: ["SBTC_YIELD", "YIELD_SBTC"],
@@ -73,7 +73,7 @@ export function createConxianActions(env: ConxianPluginEnv): Action[] {
         const profile = typeof p.profile === "string" ? p.profile : "balanced";
         const data = await getAiAllocation(env, profile);
         const text = JSON.stringify(data, null, 2);
-        if (callback) await callback({ text }, "CONXIAN_AI_ALLOCATION");
+        if (callback) await callback({ text });
         return { success: true, text, data: { response: toProviderValue(data) } };
       },
       similes: ["AI_ALLOCATION", "PORTFOLIO_WEIGHTS"],
@@ -96,7 +96,7 @@ export function createConxianActions(env: ConxianPluginEnv): Action[] {
         if (!id) return { success: false, error: "missing-parameter:id" };
         const data = await getUbiIdentity(env, id);
         const text = JSON.stringify(data, null, 2);
-        if (callback) await callback({ text }, "CONXIAN_UBI_IDENTITY");
+        if (callback) await callback({ text });
         return { success: true, text, data: { response: toProviderValue(data) } };
       },
       similes: ["UBI_IDENTITY", "SOVEREIGN_ID"],
@@ -120,7 +120,7 @@ export function createConxianActions(env: ConxianPluginEnv): Action[] {
 
         const data = await getCartMandate(env, id);
         const text = JSON.stringify(data, null, 2);
-        if (callback) await callback({ text }, "CONXIAN_GET_CART_MANDATE");
+        if (callback) await callback({ text });
         return { success: true, text, data: { response: toProviderValue(data) } };
       },
       similes: ["GET_CART_MANDATE"],
@@ -151,7 +151,7 @@ export function createConxianActions(env: ConxianPluginEnv): Action[] {
 
         const res = await checkoutCartX402(env, { id, paymentSignature });
         const text = JSON.stringify(res, null, 2);
-        if (callback) await callback({ text }, "CONXIAN_X402_CHECKOUT_CART");
+        if (callback) await callback({ text });
         return {
           success: true,
           text,
@@ -201,7 +201,7 @@ export function createConxianActions(env: ConxianPluginEnv): Action[] {
 
         const data = await submitVote(env, { proposalId, fid, choice });
         const text = JSON.stringify(data, null, 2);
-        if (callback) await callback({ text }, "CONXIAN_SUBMIT_VOTE");
+        if (callback) await callback({ text });
         return { success: true, text, data: { response: toProviderValue(data) } };
       },
       similes: ["SUBMIT_VOTE", "VOTE"],

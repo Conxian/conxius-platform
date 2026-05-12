@@ -29,7 +29,7 @@ jobs:
           submodules: recursive
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "22"
 
@@ -62,7 +62,7 @@ jobs:
 
       - name: Upload harness artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cross-repo-integration-harness-mvp-artifacts
           path: test-results/cross-repo-harness-mvp

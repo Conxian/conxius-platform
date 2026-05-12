@@ -7,7 +7,7 @@ Treasury and oracle workflows currently consume analytics outputs that are repro
 
 1. Define the pilot workloads that require proof-carrying analytics.
 2. Define a fail-closed verification path: `result + proof + commitment` verified offchain before consumption.
-3. Define freshness policy anchored to Bitcoin and Stacks (`burn-block-height` aware).
+3. Define freshness policy anchored to Bitcoin and Stacks (burn block height aware).
 4. Define concrete gateway/control-plane interfaces and an attestation envelope schema for downstream consumers.
 5. Define a minimal rollout slice that can run in shadow mode before enforcement.
 

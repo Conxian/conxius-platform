@@ -27,7 +27,7 @@ For each proof-worthy read, Gateway MUST require all artifacts:
 4. Gateway freshness guard checks:
    - Bitcoin anchor height and hash,
    - Stacks tip context,
-   - `burn_block_height` lag against configured thresholds.
+   - burn block height lag against configured thresholds.
 5. If verification and freshness pass, Gateway signs an attestation envelope.
 6. Consumers accept only signed, valid, fresh envelopes.
 7. Any verification or freshness failure => **no publish / no state-affecting action**.
@@ -36,7 +36,7 @@ For each proof-worthy read, Gateway MUST require all artifacts:
 
 ```text
 Source systems
-  -> Ingestion policy + trust classing
+  -> Ingestion policy + trust classification
   -> Proof-capable analytics engine (approved templates only)
   -> Gateway verifier service (offchain)
   -> Signed attestation envelope store
@@ -60,8 +60,8 @@ Exit criteria between slices: verification pass rate, freshness compliance, late
 
 ## 5) Stacks-native integration constraints
 
-1. Use Bitcoin + Stacks context in every attestation (`bitcoin_height`, `bitcoin_hash`, `stacks_tip`, `burn_block_height`).
-2. Freshness checks MUST include `burn_block_height` lag thresholds, not just wall-clock age.
+1. Use Bitcoin + Stacks context in every attestation (Bitcoin height/hash, Stacks tip, burn block height).
+2. Freshness checks MUST include burn block height lag thresholds, not just wall-clock age.
 3. Verifier remains offchain for pilot phase; Stacks contracts consume signed envelopes, not raw proof objects.
 4. Attestation signatures MUST use Gateway-managed keys with rotation policy and key identifier (`kid`) surfaced to consumers.
 5. Onchain consumers must fail closed when envelope signature, freshness, or anchor continuity checks fail.
@@ -89,6 +89,8 @@ Exit criteria between slices: verification pass rate, freshness compliance, late
 
 Success response:
 
+`anchor.burn_block_height` is the canonical burn-chain height field in this response path.
+
 ```json
 {
   "request_id": "uuid",
@@ -104,7 +106,6 @@ Success response:
     "bitcoin_height": 890000,
     "bitcoin_hash": "000000...",
     "stacks_tip_height": 210000,
-    "stacks_tip_burn_block_height": 889998,
     "burn_block_height": 889998
   },
   "produced_at": "2026-05-12T00:00:00Z"

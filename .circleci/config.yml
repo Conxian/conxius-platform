@@ -1,208 +1,45 @@
+# Use the latest 2.1 version of CircleCI pipeline process engine.
+# See: https://circleci.com/docs/reference/configuration-reference
+
+# For a detailed guide to building and testing with Python, read the docs:
+# https://circleci.com/docs/language-python/ for more details
 version: 2.1
 
-# Reusable, multi-language CircleCI pipeline for Conxian org repositories.
-# Features:
-# - Lint, test, build for Node/TypeScript and Rust projects
-# - Docker image build job (setup_remote_docker)
-# - Optional full-stack integration tests using docker-compose (machine executor)
-# - Scheduled nightly workflow and manual pipeline trigger
-# - Uses CircleCI contexts/placeholders for secrets (CONXIAN_SECRETS)
-
+# Orbs are reusable packages of CircleCI configuration that you may share across projects, enabling you to create encapsulated, parameterized commands, jobs, and executors that can be used across multiple projects.
+# See: https://circleci.com/docs/orbs/use/orb-intro/
 orbs:
-  node: circleci/node@5.0.0
+  # See the Python orb documentation here: https://circleci.com/developer/orbs/orb/circleci/python
+  python: circleci/python@2.1.1
 
-executors:
-  docker-node:
-    docker:
-      - image: cimg/node:20.10
-    working_directory: ~/repo
-
-  docker-rust:
-    docker:
-      - image: rust:1.72
-    working_directory: ~/repo
-
-  docker-git:
-    docker:
-      - image: cimg/base:stable
-    working_directory: ~/repo
-
-commands:
-  checkout-submodules:
-    description: "Checkout repository and submodules"
-    steps:
-      - checkout
-      - run: |
-          if [ -f .gitmodules ]; then
-            git submodule update --init --recursive || true
-          fi
-
+# Define a job to be invoked later in a workflow.
+# See: https://circleci.com/docs/guides/orchestrate/jobs-steps/#jobs-overview & https://circleci.com/docs/reference/configuration-reference/#jobs
 jobs:
-  lint-node:
-    executor: docker-node
-    steps:
-      - checkout-submodules
-      - node/with-cache:
-          steps:
-            - run: npm ci
-            - run: npx pnpm -v || npm i -g pnpm@9
-            - run: pnpm -w install --frozen-lockfile || true
-            - run: pnpm -w run lint || echo "no node lint script"
+  build-and-test:
+    # Specify the execution environment. You can specify an image from Docker Hub or use one of our convenience images from CircleCI's Developer Hub.
+    # See: https://circleci.com/docs/guides/execution-managed/executor-intro/ & https://circleci.com/docs/reference/configuration-reference/#executor-job
+    docker:
+      # Specify the version you desire here
+      # See:https://circleci.com/developer/images/image/cimg/python
+      - image: cimg/python:3.12
 
-  test-node:
-    executor: docker-node
+    # Add steps to the job
+    # See: https://circleci.com/docs/guides/orchestrate/jobs-steps/#steps-overview & https://circleci.com/docs/reference/configuration-reference/#steps
     steps:
-      - checkout-submodules
-      - node/with-cache:
-          steps:
-            - run: npm ci
-            - run: npx pnpm -v || npm i -g pnpm@9
-            - run: pnpm -w test || echo "no node tests"
-
-  build-node:
-    executor: docker-node
-    steps:
-      - checkout-submodules
-      - node/with-cache:
-          steps:
-            - run: npm ci
-            - run: npx pnpm -v || npm i -g pnpm@9
-            - run: pnpm -w build || echo "no node build"
-            - persist_to_workspace:
-                root: ~/repo
-                paths:
-                  - .
-
-  lint-rust:
-    executor: docker-rust
-    steps:
-      - checkout-submodules
-      - run: cargo fmt -- --check || true
-      - run: cargo clippy -- -D warnings || true
-
-  test-rust:
-    executor: docker-rust
-    steps:
-      - checkout-submodules
-      - run: cargo test --workspace --all-features || true
-
-  build-rust:
-    executor: docker-rust
-    steps:
-      - checkout-submodules
-      - run: cargo build --workspace --release || true
-      - persist_to_workspace:
-          root: ~/repo
-          paths:
-            - .
-
-  docker-build:
-    executor: docker-git
-    resource_class: large
-    steps:
-      - checkout-submodules
-      - setup_remote_docker
+      # Checkout the code as the first step.
+      - checkout
+      - python/install-packages:
+          pkg-manager: pip
+          # app-dir: ~/project/package-directory/  # If your requirements.txt isn't in the root directory.
+          # pip-dependency-file: test-requirements.txt  # if you have a different name for your requirements file, maybe one that combines your runtime and test requirements.
       - run:
-          name: Build Docker images (if Dockerfile present)
-          command: |
-            set -e
-            if [ -f Dockerfile ]; then
-              docker build -t ${CIRCLE_PROJECT_REPONAME}:$CIRCLE_SHA1 . || true
-            else
-              echo "No Dockerfile at repo root"
-            fi
+          name: Run tests
+          # This assumes pytest is installed via the install-package step above
+          command: pytest
 
-  integration-docker-compose:
-    machine: true
-    resource_class: xlarge
-    steps:
-      - checkout-submodules
-      - run:
-          name: Configure environment (placeholders)
-          command: |
-            export NEXT_PUBLIC_CORE_API_URL=${NEXT_PUBLIC_CORE_API_URL:-http://localhost:8080}
-            export POSTGRES_USER=${POSTGRES_USER:-conxian}
-            export POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-conxian}
-            export POSTGRES_DB=${POSTGRES_DB:-conxian_db}
-      - run:
-          name: Start docker-compose stack
-          command: |
-            if [ -f docker-compose.yml ]; then
-              docker compose up -d --build
-              echo "Waiting for services to initialize..."
-              sleep 30
-            else
-              echo "docker-compose.yml not present; skipping integration"
-              exit 0
-            fi
-      - run:
-          name: Run health checks and benchmarks
-          command: |
-            if curl -sSf http://localhost:8080/api/v1/health >/dev/null 2>&1; then
-              echo "Gateway healthy"
-            else
-              echo "Gateway health check failed or service not present"
-            fi
-            if [ -f scripts/run-benchmarks.sh ]; then
-              bash scripts/run-benchmarks.sh || true
-            fi
-      - run:
-          name: Collect logs
-          command: |
-            mkdir -p test-results || true
-            docker compose logs > test-results/docker-compose.log || true
-      - run:
-          name: Teardown
-          when: always
-          command: docker compose down -v || true
-      - store_artifacts:
-          path: test-results
-          destination: integration-results
-
+# Orchestrate jobs using workflows
+# See: https://circleci.com/docs/guides/orchestrate/workflows/ & https://circleci.com/docs/reference/configuration-reference/#workflows
 workflows:
-  version: 2
-
-  default:
+  sample: # This is the name of the workflow, feel free to change it to better match your workflow.
+    # Inside the workflow, you define the jobs you want to run.
     jobs:
-      - lint-node
-      - lint-rust
-      - test-node:
-          requires:
-            - lint-node
-      - test-rust:
-          requires:
-            - lint-rust
-      - build-node:
-          requires:
-            - test-node
-      - build-rust:
-          requires:
-            - test-rust
-      - docker-build:
-          requires:
-            - build-node
-            - build-rust
-
-  nightly-integration:
-    triggers:
-      - schedule:
-          cron: "0 3 * * *"
-          filters:
-            branches:
-              only:
-                - main
-    jobs:
-      - integration-docker-compose
-
-  manual-integration:
-    triggers:
-      - schedule:
-          cron: "@weekly"
-    jobs:
-      - integration-docker-compose
-
-
-# Notes for operators:
-# - Create a CircleCI context named `conxian-secrets` and add required env vars (GCP, registry creds, DB creds).
-# - For Docker-in-Docker integration tests, use self-hosted machine runners or enable remote docker with privileged mode on CircleCI.
-# - This config is intentionally permissive (uses || true) for experimental projects; tighten `set -e` and remove `|| true` for stricter CI enforcement.
+      - build-and-test

@@ -45,6 +45,7 @@ This document tracks the resolution of gaps and identifies new technical require
 - **Stitch**: AI-driven UI design system used for rapid prototyping and theme enforcement.
 
 ## 3. Pending / Next Steps (Phase 7)
+- ✅ **Cross-repo integration harness MVP (Issue #591)**: Added `.github/workflows/cross-repo-integration-mvp.yml` and `scripts/ci/run-cross-repo-harness-mvp.sh` to verify Gateway readiness, Nexus state-path coverage, x402 payment-header contracts, and local-first transition checks.
 - Expansion of BitVM2 verification verifiers to 50+ nodes.
 - Mainnet launch of the 5-5-5 Autonomous Referral Engine.
 - Integration of jurisdictional sharding for ZAR-linked settlements (Guardian: Sovereignty).

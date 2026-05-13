@@ -212,7 +212,7 @@ jobs:
   test-cloud:
     if: ${{ github.event.inputs.environment == 'cloud' || github.event.inputs.environment == 'all' || github.event_name != 'workflow_dispatch' }}
     name: Cloud (GCP/Render validation)
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 20
 
     env:
@@ -286,7 +286,7 @@ jobs:
   # ============================================================================
   test-summary:
     name: Test Summary
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: always()
     needs: [ test-onsite, test-server, test-cloud ]
 

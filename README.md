@@ -1,48 +1,32 @@
-# Conxian Platform: Master Orchestrator
+# Conxian Platform: Control Plane
 
-The `conxius-platform` repository is the central point of orchestration for the Conxian ecosystem. It manages services, environment secrets, and Docker-based local development.
+The `conxius-platform` repository is the declarative control plane for the Conxian ecosystem. It manages the orchestration of services, environment security, and the transition toward a decentralized, local-first operational topology.
 
 ## 📖 Technical Documentation Map
 
-For deep technical insights into the Conxian architecture, refer to the following authoritative documents:
+For deep technical insights into the Conxian architecture and the Phase 7 Sovereign Redesign, refer to the following authoritative documents:
 
-- [**Whitepaper**](./WHITEPAPER.md) - Vision, ethos, and core Bitcoin sovereign finance layer.
+- [**Sovereign Computing Redesign (2026)**](./docs/architecture/SOVEREIGN_REPR_2026.md) - The paradigmatic shift to local-first, BFF-driven architecture (Phase 7).
+- [**Whitepaper**](./WHITEPAPER.md) - Vision, ethos, and the core Bitcoin sovereign finance layer.
 - [**System Architecture Graph**](./SYSTEM_GRAPH.md) - Holistic organization-wide component mapping.
-- [**Sovereign Computing Redesign (2026)**](./docs/architecture/SOVEREIGN_REPR_2026.md) - Paradigmatic shift to local-first, BFF-driven architecture.
-- [**Alignment Strategy**]( ./ALIGNMENT.md) - Unified strategy for business logic, design, and authority.
+- [**Alignment Strategy**](./ALIGNMENT.md) - Unified strategy for business logic, design, and authority.
 - [**Ecosystem Synergy**](./SYNERGY.md) - Details on inter-repository workflows and the "Core Loop."
-- [**Gap Analysis (GAPS.md)**](./GAPS.md) - Real-time tracking of Phase 6 implementation and technical debt.
-- [**Fail-Closed BOS Payments + AP/AR Spec (CON-439)**](./openspec/specs/fail-closed-bos-payments-apar.spec.md) - Normative fail-closed control model including rail-by-rail finality controls for on-chain, ISO 20022, and PAPSS settlement.
-- [**SIDL Release Readiness Runbook (CON-355)**](./docs/runbooks/SIDL_RELEASE_READINESS_RUNBOOK.md) - Maintainer rollout and verification guidance for SIDL Frames, ElizaOS plugin actions, and x402 cart checkout reference flows.
+- [**Gap Analysis (GAPS.md)**](./GAPS.md) - Real-time tracking of Phase 7 requirements and technical debt.
+- [**Fail-Closed BOS Payments + AP/AR Spec (CON-439)**](./openspec/specs/fail-closed-bos-payments-apar.spec.md) - Normative fail-closed control model.
+- [**Repository Taxonomy**](./docs/REPOSITORY_TAXONOMY.md) - Canonical map of repository roles, ownership, and status.
+- [**SIDL Release Readiness Runbook (CON-355)**](./docs/runbooks/SIDL_RELEASE_READINESS_RUNBOOK.md) - Maintainer rollout and verification guidance.
 
 ## Purpose
 
-Make it easy to run, compose, and deploy the Conxian stack (Gateway, UI, and operational services) with consistent local and CI environments.
+The Control Plane provides the necessary scaffolding to compose and deploy the Conxian stack (Gateway, UI, and operational services) while enforcing architectural alignment through declarative infrastructure (NixOS) and standardized configuration.
 
 ## Status
 
-**SDK-First Pivot (v0.2.3-aligned).** The platform has transitioned to an SDK-first model. Core Gateway and Protocol components have been demoted to supporting infrastructure for the Unified Vault SDK, which provides the first sellable primitive: hardware-backed Bitcoin signing plus policy enforcement.
+**Phase 7: Sovereign Redesign (v0.2.3-aligned).** The platform is currently migrating from a centralized "Master Orchestrator" model to a decentralized "Control Plane" based on NixOS and a Backend-for-Frontend (BFF) topology. This transition prioritizes local-first execution and trust-minimized operations.
 
-## Ownership
+## 🚀 Quick Start (Development)
 
-Ownership and review requirements are defined in [`CODEOWNERS`](./CODEOWNERS).
-
-## Audience
-
-- Platform engineers running the full stack locally or in hosted environments.
-- Contributors who need a single entry point for wiring and dependency management.
-- Operators validating observability, secrets, and deployment workflows.
-
-## Relationship to the Conxian stack
-
-- **Unified Vault SDK**: The primary commercial primitive for secure signing and policy orchestration.
-- **Bitcoin Native Application Infrastructure**: Tools for building on the existing Bitcoin stack without requiring new layers.
-- **Supporting Infrastructure**: The Gateway and Nexus OS provide state sync and telemetry as downstream consumers of the SDK core.
-- **Sovereign Reference Client**: A minimalist wallet proving the SDK and security model without competing with integrators.
-
-## 🚀 Quick Start
-
-Ensure you have Docker and Git installed.
+Ensure you have Docker and Git installed. Note that while we are transitioning to declarative NixOS, development environments still utilize the following imperative loop:
 
 ```bash
 make init           # Initialize and update all submodules
@@ -53,20 +37,21 @@ make bench          # Run performance benchmarks
 
 ## 📂 Repository Structure
 
-- **services/lib-conxian-core**: Shared Rust/TS libraries and the **Conxian Gateway**.
+- **services/lib-conxian-core**: Shared Rust/TS libraries and the **Conxian Gateway** (BFF).
 - **services/conxian-ui**: The primary Next.js dashboard for users.
 - **services/admin-dashboard**: Internal telemetry and system monitoring.
-- **services/admin-pulse-bos**: Dev-only BOS pulse prototype (not production-wired).
-- **services/elizaos-plugin-conxian**: ElizaOS plugin for Conxian Gateway and social interfaces.
-- **openspec/**: Specifications for all system changes and Phase 5/6 alignment.
-- **docs/PRODUCTION_BOUNDARY.md**: Owner surface + production boundary for BOS-related work in this repo.
+- **services/admin-pulse-bos**: Dev-only BOS pulse prototype (excluded from production).
+- **services/elizaos-plugin-conxian**: ElizaOS plugin for Conxian Gateway integration.
+- **openspec/**: Specifications for all system changes and architectural alignment.
+- **nixos/**: Declarative configuration for the Phase 7 transition.
 
 ## ⚖️ Governance
 
-- [LICENSE](LICENSE) (MIT)
-- [SECURITY.md](SECURITY.md) - Vulnerability reporting process
-- [CONTRIBUTING.md](CONTRIBUTING.md) - Monorepo development guidelines
-- [CODEOWNERS](CODEOWNERS) - Service-level ownership
+- **[LICENSE](LICENSE)** (MIT)
+- **[SECURITY.md](SECURITY.md)** - Vulnerability reporting process
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Monorepo development guidelines
+- **[GOVERNANCE.md](GOVERNANCE.md)** - Operational governance and ownership
+- **[CODEOWNERS](CODEOWNERS)** - Service-level ownership mapping
 
 ## 🛠️ Operating Model
 
@@ -77,22 +62,9 @@ This repository follows the **OpenSpec First** directive. All architectural chan
 Conxian uses the **Earthy Corporate Finance** theme:
 - Primary: **Forest Green** (#2E403B)
 - Secondary: **Gold** (#D4A017)
-## 📁 Repository Taxonomy & Roles
-| Repository | Classification | Role |
-| :--- | :--- | :--- |
-| **Conxian/Conxian** | Flagship | Master Orchestrator |
-| **conxius-platform** | Control Plane | Declarative Control Plane |
-| **conxian-ui** | Product UI | Institutional Dashboard |
-| **conxius-wallet** | Sovereign Access | Mobile Secure Enclave |
-| **lib-conxian-core** | Core SDK | Gateway & Primitives |
-| **conxian-nexus** | Glass Node | State & Risk Oracle |
-| **admin-dashboard** | Internal | Telemetry & Operations |
 
-For full details, see [REPOSITORY_TAXONOMY](docs/REPOSITORY_TAXONOMY.md).
+## 📞 Support & Communication
 
-## 📖 Technical Documentation Map
-- [ENHANCEMENT_STRATEGY_APRIL_2026](docs/ENHANCEMENT_STRATEGY_APRIL_2026.md)
-- [REPOSITORY_TAXONOMY](docs/REPOSITORY_TAXONOMY.md)
-- [WHITEPAPER](WHITEPAPER.md)
-- [SYSTEM_GRAPH](SYSTEM_GRAPH.md)
-- [ALIGNMENT](ALIGNMENT.md)
+- **Technical Support**: Open a [GitHub Issue](https://github.com/Conxian/conxius-platform/issues) or contact `dev@conxian.com`.
+- **Security**: Refer to [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
+- **Institutional Inquiries**: Contact `labs@conxian.com` for partnership and institutional integration.

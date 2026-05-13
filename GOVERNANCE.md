@@ -21,7 +21,7 @@ This repository is governed by Conxian Labs and uses a pull-request-first workfl
 
 ## Repository boundary
 
-`conxius-platform` is the orchestration repository for the Conxian stack. It should own orchestration and operator surfaces, while core protocol logic remains in its owning repositories. See [`docs/PRODUCTION_BOUNDARY.md`](./docs/PRODUCTION_BOUNDARY.md).
+`conxius-platform` is the declarative control plane repository for the Conxian ecosystem. It owns the orchestration and operator surfaces, while core protocol logic remains in its respective source repositories. See [`docs/PRODUCTION_BOUNDARY.md`](./docs/PRODUCTION_BOUNDARY.md).
 
 ## Branch and promotion guidance (current repo)
 

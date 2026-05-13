@@ -11,7 +11,7 @@ permissions:
 jobs:
   release:
     name: Create GitHub Release from tag
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Validate SemVer tag format

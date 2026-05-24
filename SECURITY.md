@@ -2,12 +2,10 @@
 
 ## Supported Versions
 
-Only the latest release of the Conxian monorepo and its constituent services are supported for security updates.
-
 | Version | Supported          |
 | ------- | ------------------ |
-| v0.x    | :white_check_mark: |
-| < v0.x  | :x:                |
+| 0.2.x   | :white_check_mark: |
+| < 0.2   | :x:                |
 
 ## Reporting a Vulnerability
 
@@ -22,4 +20,4 @@ Instead, please send an email to [security@conxian.com](mailto:security@conxian.
 - Steps to reproduce the issue
 - Any suggested fixes or mitigations
 
-We will acknowledge receipt of your report and provide a timeline for addressing the issue. We appreciate your help in keeping Conxian secure.
+We will acknowledge receipt of your report within 48 hours and provide a timeline for remediation.

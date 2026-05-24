@@ -36,6 +36,7 @@ This document tracks the resolution of gaps and identifies new technical require
   - **Unified Core API Client**: Native support for all Gateway proprietary endpoints, including Phase 6 AI Allocation, UBI, ALEX Method B, and POS Sync.
   - **Real-time Telemetry**: `SystemStatus` component consumes high-fidelity Gateway telemetry.
   - **Sovereign Dashboard**: Integrated `AiAllocationCard`, `NexusSyncStatus`, `UbiIdentityCard`, `AlexMethodB`, `OpsLoansCard`, `PosSyncStatus`, `InstitutionalMetricsCard`, `TreasuryHandshake`, `FinanceInvoices`, `BosSupplyChain`, and `AutonomousOperations`.
+  - **Multi-token UX Rationalization (CON-649)**: ✅ Implemented "Unified Balance" abstraction to simplify the 5-token protocol model for retail users.
 
 ## 2. Tooling Integration
 

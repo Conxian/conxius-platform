@@ -2,11 +2,13 @@
 
 This document details the interconnected workflows and synergy between the various repositories under the Conxian organization.
 
-## 1. The Core Loop (Refined for Phase 5)
+> **Scope note:** This file documents cross-repository interaction patterns. For current execution status, use [README.md](./README.md) and [GAPS.md](./GAPS.md). For architecture baseline, use [Sovereign Computing Redesign (2026)](./docs/architecture/SOVEREIGN_REPR_2026.md).
+
+## 1. The Core Loop (Phase 5 baseline; referenced during Phase 7 transition)
 The primary flow of state and authority follows this hierarchy:
 1.  **Conxian (Contracts)**: Defines on-chain state; now anchored to Nakamoto/sBTC logic.
 2.  **Conxian Gateway (Middleware)**: The **Unified Orchestrator**. Implements the Global Liquidity Mesh, Risk Oracle, and Nexus state synchronization.
-3.  **Conxian UI / Wallet (Clients)**: Standardized interfaces consuming the Gateway's Phase 5 API for real-time mesh telemetry and compliance.
+3.  **Conxian UI / Wallet (Clients)**: Standardized interfaces consuming Gateway APIs for real-time mesh telemetry and compliance.
 
 ## 2. Technical Synergies
 

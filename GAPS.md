@@ -1,6 +1,8 @@
-# Conxian Platform: Gap Analysis & Technical Debt (Phase 6 Global Sync)
+# Conxian Platform: Gap Analysis & Technical Debt (Phase 6 baseline, Phase 7 transition)
 
 This document tracks the resolution of gaps and identifies new technical requirements.
+
+> **Status framing:** Sections marked as resolved capture a historical baseline snapshot (not a current release tag). Use [README.md](./README.md) for repository-role status, [Sovereign Computing Redesign (2026)](./docs/architecture/SOVEREIGN_REPR_2026.md) for architecture baseline, and [`openspec/changes/`](./openspec/changes/) for change-by-change implementation records.
 
 ## 1. Service Gaps (Resolved 2026-04-26)
 ### Agentic Orchestration & Auditability (Phase 6 Additive)

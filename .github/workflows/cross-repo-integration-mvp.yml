@@ -51,7 +51,7 @@ jobs:
         run: docker compose up -d db redis
 
       - name: Run cross-repo harness script (MVP)
-        run: bash scripts/ci/run-cross-repo-harness-mvp.sh
+        run: pnpm run check:phase6:sequence1
 
       - name: Collect compose logs
         if: always()

@@ -4,14 +4,15 @@ The `conxius-platform` repository is the declarative control plane for the Conxi
 
 ## 📖 Technical Documentation Map
 
-For deep technical insights into the Conxian architecture and the Phase 7 Sovereign Redesign, refer to the following authoritative documents:
+For architecture context and current execution status, use the following canonical documents:
 
+- [**Conxian Unified Theory v2 (Canonical Index)**](./docs/CONXIAN_UNIFIED_THEORY_v2.md) - Entry point for strategy, architecture, and execution-status sources.
 - [**Sovereign Computing Redesign (2026)**](./docs/architecture/SOVEREIGN_REPR_2026.md) - The paradigmatic shift to local-first, BFF-driven architecture (Phase 7).
 - [**Whitepaper**](./WHITEPAPER.md) - Vision, ethos, and the core Bitcoin sovereign finance layer.
 - [**System Architecture Graph**](./SYSTEM_GRAPH.md) - Holistic organization-wide component mapping.
 - [**Alignment Strategy**](./ALIGNMENT.md) - Unified strategy for business logic, design, and authority.
 - [**Ecosystem Synergy**](./SYNERGY.md) - Details on inter-repository workflows and the "Core Loop."
-- [**Gap Analysis (GAPS.md)**](./GAPS.md) - Real-time tracking of Phase 7 requirements and technical debt.
+- [**Gap Analysis (GAPS.md)**](./GAPS.md) - Active gap tracker and transition backlog.
 - [**Fail-Closed BOS Payments + AP/AR Spec (CON-439)**](./openspec/specs/fail-closed-bos-payments-apar.spec.md) - Normative fail-closed control model.
 - [**Repository Taxonomy**](./docs/REPOSITORY_TAXONOMY.md) - Canonical map of repository roles, ownership, and status.
 - [**SIDL Release Readiness Runbook (CON-355)**](./docs/runbooks/SIDL_RELEASE_READINESS_RUNBOOK.md) - Maintainer rollout and verification guidance.
@@ -22,7 +23,7 @@ The Control Plane provides the necessary scaffolding to compose and deploy the C
 
 ## Status
 
-**Phase 7: Sovereign Redesign (v0.2.3-aligned).** The platform is currently migrating from a centralized "Master Orchestrator" model to a decentralized "Control Plane" based on NixOS and a Backend-for-Frontend (BFF) topology. This transition prioritizes local-first execution and trust-minimized operations.
+**Phase 7 Sovereign Redesign transition is in progress.** The platform is migrating from a centralized "Master Orchestrator" model to a decentralized "Control Plane" based on NixOS and a Backend-for-Frontend (BFF) topology. For active execution status and open work, use [GAPS.md](./GAPS.md) and change artifacts in [`openspec/changes/`](./openspec/changes/).
 
 ## 🚀 Quick Start (Development)
 

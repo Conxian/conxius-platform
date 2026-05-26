@@ -1,17 +1,12 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import { normalizeNexusState, type NexusState } from "@/lib/nexusContract";
 
 type GatewayStats = {
   status: "Healthy" | "Degraded" | "Unknown";
   version: string | null;
   processedHeight: number | null;
   uptimeSeconds: number | null;
-};
-
-type NexusState = {
-  merkleRoot: string | null;
-  syncStatus: "synced" | "syncing" | "unknown";
-  leafCount: number | null;
 };
 
 async function fetchJsonWithFallback(baseUrl: string, paths: string[]): Promise<unknown | null> {
@@ -115,8 +110,6 @@ export default function AdminPage() {
       }
 
       const safetyMode = getBoolean(statusJson, "safety_mode");
-      const drift = getNumber(statusJson, "drift");
-
       setStats({
         status: safetyMode === null ? "Unknown" : safetyMode ? "Degraded" : "Healthy",
         version: getString(statusJson, "version"),
@@ -125,18 +118,7 @@ export default function AdminPage() {
       });
 
       const nexusJson = await fetchJsonWithFallback(baseUrl, ["/api/v1/nexus/state"]);
-      const merkleRoot =
-        getString(nexusJson, "merkle_root") ??
-        getString(statusJson, "state_root") ??
-        getString(statusJson, "mmr_root");
-
-      setNexus({
-        merkleRoot,
-        syncStatus: drift === null ? "unknown" : drift === 0 ? "synced" : "syncing",
-        leafCount:
-          getNumber(nexusJson, "leaf_count") ??
-          getNumber(statusJson, "processed_height"),
-      });
+      setNexus(normalizeNexusState(nexusJson, statusJson));
     } catch (err) {
       console.error("Dashboard fetch error:", err);
       setError("Unexpected error while fetching status.");

@@ -1,11 +1,84 @@
 import { z } from "zod";
 
+const AI_ALLOCATION_WEIGHT_SUM_EPSILON = 0.001;
+const UBI_IDENTITY_HASH_REGEX = /^ubi:btc:[^\s]+$/;
+
+const aiAllocationSchema = z
+  .object({
+    status: z.string().min(1, "status must be a non-empty string"),
+    allocations: z
+      .array(
+        z
+          .object({
+            agent: z.string().min(1, "allocations[].agent must be a non-empty string"),
+            weight: z.number().finite().min(0).max(1),
+          })
+          .passthrough()
+      )
+      .min(1, "allocations must contain at least one entry"),
+    profile: z.string().min(1).optional(),
+  })
+  .passthrough();
+
+const ubiIdentitySchema = z
+  .object({
+    identity_hash: z
+      .string()
+      .regex(UBI_IDENTITY_HASH_REGEX, "identity_hash must match ubi:btc:{id}"),
+  })
+  .passthrough();
+
 const envSchema = z.object({
   CONXIAN_GATEWAY_URL: z.string().url().default("http://localhost:8080"),
   CONXIAN_SOCIAL_URL: z.string().url().default("http://localhost:3002"),
 });
 
 export type ConxianPluginEnv = z.infer<typeof envSchema>;
+export type AiAllocationResponse = z.infer<typeof aiAllocationSchema>;
+export type UbiIdentityResponse = z.infer<typeof ubiIdentitySchema>;
+
+function formatValidationError(error: z.ZodError): string {
+  return error.issues
+    .map((issue) => {
+      const path = issue.path.length ? issue.path.join(".") : "(root)";
+      return `${path}: ${issue.message}`;
+    })
+    .join("; ");
+}
+
+function normalizeAiProfile(profile?: string): string | undefined {
+  if (profile === undefined) return undefined;
+  const normalized = profile.trim().toLowerCase();
+  if (!normalized) {
+    throw new Error("Invalid AI allocation request: profile must be a non-empty string");
+  }
+  return normalized;
+}
+
+function validateAiAllocationPayload(payload: unknown): AiAllocationResponse {
+  const parsed = aiAllocationSchema.safeParse(payload);
+  if (!parsed.success) {
+    throw new Error(`Invalid AI allocation payload: ${formatValidationError(parsed.error)}`);
+  }
+
+  const totalWeight = parsed.data.allocations.reduce((sum, allocation) => sum + allocation.weight, 0);
+  if (Math.abs(totalWeight - 1) > AI_ALLOCATION_WEIGHT_SUM_EPSILON) {
+    throw new Error(
+      `Invalid AI allocation payload: allocations weights must sum to 1±${AI_ALLOCATION_WEIGHT_SUM_EPSILON} (received ${totalWeight.toFixed(6)})`
+    );
+  }
+
+  return parsed.data;
+}
+
+function validateUbiIdentityPayload(payload: unknown): UbiIdentityResponse {
+  const parsed = ubiIdentitySchema.safeParse(payload);
+  if (!parsed.success) {
+    throw new Error(`Invalid UBI identity payload: ${formatValidationError(parsed.error)}`);
+  }
+
+  return parsed.data;
+}
 
 export function parseConxianEnv(config: Record<string, string | undefined>): ConxianPluginEnv {
   const input = {
@@ -94,12 +167,27 @@ export async function checkoutCartX402(env: ConxianPluginEnv, input: { id: strin
   };
 }
 
-export async function getAiAllocation(env: ConxianPluginEnv, profile?: string): Promise<unknown> {
+export async function getAiAllocation(env: ConxianPluginEnv, profile?: string): Promise<AiAllocationResponse> {
   const url = new URL(`${env.CONXIAN_GATEWAY_URL.replace(/\/$/, "")}/api/v1/ai/allocation`);
-  if (profile) url.searchParams.set("profile", profile);
-  return fetchJson(url.toString(), { cache: "no-store" });
+  const normalizedProfile = normalizeAiProfile(profile);
+  if (normalizedProfile) url.searchParams.set("profile", normalizedProfile);
+
+  const payload = await fetchJson(url.toString(), { cache: "no-store" });
+  return validateAiAllocationPayload(payload);
 }
 
-export async function getUbiIdentity(env: ConxianPluginEnv, address: string): Promise<unknown> {
-  return fetchJson(`${env.CONXIAN_GATEWAY_URL.replace(/\/$/, "")}/api/v1/identity/ubi/${encodeURIComponent(address)}`, { cache: "no-store" });
+export async function getUbiIdentity(env: ConxianPluginEnv, address: string): Promise<UbiIdentityResponse> {
+  const normalizedAddress = address.trim();
+  if (!normalizedAddress) {
+    throw new Error("Invalid UBI identity request: address must be a non-empty string");
+  }
+
+  const payload = await fetchJson(
+    `${env.CONXIAN_GATEWAY_URL.replace(/\/$/, "")}/api/v1/identity/ubi/${encodeURIComponent(normalizedAddress)}`,
+    {
+      cache: "no-store",
+    }
+  );
+
+  return validateUbiIdentityPayload(payload);
 }

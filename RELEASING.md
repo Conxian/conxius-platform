@@ -39,6 +39,14 @@ git push origin vX.Y.Z
 
 Use [`docs/runbooks/RELEASE_CHECKLIST_TEMPLATE.md`](./docs/runbooks/RELEASE_CHECKLIST_TEMPLATE.md) as the copy/paste checklist for each release PR/tag.
 
+## Cross-repository release discipline
+
+For chain-specific deployment/operator repositories (including Conxius Orbit in `Conxian/conxius-orbit`):
+
+- Every release PR/tag should reference the controlling parent issue/spec in `conxius-platform`.
+- Release notes should state deployment safety assumptions and trust assumptions for operator-managed surfaces.
+- Release scope must remain bounded to deployment/operator concerns (no broad protocol-ownership expansion).
+
 ## Confidence gates beyond minimum
 
 Heavy suites (extended E2E, soak, manual exploratory QA, security deep-dive) are treated as **optional/nightly/manual confidence gates by default**.

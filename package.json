@@ -10,6 +10,7 @@
     "test": "pnpm -r --if-present run test",
     "build": "pnpm -r --if-present run build",
     "typecheck": "pnpm -r --if-present run typecheck",
+    "check:lifecycle-control": "bash scripts/ci/run-lifecycle-control-gates.sh",
     "check:phase6:sequence1": "bash scripts/ci/run-cross-repo-harness-mvp.sh"
   },
   "devDependencies": {

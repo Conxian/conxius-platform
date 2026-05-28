@@ -47,6 +47,15 @@ For chain-specific deployment/operator repositories (including Conxius Orbit in 
 - Release notes should state deployment safety assumptions and trust assumptions for operator-managed surfaces.
 - Release scope must remain bounded to deployment/operator concerns (no broad protocol-ownership expansion).
 
+## Lifecycle/control gate requirements
+
+Before promoting a release candidate:
+
+1. Run `pnpm run check:lifecycle-control` on the candidate branch/commit.
+2. Ensure the latest `Lifecycle Control Gates` CI workflow run is passing (or record why CI is unavailable and attach local evidence).
+3. Attach lifecycle/control evidence links per [`docs/runbooks/LIFECYCLE_CONTROL_VERIFICATION_EVIDENCE.md`](./docs/runbooks/LIFECYCLE_CONTROL_VERIFICATION_EVIDENCE.md).
+4. Confirm rollback owner/escalation route and monitoring expectations per [`docs/runbooks/LIFECYCLE_CONTROL_GATE_OPERATIONS.md`](./docs/runbooks/LIFECYCLE_CONTROL_GATE_OPERATIONS.md).
+
 ## Confidence gates beyond minimum
 
 Heavy suites (extended E2E, soak, manual exploratory QA, security deep-dive) are treated as **optional/nightly/manual confidence gates by default**.

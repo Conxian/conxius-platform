@@ -12,6 +12,14 @@ This document defines what `conxius-platform` is allowed to own for BOS-related 
 
 `conxius-platform` must not become the home for core Nexus/Gateway production logic. Those changes belong in their owning repositories.
 
+## Chain-specific operator/deployment repositories
+
+Chain-specific deployment/operator repositories (including Conxius Orbit / `Conxian/conxius-orbit`) are subordinate to this parent control model:
+
+- Operator setup must use parent-approved runbook steps and owner review routing.
+- Deployment workflows must be fail-closed and bounded to deployment/operator concerns.
+- These repositories must not become protocol owners and must not expand into broad protocol ownership.
+
 ## Production boundary
 
 In this repository, the production boundary is:

@@ -46,6 +46,14 @@ This document is the **canonical source of truth** for Conxian repository invent
 ### 4. Public communications surface
 - `Conxian/conxian-labs-site`
 
+## Control inheritance for chain-specific deployment repos
+
+Chain-specific deployment/operator repositories (including `Conxian/conxius-orbit` for Conxius Orbit) inherit parent control expectations from `Conxian/conxius-platform`:
+
+- lifecycle and governance controls in [`GOVERNANCE.md`](../GOVERNANCE.md),
+- production-boundary and operator-safety constraints in [`docs/PRODUCTION_BOUNDARY.md`](./PRODUCTION_BOUNDARY.md), and
+- release discipline in [`RELEASING.md`](../RELEASING.md).
+
 ## Maintenance notes
 
 - Visibility and activity status are based on current GitHub repository metadata.

@@ -1,15 +1,18 @@
-# Conxian Monorepo Codeowners
+# Conxian Labs Administrative Registry - Governance
 
-# Root files and general governance
-* @conxian/core-devs
+# Verified maintainers with admin access
+* @botshelomokoka @admin-conxian-labs
 
-# Services
-/services/conxian-ui/ @conxian/ui-devs
-/services/lib-conxian-core/ @conxian/core-devs
-/services/elizaos-plugin-conxian/ @conxian/core-devs
-/services/admin-dashboard/ @conxian/admin-devs
-/services/admin-pulse-bos/ @conxian/admin-devs
+# Security and governance-sensitive files
+/CODEOWNERS @botshelomokoka @admin-conxian-labs
+/SECURITY.md @botshelomokoka @admin-conxian-labs
+/SUPPORT.md @botshelomokoka @admin-conxian-labs
+/.github/release.yml @botshelomokoka @admin-conxian-labs
+/.github/ISSUE_TEMPLATE/** @botshelomokoka @admin-conxian-labs
+/.github/PULL_REQUEST_TEMPLATE* @botshelomokoka @admin-conxian-labs
+/.github/workflows/** @botshelomokoka @admin-conxian-labs
 
-# Documentation and Specifications
-/openspec/ @conxian/core-devs
-README.md @conxian/core-devs
+# Financial and strategic registries
+/REVIEWS.md @botshelomokoka @admin-conxian-labs
+/CONTRIBUTING.md @botshelomokoka @admin-conxian-labs
+/profile/README.md @botshelomokoka @admin-conxian-labs

@@ -9,6 +9,8 @@ mkdir -p "${ARTIFACT_DIR}"
 GATEWAY_URL="${GATEWAY_URL:-http://127.0.0.1:8080}"
 START_GATEWAY="${START_GATEWAY:-1}"
 GATEWAY_START_TIMEOUT_SECONDS="${GATEWAY_START_TIMEOUT_SECONDS:-900}"
+ENABLE_WEBHOOK_REPLAY_CHECK="${ENABLE_WEBHOOK_REPLAY_CHECK:-0}"
+WEBHOOK_REPLAY_CHECK_RESULT="SKIPPED (set ENABLE_WEBHOOK_REPLAY_CHECK=1 to run)"
 
 log() {
   printf '[cross-repo-harness-mvp] %s\n' "$*"
@@ -22,6 +24,45 @@ fail() {
 require_command() {
   local name="$1"
   command -v "$name" >/dev/null 2>&1 || fail "Required command is missing: ${name}"
+}
+
+validate_core_bitcoin_network() {
+  local configured_network="${CORE_BITCOIN_NETWORK:-}"
+
+  if [[ -z "${configured_network}" ]]; then
+    log "CORE_BITCOIN_NETWORK not set; preserving existing default harness behavior (testnet)"
+    return 0
+  fi
+
+  case "${configured_network}" in
+    testnet|signet|regtest)
+      log "CORE_BITCOIN_NETWORK preflight accepted: ${configured_network}"
+      ;;
+    *)
+      fail "Invalid CORE_BITCOIN_NETWORK='${configured_network}'. Allowed values: testnet|signet|regtest. Leave unset to preserve default behavior."
+      ;;
+  esac
+}
+
+run_optional_webhook_replay_check() {
+  local replay_summary_file="${ARTIFACT_DIR}/webhook-replay-summary.md"
+
+  if [[ "${ENABLE_WEBHOOK_REPLAY_CHECK}" != "1" ]]; then
+    log "Webhook replay validation scaffold disabled (ENABLE_WEBHOOK_REPLAY_CHECK=${ENABLE_WEBHOOK_REPLAY_CHECK})"
+    return 0
+  fi
+
+  log "Running opt-in webhook replay validation scaffold"
+  rm -f "${replay_summary_file}"
+
+  WEBHOOK_REPLAY_ARTIFACT_DIR="${ARTIFACT_DIR}" \
+    bash "${ROOT_DIR}/scripts/ci/check-webhook-replay-idempotency.sh"
+
+  if [[ -f "${replay_summary_file}" ]]; then
+    WEBHOOK_REPLAY_CHECK_RESULT="PASS (opt-in scaffold; see webhook-replay-summary.md)"
+  else
+    WEBHOOK_REPLAY_CHECK_RESULT="SKIPPED (opt-in enabled but required replay env was not fully configured)"
+  fi
 }
 
 wait_for_http_200() {
@@ -56,6 +97,7 @@ require_command curl
 require_command pnpm
 require_command cargo
 require_command python3
+validate_core_bitcoin_network
 
 if [[ "${START_GATEWAY}" == "1" ]]; then
   log "Starting gateway binary for readiness and endpoint checks"
@@ -245,6 +287,8 @@ log "Validating Phase 7 PSBT Handshake Simulation (Mock)"
 PSBT_STATUS="$(curl -sS -o "${ARTIFACT_DIR}/psbt-simulate.json" -w "%{http_code}" "${GATEWAY_URL}/api/v1/settlement/simulate" || true)"
 [[ "${PSBT_STATUS}" == "200" ]] || log "Warning: Settlement simulation not yet fully wired (Phase 7)"
 
+run_optional_webhook_replay_check
+
 log "Running existing x402 + local-first + nexus contract tests"
 pnpm --dir "${ROOT_DIR}/services/admin-dashboard" test -- src/tests/x402.test.ts src/tests/sidlPersistence.test.ts src/tests/nexusContract.test.ts \
   2>&1 | tee "${ARTIFACT_DIR}/admin-dashboard-contract-tests.log"
@@ -263,6 +307,7 @@ cat > "${ARTIFACT_DIR}/summary.md" <<EOF_SUMMARY
 - x402/payment-header contract tests: PASS (services/admin-dashboard, services/elizaos-plugin-conxian)
 - local-first state transition tests: PASS (services/admin-dashboard/src/tests/sidlPersistence.test.ts)
 - admin dashboard nexus parity normalization tests: PASS (services/admin-dashboard/src/tests/nexusContract.test.ts)
+- webhook replay idempotency scaffold: ${WEBHOOK_REPLAY_CHECK_RESULT}
 EOF_SUMMARY
 
 log "Harness checks completed successfully"

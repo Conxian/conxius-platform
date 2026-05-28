@@ -9,7 +9,10 @@ This harness verifies:
 - AI allocation contract invariants (weight bounds + sum ≈ 1) and unknown-profile fail-closed probe,
 - UBI identity hash format contract (`identity_hash` matches `ubi:btc:{id}`),
 - x402/payment-header transmission behavior,
-- local-first state transition assertions.
+- local-first state transition assertions,
+- opt-in Bitcoin sandbox parity scaffolding (network preflight and webhook replay probe).
+
+For detailed parity scope mapping, see `docs/runbooks/BITCOIN_SANDBOX_PRODUCTION_PARITY_MATRIX.md`.
 
 ## CI entrypoint
 - Workflow: `.github/workflows/cross-repo-integration-mvp.yml`
@@ -33,7 +36,21 @@ This harness verifies:
    pnpm run check:phase6:sequence1
    ```
    (Equivalent direct entrypoint: `bash scripts/ci/run-cross-repo-harness-mvp.sh`.)
-5. Tear down dependencies:
+5. (Optional) Validate network preflight behavior:
+   ```bash
+   # Expected to fail fast before gateway startup due to invalid network value
+   CORE_BITCOIN_NETWORK=invalid-network START_GATEWAY=0 bash scripts/ci/run-cross-repo-harness-mvp.sh
+   ```
+6. (Optional) Run webhook replay parity scaffold:
+   ```bash
+   ENABLE_WEBHOOK_REPLAY_CHECK=1 \
+   WEBHOOK_REPLAY_ENDPOINT_URL=http://127.0.0.1:8080/api/v1/webhooks/sandbox \
+   WEBHOOK_REPLAY_FIXTURE_PATH=/absolute/path/to/webhook-fixture.json \
+   bash scripts/ci/run-cross-repo-harness-mvp.sh
+   ```
+   - If `WEBHOOK_REPLAY_ENDPOINT_URL` or `WEBHOOK_REPLAY_FIXTURE_PATH` is missing, replay probe reports a clear `SKIP` and exits `0`.
+   - Replay artifacts are written to `test-results/cross-repo-harness-mvp/`.
+7. Tear down dependencies:
    ```bash
    docker compose down -v
    ```
@@ -59,6 +76,7 @@ The harness **passes** only when all checks succeed:
    - `services/admin-dashboard/src/tests/sidlPersistence.test.ts`
 7. admin dashboard nexus parity normalization tests pass:
    - `services/admin-dashboard/src/tests/nexusContract.test.ts`
+8. optional replay validation (only when `ENABLE_WEBHOOK_REPLAY_CHECK=1`) completes with accepted replay status policy.
 
 The harness **fails fast** on any contract violation and preserves logs in the artifact directory.
 

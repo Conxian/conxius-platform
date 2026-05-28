@@ -1,0 +1,33 @@
+name: Lifecycle Control Gates
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  lifecycle-control-gates:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Run lifecycle/control gates
+        run: |
+          bash scripts/ci/run-lifecycle-control-gates.sh
+
+      - name: Upload lifecycle/control gate artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lifecycle-control-gates
+          path: test-results/lifecycle-control-gates/
+          if-no-files-found: warn

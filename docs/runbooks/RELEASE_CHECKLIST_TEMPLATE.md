@@ -19,7 +19,15 @@ Copy/paste this checklist into the release PR description (or release tracking i
 - [ ] Required checks for `main` are passing.
 - [ ] Required review approvals are complete.
 
-## 2) Optional confidence gates (team policy dependent)
+## 2) Lifecycle/control gates (required)
+
+- [ ] `pnpm run check:lifecycle-control` passes on the release candidate commit.
+- [ ] Latest `Lifecycle Control Gates` workflow result is passing (or local fallback evidence is attached).
+- [ ] `lifecycle-control-gates` artifact summary/log link is attached in the release PR/issue.
+- [ ] Rollback owner + escalation route are confirmed per `docs/runbooks/LIFECYCLE_CONTROL_GATE_OPERATIONS.md`.
+- [ ] Monitoring expectation review is completed for lifecycle/control workflow health.
+
+## 3) Optional confidence gates (team policy dependent)
 
 - [ ] Extended E2E/regression suite run.
 - [ ] Manual smoke test in target environment.
@@ -28,7 +36,7 @@ Copy/paste this checklist into the release PR description (or release tracking i
 
 > These gates are optional by default for public-repo minimum workflow unless your team marks them as required.
 
-## 3) Tag and publish (required)
+## 4) Tag and publish (required)
 
 - [ ] Release PR is merged to `main`.
 - [ ] Local `main` is up to date (`git pull --ff-only`).
@@ -43,7 +51,7 @@ git push origin vX.Y.Z
 - [ ] `.github/workflows/release.yml` completed successfully for the tag.
 - [ ] GitHub Release exists for `vX.Y.Z`.
 
-## 4) Release notes and closeout (required)
+## 5) Release notes and closeout (required)
 
 - [ ] GitHub Release notes reviewed/edited for clarity.
 - [ ] Release notes align with `CHANGELOG.md` for `X.Y.Z`.

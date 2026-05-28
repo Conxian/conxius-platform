@@ -36,7 +36,9 @@ Copy/paste this checklist into the release PR description (or release tracking i
 
 > These gates are optional by default for public-repo minimum workflow unless your team marks them as required.
 
-## 4) Tag and publish (required)
+## 4) Tag and publish GitHub release artifacts (required)
+
+> In this repo, "publish" means pushing the release Git tag and verifying the GitHub Release. Do **not** run `npm publish`.
 
 - [ ] Release PR is merged to `main`.
 - [ ] Local `main` is up to date (`git pull --ff-only`).

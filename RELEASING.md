@@ -2,6 +2,8 @@
 
 This repository uses **Semantic Versioning** with Git tags and GitHub Releases.
 
+This repository currently does **not** publish packages to npm. Releases are managed as Git tags plus GitHub Releases.
+
 - Version tag format: `vX.Y.Z` (**annotated tags only**)
 - Changelog: [`CHANGELOG.md`](./CHANGELOG.md) (Keep a Changelog format)
 - Release checklist template: [`docs/runbooks/RELEASE_CHECKLIST_TEMPLATE.md`](./docs/runbooks/RELEASE_CHECKLIST_TEMPLATE.md)

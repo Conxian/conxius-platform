@@ -6,7 +6,10 @@ ElizaOS plugin that exposes Conxian Gateway + SIDL social interfaces as typed ac
 
 Environment variables (or plugin `config` keys):
 
-- `CONXIAN_GATEWAY_URL` (default: `http://localhost:8080`)
+- `CONXIAN_GATEWAY_URL` (default: `https://gateway.conxian-labs.com`)
+- `CONXIAN_VAULT_URL` (default: `https://vault.conxian-labs.com`)
+- `CONXIAN_NEXUS_URL` (default: `https://nexus.conxian-labs.com`)
+- `CONXIAN_API_KEY` (required for authenticated routes)
 - `CONXIAN_SOCIAL_URL` (default: `http://localhost:3002`)
 
 ## Actions

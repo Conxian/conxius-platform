@@ -9,6 +9,9 @@ const nullableUrl = z.preprocess((v) => (v === null ? undefined : v), z.string()
 const configSchema = z.object({
   CONXIAN_GATEWAY_URL: nullableUrl,
   CONXIAN_SOCIAL_URL: nullableUrl,
+  CONXIAN_VAULT_URL: nullableUrl,
+  CONXIAN_NEXUS_URL: nullableUrl,
+  CONXIAN_API_KEY: z.string().optional(),
 });
 
 const conxianPlugin: Plugin = {
@@ -17,6 +20,9 @@ const conxianPlugin: Plugin = {
   config: {
     CONXIAN_GATEWAY_URL: process.env.CONXIAN_GATEWAY_URL ?? null,
     CONXIAN_SOCIAL_URL: process.env.CONXIAN_SOCIAL_URL ?? null,
+    CONXIAN_VAULT_URL: process.env.CONXIAN_VAULT_URL ?? null,
+    CONXIAN_NEXUS_URL: process.env.CONXIAN_NEXUS_URL ?? null,
+    CONXIAN_API_KEY: process.env.CONXIAN_API_KEY ?? null,
   },
 
   async init(config, runtime) {

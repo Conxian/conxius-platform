@@ -618,7 +618,7 @@ impl Engine {
 
     pub fn get_cjcs_v2_spec(&self) -> serde_json::Value {
         serde_json::json!({
-            "@context": "https://conxian.com/contexts/job-card/v2.0",
+            "@context": "https://conxian-labs.com/contexts/job-card/v2.0",
             "@type": "ConxianJobCard",
             "version": "2.0.0",
             "standard": "JSON-LD",

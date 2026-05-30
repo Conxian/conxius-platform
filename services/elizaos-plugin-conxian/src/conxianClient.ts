@@ -29,8 +29,11 @@ const ubiIdentitySchema = z
   .passthrough();
 
 const envSchema = z.object({
-  CONXIAN_GATEWAY_URL: z.string().url().default("http://localhost:8080"),
+  CONXIAN_GATEWAY_URL: z.string().url().default("https://gateway.conxian-labs.com"),
   CONXIAN_SOCIAL_URL: z.string().url().default("http://localhost:3002"),
+  CONXIAN_VAULT_URL: z.string().url().default("https://vault.conxian-labs.com"),
+  CONXIAN_NEXUS_URL: z.string().url().default("https://nexus.conxian-labs.com"),
+  CONXIAN_API_KEY: z.string().min(1).default("sk-unset-change-me"),
 });
 
 export type ConxianPluginEnv = z.infer<typeof envSchema>;
@@ -84,6 +87,9 @@ export function parseConxianEnv(config: Record<string, string | undefined>): Con
   const input = {
     CONXIAN_GATEWAY_URL: config.CONXIAN_GATEWAY_URL || process.env.CONXIAN_GATEWAY_URL,
     CONXIAN_SOCIAL_URL: config.CONXIAN_SOCIAL_URL || process.env.CONXIAN_SOCIAL_URL,
+    CONXIAN_VAULT_URL: config.CONXIAN_VAULT_URL || process.env.CONXIAN_VAULT_URL,
+    CONXIAN_NEXUS_URL: config.CONXIAN_NEXUS_URL || process.env.CONXIAN_NEXUS_URL,
+    CONXIAN_API_KEY: config.CONXIAN_API_KEY || process.env.CONXIAN_API_KEY,
   };
 
   return envSchema.parse(input);

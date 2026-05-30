@@ -50,4 +50,4 @@ pnpm --filter ./services/elizaos-plugin-conxian test
 
 ## Contact
 
-For any questions or feedback, please reach out via GitHub Issues or contact the team at dev@conxian.com.
+For any questions or feedback, please reach out via GitHub Issues or contact the team at dev@conxian-labs.com.

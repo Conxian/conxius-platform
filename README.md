@@ -66,6 +66,6 @@ Conxian uses the **Earthy Corporate Finance** theme:
 
 ## 📞 Support & Communication
 
-- **Technical Support**: Open a [GitHub Issue](https://github.com/Conxian/conxius-platform/issues) or contact `dev@conxian.com`.
+- **Technical Support**: Open a [GitHub Issue](https://github.com/Conxian/conxius-platform/issues) or contact `dev@conxian-labs.com`.
 - **Security**: Refer to [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
-- **Institutional Inquiries**: Contact `labs@conxian.com` for partnership and institutional integration.
+- **Institutional Inquiries**: Contact `labs@conxian-labs.com` for partnership and institutional integration.

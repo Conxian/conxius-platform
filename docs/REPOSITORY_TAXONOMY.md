@@ -2,7 +2,7 @@
 
 This document is the **canonical source of truth** for Conxian repository inventory and classification.
 
-Ownership authority is defined in each repository's `CODEOWNERS` file. For `Conxian/conxius-platform`, `CODEOWNERS` is authoritative.
+Ownership authority remains defined in each repository's root `CODEOWNERS` file. For `Conxian/conxius-platform`, `CODEOWNERS` is authoritative.
 
 > [!NOTE]
 > Keep repository inventory updates in this file first. Other docs (for example `README.md` and `SYSTEM_GRAPH.md`) should link here rather than duplicate the full inventory.
@@ -60,6 +60,7 @@ Chain-specific deployment/operator repositories (including `Conxian/conxius-orbi
 
 - Visibility and activity status are based on current GitHub repository metadata.
 - Owner values are taken from each repository's root `CODEOWNERS` (or `.github/CODEOWNERS`) when available.
+- Operational gate-owner roles are tracked in runbooks and do not supersede `CODEOWNERS` review/merge ownership.
 - If ownership/classification cannot be verified confidently, use explicit conservative wording: `TBD (owner confirmation required)`.
 
 ## Temporary Exceptions & Transitional States Register (Living)

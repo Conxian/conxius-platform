@@ -18,14 +18,16 @@ Ownership authority for lifecycle/control gates is defined by repository `CODEOW
 
 | Role | Owner | Responsibility |
 | --- | --- | --- |
-| Gate owners of record | `@botshelomokoka`, `@admin-conxian-labs` | Accountable for gate definitions, release suitability, and policy drift remediation. |
+| Gate owners of record (operational) | `@botshelomokoka`, `@admin-conxian-labs` | Accountable for gate definitions, release suitability, and policy drift remediation; this role does not override repository `CODEOWNERS` merge authority. |
 | Change implementer | PR author | Runs gates locally, links evidence, and resolves failures before merge. |
 | Release owner | Release PR owner | Verifies lifecycle/control evidence is attached before tag/promotion. |
+
+Root `CODEOWNERS` remains the authoritative source for repository code-review and merge ownership.
 
 ### Escalation path
 
 1. If lifecycle/control gates fail on release-bound changes, block promotion.
-2. Notify `@botshelomokoka` and `@admin-conxian-labs` in the release PR/issue and attach gate summary/log artifacts.
+2. Notify `@botshelomokoka`, `@admin-conxian-labs` (operational gate owners), and mapped `CODEOWNERS` maintainers in the release PR/issue, then attach gate summary/log artifacts.
 3. If unresolved by release cutoff, create a follow-up blocking issue and defer promotion.
 
 ## Monitoring expectations

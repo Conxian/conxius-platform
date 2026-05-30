@@ -31,7 +31,7 @@ This document serves as the authoritative guide for aligning business logic, des
 
 ## Repo-Specific Directives
 
-- **Conxian_UI**: Use canonical components; no token drift.
+- **conxian_ui**: Use canonical components; no token drift.
 - **lib-conxian-core**: Maintain audit-ready Rust binaries and shared TypeScript libraries.
 - **conxian-gateway**: Consolidate all sovereign service APIs.
 - **Conxian (Contracts)**: Nakamoto-readiness (Clarity 4).

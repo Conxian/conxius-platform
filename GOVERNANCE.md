@@ -4,7 +4,7 @@ This repository is governed by Conxian Labs and uses a pull-request-first workfl
 
 ## Ownership
 
-- Repository ownership and review routing are defined in [`CODEOWNERS`](./CODEOWNERS).
+- Root [`CODEOWNERS`](./CODEOWNERS) is the authoritative source for repository code-review and merge ownership.
 - Governance, security, and policy changes should be reviewed by the owners mapped in `CODEOWNERS`.
 
 ## Change control
@@ -26,6 +26,7 @@ This repository is governed by Conxian Labs and uses a pull-request-first workfl
 ## Cross-repository control alignment
 
 - Chain-specific deployment/operator repositories (including Conxius Orbit in `Conxian/conxius-orbit`) must align to the parent lifecycle/control model defined by this repository.
+- This alignment is an operational policy baseline only; it does not transfer code-review/merge authority across repositories.
 - Operator setup and deployment-policy changes in those repositories must reference a parent control-plane issue/spec and use parent-approved runbook evidence.
 - Trust assumption: operator surfaces are treated as untrusted by default and must never require protocol-signing key custody.
 - Scope boundary: deployment/operator repositories must not expand into broad protocol ownership; protocol-state/business-logic changes remain in their owning repositories.

@@ -1,4 +1,4 @@
-# Conxian Platform: Gap Analysis & Technical Debt (Phase 6 baseline, Phase 7 transition)
+# Conxius Platform: Gap Analysis & Technical Debt (Phase 6 baseline, Phase 7 transition)
 
 This document tracks the resolution of gaps and identifies new technical requirements.
 

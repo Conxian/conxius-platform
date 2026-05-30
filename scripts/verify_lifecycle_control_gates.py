@@ -101,7 +101,9 @@ def main() -> int:
         ContentRule(
             path="docs/runbooks/LIFECYCLE_CONTROL_GATE_OPERATIONS.md",
             required_snippets=(
-                "@conxian/core-devs",
+                "CODEOWNERS",
+                "@botshelomokoka",
+                "@admin-conxian-labs",
                 "Escalation path",
                 "Monitoring expectations",
                 "Rollback plan",
@@ -111,7 +113,9 @@ def main() -> int:
             path="REPO_OWNERSHIP.md",
             required_snippets=(
                 "Lifecycle/control gate ownership",
-                "@conxian/core-devs",
+                "Ownership authority source of truth",
+                "@botshelomokoka",
+                "@admin-conxian-labs",
                 "Escalation",
             ),
         ),

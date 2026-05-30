@@ -1,4 +1,4 @@
-# Conxian Platform: Deployment Guide (Sovereign Redesign 2026)
+# Conxius Platform: Deployment Guide (Sovereign Redesign 2026)
 
 ## Declarative NixOS Deployment (Target)
 The Conxius Platform is transitioning to a purely declarative deployment model using NixOS.

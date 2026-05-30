@@ -2,7 +2,7 @@
 
 This document is the **canonical source of truth** for Conxian repository inventory and classification.
 
-Review/merge authority remains canonical in each repository's root `CODEOWNERS`.
+Ownership authority remains defined in each repository's root `CODEOWNERS` file. For `Conxian/conxius-platform`, `CODEOWNERS` is authoritative.
 
 > [!NOTE]
 > Keep repository inventory updates in this file first. Other docs (for example `README.md` and `SYSTEM_GRAPH.md`) should link here rather than duplicate the full inventory.

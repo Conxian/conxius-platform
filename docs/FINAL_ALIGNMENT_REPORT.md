@@ -1,7 +1,7 @@
-# Conxian Platform: Phase 5/6 Alignment & Production Readiness Report
+# Conxius Platform: Phase 5/6 Alignment & Production Readiness Report
 
 ## Executive Summary
-This report documents the systematic alignment of the Conxian platform with Phase 5/6 specifications and the remediation of production-path contamination across the monorepo. All critical implementation gaps identified in Linear "Done" issues have been resolved, and institutional treasury enhancements have been integrated.
+This report documents the systematic alignment of the Conxius Platform with Phase 5/6 specifications and the remediation of production-path contamination across the monorepo. All critical implementation gaps identified in Linear "Done" issues have been resolved, and institutional treasury enhancements have been integrated.
 
 ## 1. Logic Restoration (Gateway Engine)
 **Status**: ✅ Operational (v0.2.2-aligned)

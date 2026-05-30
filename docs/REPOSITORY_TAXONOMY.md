@@ -1,6 +1,8 @@
 # Conxian Repository Taxonomy & Ownership Map
 
-This document is the **canonical source of truth** for Conxian repository inventory, ownership, and classification.
+This document is the **canonical source of truth** for Conxian repository inventory and classification.
+
+Ownership authority is defined in each repository's `CODEOWNERS` file. For `Conxian/conxius-platform`, `CODEOWNERS` is authoritative.
 
 > [!NOTE]
 > Keep repository inventory updates in this file first. Other docs (for example `README.md` and `SYSTEM_GRAPH.md`) should link here rather than duplicate the full inventory.
@@ -18,7 +20,7 @@ This document is the **canonical source of truth** for Conxian repository invent
 | [`Conxian/conxian-labs-site`](https://github.com/Conxian/conxian-labs-site) | Public ecosystem audience, partners, and communications team | Public | `@botshelomokoka`, `@admin-conxian-labs` | Public website | Publishes Conxian Labs web presence and public-facing messaging | Active (not archived; last push 2026-05-05) |
 | [`Conxian/conxian-gateway`](https://github.com/Conxian/conxian-gateway) | Backend/API engineers and integration partners | Public | `@botshelomokoka`, `@admin-conxian-labs` | Middleware/API service | Exposes middleware bridging Bitcoin/Stacks flows with institutional interfaces | Active (not archived; last push 2026-05-03) |
 | [`Conxian/lib-conxian-core`](https://github.com/Conxian/lib-conxian-core) | Core protocol developers and SDK consumers | Public | `@botshelomokoka`, `@admin-conxian-labs`, `@Conxian/mobile` | Shared core library/SDK | Provides shared protocol primitives and reusable core logic | Active (not archived; last push 2026-05-03) |
-| [`Conxian/conxius-platform`](https://github.com/Conxian/conxius-platform) | Platform/infrastructure engineers and operators | Public | `@conxian/core-devs` | Control plane/orchestration | Operates the local-first control plane, orchestration, and operational topology | Active (not archived; last push 2026-05-04) |
+| [`Conxian/conxius-platform`](https://github.com/Conxian/conxius-platform) | Platform/infrastructure engineers and operators | Public | `@botshelomokoka`, `@admin-conxian-labs` | Control plane/orchestration | Operates the local-first control plane, orchestration, and operational topology | Active (not archived; last push 2026-05-04) |
 | [`Conxian/conxian-nexus`](https://github.com/Conxian/conxian-nexus) | State/indexing engineers and backend maintainers | Public | `@Conxian/core-devs`, `@botshelomokoka`, `@admin-conxian-labs` | State/indexing service | Maintains the Nexus/Glass Node API bridge and state synchronization surface | Active (not archived; last push 2026-05-03) |
 | [`Conxian/conxian-business`](https://github.com/Conxian/conxian-business) | Internal leadership, strategy, legal, and operations teams | Private | `@botshelomokoka`, `@admin-conxian-labs` | Business operations (private) | Stores non-public strategic, legal, and operational documentation | Active (not archived; last push 2026-05-05) |
 | [`Conxian/conxius-enclave-sdk`](https://github.com/Conxian/conxius-enclave-sdk) | Security/mobile engineers integrating hardware enclave capabilities | Public | `@botshelomokoka`, `@admin-conxian-labs` | Security/enclave SDK | Provides cross-platform enclave abstractions for sovereign computing | Active (not archived; last push 2026-05-04) |

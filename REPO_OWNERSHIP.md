@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`conxius-platform` is the composition, runtime, and integration harness repo for the Conxian builder platform.
+`conxius-platform` is the composition, runtime, and integration harness repo for the Conxius Platform.
 
 ## This repo owns
 
@@ -25,9 +25,10 @@ This repo should compose strategic repos rather than become the hidden home of b
 
 ## Lifecycle/control gate ownership
 
-- **Gate owner of record:** `@conxian/core-devs`
+- **Ownership authority source of truth:** `CODEOWNERS`
+- **Gate owners of record:** `@botshelomokoka`, `@admin-conxian-labs`
 - **Accountable surfaces:** lifecycle/control CI gates, verification evidence standards, release/operate readiness controls.
-- **Escalation:** if lifecycle/control gates fail for release-bound work, escalate in the active PR/issue to `@conxian/core-devs` and block promotion until resolution or documented rollback.
+- **Escalation:** if lifecycle/control gates fail for release-bound work, escalate in the active PR/issue to `@botshelomokoka` and `@admin-conxian-labs` and block promotion until resolution or documented rollback.
 
 ## Strategic role
 

@@ -1,4 +1,4 @@
-# Conxian Platform: Performance Benchmarks
+# Conxius Platform: Performance Benchmarks
 
 ## 1. Gateway Latency (Localhost)
 - **Endpoint**: /api/v1/status

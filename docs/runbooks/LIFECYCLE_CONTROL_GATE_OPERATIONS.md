@@ -14,16 +14,18 @@ pnpm run check:lifecycle-control
 
 ## Ownership and escalation
 
+Ownership authority for lifecycle/control gates is defined by repository `CODEOWNERS`.
+
 | Role | Owner | Responsibility |
 | --- | --- | --- |
-| Gate owner of record | `@conxian/core-devs` | Accountable for gate definitions, release suitability, and policy drift remediation. |
+| Gate owners of record | `@botshelomokoka`, `@admin-conxian-labs` | Accountable for gate definitions, release suitability, and policy drift remediation. |
 | Change implementer | PR author | Runs gates locally, links evidence, and resolves failures before merge. |
 | Release owner | Release PR owner | Verifies lifecycle/control evidence is attached before tag/promotion. |
 
 ### Escalation path
 
 1. If lifecycle/control gates fail on release-bound changes, block promotion.
-2. Notify `@conxian/core-devs` in the release PR/issue and attach gate summary/log artifacts.
+2. Notify `@botshelomokoka` and `@admin-conxian-labs` in the release PR/issue and attach gate summary/log artifacts.
 3. If unresolved by release cutoff, create a follow-up blocking issue and defer promotion.
 
 ## Monitoring expectations

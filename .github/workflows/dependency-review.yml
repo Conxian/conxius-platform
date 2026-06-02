@@ -9,10 +9,12 @@ permissions:
 
 jobs:
   dependency-review:
-    uses: Conxian/.github/.github/workflows/dependency-review.yml@main
+    runs-on: self-hosted
     permissions:
       contents: read
       pull-requests: write
-    with:
-      base-ref: ${{ github.event.pull_request.base.sha }}
-      head-ref: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4

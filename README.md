@@ -28,6 +28,9 @@ This repository is maintained by Conxian Labs. It supports development and opera
 - [Ecosystem Synergy](./SYNERGY.md)
 - [Gap Analysis](./GAPS.md)
 - [Repository Taxonomy](./docs/REPOSITORY_TAXONOMY.md)
+- [ADR 001: Repo Ownership](./docs/architecture/ADR-001_REPO_OWNERSHIP_AND_BOUNDARIES.md)
+- [Repository Evolution Plan](./docs/architecture/REPO_EVOLUTION_PLAN.md)
+- [Alignment Blueprint 2026](./ALIGNMENT_BLUEPRINT_2026.md)
 
 ## Quick start
 

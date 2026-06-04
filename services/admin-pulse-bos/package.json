@@ -1,0 +1,19 @@
+{
+  "name": "admin-pulse-bos",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Admin Pulse (BOS) components for Conxian ecosystem",
+  "scripts": {
+    "lint": "echo 'No linting configured for this package yet.'",
+    "test": "echo 'No tests configured for this package yet.'",
+    "typecheck": "echo 'No typechecking configured for this package yet.'"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "lucide-react": "^0.474.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "typescript": "^5.6.3"
+  }
+}

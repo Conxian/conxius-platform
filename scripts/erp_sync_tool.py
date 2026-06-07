@@ -3,8 +3,12 @@ import json
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-# Configuration from plan step
-DB_URL = "postgresql://neondb_owner:npg_tkKLzfNa54rg@ep-weathered-sound-aggxr7go-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require"
+# Use an environment override for real runs and a clearly non-secret mock default
+# so this script remains runnable without embedding credential-like literals.
+DB_URL = os.getenv(
+    "ERP_SYNC_DB_URL",
+    "postgresql://localhost:5432/erp_mock_db?sslmode=disable",
+)
 
 def sync_erp_to_bos():
     print("Starting ERP to BOS synchronization...")

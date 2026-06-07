@@ -16,14 +16,14 @@ export async function GET() {
         orchestrator: "Kubernetes",
         replicas: 3,
         image_repo: "gcr.io/conxian-project/gateway",
-        manifest_path: "services/lib-conxian-core/gateway/infrastructure/gcp/deployment.yaml"
+        repository: "https://github.com/Conxian/conxian-gateway"
       },
       {
         target: "Render (UI)",
         status: "Production",
         orchestrator: "Render Native",
-        build_command: "npm run build",
-        manifest_path: "services/conxian-ui/render.yaml"
+        build_command: "pnpm build",
+        repository: "https://github.com/Conxian/conxian_ui"
       }
     ],
     governance: {

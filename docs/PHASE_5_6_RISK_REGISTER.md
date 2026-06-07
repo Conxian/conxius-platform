@@ -14,10 +14,10 @@ This document proactively manages delivery, dependency, security, and adoption r
 
 ## 2. Mitigation Backlog
 
-- [ ] **[R-01]** Implement mock ERP/OData endpoints for integration testing.
+- [x] **[R-01]** Implement mock ERP/OData endpoints for integration testing (Done June 2026).
 - [ ] **[R-02]** Perform gap analysis between legacy Gateway and Phase 6 BFF.
 - [ ] **[R-03]** Draft "Sovereign Abstraction" spec for multi-token UX.
-- [ ] **[R-04]** Integrate `system_audit.py` outputs into the compliance ledger.
+- [x] **[R-04]** Integrate `system_audit.py` outputs into the compliance ledger (Done June 2026).
 - [ ] **[R-05]** Configure Linear automation for cross-repo dependency tracking.
 
 ## 3. Scoring Rubric

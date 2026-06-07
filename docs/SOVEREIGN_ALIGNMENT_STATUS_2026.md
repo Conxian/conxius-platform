@@ -18,13 +18,13 @@ The authoritative spec `docs/architecture/SOVEREIGN_REPR_2026.md` defines the ne
 - **NixOS Orchestration**: Replacing imperative provisioning (`provision-secrets.sh`) with declarative state.
 - **Nexus OS**: Evolving the indexer into an IVC-verifiable computation machine.
 
-## 3. Linear Issue Alignment & Tracking
+## 3. Linear Issue Alignment & Tracking (Updated June 2026)
 The following high-priority issues are driving the current sprint:
 - **CON-674**: Root-to-Leaf KPI Scorecard (Completed).
 - **CON-675**: Phase 5/6 Risk Register (Completed).
+- **CON-736/737**: Capability Matrix and System Validation (ATS Executed June 2026).
+- **CON-739**: Live-ready deployment gates (Remediation aligned for Render).
 - **CON-649**: Multi-token UX Rationalization (Retail/Global South focus).
-- **CON-557 / Issue #591**: BFF/Nexus Cross-Repo Integration Harness MVP.
-- **CON-572**: Security hardening for `conxian-business`.
 
 ## 4. Repository Boundaries (CON-637 Audit)
 Ownership is being clarified to reduce logic leakage:
@@ -36,8 +36,9 @@ Ownership is being clarified to reduce logic leakage:
 ## 5. Risk & Hygiene
 - **ZSE Compliance**: Zero Secret Egress verified; sensitive docs migrated to Linear Virtual Office.
 - **Vulnerability Remediation**: Over 30 vulnerabilities resolved via `pnpm.overrides`.
+- **pnpm Compliance**: All workspace services strictly use pnpm; npm is banned and references purged.
 - **Git Hygiene**: Merged and stale branches (90+ days) have been purged.
 
 ---
 **Prepared by**: Jules (Sovereign Computing Agent)
-**Status**: ACTIVE
+**Status**: ACTIVE - ATS Execution Complete (June 7, 2026)

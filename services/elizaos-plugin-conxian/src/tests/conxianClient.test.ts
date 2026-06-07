@@ -4,6 +4,7 @@ import { checkoutCartX402, getAiAllocation, getUbiIdentity } from "../conxianCli
 const env = {
   CONXIAN_GATEWAY_URL: "http://localhost:8080",
   CONXIAN_SOCIAL_URL: "http://localhost:3002",
+  CONXIAN_ADMIN_URL: "http://localhost:3001",
 };
 
 function mockJsonFetch(payload: unknown, status = 200) {

@@ -47,10 +47,10 @@ For lifecycle/control implementation or release-readiness work, include:
 
 ## Current local validation snapshot (CON-698 implementation)
 
-Validation run timestamp (UTC): `2026-05-28T05:07:02Z`
+Validation run timestamp (UTC): `2026-06-07T09:50:00Z`
 
 | Command | Result | Notes |
 | --- | --- | --- |
 | `pnpm run check:lifecycle-control` | PASS | Generated `test-results/lifecycle-control-gates/summary.md` and `lifecycle-control-gates.log`; all 4 gate checks passed. |
 | `pnpm run lint` | PASS | Workspace lint command completed without reported lint violations. |
-| `pnpm run typecheck` | FAIL | Pre-existing TypeScript environment/type-definition issues in `services/elizaos-plugin-conxian` (missing `process`/`fetch`/DOM globals); unrelated to lifecycle/control doc+CI gate changes. |
+| `pnpm run typecheck` | PASS | Resolved pre-existing TypeScript environment issues in `services/elizaos-plugin-conxian` by adding DOM lib and node types to tsconfig. |

@@ -30,7 +30,7 @@ function SecretInput({
 export default function SettingsPage() {
   const [secrets, setSecrets] = useState({
     ADMIN_PAT_TOKEN: "",
-    ADMIN_NPM_TOKEN: "",
+    ADMIN_PNPM_TOKEN: "",
     ADMIN_PYPI_API_TOKEN: "",
     ADMIN_GCP_SA_KEY_JSON: "",
     ADMIN_CHANGELLY_API_ID: "",
@@ -95,11 +95,11 @@ export default function SettingsPage() {
         </div>
 
         <h3 style={{ marginTop: '2rem', color: '#D4A017', fontSize: '1.2rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem' }}>Institutional Secrets</h3>
-        <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1.5rem' }}>These secrets are required for automated deployments (NPM, PyPI, GCP) and exchange integrations.</p>
+        <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1.5rem' }}>These secrets are required for automated deployments (pnpm, PyPI, GCP) and exchange integrations.</p>
         
         <div style={{ display: 'grid', gap: '1rem' }}>
           <SecretInput label="GitHub PAT Token" name="ADMIN_PAT_TOKEN" value={secrets.ADMIN_PAT_TOKEN} onChange={handleChange} />
-          <SecretInput label="NPM Token" name="ADMIN_NPM_TOKEN" value={secrets.ADMIN_NPM_TOKEN} onChange={handleChange} />
+          <SecretInput label="pnpm Registry Token" name="ADMIN_PNPM_TOKEN" value={secrets.ADMIN_PNPM_TOKEN} onChange={handleChange} />
           <SecretInput label="PyPI API Token" name="ADMIN_PYPI_API_TOKEN" value={secrets.ADMIN_PYPI_API_TOKEN} onChange={handleChange} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
             <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#444' }}>GCP Service Account Key (JSON)</label>

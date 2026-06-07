@@ -3,8 +3,10 @@ import json
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-# Configuration from plan step
-DB_URL = "postgresql://neondb_owner:npg_tkKLzfNa54rg@ep-weathered-sound-aggxr7go-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require"
+DB_URL = os.getenv("ERP_SYNC_DATABASE_URL")
+if not DB_URL:
+    raise RuntimeError("Missing required environment variable: ERP_SYNC_DATABASE_URL")
+
 
 def sync_erp_to_bos():
     print("Starting ERP to BOS synchronization...")

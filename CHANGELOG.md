@@ -60,3 +60,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Kwil Transactional State**: Migrated Nexus Glass Node state and history storage to Kwil.
 - **Sovereign AI Allocation**: Real-time compute weighting and risk-optimized asset management.
 - **Hardware Security**: Integrated HSM FIPS 140-2 Level 3 status tracking.
+
+## [0.2.0] - 2026-06-07
+### Added
+- Multi-dimensional ERP database implementation in Neon (br-icy-dust-agc4w03v).
+- Sovereign ERP metrics integration in Admin Dashboard.
+- 'docs/BITCOIN_STANDARD_RESEARCH.md' detailing Bitcoin-native business operations.
+- New ERP data types and API routes for platform processing.
+### Fixed
+- Remediated implementation drift and governance file gaps identified during stress testing.

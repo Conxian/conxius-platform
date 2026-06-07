@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { normalizeNexusState, type NexusState } from "@/lib/nexusContract";
+import { type ErpDashboardData } from "@/lib/sidl/types";
 
 type GatewayStats = {
   status: "Healthy" | "Degraded" | "Unknown";
@@ -84,6 +85,7 @@ function BlueprintCard() {
 export default function AdminPage() {
   const [stats, setStats] = useState<GatewayStats | null>(null);
   const [nexus, setNexus] = useState<NexusState | null>(null);
+  const [erpData, setErpData] = useState<ErpDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -119,6 +121,9 @@ export default function AdminPage() {
 
       const nexusJson = await fetchJsonWithFallback(baseUrl, ["/api/v1/nexus/state"]);
       setNexus(normalizeNexusState(nexusJson, statusJson));
+      const erpRes = await fetch("/api/erp");
+      const erpJson = await erpRes.json();
+      setErpData(erpJson);
     } catch (err) {
       console.error("Dashboard fetch error:", err);
       setError("Unexpected error while fetching status.");
@@ -199,6 +204,29 @@ export default function AdminPage() {
         </section>
       </div>
 
+      <section style={{ marginTop: "3rem" }}>
+        <h3 style={{ borderBottom: "2px solid #D4A017", paddingBottom: "0.5rem", color: "#2E403B" }}>Sovereign ERP Operations</h3>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "2rem", marginTop: "1rem" }}>
+          <div style={{ backgroundColor: "white", padding: "1.5rem", borderRadius: "8px", boxShadow: "0 4px 6px rgba(0,0,0,0.05)" }}>
+            <h4 style={{ color: "#666", fontSize: "0.8rem", textTransform: "uppercase", marginBottom: "1rem" }}>Treasury (L2 Settlement)</h4>
+            {erpData?.treasury.map(t => (
+              <div key={t.ticker} style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+                <span>{t.ticker}</span>
+                <span style={{ fontWeight: "bold" }}>{t.balance}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ backgroundColor: "white", padding: "1.5rem", borderRadius: "8px", boxShadow: "0 4px 6px rgba(0,0,0,0.05)" }}>
+            <h4 style={{ color: "#666", fontSize: "0.8rem", textTransform: "uppercase", marginBottom: "1rem" }}>Active Payroll (UBI-Linked)</h4>
+            {erpData?.employees.map(e => (
+              <div key={e.ubi_id} style={{ marginBottom: "0.5rem" }}>
+                <div style={{ fontSize: "0.9rem" }}>{e.name}</div>
+                <div style={{ fontSize: "0.7rem", color: "#888" }}>{e.ubi_id}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
       <BlueprintCard />
     </div>
   );

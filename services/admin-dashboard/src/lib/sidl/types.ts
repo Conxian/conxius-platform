@@ -104,3 +104,38 @@ export type CheckoutLifecycleState = {
   lastPaymentAttemptAtIso?: string;
   lastSettledAtIso?: string;
 };
+
+export type ErpTreasuryAsset = {
+  id: string;
+  ticker: string;
+  balance: string;
+};
+
+export type ErpEmployee = {
+  id: string;
+  name: string;
+  ubi_id: string;
+  base_salary_btc: string;
+};
+
+export type ErpInvoice = {
+  id: string;
+  customer_name: string;
+  amount_btc: string;
+  status: string;
+  created_at: string;
+};
+
+export type ErpAiComputeLog = {
+  id: string;
+  agent_id: string;
+  tokens_allocated: string;
+  timestamp: string;
+};
+
+export type ErpDashboardData = {
+  treasury: ErpTreasuryAsset[];
+  employees: ErpEmployee[];
+  invoices: ErpInvoice[];
+  computeLogs: ErpAiComputeLog[];
+};

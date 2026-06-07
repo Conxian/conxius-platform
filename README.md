@@ -56,3 +56,10 @@ Use templates and generated local secrets for development only. Do not commit re
 - Support: [support@conxian-labs.com](mailto:support@conxian-labs.com)
 - Security: [security@conxian-labs.com](mailto:security@conxian-labs.com)
 - General: [info@conxian-labs.com](mailto:info@conxian-labs.com)
+
+## Sovereign ERP Integration (2026)
+The Conxian platform now includes a sovereign ERP processing engine, bridging Bitcoin-standard business operations with real-time infrastructure telemetry.
+- **Treasury settled on L2 (sBTC)**
+- **UBI-linked Payroll Distribution**
+- **Native Bitcoin Invoicing**
+- **Verifiable AI Compute Allocation**

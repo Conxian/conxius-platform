@@ -6,7 +6,7 @@ This document proactively manages delivery, dependency, security, and adoption r
 
 | Risk ID | Risk Statement | Area | Probability | Impact | Rating | Owner | Mitigation Approach | Target Date |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **R-01** | ERP integration complexity delays institutional rollout | Delivery | High | High | **CRITICAL** | @botshelomokoka | Freeze canonical contract early; add integration test gates. | 2026-06-15 |
+| **R-01** | ERP integration complexity delays institutional rollout | Delivery | High | High | **CRITICAL** | @botshelomokoka | REMEDIATED: 5 client environments seeded in erp_mock (June 2026). | 2026-06-15 |
 | **R-02** | Phase 6 AgentOps/API parity gaps block production readiness | Architecture | Medium | High | **HIGH** | @botshelomokoka | Publish parity matrix; define staged rollout + rollback guardrails. | 2026-06-30 |
 | **R-03** | Multi-token UX confusion reduces adoption and increases support | Product/UX | High | Medium | **HIGH** | @product-lead | Approve canonical token model; revise onboarding copy/flows. | 2026-06-30 |
 | **R-04** | Security/compliance evidence trails are incomplete for MVCR | Compliance | Medium | High | **HIGH** | @security-lead | Define required control evidence set; automate artifact generation. | 2026-06-15 |
@@ -14,10 +14,10 @@ This document proactively manages delivery, dependency, security, and adoption r
 
 ## 2. Mitigation Backlog
 
-- [x] **[R-01]** Implement mock ERP/OData endpoints for integration testing (Done June 2026).
+- [x] **[R-01]** Implement mock ERP/OData endpoints and seed 5 client environments (Done June 2026).
 - [ ] **[R-02]** Perform gap analysis between legacy Gateway and Phase 6 BFF.
 - [ ] **[R-03]** Draft "Sovereign Abstraction" spec for multi-token UX.
-- [x] **[R-04]** Integrate `system_audit.py` outputs into the compliance ledger (Done June 2026).
+- [x] **[R-04]** Integrate system_audit.py outputs into the compliance ledger (Done June 2026).
 - [ ] **[R-05]** Configure Linear automation for cross-repo dependency tracking.
 
 ## 3. Scoring Rubric

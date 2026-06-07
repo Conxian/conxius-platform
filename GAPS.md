@@ -23,8 +23,8 @@ This document tracks the resolution of gaps and identifies new technical require
   - **ALEX Readiness (Method B)**: Direct contract-call transaction construction.
 
 ## 2. Identified Frictions & Roadmap (Phase 7)
-- [ ] **Render Deployment Remediation**: Correct port binding (srv-d7b0el3uibrs73b2qjg0) and build command (srv-d8fmkcd8nd3s738pmbgg).
-- [ ] **Declarative NixOS Migration**: Deprecate Master Control Center in favor of NixOS declarative state.
+- [x] **Render Deployment Remediation**: Analysis complete. srv-d7b0el3uibrs73b2qjg0 requires removal of the trailing colon in the --listen binding (fix: serve out -l $PORT). srv-d8fmkcd8nd3s738pmbgg requires correcting Npm to npm in the build command.
+- [/] **Declarative NixOS Migration**: In progress. provision-secrets.sh is being phased out in favor of sops-nix.
 - [ ] **Local-First UI Execution**: Transition state transition logic to Wasm for client-side execution.
 - [ ] **Micro-Frontend Federation**: Decompose UI into federated modules (DEX, BitVM, sBTC).
 

@@ -73,7 +73,8 @@ export class ImapWorker {
           inReplyTo: parsed.inReplyTo,
         };
 
-        console.log(`[IMAP] Processing email from ${email.from}: ${email.subject}`);
+        const sanitizedSubjectForLog = this.scrubContent(email.subject);
+        console.log(`[IMAP] Processing email from ${email.from.split('@')[1] || 'unknown'}: ${sanitizedSubjectForLog}`);
 
         const result = await this.processEmail(email);
 
@@ -157,9 +158,20 @@ export class ImapWorker {
 
   private scrubContent(text: string): string {
     let scrubbed = text;
+    // PII Redaction
     scrubbed = scrubbed.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[REDACTED-EMAIL]');
-    scrubbed = scrubbed.replace(/\b[a-f0-9]{32,64}\b/gi, '[REDACTED-TOKEN]');
     scrubbed = scrubbed.replace(/\b(invoice|inv)-[a-z0-9-]+\b/gi, '[REDACTED-INVOICE]');
+
+    // Token & Secret Redaction (Hex/Base64 secrets)
+    scrubbed = scrubbed.replace(/\b[a-f0-9]{32,64}\b/gi, '[REDACTED-TOKEN]');
+
+    // Bitcoin-native Redaction
+    // Legacy (1, 3) and WIF (5, K, L)
+    scrubbed = scrubbed.replace(/\b[13][a-km-zA-HJ-NP-Z1-9]{25,34}\b/g, '[REDACTED-BTC-ADDR]');
+    scrubbed = scrubbed.replace(/\b[5KL][1-9A-HJ-NP-Za-km-z]{50,51}\b/g, '[REDACTED-BTC-KEY]');
+    // Bech32/SegWit (bc1)
+    scrubbed = scrubbed.replace(/\bbc1[a-z0-9]{39,59}\b/g, '[REDACTED-BTC-ADDR]');
+
     return scrubbed;
   }
 
@@ -215,6 +227,7 @@ export class ImapWorker {
 
   private async processEmail(email: SupportEmail): Promise<{ success: boolean; token: string }> {
     const token = this.generateTicketToken();
+    const sanitizedSubject = this.scrubContent(email.subject);
     const sanitizedBody = this.scrubContent(email.body).substring(0, 2000);
     const senderDomain = email.from.split('@')[1] || 'unknown';
 
@@ -263,7 +276,7 @@ ${sanitizedBody}
 
       const variables = {
         input: {
-          title: `[${token}] ${email.subject}`,
+          title: `[${token}] ${sanitizedSubject}`,
           description,
           teamId: this.teamId,
           labelIds,

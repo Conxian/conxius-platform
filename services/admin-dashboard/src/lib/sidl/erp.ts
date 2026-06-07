@@ -15,8 +15,8 @@ export async function getErpDashboardData(): Promise<ErpDashboardData> {
       { id: "3", ticker: "USDT", balance: "1000000.00000000" }
     ],
     employees: [
-      { id: "1", name: "Alice Smith", ubi_id: "ubi:btc:MOCK_ADDRESS_ALICE_12345", base_salary_btc: "0.50000000" },
-      { id: "2", name: "Bob Jones", ubi_id: "ubi:btc:MOCK_ADDRESS_BOB_67890", base_salary_btc: "0.45000000" }
+      { id: "1", name: "Alice Smith", ubi_id: "ubi:btc:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa", base_salary_btc: "0.50000000" },
+      { id: "2", name: "Bob Jones", ubi_id: "ubi:btc:3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy", base_salary_btc: "0.45000000" }
     ],
     invoices: [
       { id: "1", customer_name: "Satoshi Corp", amount_btc: "2.50000000", status: "pending", created_at: new Date().toISOString() },

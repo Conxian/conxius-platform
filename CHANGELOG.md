@@ -1,11 +1,3 @@
-## [0.2.2-aligned] - 2026-05-20
-### Fixed
-- **System Drift Remediation**: Restored massive missing Phase 6 logic in the Gateway Engine and UI after an audit revealed significant discrepancy between Linear status and codebase.
-- **Gateway Engine**: Rebuilt `engine/mod.rs` and `api/mod.rs` to support AI Allocation, UBI Identity, Nexus State, and Nostr Telemetry.
-- **Frontend Restoration**: Rebuilt and integrated 8 missing Phase 6 dashboard components in `conxian-ui`.
-- **API Tests**: Aligned implementation with tests, achieving 100% pass rate (26/26 tests).
-- **TypeScript Alignment**: Fixed strict typing and BigInt constructor issues for Next.js 15 compatibility.
-- **Security**: Implemented `hygiene-drift-guard.yml` to prevent future implementation drift.
 # Changelog
 
 All notable changes to this project will be documented in this file.
@@ -16,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Phase 7 BFF Topology Scaffolding**: Initial decomposition of the Gateway into UI-BFF, Wallet-BFF, and Sovereign-Proxy within the Admin Dashboard.
+- **Unified Cross-Chain Balance API**: A single entry point for consolidated liquidity visibility across Bitcoin L1, L2 (Lightning/RGB), and Stacks (sBTC).
+- **Nostr P&L Telemetry**: Implemented decentralized institutional P&L reporting using Nostr Event Kind 20626.
+- **Hardened ZSE Audit**: Added `hardened_audit.py` with aggressive Zero Secret Egress (ZSE) scanning for RSA keys and cloud provider tokens.
 - **RGB Stack Upgrade**: Upgraded core protocol stack to version 0.12.0 for improved scalability and security.
 - **Execution Simulation**: Pre-execution cost and policy validation for institutional settlement.
 - **Deterministic BOS Supply Chain**: Commitment window and manifest generation logic for immutable verification.
@@ -32,6 +28,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **System Audit Modernization**: Refactored `system_audit.py` to align with the post-submodule monorepo topology and active service monitoring.
 - **Service Governance Standardization**: Enforced mandatory `LICENSE` and `SECURITY.md` files across all active services (`admin-dashboard`, `admin-pulse-bos`, `elizaos-plugin-conxian`).
 - **Package Metadata Hygiene**: Initialized standardized `package.json` for `admin-pulse-bos`.
+
+## [0.2.2-aligned] - 2026-05-20
+### Fixed
+- **System Drift Remediation**: Restored massive missing Phase 6 logic in the Gateway office and UI.
+- **Gateway Engine**: Rebuilt `engine/mod.rs` and `api/mod.rs` to support AI Allocation, UBI Identity, Nexus State, and Nostr Telemetry.
 
 ## [0.2.1] - 2026-04-10
 

@@ -1,18 +1,18 @@
 version: 2
 updates:
-  - package-ecosystem: "pnpm"
+  - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "weekly"
-  - package-ecosystem: "pnpm"
+  - package-ecosystem: "npm"
     directory: "/services/admin-dashboard"
     schedule:
       interval: "weekly"
-  - package-ecosystem: "pnpm"
+  - package-ecosystem: "npm"
     directory: "/services/conxian-ui"
     schedule:
       interval: "weekly"
-  - package-ecosystem: "pnpm"
+  - package-ecosystem: "npm"
     directory: "/services/elizaos-plugin-conxian"
     schedule:
       interval: "weekly"

@@ -61,7 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sovereign AI Allocation**: Real-time compute weighting and risk-optimized asset management.
 - **Hardware Security**: Integrated HSM FIPS 140-2 Level 3 status tracking.
 
-## [0.2.0] - 2026-06-07
+## [0.2.3-aligned] - 2026-06-07
 ### Added
 - Multi-dimensional ERP database implementation in Neon (br-icy-dust-agc4w03v).
 - Sovereign ERP metrics integration in Admin Dashboard.

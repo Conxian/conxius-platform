@@ -150,7 +150,7 @@ def main() -> int:
             required_snippets=(
                 "name: Lifecycle Control Gates",
                 "bash scripts/ci/run-lifecycle-control-gates.sh",
-                "actions/upload-artifact@v4",
+                "actions/upload-artifact@v7",
                 "lifecycle-control-gates",
             ),
         ),

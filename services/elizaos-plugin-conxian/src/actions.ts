@@ -8,6 +8,7 @@ import {
   getAiAllocation,
   getUbiIdentity,
   submitVote,
+  getMultidimensionalMetrics,
 } from "./conxianClient";
 import type { ConxianPluginEnv } from "./conxianClient";
 
@@ -205,6 +206,18 @@ export function createConxianActions(env: ConxianPluginEnv): Action[] {
         return { success: true, text, data: { response: toProviderValue(data) } };
       },
       similes: ["SUBMIT_VOTE", "VOTE"],
+    },
+    {
+      name: "CONXIAN_MULTIDIMENSIONAL_METRICS",
+      description: "Fetch multidimensional platform metrics (Treasury, AI Agents, Settlements, UBI).",
+      validate: async () => true,
+      handler: async (_runtime, _message, _state, _options, callback) => {
+        const data = await getMultidimensionalMetrics(env);
+        const text = JSON.stringify(data, null, 2);
+        if (callback) await callback({ text });
+        return { success: true, text, data: { response: toProviderValue(data) } };
+      },
+      similes: ["PLATFORM_METRICS", "BUSINESS_INTEL", "TREASURY_PULSE"],
     },
   ];
 }

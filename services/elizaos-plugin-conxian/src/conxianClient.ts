@@ -28,14 +28,35 @@ const ubiIdentitySchema = z
   })
   .passthrough();
 
+const multidimensionalMetricsSchema = z.object({
+  treasury: z.record(z.object({
+    balance: z.number(),
+    pnl_usd: z.number(),
+    yield_apy: z.number().optional()
+  })),
+  agents: z.array(z.object({
+    id: z.string(),
+    weight: z.number(),
+    budget_usd: z.number(),
+    consumed_usd: z.number()
+  })),
+  settlements: z.record(z.object({
+    count: z.number(),
+    volume_sats: z.number(),
+    status: z.string()
+  }))
+}).passthrough();
+
 const envSchema = z.object({
   CONXIAN_GATEWAY_URL: z.string().url().default("http://localhost:8080"),
   CONXIAN_SOCIAL_URL: z.string().url().default("http://localhost:3002"),
+  CONXIAN_ADMIN_URL: z.string().url().default("http://localhost:3001"),
 });
 
 export type ConxianPluginEnv = z.infer<typeof envSchema>;
 export type AiAllocationResponse = z.infer<typeof aiAllocationSchema>;
 export type UbiIdentityResponse = z.infer<typeof ubiIdentitySchema>;
+export type MultidimensionalMetricsResponse = z.infer<typeof multidimensionalMetricsSchema>;
 
 function formatValidationError(error: z.ZodError): string {
   return error.issues
@@ -84,6 +105,7 @@ export function parseConxianEnv(config: Record<string, string | undefined>): Con
   const input = {
     CONXIAN_GATEWAY_URL: config.CONXIAN_GATEWAY_URL || process.env.CONXIAN_GATEWAY_URL,
     CONXIAN_SOCIAL_URL: config.CONXIAN_SOCIAL_URL || process.env.CONXIAN_SOCIAL_URL,
+    CONXIAN_ADMIN_URL: config.CONXIAN_ADMIN_URL || process.env.CONXIAN_ADMIN_URL,
   };
 
   return envSchema.parse(input);
@@ -190,4 +212,16 @@ export async function getUbiIdentity(env: ConxianPluginEnv, address: string): Pr
   );
 
   return validateUbiIdentityPayload(payload);
+}
+
+export async function getMultidimensionalMetrics(env: ConxianPluginEnv): Promise<MultidimensionalMetricsResponse> {
+  const payload = await fetchJson(`${env.CONXIAN_ADMIN_URL.replace(/\/$/, "")}/api/multidimensional/metrics`, {
+    cache: "no-store",
+  });
+
+  const parsed = multidimensionalMetricsSchema.safeParse(payload);
+  if (!parsed.success) {
+    throw new Error(`Invalid Multidimensional metrics payload: ${formatValidationError(parsed.error)}`);
+  }
+  return parsed.data;
 }

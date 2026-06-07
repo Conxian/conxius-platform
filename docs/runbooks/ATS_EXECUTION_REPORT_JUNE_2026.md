@@ -15,7 +15,7 @@
 | Deviation | Impact | Remediation Alignment |
 | :--- | :--- | :--- |
 | **Render Port Binding Error** | conxian-ui (srv-d7b0el3uibrs73b2qjg0) fails start. | Hardened start command: serve out -l $PORT (remove trailing colon). |
-| **Render Build Command Typo** | conxian-labs-site fails build. | Correct 'Npm' to 'npm' in build script. |
+| **Render Build Command Typo** | conxian-labs-site fails build. | Correct 'pnpm' to 'pnpm' in build script. |
 | **Seed Data Gap** | Initial analysis found only 2/5 clients. | REMEDIATED: Manually seeded 3 missing clients into erp_mock. |
 | **Local Script Dependency** | psycopg2 missing in devbox. | Analysis complete: Production environments use standardized Docker/NixOS layers. |
 

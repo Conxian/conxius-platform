@@ -29,7 +29,7 @@ const ubiIdentitySchema = z
   .passthrough();
 
 const multidimensionalMetricsSchema = z.object({
-  treasury: z.record(z.object({
+  treasury: z.record(z.string(), z.object({
     balance: z.number(),
     pnl_usd: z.number(),
     yield_apy: z.number().optional()
@@ -40,7 +40,7 @@ const multidimensionalMetricsSchema = z.object({
     budget_usd: z.number(),
     consumed_usd: z.number()
   })),
-  settlements: z.record(z.object({
+  settlements: z.record(z.string(), z.object({
     count: z.number(),
     volume_sats: z.number(),
     status: z.string()

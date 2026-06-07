@@ -8,7 +8,7 @@ const adminGcpSaKeyJsonKey = "ADMIN_GCP_SA_KEY_JSON" as const;
 
 const legacySecretAliases: Record<string, string[]> = {
   ADMIN_PAT_TOKEN: ["PAT_TOKEN"],
-  ADMIN_NPM_TOKEN: ["NPM_TOKEN"],
+  ADMIN_PNPM_TOKEN: ["PNPM_TOKEN"],
   ADMIN_PYPI_API_TOKEN: ["PYPI_API_TOKEN"],
   [adminGcpSaKeyJsonKey]: ["GCP_SA_KEY_JSON", "GCP_CREDENTIALS"],
   ADMIN_CHANGELLY_API_ID: ["CHANGELLY_API_KEY"],

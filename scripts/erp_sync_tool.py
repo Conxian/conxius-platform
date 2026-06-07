@@ -3,12 +3,10 @@ import json
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-# Use an environment override for real runs and a clearly non-secret mock default
-# so this script remains runnable without embedding credential-like literals.
-DB_URL = os.getenv(
-    "ERP_SYNC_DB_URL",
-    "postgresql://localhost:5432/erp_mock_db?sslmode=disable",
-)
+DB_URL = os.getenv("ERP_SYNC_DATABASE_URL")
+if not DB_URL:
+    raise RuntimeError("Missing required environment variable: ERP_SYNC_DATABASE_URL")
+
 
 def sync_erp_to_bos():
     print("Starting ERP to BOS synchronization...")

@@ -1,0 +1,55 @@
+name: Platform orchestration issue
+description: Report platform control-plane, orchestration, CI, or environment-tooling work for this repository.
+title: "[platform] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This repository is for platform/orchestration work only.
+
+        Out of scope here: portfolio strategy, legal/finance operations, and non-platform product planning.
+
+        Route out-of-scope discussions to Linear CON (`https://linear.app/conxian-labs/team/CON`) or the owning repository listed in `docs/REPOSITORY_TAXONOMY.md`.
+
+  - type: checkboxes
+    id: scope_confirmation
+    attributes:
+      label: Scope confirmation
+      options:
+        - label: This issue is about platform orchestration, CI/release automation, environment wiring, or developer tooling in `conxius-platform`.
+          required: true
+        - label: I confirm this is not a portfolio strategy, legal, or financial operations request.
+          required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - CI / GitHub workflows
+        - Environment scaffolding
+        - Integration harnesses
+        - Operator tooling
+        - Documentation boundary
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What platform/orchestration behavior should change?
+      placeholder: Describe the concrete problem or request.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: List clear completion criteria.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true

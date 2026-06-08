@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Strategy / cross-repo planning (Linear CON)
+    url: https://linear.app/conxian-labs/team/CON
+    about: Use Linear for portfolio strategy, roadmap, and cross-repo planning decisions.
+  - name: Security disclosures
+    url: mailto:security@conxian-labs.com
+    about: Report vulnerabilities privately to the security team.

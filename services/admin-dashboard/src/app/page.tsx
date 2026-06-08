@@ -10,6 +10,12 @@ type GatewayStats = {
   uptimeSeconds: number | null;
 };
 
+type TelemetryService = {
+  name: string;
+  status: string;
+  health: string;
+};
+
 async function fetchJsonWithFallback(baseUrl: string, paths: string[]): Promise<unknown | null> {
   for (const path of paths) {
     try {
@@ -51,12 +57,23 @@ function getBoolean(obj: unknown, key: string): boolean | null {
 function BlueprintCard() {
   const [blueprint, setBlueprint] = useState<any>(null);
   const [show, setShow] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchBlueprint = async () => {
-    const res = await fetch("/api/deployment/blueprint");
-    const data = await res.json();
-    setBlueprint(data);
-    setShow(true);
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/deployment/blueprint");
+      if (!res.ok) throw new Error(`Failed to export blueprint: ${res.status}`);
+      const data = await res.json();
+      setBlueprint(data);
+      setShow(true);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -66,12 +83,16 @@ function BlueprintCard() {
         <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
           Deterministic deployment export for autonomous auditors and AI orchestrators.
         </p>
-        <button
-          onClick={fetchBlueprint}
-          style={{ padding: '0.5rem 1rem', backgroundColor: '#D4A017', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
-        >
-          {show ? "Refresh Blueprint" : "Export Blueprint"}
-        </button>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <button
+            onClick={fetchBlueprint}
+            disabled={loading}
+            style={{ padding: '0.5rem 1rem', backgroundColor: '#D4A017', color: 'white', border: 'none', borderRadius: '4px', cursor: loading ? 'default' : 'pointer', fontWeight: 'bold' }}
+          >
+            {loading ? "Exporting..." : show ? "Refresh Blueprint" : "Export Blueprint"}
+          </button>
+          {error && <span style={{ color: '#b91c1c', fontSize: '0.8rem' }}>{error}</span>}
+        </div>
         {show && blueprint && (
           <pre style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#f9f9f9', borderRadius: '4px', fontSize: '0.8rem', overflowX: 'auto', border: '1px solid #eee' }}>
             {JSON.stringify(blueprint, null, 2)}
@@ -86,6 +107,7 @@ export default function AdminPage() {
   const [stats, setStats] = useState<GatewayStats | null>(null);
   const [nexus, setNexus] = useState<NexusState | null>(null);
   const [erpData, setErpData] = useState<ErpDashboardData | null>(null);
+  const [telemetry, setTelemetry] = useState<TelemetryService[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -94,39 +116,41 @@ export default function AdminPage() {
     setError(null);
     try {
       const rawBaseUrl = process.env.NEXT_PUBLIC_CORE_API_URL;
-      if (!rawBaseUrl) {
-        setStats(null);
-        setNexus(null);
-        setError("NEXT_PUBLIC_CORE_API_URL is not configured.");
-        return;
+
+      // Fetch Infrastructure Stats
+      if (rawBaseUrl) {
+        const baseUrl = rawBaseUrl.replace(/\/$/, "");
+        const statusJson = await fetchJsonWithFallback(baseUrl, ["/api/v1/status", "/v1/status"]);
+        if (statusJson) {
+          const safetyMode = getBoolean(statusJson, "safety_mode");
+          setStats({
+            status: safetyMode === null ? "Unknown" : safetyMode ? "Degraded" : "Healthy",
+            version: getString(statusJson, "version"),
+            processedHeight: getNumber(statusJson, "processed_height"),
+            uptimeSeconds: getNumber(statusJson, "uptime_seconds"),
+          });
+          const nexusJson = await fetchJsonWithFallback(baseUrl, ["/api/v1/nexus/state"]);
+          setNexus(normalizeNexusState(nexusJson, statusJson));
+        }
       }
 
-      const baseUrl = rawBaseUrl.replace(/\/$/, "");
-
-      const statusJson = await fetchJsonWithFallback(baseUrl, ["/api/v1/status", "/v1/status"]);
-      if (statusJson === null) {
-        setStats(null);
-        setNexus(null);
-        setError("Could not fetch /api/v1/status from the configured CORE API URL.");
-        return;
-      }
-
-      const safetyMode = getBoolean(statusJson, "safety_mode");
-      setStats({
-        status: safetyMode === null ? "Unknown" : safetyMode ? "Degraded" : "Healthy",
-        version: getString(statusJson, "version"),
-        processedHeight: getNumber(statusJson, "processed_height"),
-        uptimeSeconds: getNumber(statusJson, "uptime_seconds"),
-      });
-
-      const nexusJson = await fetchJsonWithFallback(baseUrl, ["/api/v1/nexus/state"]);
-      setNexus(normalizeNexusState(nexusJson, statusJson));
+      // Fetch ERP Data
       const erpRes = await fetch("/api/erp");
-      const erpJson = await erpRes.json();
-      setErpData(erpJson);
+      if (erpRes.ok) {
+        const erpJson = await erpRes.json();
+        setErpData(erpJson);
+      }
+
+      // Fetch Service Telemetry
+      const telRes = await fetch("/api/v1/ui/telemetry");
+      if (telRes.ok) {
+        const telJson = await telRes.json();
+        setTelemetry(telJson.services);
+      }
+
     } catch (err) {
       console.error("Dashboard fetch error:", err);
-      setError("Unexpected error while fetching status.");
+      setError("Unexpected error while fetching status pulse.");
     } finally {
       setLoading(false);
     }
@@ -134,7 +158,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     fetchAll();
-    const interval = setInterval(fetchAll, 10000);
+    const interval = setInterval(fetchAll, 30000); // 30s refresh
     return () => clearInterval(interval);
   }, []);
 
@@ -158,7 +182,7 @@ export default function AdminPage() {
           disabled={loading}
           style={{
             padding: '0.6rem 1.2rem',
-            cursor: 'pointer',
+            cursor: loading ? 'default' : 'pointer',
             backgroundColor: loading ? '#ccc' : '#2E403B',
             color: 'white',
             border: 'none',
@@ -194,11 +218,17 @@ export default function AdminPage() {
           <h3 style={{ borderBottom: '2px solid #D4A017', paddingBottom: '0.5rem', color: '#2E403B' }}>Sovereign Services</h3>
           <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', marginTop: '1rem' }}>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-              <ServiceItem name="Stacks (L2)" status="Unknown" />
-              <ServiceItem name="Bisq (P2P)" status="Unknown" />
-              <ServiceItem name="RGB (Client-side)" status="Unknown" />
-              <ServiceItem name="BitVM (Optimistic)" status="Unknown" />
-              <ServiceItem name="Lightning Network" status="Unknown" />
+              {telemetry.length > 0 ? telemetry.map(svc => (
+                <ServiceItem key={svc.name} name={svc.name} status={svc.status} health={svc.health} />
+              )) : (
+                <>
+                  <ServiceItem name="Stacks (L2)" status="Unknown" health="unknown" />
+                  <ServiceItem name="Bisq (P2P)" status="Unknown" health="unknown" />
+                  <ServiceItem name="RGB (Client-side)" status="Unknown" health="unknown" />
+                  <ServiceItem name="BitVM (Optimistic)" status="Unknown" health="unknown" />
+                  <ServiceItem name="Lightning Network" status="Unknown" health="unknown" />
+                </>
+              )}
             </ul>
           </div>
         </section>
@@ -264,8 +294,8 @@ function DataRow({ label, value, mono, highlight }: { label: string, value: stri
   );
 }
 
-function ServiceItem({ name, status }: { name: string, status: string }) {
-  const statusColor = status === "Unknown" ? "#666" : "#2E403B";
+function ServiceItem({ name, status, health }: { name: string, status: string, health?: string }) {
+  const statusColor = health === "active" || health === "healthy" ? "#2E403B" : "#666";
   return (
     <li style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem 0', borderBottom: '1px solid #F0F0F0' }}>
       <span style={{ fontWeight: 500 }}>{name}</span>

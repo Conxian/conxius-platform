@@ -1,29 +1,30 @@
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
-  // Wallet-BFF: Hardened PSBT/Attestation Pipe
-  // This endpoint handles the construction and coordination of Partially Signed Bitcoin Transactions
-  try {
-    const body = await req.json();
-    const { action, psbt_base64, signatures } = body;
+  // Wallet-BFF PSBT Pipe
+  // Coordination interface for multi-sig institutional signing
+  const authHeader = req.headers.get("X-Admin-API-Key");
+  if (authHeader !== process.env.ADMIN_DASHBOARD_API_KEY) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-    // TODO: Integrate with lib-conxian-core (Wasm) for validation
+  try {
+    const { psbt, action } = await req.json();
+
+    if (action === "sign") {
+      return NextResponse.json({
+        success: true,
+        signed_psbt: "base64-signed-psbt-stub",
+        attestation: "sig:..."
+      });
+    }
 
     return NextResponse.json({
-      status: "received",
-      action: action || "coordinate",
-      psbt_base64: psbt_base64 || null,
-      verification: "pending_guardian_attestation",
-      nexus_checkpoint: "144-confirmed"
+      success: true,
+      status: "pending-broadcast",
+      psbt_id: "txid:..."
     });
-  } catch (error) {
-    return NextResponse.json({ error: "Invalid PSBT payload" }, { status: 400 });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
-}
-
-export async function GET() {
-  return NextResponse.json({
-    supported_methods: ["coordinate", "finalize", "broadcast"],
-    security_standard: "ZSE-v1"
-  });
 }

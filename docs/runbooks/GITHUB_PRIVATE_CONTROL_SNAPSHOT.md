@@ -68,10 +68,10 @@ For this repository class, baseline controls are:
 
 | Gap ID | Verified gap | Recommended remediation | Follow-up placeholder (parent tracking) |
 | :--- | :--- | :--- | :--- |
-| `GHPRIV-01` | `main` is unprotected and required checks are off. | Enable branch protection or repository rulesets for `main`: require PRs, at least one approval, and required status checks. | [Create child issue under #776: Branch protection hardening](https://github.com/Conxian/conxius-platform/issues/776) |
-| `GHPRIV-02` | Dependabot alerts disabled; code scanning/GHAS not enabled. | Enable available security alerting; document explicit exceptions where licensing/plan blocks enforcement. | [Create child issue under #776: Security feature baseline](https://github.com/Conxian/conxius-platform/issues/776) |
-| `GHPRIV-03` | Team access and several security settings are not observable with current permissions. | Run an admin-scoped review (`administration=read`) and record definitive values in this snapshot. | [Create child issue under #776: Admin-scope evidence refresh](https://github.com/Conxian/conxius-platform/issues/776) |
-| `GHPRIV-04` | No documented anti-drift execution cadence for this repository's controls. | Add scheduled control review cadence and checklist owner in governance operations docs. | [Create child issue under #776: Anti-drift cadence + owner](https://github.com/Conxian/conxius-platform/issues/776) |
+| `GHPRIV-01` | `main` is unprotected and required checks are off. | Enable branch protection or repository rulesets for `main`: require PRs, at least one approval, and required status checks. | [Issue #829: Branch protection hardening](https://github.com/Conxian/conxius-platform/issues/829) |
+| `GHPRIV-02` | Dependabot alerts disabled; code scanning/GHAS not enabled. | Enable available security alerting; document explicit exceptions where licensing/plan blocks enforcement. | [Issue #830: Security feature baseline](https://github.com/Conxian/conxius-platform/issues/830) |
+| `GHPRIV-03` | Team access and several security settings are not observable with current permissions. | Run an admin-scoped review (`administration=read`) and record definitive values in this snapshot. | [Issue #831: Admin-scope evidence refresh](https://github.com/Conxian/conxius-platform/issues/831) |
+| `GHPRIV-04` | No documented anti-drift execution cadence for this repository's controls. | Add scheduled control review cadence and checklist owner in governance operations docs. | [Issue #832: Anti-drift cadence + owner](https://github.com/Conxian/conxius-platform/issues/832) |
 
 ## 7) Evidence commands / API endpoints used
 

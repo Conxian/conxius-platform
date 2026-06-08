@@ -11,7 +11,7 @@ Ownership authority remains defined in each repository's root `CODEOWNERS` file.
 
 | Repository | Intended audience | Visibility | Owner | Primary classification | Public purpose | Current status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| [`Conxian/.github-private`](https://github.com/Conxian/.github-private) | Internal organization administrators and security maintainers | Private | TBD (owner confirmation required; `CODEOWNERS` not found) | Organization governance (private) | Hosts private organization defaults, policy automation, and internal templates | Active (not archived; last push 2026-03-30) |
+| [`Conxian/.github-private`](https://github.com/Conxian/.github-private) | Internal organization administrators and security maintainers | Private | TBD (owner confirmation required; `CODEOWNERS` not found) | Organization governance (private) | Hosts private organization defaults, policy automation, and internal templates | Active (not archived; last push 2026-06-08). Required control snapshot: [`docs/runbooks/GITHUB_PRIVATE_CONTROL_SNAPSHOT.md`](./runbooks/GITHUB_PRIVATE_CONTROL_SNAPSHOT.md). |
 | [`Conxian/.github`](https://github.com/Conxian/.github) | Conxian maintainers and external contributors using shared templates | Public | `@Conxian/Admins` | Organization governance (public) | Provides shared community health files, issue templates, and contribution defaults | Active (not archived; last push 2026-04-18) |
 | [`Conxian/Conxian`](https://github.com/Conxian/Conxian) | Protocol engineers, integrators, and auditors | Public | `@botshelomokoka`, `@admin-conxian-labs` | Flagship protocol/contracts | Implements the Stacks-native automated monetary platform core | Active (not archived; last push 2026-05-04) |
 | [`Conxian/conxian_ui`](https://github.com/Conxian/conxian_ui) | Institutional dashboard users and frontend engineers | Public | `@botshelomokoka`, `@admin-conxian-labs` | Product UI | Delivers the primary web dashboard/user interface surface | Active (not archived; last push 2026-05-03) |
@@ -48,6 +48,14 @@ Ownership authority remains defined in each repository's root `CODEOWNERS` file.
 ### 4. Public communications surface
 - `Conxian/conxian-labs-site`
 
+## Mandatory governance control-review inclusion (do not omit)
+
+Control-review passes must include the repositories and snapshot evidence below. Do not remove entries unless the same change introduces a superseding control artifact and rationale.
+
+| Repository | Required control snapshot evidence | Tracking parent |
+| :--- | :--- | :--- |
+| [`Conxian/.github-private`](https://github.com/Conxian/.github-private) | [`docs/runbooks/GITHUB_PRIVATE_CONTROL_SNAPSHOT.md`](./runbooks/GITHUB_PRIVATE_CONTROL_SNAPSHOT.md) | [conxius-platform#776](https://github.com/Conxian/conxius-platform/issues/776) |
+
 ## Control inheritance for chain-specific deployment repos
 
 Chain-specific deployment/operator repositories (including `Conxian/conxius-orbit` for Conxius Orbit) inherit parent control expectations from `Conxian/conxius-platform`:
@@ -62,6 +70,7 @@ Chain-specific deployment/operator repositories (including `Conxian/conxius-orbi
 - Owner values are taken from each repository's root `CODEOWNERS` (or `.github/CODEOWNERS`) when available.
 - Operational gate-owner roles are tracked in runbooks and do not supersede `CODEOWNERS` review/merge ownership.
 - If ownership/classification cannot be verified confidently, use explicit conservative wording: `TBD (owner confirmation required)`.
+- The `Mandatory governance control-review inclusion` section is normative for recurring control reviews.
 
 ## Temporary Exceptions & Transitional States Register (Living)
 

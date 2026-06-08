@@ -2,6 +2,8 @@
 
 This repository treats GitHub Actions workflows in [`.github/workflows`](./workflows) as the source of truth for what CI can run. Branch protection determines which checks are required to merge.
 
+Legacy CircleCI configuration is deprecated for this repository, and `.circleci/` is intentionally not used.
+
 ## Pull request discipline
 
 - No direct commits to `main`; use pull requests.

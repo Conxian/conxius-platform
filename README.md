@@ -4,11 +4,24 @@ The `conxius-platform` repository contains development and control-plane scaffol
 
 ## Purpose
 
-Provide platform configuration, orchestration, and environment scaffolding for contributors and maintainers working across the Conxian ecosystem.
+Provide platform configuration, orchestration, CI/release automation, and environment scaffolding for contributors and maintainers working across the Conxian ecosystem.
 
 ## Status
 
-**Active development.** This repository is evolving alongside the broader platform architecture and may contain development-oriented control-plane material.
+**Active development.** This is a platform control-plane repository and should be read primarily as contributor and operator infrastructure rather than as an end-user product surface.
+
+There are currently **no published GitHub releases** for this repository. Until a formal release policy is established, external readers should treat the repository as actively maintained platform infrastructure rather than a versioned public product.
+
+## Audience
+
+Use this repository if you need:
+
+- local or managed environment scaffolding
+- control-plane and orchestration assets
+- CI and release automation references
+- developer tooling that spans multiple Conxian repositories
+
+For protocol logic, wallet/client behavior, or public site content, use the owning repository directly.
 
 ## CI source of truth
 
@@ -18,15 +31,23 @@ GitHub Actions workflows in [`.github/workflows`](./.github/workflows) are the s
 
 `conxius-platform` is a platform control-plane repository. Keep root-level content focused on:
 
-- environment/runtime orchestration
+- environment and runtime orchestration
 - CI and release automation
 - integration harnesses and developer tooling
+- platform architecture and repository-boundary guidance
 
-Out of scope here: portfolio strategy narratives, legal/financial operations material, and non-platform product planning. Route those to the owning repository in [Repository Taxonomy](./docs/REPOSITORY_TAXONOMY.md) or the Conxian Linear `CON` workspace.
+Out of scope here: portfolio strategy narratives, legal or financial operations material, and non-platform product planning. Route those to the owning repository in [Repository Taxonomy](./docs/REPOSITORY_TAXONOMY.md) or the Conxian Linear `CON` workspace.
 
 ## Governance relation
 
 This repository is maintained by Conxian Labs. It supports development and operational enablement around the public Conxian stack, but it is not itself a governance authority for the protocol.
+
+## Relationship to the Conxian stack
+
+- `Conxian` is the protocol and public ecosystem layer.
+- `conxius-wallet` is the sovereign wallet and reference client.
+- `conxian-gateway` and `conxian-nexus` provide middleware and service-side coordination surfaces.
+- `conxian-labs-site` is the public narrative and discovery surface.
 
 ## Technical documentation map
 
@@ -52,6 +73,12 @@ make bench
 ```
 
 Use templates and generated local secrets for development only. Do not commit real credentials.
+
+## Release posture
+
+- If this repository becomes release-tracked, publish annotated GitHub releases in the form `vX.Y.Z`.
+- Keep release-facing changes recorded in `CHANGELOG.md` when that workflow is adopted.
+- If the repository remains non-release-tracked, keep that explicit in the README so public readers do not infer missing hygiene.
 
 ## Policies
 

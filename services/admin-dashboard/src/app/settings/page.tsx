@@ -41,7 +41,7 @@ export default function SettingsPage() {
   });
   const [adminApiKey, setAdminApiKey] = useState("");
   const [loading, setLoading] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setSecrets({ ...secrets, [e.target.name]: e.target.value });
@@ -54,6 +54,7 @@ export default function SettingsPage() {
     }
 
     setLoading(true);
+    setMessage(null);
     try {
       const res = await fetch("/api/secrets", {
         method: "POST",
@@ -64,11 +65,15 @@ export default function SettingsPage() {
         body: JSON.stringify({ secrets })
       });
       if (res.ok) {
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
+        setMessage({ text: "Settings saved successfully", type: 'success' });
+        setTimeout(() => setMessage(null), 5000);
+      } else {
+        const err = await res.json();
+        setMessage({ text: `Failed to save settings: ${err.error}`, type: 'error' });
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setMessage({ text: `Error: ${err.message}`, type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -127,7 +132,7 @@ export default function SettingsPage() {
       </section>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', alignItems: 'center' }}>
-        {saved && <span style={{ color: '#2E403B', fontWeight: 'bold' }}>Settings saved successfully</span>}
+        {message && <span style={{ color: message.type === 'success' ? '#2E403B' : '#b91c1c', fontWeight: 'bold' }}>{message.text}</span>}
         <button 
           onClick={handleSave}
           disabled={loading}

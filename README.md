@@ -10,9 +10,19 @@ Provide platform configuration, orchestration, and environment scaffolding for c
 
 **Active development.** This repository is evolving alongside the broader platform architecture and may contain development-oriented control-plane material.
 
+## CI source of truth
+
+GitHub Actions workflows in [`.github/workflows`](./.github/workflows) are the sole CI source of truth for this repository. Legacy CircleCI configuration has been intentionally removed.
+
 ## Scope
 
-This repository should contain platform and environment tooling only. Business administration, legal materials, financial operations, and other sensitive internal workflows should remain outside this public repository.
+`conxius-platform` is a platform control-plane repository. Keep root-level content focused on:
+
+- environment/runtime orchestration
+- CI and release automation
+- integration harnesses and developer tooling
+
+Out of scope here: portfolio strategy narratives, legal/financial operations material, and non-platform product planning. Route those to the owning repository in [Repository Taxonomy](./docs/REPOSITORY_TAXONOMY.md) or the Conxian Linear `CON` workspace.
 
 ## Governance relation
 
@@ -56,10 +66,3 @@ Use templates and generated local secrets for development only. Do not commit re
 - Support: [support@conxian-labs.com](mailto:support@conxian-labs.com)
 - Security: [security@conxian-labs.com](mailto:security@conxian-labs.com)
 - General: [info@conxian-labs.com](mailto:info@conxian-labs.com)
-
-## Sovereign ERP Integration (2026)
-The Conxian platform now includes a sovereign ERP processing engine, bridging Bitcoin-standard business operations with real-time infrastructure telemetry.
-- **Treasury settled on L2 (sBTC)**
-- **UBI-linked Payroll Distribution**
-- **Native Bitcoin Invoicing**
-- **Verifiable AI Compute Allocation**

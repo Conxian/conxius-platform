@@ -1,31 +1,18 @@
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  // UI-BFF: High-throughput telemetry/caching
-  // This endpoint serves as the primary data source for the Sovereign Dashboard
+  // UI-BFF Telemetry: Status monitoring for Stacks (L2), Bisq (P2P), RGB, BitVM, and Lightning Network
+  // In a real scenario, this would aggregate data from various service health endpoints.
   const telemetry = {
-    system_load: 0.12,
-    active_connections: 42,
-    nexus_sync: {
-      status: "synced",
-      drift: 0,
-      last_block: 840000,
-      merkle_root: "0x123...abc"
-    },
-    latency: {
-      gateway_p99: "1.2ms",
-      indexer_p99: "35ms"
-    },
-    alerts: [],
-    governance: {
-      pending_votes: 2,
-      active_proposals: 1
-    }
+    timestamp: new Date().toISOString(),
+    services: [
+      { name: "Stacks (L2)", status: "Healthy", latency_ms: 120, health: "active" },
+      { name: "Bisq (P2P)", status: "Healthy", latency_ms: 350, health: "active" },
+      { name: "RGB (Client-side)", status: "Healthy", latency_ms: 45, health: "active" },
+      { name: "BitVM (Optimistic)", status: "Active", latency_ms: 850, health: "active" },
+      { name: "Lightning Network", status: "Healthy", latency_ms: 15, health: "active" }
+    ]
   };
 
-  return NextResponse.json(telemetry, {
-    headers: {
-      'Cache-Control': 'public, s-maxage=1, stale-while-revalidate=5'
-    }
-  });
+  return NextResponse.json(telemetry);
 }

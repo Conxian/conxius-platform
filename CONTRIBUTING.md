@@ -10,6 +10,12 @@ For service-specific conventions, see:
 
 - `services/admin-dashboard/CONTRIBUTING.md`
 
+## Issue routing
+
+Use this repository's issues for platform/orchestration work only (CI/workflows, environment scaffolding, integration harnesses, and operator tooling).
+
+For portfolio strategy, legal/finance operations, or non-platform product planning, route work to the owning repository in `docs/REPOSITORY_TAXONOMY.md` or the Conxian Linear `CON` workspace.
+
 ## Getting started
 
 Prerequisites:

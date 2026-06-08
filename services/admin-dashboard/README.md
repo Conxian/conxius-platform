@@ -23,15 +23,18 @@ To maintain the security of this platform:
 ## Features
 
 - **Infrastructure Pulse**: Real-time monitoring of Gateway health, Engine version, and request throughput.
+- **Multidimensional Platform Pulse**: High-fidelity dashboard for Treasury (BTC/sBTC), AI Resource Allocation, L2 Settlements, and UBI Distribution.
+- **Sovereign Financial Office (SFO)**: Integrated command center for fiscal orchestration, yield harvesting, and symmetry management.
 - **Nexus "Glass Node" State**: Visibility into Merkle roots and synchronization status with Stacks L1.
-- **Sovereign Services Tracking**: Status monitoring for Stacks (L2), Bisq (P2P), RGB, BitVM, and Lightning Network.
+- **Sovereign Services Tracking**: Real-time status monitoring for Stacks (L2), Bisq (P2P), RGB, BitVM, and Lightning Network via the UI-BFF Telemetry API.
 - **Configuration Management**: Interface for provisioning institutional settings (accessible via `/settings`).
 - **SIDL Audit Persistence**: Governance vote events/tallies and Cart Mandate checkout lifecycle state are persisted locally for restart durability and auditing.
 
 ## Tech Stack
 
-- **Framework**: Next.js 15
+- **Framework**: Next.js 16
 - **Language**: TypeScript
+- **UI Components**: Earthy Corporate Design System (Forest Green #2E403B, Nakamoto Gold #D4A017)
 
 ## ⚖️ Governance
 

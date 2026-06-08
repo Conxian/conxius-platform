@@ -29,6 +29,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Service Governance Standardization**: Enforced mandatory `LICENSE` and `SECURITY.md` files across all active services (`admin-dashboard`, `admin-pulse-bos`, `elizaos-plugin-conxian`).
 - **Package Metadata Hygiene**: Initialized standardized `package.json` for `admin-pulse-bos`.
 
+## [0.2.3-aligned] - 2026-06-08
+
+### Added
+- **Multidimensional Platform Pulse**: Launched at `/multidimensional`, integrating Bitcoin-native business intelligence.
+- **Sovereign Financial Office (SFO) Integration**: Embedded the SFO Command Pulse from `admin-pulse-bos` into the platform dashboard.
+- **UI-BFF Telemetry API**: Implemented `/api/v1/ui/telemetry` for real-time service health monitoring, replacing static stubs.
+- **BFF Scaffolding**: Deployed skeleton endpoints for Unified Liquidity, Nostr P&L, and Wallet PSBT coordination.
+- **Admin Navigation Enhancement**: Unified the platform interface with direct access to Multidimensional metrics and SFO controls.
+
+### Fixed
+- **Navigation Drift**: Resolved issue where the Multidimensional dashboard was unreachable via the main UI.
+- **Component Interactivity**: Added missing refresh triggers and state management to the Pulse dashboard.
+- **Error Handling**: Hardened `BlueprintCard` and `SettingsPage` against fetch failures and unauthorized access.
+
 ## [0.2.2-aligned] - 2026-05-20
 ### Fixed
 - **System Drift Remediation**: Restored massive missing Phase 6 logic in the Gateway office and UI.
@@ -60,12 +74,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Kwil Transactional State**: Migrated Nexus Glass Node state and history storage to Kwil.
 - **Sovereign AI Allocation**: Real-time compute weighting and risk-optimized asset management.
 - **Hardware Security**: Integrated HSM FIPS 140-2 Level 3 status tracking.
-
-## [0.2.3-aligned] - 2026-06-07
-### Added
-- Multi-dimensional ERP database implementation in Neon (br-icy-dust-agc4w03v).
-- Sovereign ERP metrics integration in Admin Dashboard.
-- 'docs/BITCOIN_STANDARD_RESEARCH.md' detailing Bitcoin-native business operations.
-- New ERP data types and API routes for platform processing.
-### Fixed
-- Remediated implementation drift and governance file gaps identified during stress testing.

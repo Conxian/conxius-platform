@@ -10,7 +10,7 @@ Provide platform configuration, orchestration, CI/release automation, and enviro
 
 **Active development.** This is a platform control-plane repository and should be read primarily as contributor and operator infrastructure rather than as an end-user product surface.
 
-There are currently **no published GitHub releases** for this repository. Until a formal release policy is established, external readers should treat the repository as actively maintained platform infrastructure rather than a versioned public product.
+There are currently **no published GitHub releases** for this repository. Release and versioning policy are defined in [RELEASING.md](./RELEASING.md) and [`.github/RELEASE_HYGIENE.md`](./.github/RELEASE_HYGIENE.md); until releases are published, treat this repository as actively maintained platform infrastructure rather than a versioned public product.
 
 ## Audience
 

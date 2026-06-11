@@ -2,8 +2,18 @@ name: Multi-Environment Deployment Testing
 
 on:
   push:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'CODEOWNERS'
+      - 'LICENSE'
     branches: [ main, develop ]
   pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'CODEOWNERS'
+      - 'LICENSE'
     branches: [ main ]
   schedule:
     - cron: '0 3 * * *' # Nightly at 3 AM UTC

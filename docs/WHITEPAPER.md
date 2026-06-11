@@ -1,7 +1,7 @@
 # Conxian: The Bitcoin Sovereign Finance Layer
 **Whitepaper v1.2.0 (2026 Revision - Phase 5 Alignment)**
 
-> **Scope note:** This whitepaper is a strategic baseline document. For current implementation status and active transition tracking, use [README.md](./README.md), [GAPS.md](./GAPS.md), and [Sovereign Computing Redesign (2026)](./docs/architecture/SOVEREIGN_REPR_2026.md).
+> **Scope note:** This whitepaper is a strategic baseline document. For current implementation status and active transition tracking, use [README.md](../README.md), [GAPS.md](../GAPS.md), and [Sovereign Computing Redesign (2026)](./docs/architecture/SOVEREIGN_REPR_2026.md).
 
 ## Abstract
 Conxian is a comprehensive DeFi orchestration platform designed to make Bitcoin a productive asset. By integrating Stacks L2 (Nakamoto) smart contracts with a high-performance middleware layer (Conxian Gateway & Nexus), Conxian provides institutional-grade access to sovereign Bitcoin services.

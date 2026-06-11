@@ -1,7 +1,7 @@
 # Conxian System Architecture: Sovereign Declarative Topology
 
 > [!IMPORTANT]
-> **Architectural Transition in Progress**: The platform is migrating from a centralized orchestration model to a decentralized, local-first, BFF-driven topology. See [SOVEREIGN_REPR_2026.md](./docs/architecture/SOVEREIGN_REPR_2026.md) for the authoritative redesign specification.
+> **Architectural Transition in Progress**: The platform is migrating from a centralized orchestration model to a decentralized, local-first, BFF-driven topology. See [SOVEREIGN_REPR_2026.md](./SOVEREIGN_REPR_2026.md) for the authoritative redesign specification.
 
 ## 1. Proposed Sovereign Architecture (Target State)
 This graph represents the holistic viewpoint of the Conxian organization, transitioning from centralized orchestration to a decentralized NixOS control plane.

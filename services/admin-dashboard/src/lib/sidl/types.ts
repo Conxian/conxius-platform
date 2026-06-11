@@ -139,3 +139,30 @@ export type ErpDashboardData = {
   invoices: ErpInvoice[];
   computeLogs: ErpAiComputeLog[];
 };
+
+export type CrossChainEvent = {
+  id: string;
+  source_chain: string;
+  destination_chain: string;
+  event_type: string;
+  payload: any;
+  sequence_number: number;
+  nexus_id: string;
+  nexus_signature: string;
+  occurred_at_iso: string;
+};
+
+export type EventDeliveryStatus = "pending" | "delivered" | "failed" | "retrying";
+
+export type EventDeliveryRecord = {
+  event_id: string;
+  status: EventDeliveryStatus;
+  retry_count: number;
+  last_attempt_at_iso?: string;
+  error?: string;
+};
+
+export type EventBusState = {
+  last_sequence_processed: number;
+  delivery_records: Record<string, EventDeliveryRecord>;
+};

@@ -2,8 +2,18 @@ name: BOS production boundary guard
 
 on:
   push:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'CODEOWNERS'
+      - 'LICENSE'
     branches: [ main ]
   pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'CODEOWNERS'
+      - 'LICENSE'
     branches: [ main ]
   workflow_dispatch:
 

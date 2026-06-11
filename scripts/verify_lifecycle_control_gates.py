@@ -110,7 +110,7 @@ def main() -> int:
             ),
         ),
         ContentRule(
-            path="REPO_OWNERSHIP.md",
+            path="docs/architecture/REPO_OWNERSHIP.md",
             required_snippets=(
                 "Lifecycle/control gate ownership",
                 "Ownership authority source of truth",

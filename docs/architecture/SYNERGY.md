@@ -2,7 +2,7 @@
 
 This document details the interconnected workflows and synergy between the various repositories under the Conxian organization.
 
-> **Scope note:** This file documents cross-repository interaction patterns. For current execution status, use [README.md](./README.md) and [GAPS.md](./GAPS.md). For architecture baseline, use [Sovereign Computing Redesign (2026)](./docs/architecture/SOVEREIGN_REPR_2026.md).
+> **Scope note:** This file documents cross-repository interaction patterns. For current execution status, use [README.md](../../README.md) and [GAPS.md](../../GAPS.md). For architecture baseline, use [Sovereign Computing Redesign (2026)](./SOVEREIGN_REPR_2026.md).
 
 ## 1. The Core Loop (Phase 5 baseline; referenced during Phase 7 transition)
 The primary flow of state and authority follows this hierarchy:

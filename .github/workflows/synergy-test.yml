@@ -2,8 +2,18 @@ name: End-to-End Synergy Testing
 
 on:
   push:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'CODEOWNERS'
+      - 'LICENSE'
     branches: [ main ]
   pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'CODEOWNERS'
+      - 'LICENSE'
     branches: [ main ]
   schedule:
     - cron: '0 2 * * *' # Run nightly

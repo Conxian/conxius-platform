@@ -17,7 +17,7 @@ Welcome, Agent. You are tasked with maintaining and extending the Conxian DeFi e
 - **Clarity (Contracts)**: Prioritize mathematical certainty and sBTC integration.
 
 ## Documentation
-Refer to `ALIGNMENT.md` for strategy and `SYNERGY.md` for inter-repo workflows.
+Refer to `docs/architecture/ALIGNMENT.md` for strategy and `docs/architecture/SYNERGY.md` for inter-repo workflows.
 
 ---
 © 2026 Conxian Labs. Code is Law.

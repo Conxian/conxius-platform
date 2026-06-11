@@ -6,6 +6,8 @@ The `conxius-platform` repository contains development and control-plane scaffol
 
 Provide platform configuration, orchestration, and environment scaffolding for contributors and maintainers working across the Conxian ecosystem.
 
+[![Secret Scan](https://github.com/Conxian/conxius-platform/actions/workflows/secret-scan.yml/badge.svg)](https://github.com/Conxian/conxius-platform/actions/workflows/secret-scan.yml) [![Repository Hygiene Guard](https://github.com/Conxian/conxius-platform/actions/workflows/hygiene.yml/badge.svg)](https://github.com/Conxian/conxius-platform/actions/workflows/hygiene.yml) [![Lifecycle Control Gates](https://github.com/Conxian/conxius-platform/actions/workflows/lifecycle-control-gates.yml/badge.svg)](https://github.com/Conxian/conxius-platform/actions/workflows/lifecycle-control-gates.yml)
+
 ## Status
 
 **Active development.** This repository is evolving alongside the broader platform architecture and may contain development-oriented control-plane material.
@@ -32,15 +34,15 @@ This repository is maintained by Conxian Labs. It supports development and opera
 
 - [Conxian Unified Theory v2](./docs/CONXIAN_UNIFIED_THEORY_v2.md)
 - [Sovereign Computing Redesign (2026)](./docs/architecture/SOVEREIGN_REPR_2026.md)
-- [Whitepaper](./WHITEPAPER.md)
-- [System Architecture Graph](./SYSTEM_GRAPH.md)
-- [Alignment Strategy](./ALIGNMENT.md)
-- [Ecosystem Synergy](./SYNERGY.md)
+- [Whitepaper](./docs/WHITEPAPER.md)
+- [System Architecture Graph](./docs/architecture/SYSTEM_GRAPH.md)
+- [Alignment Strategy](./docs/architecture/ALIGNMENT.md)
+- [Ecosystem Synergy](./docs/architecture/SYNERGY.md)
 - [Gap Analysis](./GAPS.md)
 - [Repository Taxonomy](./docs/REPOSITORY_TAXONOMY.md)
 - [ADR 001: Repo Ownership](./docs/architecture/ADR-001_REPO_OWNERSHIP_AND_BOUNDARIES.md)
 - [Repository Evolution Plan](./docs/architecture/REPO_EVOLUTION_PLAN.md)
-- [Alignment Blueprint 2026](./ALIGNMENT_BLUEPRINT_2026.md)
+- [Alignment Blueprint 2026](./docs/architecture/ALIGNMENT_BLUEPRINT_2026.md)
 
 ## Quick start
 

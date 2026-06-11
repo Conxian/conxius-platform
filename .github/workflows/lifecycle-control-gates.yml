@@ -2,8 +2,18 @@ name: Lifecycle Control Gates
 
 on:
   push:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'CODEOWNERS'
+      - 'LICENSE'
     branches: [ main, develop ]
   pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'CODEOWNERS'
+      - 'LICENSE'
     branches: [ main, develop ]
   workflow_dispatch:
 

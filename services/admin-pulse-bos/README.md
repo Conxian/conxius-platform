@@ -2,6 +2,18 @@
 
 The `admin-pulse-bos` service provides administrative components for the Conxian ecosystem, focusing on fiscal orchestration and symmetry management.
 
+## Status
+
+**Active development.** Designated as a dev-only/supporting service for platform operations.
+
+## Positioning
+
+This service provides non-custodial administrative components for fiscal coordination; it does not take possession of customer funds.
+
+## Purpose
+
+Deliver specialized administrative components and command pulses for Bitcoin-native business intelligence and fiscal coordination.
+
 ## 🏛️ Sovereign Financial Office (SFO)
 
 The core component, `SovereignFinancialOffice.tsx`, is a command pulse for:

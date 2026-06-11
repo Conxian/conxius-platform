@@ -2,6 +2,18 @@
 
 This service is the internal backend/frontend orchestration layer for the Conxian platform. It provides real-time telemetry from the Unified Gateway Engine and allows for management of operational configurations.
 
+## Status
+
+**Active development.** Deployed to Render as an internal control-plane surface. Versioning follows the platform root `0.2.3-aligned` standard.
+
+## Positioning
+
+This service provides non-custodial administrative interfaces and orchestration logic; it does not take possession of customer funds.
+
+## Purpose
+
+Provide an internal administrative interface for monitoring platform health, managing institutional configurations, and orchestrating multidimensional operations.
+
 ## ⚠️ SECURITY WARNING
 
 **This dashboard is for internal, local, or high-privilege administrative use only.**

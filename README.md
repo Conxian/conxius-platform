@@ -2,17 +2,21 @@
 
 The `conxius-platform` repository contains development and control-plane scaffolding for composing parts of the Conxian stack locally and in managed environments.
 
+## Status
+
+**Active development.** This is a platform control-plane repository and should be read primarily as contributor and operator infrastructure rather than as an end-user product surface.
+
+This repository uses formal versioned releases tracked in `CHANGELOG.md` and published via GitHub Releases.
+
+## Positioning
+
+Conxian provides non-custodial control and orchestration surfaces; it does not take possession of customer funds or operate as a raw customer-data system of record.
+
 ## Purpose
 
 Provide platform configuration, orchestration, CI/release automation, and environment scaffolding for contributors and maintainers working across the Conxian ecosystem.
 
 [![Secret Scan](https://github.com/Conxian/conxius-platform/actions/workflows/secret-scan.yml/badge.svg)](https://github.com/Conxian/conxius-platform/actions/workflows/secret-scan.yml) [![Repository Hygiene Guard](https://github.com/Conxian/conxius-platform/actions/workflows/hygiene.yml/badge.svg)](https://github.com/Conxian/conxius-platform/actions/workflows/hygiene.yml) [![Lifecycle Control Gates](https://github.com/Conxian/conxius-platform/actions/workflows/lifecycle-control-gates.yml/badge.svg)](https://github.com/Conxian/conxius-platform/actions/workflows/lifecycle-control-gates.yml)
-
-## Status
-
-**Active development.** This is a platform control-plane repository and should be read primarily as contributor and operator infrastructure rather than as an end-user product surface.
-
-There are currently **no published GitHub releases** for this repository. Release and versioning policy are defined in [RELEASING.md](./RELEASING.md) and [`.github/RELEASE_HYGIENE.md`](./.github/RELEASE_HYGIENE.md); until releases are published, treat this repository as actively maintained platform infrastructure rather than a versioned public product.
 
 ## Audience
 
@@ -78,9 +82,9 @@ Use templates and generated local secrets for development only. Do not commit re
 
 ## Release posture
 
-- If this repository becomes release-tracked, publish annotated GitHub releases in the form `vX.Y.Z`.
-- Keep release-facing changes recorded in `CHANGELOG.md` when that workflow is adopted.
-- If the repository remains non-release-tracked, keep that explicit in the README so public readers do not infer missing hygiene.
+- This repository follows Semantic Versioning via annotated tags (`vX.Y.Z`).
+- Changes are recorded in `CHANGELOG.md`.
+- Releases are triggered by tags and verified by the [`release.yml`](./.github/workflows/release.yml) workflow.
 
 ## Policies
 

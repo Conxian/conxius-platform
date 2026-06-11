@@ -2,6 +2,18 @@
 
 ElizaOS plugin that exposes Conxian Gateway + SIDL social interfaces as typed actions.
 
+## Status
+
+**Active development.** Integrated with the Conxian Multidimensional Pulse and Gateway Engine.
+
+## Positioning
+
+This plugin enables non-custodial interaction with Conxian protocol states and governance; it does not take possession of customer funds.
+
+## Purpose
+
+Enable AI agents within the ElizaOS ecosystem to interact with Conxian protocol states, treasury metrics, and governance flows.
+
 ## Config
 
 Environment variables (or plugin `config` keys):
@@ -16,3 +28,4 @@ Environment variables (or plugin `config` keys):
 - `CONXIAN_GET_CART_MANDATE`
 - `CONXIAN_X402_CHECKOUT_CART`
 - `CONXIAN_SUBMIT_VOTE`
+- `CONXIAN_MULTIDIMENSIONAL_METRICS`

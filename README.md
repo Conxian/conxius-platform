@@ -92,10 +92,12 @@ Use templates and generated local secrets for development only. Do not commit re
 - [SECURITY.md](SECURITY.md)
 - [CONTRIBUTING.md](CONTRIBUTING.md)
 - [GOVERNANCE.md](GOVERNANCE.md)
+- [SUPPORT.md](SUPPORT.md)
+- [REVIEWS.md](REVIEWS.md)
 - [CODEOWNERS](CODEOWNERS)
 
 ## Contact
 
-- Support: [support@conxian-labs.com](mailto:support@conxian-labs.com)
+- Support: [SUPPORT.md](SUPPORT.md) | [support@conxian-labs.com](mailto:support@conxian-labs.com)
 - Security: [security@conxian-labs.com](mailto:security@conxian-labs.com)
 - General: [info@conxian-labs.com](mailto:info@conxian-labs.com)

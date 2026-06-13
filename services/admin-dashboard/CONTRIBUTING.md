@@ -6,11 +6,9 @@ Welcome! We appreciate your interest in contributing to the Conxian monorepo.
 
 This repository is organized as a monorepo containing multiple services:
 
-- `services/conxian-ui`: The primary web application (Next.js).
-- `services/lib-conxian-core`: Core business logic and the Gateway Engine (Rust).
-- `services/admin-dashboard`: Administrative monitoring and management tool (Next.js).
+- `services/admin-dashboard`: Administrative monitoring and management tool (Next.js 16).
 - `services/admin-pulse-bos`: Administrative components for fiscal orchestration (SFO).
-- `services/elizaos-plugin-conxian`: ElizaOS plugin for Conxian Gateway and social interfaces.
+- `services/elizaos-plugin-conxian`: ElizaOS plugin for Conxian Gateway and multidimensional metrics.
 
 ## Development Guidelines
 
@@ -23,8 +21,6 @@ This repository is organized as a monorepo containing multiple services:
 ## Node/TypeScript services
 
 The Node/TypeScript services under `services/` (as configured in `pnpm-workspace.yaml`) are managed as a `pnpm` workspace with a single root `pnpm-lock.yaml`.
-
-Note: `services/conxian-ui` and `services/lib-conxian-core` are git submodules. `conxian-ui` is currently excluded from the root `pnpm` workspace to avoid lockfile churn when it’s initialized locally.
 
 ### Prerequisites
 

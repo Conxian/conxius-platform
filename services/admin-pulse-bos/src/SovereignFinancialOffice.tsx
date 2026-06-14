@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 
 /**
- * Sovereign Financial Office (SPO) - Command Pulse
+ * Sovereign Financial Office (SFO) - Command Pulse
  * Codified roles: SFO, SBC (Sovereign Business Cells), SYI (Sovereign Yield Index)
- * Aligned with Chappies 4.0+: Autonomous, DeFi-Exploiting, Multi-Dimensional
+ * Aligned with Sovereign Earthy Branding: Forest Green (#2E403B), Nakamoto Gold (#D4A017)
  */
 
 const SBC_LIST = ["Conxian-Core", "Nexus-Labs", "DeFi-Desk", "Sovereign-Grants"];
@@ -44,75 +44,84 @@ export default function SovereignFinancialOffice() {
     simulateFiscalPulse();
   };
 
+  const forestGreen = "#2E403B";
+  const nakamotoGold = "#D4A017";
+
   return (
-    <div className="sfo-container p-6 bg-slate-900 text-slate-100 rounded-xl border border-slate-700 shadow-2xl">
-      <header className="flex justify-between items-center mb-8 border-b border-slate-700 pb-4">
+    <div className="sfo-container" style={{ padding: '1.5rem', backgroundColor: '#1a2421', color: '#f1f5f9', borderRadius: '0.75rem', border: `1px solid ${forestGreen}`, boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.5)' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', borderBottom: `1px solid ${forestGreen}`, paddingBottom: '1rem' }}>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-cyan-400">Sovereign Financial Office</h1>
-          <p className="text-slate-400 text-sm">Fiscal Orchestration & Symmetry Management</p>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.025em', color: nakamotoGold }}>Sovereign Financial Office</h1>
+          <p style={{ color: '#94a3b8', fontSize: '0.875rem' }}>Fiscal Orchestration & Symmetry Management</p>
         </div>
-        <div className="text-right">
-          <span className="text-xs uppercase tracking-widest text-slate-500">Global symmetry</span>
-          <div className="text-xl font-mono text-emerald-400">{globalSymmetry.toLocaleString()} sBTC</div>
+        <div style={{ textAlign: 'right' }}>
+          <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#64748b' }}>Global symmetry</span>
+          <div style={{ fontSize: '1.25rem', fontWeight: 700, fontFamily: 'monospace', color: nakamotoGold }}>{globalSymmetry.toLocaleString()} sBTC</div>
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
         {SBC_LIST.map(name => (
           <button
             key={name}
             onClick={() => setSelectedSBC(name)}
-            className={`p-3 rounded-lg text-sm font-medium transition-all ${
-              selectedSBC === name 
-              ? 'bg-cyan-900/40 border border-cyan-500 text-cyan-100' 
-              : 'bg-slate-800/40 border border-slate-700 text-slate-400 hover:border-slate-500'
-            }`}
+            style={{
+              padding: '0.75rem',
+              borderRadius: '0.5rem',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              transition: 'all 0.2s',
+              backgroundColor: selectedSBC === name ? 'rgba(212, 160, 23, 0.2)' : 'rgba(46, 64, 59, 0.4)',
+              border: selectedSBC === name ? `1px solid ${nakamotoGold}` : `1px solid ${forestGreen}`,
+              color: selectedSBC === name ? '#fff' : '#94a3b8',
+              cursor: 'pointer'
+            }}
           >
             {name}
           </button>
         ))}
       </div>
 
-      <div className="bg-slate-800/30 p-6 rounded-xl border border-slate-700/50">
-        <div className="flex justify-between items-start mb-6">
-          <h2 className="text-lg font-semibold text-slate-200">Cell Intel: {selectedSBC}</h2>
-          <span className="px-2 py-1 bg-emerald-900/30 text-emerald-400 text-xs rounded border border-emerald-500/30">
+      <div style={{ backgroundColor: 'rgba(46, 64, 59, 0.2)', padding: '1.5rem', borderRadius: '0.75rem', border: '1px solid rgba(46, 64, 59, 0.5)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
+          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#e2e8f0' }}>Cell Intel: {selectedSBC}</h2>
+          <span style={{ padding: '0.25rem 0.5rem', backgroundColor: 'rgba(212, 160, 23, 0.1)', color: nakamotoGold, fontSize: '0.75rem', borderRadius: '0.25rem', border: `1px solid ${nakamotoGold}` }}>
             {fiscalData.status}
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="stat-card">
-            <label className="text-xs text-slate-500 uppercase">Liquid Reserve</label>
-            <div className="text-2xl font-mono">{fiscalData.liquidReserve.toLocaleString()} STX</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+          <div>
+            <label style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase' }}>Liquid Reserve</label>
+            <div style={{ fontSize: '1.5rem', fontFamily: 'monospace' }}>{fiscalData.liquidReserve.toLocaleString()} STX</div>
           </div>
-          <div className="stat-card">
-            <label className="text-xs text-slate-500 uppercase">Yield Harvested</label>
-            <div className="text-2xl font-mono text-emerald-400">+{fiscalData.yieldHarvested.toLocaleString()} STX</div>
+          <div>
+            <label style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase' }}>Yield Harvested</label>
+            <div style={{ fontSize: '1.5rem', fontFamily: 'monospace', color: nakamotoGold }}>+{fiscalData.yieldHarvested.toLocaleString()} STX</div>
           </div>
-          <div className="stat-card">
-            <label className="text-xs text-slate-500 uppercase">Yield Index (SYI)</label>
-            <div className="text-2xl font-mono text-cyan-400">{fiscalData.syi} BPS</div>
+          <div>
+            <label style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase' }}>Yield Index (SYI)</label>
+            <div style={{ fontSize: '1.5rem', fontFamily: 'monospace', color: nakamotoGold }}>{fiscalData.syi} BPS</div>
           </div>
         </div>
 
-        <div className="flex gap-4">
-          <button 
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <button
             onClick={harvestYield}
-            className="flex-1 py-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-bold transition-all shadow-lg shadow-cyan-900/20"
+            style={{ flex: 1, padding: '0.75rem', backgroundColor: forestGreen, color: 'white', border: `1px solid ${nakamotoGold}`, borderRadius: '0.5rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}
           >
             Harvest Sovereign Yield
           </button>
-          <button className="flex-1 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition-all">
+          <button style={{ flex: 1, padding: '0.75rem', backgroundColor: 'transparent', color: 'white', border: `1px solid ${forestGreen}`, borderRadius: '0.5rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}>
             Deploy Symmetry
           </button>
         </div>
       </div>
 
-      <footer className="mt-8 text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-800 rounded-full text-[10px] text-slate-500">
-          <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-          Nakamoto Heartbeat Active • Fiscal Orchestrator v4.2.0
+      <footer style={{ marginTop: '2rem', textAlign: 'center' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.25rem 0.75rem', backgroundColor: '#1e2927', borderRadius: '9999px', fontSize: '0.625rem', color: '#64748b' }}>
+          <span style={{ width: '0.5rem', height: '0.5rem', backgroundColor: nakamotoGold, borderRadius: '50%' }}></span>
+          Nakamoto Heartbeat Active • Fiscal Orchestrator v4.2.4
         </div>
       </footer>
     </div>

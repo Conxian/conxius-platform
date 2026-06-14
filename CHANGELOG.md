@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-06-13
+
 ### Added
 - **CI Path Optimization**: Added `paths-ignore` to all GitHub Workflows to prevent documentation-only changes from triggering heavy CI suites.
 - **Repository De-cluttering**: Archived over 50 legacy maintenance and reconstruction scripts to `docs/archived-scripts/`.

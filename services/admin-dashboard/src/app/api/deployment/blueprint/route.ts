@@ -6,7 +6,7 @@ export async function GET() {
   // Deterministic Blueprint for AI Agents
   const blueprint = {
     system: "Conxian Platform",
-    version: "0.2.3-aligned",
+    version: "0.2.4",
     timestamp: new Date().toISOString(),
     integrity_standard: "Nakamoto-Style",
     deployment_targets: [

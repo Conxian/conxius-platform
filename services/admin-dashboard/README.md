@@ -4,7 +4,7 @@ This service is the internal backend/frontend orchestration layer for the Conxia
 
 ## Status
 
-**Active development.** Deployed to Render as an internal control-plane surface. Versioning follows the platform root `0.2.3-aligned` standard.
+**Active development.** Deployed to Render as an internal control-plane surface. Versioning follows the platform root `0.2.4` standard.
 
 ## Positioning
 

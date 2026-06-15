@@ -6,16 +6,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 describe("SIDL persistent state", () => {
   let tmpDir: string;
   let statePath: string;
+  const mockApiKey = 'test-api-key';
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "conxian-sidl-state-"));
     statePath = path.join(tmpDir, "state.json");
     process.env.SIDL_STATE_FILE = statePath;
+    process.env.ADMIN_DASHBOARD_API_KEY = mockApiKey;
     vi.resetModules();
   });
 
   afterEach(() => {
     delete process.env.SIDL_STATE_FILE;
+    delete process.env.ADMIN_DASHBOARD_API_KEY;
     vi.resetModules();
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
@@ -67,7 +70,9 @@ describe("SIDL persistent state", () => {
     const { GET } = await import("../app/api/cart/mandates/[id]/checkout/route");
     const { getCheckoutAuditTrail } = await import("@/lib/sidl/stateStore");
 
-    const challengeResponse = await GET(new Request("http://localhost/api/cart/mandates/sbtc-yield-frame/checkout"), {
+    const challengeResponse = await GET(new Request("http://localhost/api/cart/mandates/sbtc-yield-frame/checkout", {
+      headers: { 'X-Admin-API-Key': mockApiKey }
+    }), {
       params: Promise.resolve({ id: "sbtc-yield-frame" }),
     });
 
@@ -79,6 +84,7 @@ describe("SIDL persistent state", () => {
       new Request("http://localhost/api/cart/mandates/sbtc-yield-frame/checkout", {
         headers: {
           "PAYMENT-SIGNATURE": "0123456789abcdef",
+          "X-Admin-API-Key": mockApiKey,
         },
       }),
       {

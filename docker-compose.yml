@@ -1,8 +1,7 @@
 services:
-  # Requires `git submodule update --init --recursive` so services/lib-conxian-core is present
+  # Conxian Gateway - Orchestrated as an external dependency in Phase 7
   gateway:
-    build:
-      context: ./services/lib-conxian-core/gateway
+    image: ${GATEWAY_IMAGE:-nginx:alpine} # Default to stub if image not provided
     ports:
       - "${GATEWAY_PORT:-8080}:8080"
     environment:
@@ -16,6 +15,7 @@ services:
       - db
       - redis
 
+  # Admin Dashboard - Managed locally in this monorepo
   admin-dashboard:
     build:
       context: ./services/admin-dashboard
@@ -23,12 +23,13 @@ services:
       - "3002:3001"
     environment:
       - NEXT_PUBLIC_CORE_API_URL=${NEXT_PUBLIC_CORE_API_URL}
+      - ADMIN_DASHBOARD_API_KEY=${ADMIN_DASHBOARD_API_KEY}
     networks:
       - conxian-network
 
+  # Conxian UI - Orchestrated as an external dependency in Phase 7
   conxian-ui:
-    build:
-      context: ./services/conxian-ui
+    image: ${UI_IMAGE:-nginx:alpine} # Default to stub if image not provided
     ports:
       - "${UI_PORT:-3000}:3000"
     environment:
@@ -107,7 +108,6 @@ services:
     networks:
       - conxian-network
     depends_on:
-      - gateway
       - admin-dashboard
 
   grafana:

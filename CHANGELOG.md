@@ -88,3 +88,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Kwil Transactional State**: Migrated Nexus Glass Node state and history storage to Kwil.
 - **Sovereign AI Allocation**: Real-time compute weighting and risk-optimized asset management.
 - **Hardware Security**: Integrated HSM FIPS 140-2 Level 3 status tracking.
+
+## [0.2.5] - 2026-06-15
+
+### Added
+- **SIDL Hardening**: Implemented mandatory API key authentication for state-changing SIDL endpoints (CON-353).
+- **Full Bitcoin Stack Research**: Published 'docs/architecture/FULL_STACK_BITCOIN_RESEARCH.md' covering RGB, BitVM, and FDC3.
+- **Architectural Clarity**: Added 'CONTROL_ASSURANCE_MAPPING.md' and updated 'ARCHITECTURE_MODEL.md'.
+
+### Fixed
+- **Workflow Realignment**: Corrected repository paths in 'multi-env-test.yml' and 'synergy-test.yml' to reflect monorepo pivot.
+- **Render Remediation**: Updated blueprint API with correct build/start commands for UI and Labs Site (CON-739).
+- **Docker Compose**: Standardized 'docker-compose.yml' to orchestrate external service stubs and hardened internal services.
+- **CI Resilience**: Standardized all workflows to 'self-hosted' runners and added 'paths-ignore' for documentation.

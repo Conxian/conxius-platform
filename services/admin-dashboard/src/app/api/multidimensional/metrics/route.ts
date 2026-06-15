@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
   // Multidimensional Metrics: Bitcoin Standard Business Intelligence
+  // Updated for CON-776: Standardized naming (Markets instead of Corridors)
   const metrics = {
     treasury: {
       sbtc: { balance: 12.5, pnl_usd: 450000.00, yield_apy: 6.45, health: "optimized" },
@@ -13,8 +14,8 @@ export async function GET() {
       { id: "agent-compliance-auditor", weight: 0.3, budget_usd: 5000, consumed_usd: 200, status: "idle" }
     ],
     settlements: {
-      lightning: { count: 124, volume_sats: 15400000, status: "active", corridors: ["Global-South", "EU-West"] },
-      rgb: { count: 12, volume_sats: 8900000, status: "syncing", corridors: ["Institutional-Vault"] }
+      lightning: { count: 124, volume_sats: 15400000, status: "active", markets: ["Global-South", "EU-West"] },
+      rgb: { count: 12, volume_sats: 8900000, status: "syncing", markets: ["Institutional-Vault"] }
     },
     ubi: {
       total_active: 142,

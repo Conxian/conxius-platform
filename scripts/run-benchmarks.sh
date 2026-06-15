@@ -1,50 +1,35 @@
 #!/bin/bash
-# Conxian Platform: Automated Benchmark Suite
+# Conxian Platform: Automated Benchmark Suite (Phase 7 Remediated)
 
 set -e
 
 echo "📊 Starting Conxian Performance Benchmarks..."
 echo "------------------------------------------"
 
-# 1. Build Performance (Gateway)
-echo "Measuring Gateway Build Time..."
-if command -v cargo >/dev/null 2>&1; then
-    cd services/lib-conxian-core/gateway
-    START_TIME=$(date +%s)
-    cargo build --quiet
-    END_TIME=$(date +%s)
-    ELAPSED=$((END_TIME - START_TIME))
-    echo "✅ Gateway Build: ${ELAPSED}s"
-    cd - > /dev/null
-else
-    echo "⚠️  cargo not found on host, skipping build benchmark."
-fi
-
-# 2. Build Performance (UI)
-echo "Checking UI Build capability (pnpm install)..."
-cd services/conxian-ui
+# 1. Platform Service Build Performance
+echo "Measuring Admin Dashboard Build Time..."
 if command -v pnpm >/dev/null 2>&1; then
+    cd services/admin-dashboard
     START_TIME=$(date +%s)
     pnpm install > /dev/null 2>&1
+    pnpm build > /dev/null 2>&1
     END_TIME=$(date +%s)
     ELAPSED=$((END_TIME - START_TIME))
-    echo "✅ UI Dependency Install: ${ELAPSED}s"
+    echo "✅ Admin Dashboard Build: ${ELAPSED}s"
+    cd - > /dev/null
 else
-    echo "⚠️  pnpm not found on host, skipping UI benchmark."
+    echo "⚠️  pnpm not found on host, skipping build benchmark."
 fi
-cd - > /dev/null
 
-# 3. Latency Check (Requires Gateway running)
-echo "Checking Gateway Latency (requires service to be up)..."
-# Try localhost first, then check docker network if needed (but usually CI maps ports)
-if curl -s http://localhost:8080/api/v1/health > /dev/null 2>&1; then
-    echo "Measuring latency to /api/v1/status..."
+# 2. Gateway/UI Latency (Internal stubs)
+echo "Checking Platform Service Latency..."
+if curl -s http://localhost:3002/api/health > /dev/null 2>&1; then
+    echo "Measuring latency to /api/health..."
     for i in {1..5}; do
-        curl -o /dev/null -s -w "Request $i: %{time_total}s\n" http://localhost:8080/api/v1/status
+        curl -o /dev/null -s -w "Request $i: %{time_total}s\n" http://localhost:3002/api/health
     done
 else
-    echo "⚠️  Gateway not running at http://localhost:8080. Skipping latency check."
-    echo "   (Hint: run 'make start' first)"
+    echo "⚠️  Platform services not running at http://localhost:3002. Skipping latency check."
 fi
 
 echo "------------------------------------------"

@@ -3,6 +3,7 @@ import { getCartMandate, toX402PaymentRequired } from "@/lib/sidl/cart";
 import { observeSidlException, observeSidlResponse, startSidlTimer } from "@/lib/sidl/observability";
 import { recordCheckoutPaymentAttempt, recordCheckoutPaymentRequired } from "@/lib/sidl/stateStore";
 import { encodeBase64Json, encodePaymentRequiredHeader } from "@/lib/sidl/x402";
+import { validateAdminAuth } from "@/lib/support/auth";
 
 const ENDPOINT = "/api/cart/mandates/[id]/checkout";
 const PAYMENT_SIGNATURE_PATTERN = /^[A-Za-z0-9+/=_-]{16,}$/;
@@ -28,6 +29,20 @@ function classifyPaymentSignatureHeader(value: string | null): "missing" | "inva
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<NextResponse> {
   const startedAt = startSidlTimer();
+
+  // CON-353: Harden SIDL auth (Checkout remains public for 402 challenge but requires key for payment processing)
+  // Actually, standard SIDL requires auth for any non-frame entry.
+  const authError = validateAdminAuth(req);
+  if (authError) {
+    observeSidlResponse({
+      endpoint: ENDPOINT,
+      method: "GET",
+      startedAt,
+      status: authError.status,
+      errorCategory: "unauthorized",
+    });
+    return authError;
+  }
 
   try {
     const { id } = await params;

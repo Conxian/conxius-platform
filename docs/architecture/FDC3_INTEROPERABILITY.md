@@ -1,49 +1,24 @@
 # FDC3 Interoperability Path (CON-1181)
 
-This document defines the alignment path for Conxian Gateway and Conxian UI with the FDC3 (Financial Desktop Connectivity and Collaboration Consortium) standard.
+This document defines the alignment strategy for Conxian Gateway and Conxian_UI with the FDC3 (Financial Desktop Connectivity and Collaboration Consortium) standards.
 
 ## 1. Goal
-Enable Conxian components to participate in enterprise financial workflows by supporting standard intents, context sharing, and app discovery.
+Enable seamless interoperability between the Conxian stack and institutional financial desktops (e.g., Bloomberg Terminal, Symphony, OpenFin).
 
-## 2. Scope & Mapping
+## 2. Context Sharing
+Conxian will support standard FDC3 context types to allow other applications to follow the user's focus:
+- **fdc3.instrument**: When viewing a specific asset (BTC, sBTC, STX), the UI will broadcast the instrument context.
+- **fdc3.contact**: When viewing a counterparty or UBI identity, the UI will broadcast the contact context.
 
-### A. Context Exchange
-- **Current**: Conxian UI uses internal React state and URL parameters for context (e.g., selected asset, wallet address).
-- **FDC3 Alignment**: Implement support for `fdc3.instrument` (for assets like BTC, sBTC) and `fdc3.contact` (for wallet addresses/identities).
-- **Mapping**:
-  - `ticker` -> Conxian Asset ID.
-  - `address` -> Bitcoin/Stacks Address.
+## 3. Financial Intents
+The Gateway and UI will implement support for standard FDC3 intents:
+- **ViewChart**: Open the price chart for a specific Bitcoin-native asset.
+- **ViewQuote**: Retrieve real-time pricing and liquidity depth from the Stacks DEX.
+- **TradeIntent**: Initialize a trade or swap intent that can be handled by the Conxian execution engine.
 
-### B. Intents
-- **Standard Intents**:
-  - `ViewChart`: Open the Pulse dashboard for a specific asset.
-  - `ViewQuote`: Show current price/liquidity for an asset.
-  - `StartTransaction`: Initiate a swap or transfer intent in the UI.
-- **Custom Conxian Intents**:
-  - `conxian.ViewSettlement`: View L2/L3 settlement status for a transaction.
-  - `conxian.SignPSBT`: Hand off a PSBT to a connected wallet application.
-
-### C. App Discovery
-- **Gateway Role**: The Gateway will expose an FDC3-compatible App Directory (`appD`) endpoint at `/api/v1/fdc3/appd` to describe available Conxian services.
-- **UI Role**: Conxian UI will act as an FDC3 "App" that can be launched by a Desktop Agent (e.g., OpenFin, Glue42).
-
-## 3. Implementation Roadmap
-
-### Phase 1: Context Awareness (Q3 2026)
-- Update Conxian UI to listen for FDC3 context events when running in a desktop agent.
-- Map `fdc3.instrument` to the internal liquidity views.
-
-### Phase 2: Intent Handling (Q4 2026)
-- Register Conxian UI as a handler for `ViewChart` and `ViewQuote`.
-- Implement basic intent resolution logic in the Gateway.
-
-### Phase 3: Enterprise Integration (Q1 2027)
-- Full `appD` support in the Gateway.
-- Bi-directional context sharing between Conxian and legacy ERP/Terminal systems.
-
-## 4. Trust & Security
-- FDC3 interop must remain non-custodial. Context sharing is limited to public identifiers (addresses, tickers).
-- Private keys and sensitive metadata are NEVER shared via FDC3 channels.
+## 4. Implementation Status
+- **Phase 1 (Discovery)**: Mapping internal CJCS (Conxian Job Card Schema) to FDC3 context types.
+- **Phase 2 (Prototyping)**: Implementing an FDC3 Desktop Agent bridge in the Conxian UI.
 
 ---
 *Maintained by Jules (Sovereign Engineering Agent)*

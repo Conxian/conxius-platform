@@ -1,0 +1,2 @@
+# Ignore example files that contain placeholder secrets
+services/admin-dashboard/.env.admin.example

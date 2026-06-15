@@ -72,3 +72,15 @@ This document summarizes the research into the components required to achieve a 
 
 ---
 *Last Verified by Jules (Sovereign Engineering Agent) - 2026-06-15*
+
+## 11. Expansion: Micro-Frontend Federation
+- **Local-First Execution**: MFEs enable users to run specific business logic modules (e.g., Settlement Engine) in a local-only mode, reducing reliance on centralized cloud providers.
+- **Resource Isolation**: Prevents "vibe-drift" by ensuring each module adheres to its own strict design and logic boundaries while sharing the 'Sovereign Earthy' design tokens.
+
+## 12. Expansion: Wasm-First Architecture
+- **Portability**: Transitioning logic to Wasm targets allows the same codebase to power the Gateway, the CLI (Orbit), and the Browser-based Wallet.
+- **Security**: Wasm provides a sandboxed execution environment, enhancing the "Sentinel Security" model across the Conxian ecosystem.
+
+## 13. Research Papers & Peer Review
+- **[Draft] Verifiable Multi-Step Settlements via IVC**: A research paper draft exploring the use of Incrementally Verifiable Computation for complex cross-chain swaps.
+- **[Draft] Sovereign Identity in UTXO Environments**: Exploring the intersection of BIP-174 and Decentralized Identifiers (DIDs).

@@ -27,5 +27,5 @@ sys.path.append('scripts/maintenance')
 from system_audit import audit_security
 if not audit_security():
     sys.exit(1)
-            "
+"
           fi

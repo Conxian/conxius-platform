@@ -13,7 +13,7 @@ export default function MultidimensionalDashboard() {
     setError(null);
     try {
       const res = await fetch("/api/multidimensional/metrics");
-      if (!res.ok) throw new Error(`Failed to fetch metrics: ${res.status}`);
+      if (!res.ok) throw new Error(\`Failed to fetch metrics: \${res.status}\`);
       const d = await res.json();
       setData(d);
     } catch (err: any) {
@@ -73,12 +73,12 @@ export default function MultidimensionalDashboard() {
              <div style={{ padding: '1rem', backgroundColor: '#f1f5f9', borderRadius: '12px' }}>
                 <div style={{ fontSize: '0.875rem', color: '#64748b' }}>sBTC Reserve</div>
                 <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#0f172a' }}>{data?.treasury.sbtc.balance} BTC</div>
-                <div style={{ color: '#10b981', fontSize: '0.875rem', fontWeight: 600 }}>+${data?.treasury.sbtc.pnl_usd.toLocaleString()} PnL</div>
+                <div style={{ color: '#10b981', fontSize: '0.875rem', fontWeight: 600 }}>+\${data?.treasury.sbtc.pnl_usd.toLocaleString()} PnL</div>
              </div>
              <div style={{ padding: '1rem', backgroundColor: '#f1f5f9', borderRadius: '12px' }}>
                 <div style={{ fontSize: '0.875rem', color: '#64748b' }}>STX Reserve</div>
                 <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#0f172a' }}>{data?.treasury.stx.balance.toLocaleString()} STX</div>
-                <div style={{ color: '#10b981', fontSize: '0.875rem', fontWeight: 600 }}>+${data?.treasury.stx.pnl_usd.toLocaleString()} PnL</div>
+                <div style={{ color: '#10b981', fontSize: '0.875rem', fontWeight: 600 }}>+\${data?.treasury.stx.pnl_usd.toLocaleString()} PnL</div>
              </div>
           </div>
         </section>
@@ -94,11 +94,11 @@ export default function MultidimensionalDashboard() {
                   <span style={{ color: '#64748b' }}>{(agent.weight * 100).toFixed(0)}% Weight</span>
                 </div>
                 <div style={{ width: '100%', height: '10px', backgroundColor: '#f1f5f9', borderRadius: '5px', overflow: 'hidden' }}>
-                  <div style={{ width: `${(agent.consumed_usd / agent.budget_usd) * 100}%`, height: '100%', backgroundColor: '#2E403B', transition: 'width 1s ease-in-out' }}></div>
+                  <div style={{ width: \`\${(agent.consumed_usd / agent.budget_usd) * 100}%\`, height: '100%', backgroundColor: '#2E403B', transition: 'width 1s ease-in-out' }}></div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem', fontSize: '0.75rem', color: '#94a3b8' }}>
-                  <span>Used: ${agent.consumed_usd.toLocaleString()}</span>
-                  <span>Budget: ${agent.budget_usd.toLocaleString()}</span>
+                  <span>Used: \$\${agent.consumed_usd.toLocaleString()}</span>
+                  <span>Budget: \$\${agent.budget_usd.toLocaleString()}</span>
                 </div>
               </div>
             ))}

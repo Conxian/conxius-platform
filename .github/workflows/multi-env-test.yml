@@ -35,7 +35,7 @@ jobs:
   test-server:
     if: ${{ github.event.inputs.environment == 'server' || github.event.inputs.environment == 'all' || github.event_name != 'workflow_dispatch' }}
     name: Server (Full Stack)
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 45
 
     env:
@@ -105,7 +105,7 @@ jobs:
   test-cloud:
     if: ${{ github.event.inputs.environment == 'cloud' || github.event.inputs.environment == 'all' || github.event_name != 'workflow_dispatch' }}
     name: Cloud (Blueprint validation)
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
@@ -114,12 +114,13 @@ jobs:
 
       - name: Verify Admin Dashboard Dockerfile
         run: |
-          docker build ./services/admin-dashboard -t admin-build &&             echo "✅ Admin Dashboard Dockerfile valid"
+          docker build ./services/admin-dashboard -t admin-build && \
+            echo "✅ Admin Dashboard Dockerfile valid"
 
       - name: Validate Deployment Blueprint
         run: |
           # The blueprint API must match our remediated expectation
-          grep -q "pnpm start -- -p \$PORT --hostname 0.0.0.0" services/admin-dashboard/src/app/api/deployment/blueprint/route.ts
+          grep -q "pnpm start -- -p \\\$PORT --hostname 0.0.0.0" services/admin-dashboard/src/app/api/deployment/blueprint/route.ts
           echo "✅ Blueprint remediations verified"
 
   # ============================================================================
@@ -127,7 +128,7 @@ jobs:
   # ============================================================================
   test-summary:
     name: Test Summary
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     if: always()
     needs: [ test-server, test-cloud ]
 

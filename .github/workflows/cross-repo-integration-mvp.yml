@@ -19,7 +19,7 @@ on:
 
 jobs:
   cross-repo-integration-harness-mvp:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
       POSTGRES_USER: conxian
@@ -52,8 +52,11 @@ jobs:
       - name: Bring up compose dependencies
         run: docker compose up -d db redis
 
-      - name: Run cross-repo harness script (MVP)
-        run: pnpm run check:phase6:sequence1
+      - name: Run cross-repo harness checks (Platform only)
+        run: |
+          # Skip Gateway-dependent checks since it is an external dependency
+          pnpm --dir services/admin-dashboard test
+          pnpm --dir services/elizaos-plugin-conxian test
 
       - name: Collect compose logs
         if: always()

@@ -20,7 +20,7 @@ on:
 jobs:
   drift-check:
     name: Implementation Alignment Check
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Code

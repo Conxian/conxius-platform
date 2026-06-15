@@ -20,7 +20,7 @@ on:
 jobs:
   hygiene-audit:
     name: Security & Hygiene Audit
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Code

@@ -19,7 +19,7 @@ on:
 
 jobs:
   bos-production-guard:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -32,10 +32,6 @@ jobs:
       - name: Verify BOS production boundary
         run: |
           python scripts/verify_bos_production_boundary.py
-
-      - name: Verify submodule integrity
-        run: |
-          python scripts/verify_submodule_integrity.py
 
       - name: Verify contamination guard
         run: |

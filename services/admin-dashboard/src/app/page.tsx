@@ -1,13 +1,33 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import { normalizeNexusState, type NexusState } from "@/lib/nexusContract";
-import { type ErpDashboardData } from "@/lib/sidl/types";
+
+import React, { useState, useEffect } from 'react';
 
 type GatewayStats = {
-  status: "Healthy" | "Degraded" | "Unknown";
-  version: string | null;
-  processedHeight: number | null;
-  uptimeSeconds: number | null;
+  status: string;
+  version: string;
+  processedHeight: number;
+  uptimeSeconds: number;
+};
+
+type NexusState = {
+  merkleRoot: string;
+  syncStatus: string;
+  leafCount: number;
+};
+
+type ErpTreasuryAsset = {
+  ticker: string;
+  balance: string;
+};
+
+type ErpEmployee = {
+  name: string;
+  ubi_id: string;
+};
+
+type ErpDashboardData = {
+  treasury: ErpTreasuryAsset[];
+  employees: ErpEmployee[];
 };
 
 type TelemetryService = {
@@ -16,47 +36,41 @@ type TelemetryService = {
   health: string;
 };
 
-async function fetchJsonWithFallback(baseUrl: string, paths: string[]): Promise<unknown | null> {
-  for (const path of paths) {
+async function fetchJsonWithFallback(baseUrl: string, paths: string[]): Promise<any> {
+  for (const p of paths) {
     try {
-      const res = await fetch(`${baseUrl}${path}`, { cache: "no-store" });
-      if (!res.ok) continue;
-
-      const json = await res.json().catch(() => undefined);
-      if (json === undefined) continue;
-      return json as unknown;
-    } catch {
-      continue;
+      const r = await fetch(\`\${baseUrl}\${p}\`, { cache: 'no-store' });
+      if (r.ok) return await r.json();
+    } catch (e) {
+      // continue
     }
   }
-
   return null;
 }
 
-function getNumber(obj: unknown, key: string): number | null {
-  if (typeof obj !== "object" || obj === null) return null;
-  if (!(key in (obj as Record<string, unknown>))) return null;
-  const v = (obj as Record<string, unknown>)[key];
-  return typeof v === "number" && Number.isFinite(v) ? v : null;
+function getString(obj: any, key: string): string {
+  return typeof obj?.[key] === 'string' ? obj[key] : "";
 }
 
-function getString(obj: unknown, key: string): string | null {
-  if (typeof obj !== "object" || obj === null) return null;
-  if (!(key in (obj as Record<string, unknown>))) return null;
-  const v = (obj as Record<string, unknown>)[key];
-  return typeof v === "string" ? v : null;
+function getNumber(obj: any, key: string): number {
+  return typeof obj?.[key] === 'number' ? obj[key] : 0;
 }
 
-function getBoolean(obj: unknown, key: string): boolean | null {
-  if (typeof obj !== "object" || obj === null) return null;
-  if (!(key in (obj as Record<string, unknown>))) return null;
-  const v = (obj as Record<string, unknown>)[key];
-  return typeof v === "boolean" ? v : null;
+function getBoolean(obj: any, key: string): boolean | null {
+  return typeof obj?.[key] === 'boolean' ? obj[key] : null;
+}
+
+function normalizeNexusState(nexus: any, status: any): NexusState {
+  return {
+    merkleRoot: getString(nexus, "merkle_root") || getString(status, "state_root") || getString(status, "mmr_root") || "N/A",
+    syncStatus: getString(nexus, "sync_status") || (getNumber(status, "drift") === 0 ? "synced" : "syncing"),
+    leafCount: getNumber(nexus, "leaf_count") || getNumber(status, "processed_height"),
+  };
 }
 
 function BlueprintCard() {
-  const [blueprint, setBlueprint] = useState<any>(null);
   const [show, setShow] = useState(false);
+  const [blueprint, setBlueprint] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,7 +79,7 @@ function BlueprintCard() {
     setError(null);
     try {
       const res = await fetch("/api/deployment/blueprint");
-      if (!res.ok) throw new Error(`Failed to export blueprint: ${res.status}`);
+      if (!res.ok) throw new Error(\`HTTP \${res.status}\`);
       const data = await res.json();
       setBlueprint(data);
       setShow(true);
@@ -77,19 +91,18 @@ function BlueprintCard() {
   };
 
   return (
-    <section style={{ marginTop: '2rem' }}>
-      <h3 style={{ borderBottom: '2px solid #D4A017', paddingBottom: '0.5rem', color: '#2E403B' }}>Agentic Audit (Blueprint)</h3>
-      <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', marginTop: '1rem' }}>
-        <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
-          Deterministic deployment export for autonomous auditors and AI orchestrators.
-        </p>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+    <section style={{ marginTop: '3rem', borderTop: '1px solid #eee', paddingTop: '2rem' }}>
+      <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h3 style={{ margin: 0, color: '#2E403B' }}>Deployment Blueprint</h3>
+            <p style={{ margin: '0.25rem 0 0 0', color: '#666', fontSize: '0.8rem' }}>Deterministic infrastructure metadata for AI agents.</p>
+          </div>
           <button
-            onClick={fetchBlueprint}
-            disabled={loading}
-            style={{ padding: '0.5rem 1rem', backgroundColor: '#D4A017', color: 'white', border: 'none', borderRadius: '4px', cursor: loading ? 'default' : 'pointer', fontWeight: 'bold' }}
+            onClick={() => show ? setShow(false) : fetchBlueprint()}
+            style={{ padding: '0.5rem 1rem', fontSize: '0.8rem', cursor: 'pointer', border: '1px solid #ccc', borderRadius: '4px', backgroundColor: '#fcfcfc' }}
           >
-            {loading ? "Exporting..." : show ? "Refresh Blueprint" : "Export Blueprint"}
+            {loading ? "Exporting..." : show ? "Hide Blueprint" : "Export Blueprint"}
           </button>
           {error && <span style={{ color: '#b91c1c', fontSize: '0.8rem' }}>{error}</span>}
         </div>
@@ -199,18 +212,18 @@ export default function AdminPage() {
         <StatCard title="Gateway Health" value={stats?.status ?? "Unknown"} color="#2E403B" />
         <StatCard title="Engine Version" value={stats?.version ?? "N/A"} />
         <StatCard title="Requests Handled" value={stats?.processedHeight ?? 0} />
-        <StatCard title="Uptime" value={stats?.uptimeSeconds ? `${Math.floor(stats.uptimeSeconds / 60)}m ${stats.uptimeSeconds % 60}s` : "0s"} />
+        <StatCard title="Uptime" value={stats?.uptimeSeconds ? \`\${Math.floor(stats.uptimeSeconds / 60)}m \${stats.uptimeSeconds % 60}s\` : "0s"} />
       </div>
 
       <div style={{ marginTop: '3rem', display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '2rem' }}>
         <section>
-          <h3 style={{ borderBottom: '2px solid #D4A017', paddingBottom: '0.5rem', color: '#2E403B' }}>Nexus "Glass Node" State</h3>
+          <h3 style={{ borderBottom: '2px solid #D4A017', paddingBottom: '0.5rem', color: '#2E403B' }}>Nexus Node Indexing State</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem', marginTop: '1rem' }}>
             <div style={{ gridColumn: 'span 2' }}>
-              <DataRow label="Merkle Root" value={nexus?.merkleRoot ?? "Initializing..."} mono />
+              <DataRow label="State Root (Merkle)" value={nexus?.merkleRoot ?? "Initializing..."} mono />
             </div>
             <DataRow label="Sync Status" value={nexus?.syncStatus ?? "Pending"} highlight={nexus?.syncStatus === 'synced'} />
-            <DataRow label="Leaf Count" value={nexus?.leafCount ?? 0} />
+            <DataRow label="Indexed Blocks" value={nexus?.leafCount ?? 0} />
           </div>
         </section>
 
@@ -238,7 +251,7 @@ export default function AdminPage() {
         <h3 style={{ borderBottom: "2px solid #D4A017", paddingBottom: "0.5rem", color: "#2E403B" }}>Sovereign ERP Operations</h3>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "2rem", marginTop: "1rem" }}>
           <div style={{ backgroundColor: "white", padding: "1.5rem", borderRadius: "8px", boxShadow: "0 4px 6px rgba(0,0,0,0.05)" }}>
-            <h4 style={{ color: "#666", fontSize: "0.8rem", textTransform: "uppercase", marginBottom: "1rem" }}>Treasury (L2 Settlement)</h4>
+            <h4 style={{ color: "#666", fontSize: "0.8rem", textTransform: "uppercase", marginBottom: "1rem" }}>Treasury (Asset Reserves)</h4>
             {erpData?.treasury.map(t => (
               <div key={t.ticker} style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
                 <span>{t.ticker}</span>
@@ -269,7 +282,7 @@ function StatCard({ title, value, color }: { title: string, value: string | numb
       backgroundColor: 'white',
       borderRadius: '8px',
       boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
-      borderLeft: color ? `4px solid ${color}` : 'none'
+      borderLeft: color ? \`4px solid \${color}\` : 'none'
     }}>
       <h4 style={{ margin: '0 0 0.5rem 0', color: '#666', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{title}</h4>
       <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: color || '#333' }}>{value}</div>

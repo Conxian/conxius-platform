@@ -19,6 +19,31 @@ on:
 
 jobs:
   hygiene-audit:
-    uses: ./.github/workflows/reusable-hygiene.yml
-    permissions:
-      contents: read
+    name: Security & Hygiene Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Run Hygiene Audit
+        run: |
+          # We only run the security part of the audit for this general hygiene check
+          # to avoid failing on implementation drift which is handled by hygiene-drift-guard.yml
+          python3 -c "
+          import sys
+          sys.path.append('scripts/maintenance')
+          from system_audit import audit_security
+          if not audit_security():
+              sys.exit(1)
+          "
+
+      - name: Report Failure
+        if: failure()
+        run: |
+          echo "::error::Hygiene violation detected! Tracked sensitive files or generated artifacts found in version control."

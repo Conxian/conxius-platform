@@ -18,16 +18,14 @@ jobs:
           python-version: '3.10'
       - name: Run Hygiene Audit
         run: |
-          # Download audit scripts if not present, or use local ones if called within conxius-platform
           if [ ! -f scripts/maintenance/system_audit.py ]; then
-            echo "Warning: system_audit.py not found in local path. This reusable workflow assumes script presence or needs a remote fetch strategy."
-            # In a real org scenario, we might fetch these from a central repo
+            echo "Warning: system_audit.py not found in local path."
           else
             python3 -c "
-            import sys
-            sys.path.append('scripts/maintenance')
-            from system_audit import audit_security
-            if not audit_security():
-                sys.exit(1)
+import sys
+sys.path.append('scripts/maintenance')
+from system_audit import audit_security
+if not audit_security():
+    sys.exit(1)
             "
           fi

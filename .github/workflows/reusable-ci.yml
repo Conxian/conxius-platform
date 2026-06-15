@@ -7,10 +7,6 @@ on:
         required: false
         type: string
         default: '20'
-      pnpm-version:
-        required: false
-        type: string
-        default: 'latest'
       run-tests:
         required: false
         type: boolean
@@ -37,8 +33,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: ${{ inputs.pnpm-version }}
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile

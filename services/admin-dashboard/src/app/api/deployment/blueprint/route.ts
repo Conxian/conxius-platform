@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
 
 export async function GET() {
-  // Deterministic Blueprint for AI Agents
+  // Deterministic Blueprint for AI Agents (Updated v0.2.4-remediated)
   const blueprint = {
     system: "Conxian Platform",
     version: "0.2.4",
@@ -22,8 +20,19 @@ export async function GET() {
         target: "Render (UI)",
         status: "Production",
         orchestrator: "Render Native",
-        build_command: "pnpm build",
-        repository: "https://github.com/Conxian/conxian_ui"
+        build_command: "pnpm install && pnpm build",
+        start_command: "pnpm start -- -p $PORT --hostname 0.0.0.0",
+        repository: "https://github.com/Conxian/conxian_ui",
+        remediation_ref: "CON-739"
+      },
+      {
+        target: "Render (Labs Site)",
+        status: "Production",
+        orchestrator: "Static",
+        build_command: "npm install && npm run build",
+        publish_path: "dist",
+        repository: "https://github.com/Conxian/conxian-labs-site",
+        remediation_ref: "CON-739"
       }
     ],
     governance: {

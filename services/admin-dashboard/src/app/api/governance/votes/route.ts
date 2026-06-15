@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { observeSidlException, observeSidlResponse, startSidlTimer } from "@/lib/sidl/observability";
 import type { VoteChoice } from "@/lib/sidl/types";
 import { recordVote } from "@/lib/sidl/voteStore";
+import { validateAdminAuth } from "@/lib/support/auth";
 
 export const runtime = "nodejs";
 
@@ -19,6 +20,19 @@ function isVoteChoice(value: unknown): value is VoteChoice {
 
 export async function POST(req: Request): Promise<NextResponse> {
   const startedAt = startSidlTimer();
+
+  // CON-353: Harden SIDL auth
+  const authError = validateAdminAuth(req);
+  if (authError) {
+    observeSidlResponse({
+      endpoint: ENDPOINT,
+      method: "POST",
+      startedAt,
+      status: authError.status,
+      errorCategory: "unauthorized",
+    });
+    return authError;
+  }
 
   try {
     const body = (await req.json().catch(() => null)) as VoteRequestBody | null;

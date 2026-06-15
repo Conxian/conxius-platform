@@ -1,4 +1,4 @@
-name: Implementation Alignment Guard
+name: Implementation Drift Guard
 
 on:
   push:
@@ -18,33 +18,24 @@ on:
   workflow_dispatch:
 
 jobs:
-  alignment-audit:
-    name: System Alignment Audit
+  drift-check:
+    name: Implementation Alignment Check
     runs-on: self-hosted
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
-        with:
-          submodules: recursive
 
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
           python-version: '3.10'
 
-      - name: Set up Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-
-      - name: Run System Audit
+      - name: Run Drift Check
         run: |
-          python3 scripts/maintenance/system_audit.py
+          python3 scripts/verify_multidimensional_alignment.py
 
       - name: Report Failure
         if: failure()
         run: |
-          echo "::error::Implementation drift detected! The codebase is no longer aligned with the documented Phase 6 requirements or the system audit suite."
+          echo "::error::Implementation drift detected! Service alignment verification failed."

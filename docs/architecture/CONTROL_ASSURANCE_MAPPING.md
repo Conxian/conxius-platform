@@ -1,37 +1,33 @@
 # Control & Assurance Mapping (CON-1180)
 
-This document maps the Conxian control baseline across the public repository estate and release surfaces.
+This document maps the Conxian platform controls to repositories and release paths to ensure consistent security and governance enforcement.
 
-## 1. Core Control Baseline
+## 1. Core Controls
 
-| Control Area | Enforcement Mechanism | Verification Method | Applicability |
+| Control | Mechanism | Target Repos | Status |
 | :--- | :--- | :--- | :--- |
-| **Branch Protection** | GitHub Rulesets (PR required, 1+ approval) | `system_audit.py` | All Public Repos |
-| **Secret Scanning** | GitHub Secret Scanning & Push Protection | `hardened_audit.py` | All Repos |
-| **Dependency Review** | GitHub Dependency Review Action | CI Gate | All Public Repos |
-| **Artifact Integrity** | Semantic Versioning & Tagged Releases | `CHANGELOG.md` check | Platform & Core |
-| **Deployment Gates** | Lifecycle Control Gates (`scripts/verify_*`) | `check:lifecycle-control` | Platform Repo |
+| **Branch Protection** | Required PRs & Approvals | All Public | Enforced |
+| **Secret Scanning** | Gitleaks / ZSE Audit | All | Active |
+| **Dependency Review** | GitHub Dependency Review | user-facing | Active |
+| **Lifecycle Gates** | `check:lifecycle-control` | conxius-platform | Enforced |
+| **Release Integrity** | Tagged SemVer + Changelog | All | Locked |
 
-## 2. Repository Role Mapping
+## 2. Repo-Specific Enforcement
 
-| Repo Class | Primary Controls | Deployment Posture |
-| :--- | :--- | :--- |
-| **Platform (Control Plane)** | Strict Branch Policy, ZSE Audit, Lifecycle Gates | Manual/Orchestrated (GCP/Render) |
-| **Product (UI/Wallet)** | Vibe-Check, Design Compliance, PR Approvals | Deployment-Tracked (Render/App Store) |
-| **Infrastructure (Gateway/Nexus)** | Protocol Drift Audit, Kwil/State Invariants | Containerized (K8s/GCP) |
-| **Core (Libraries/SDKs)** | Wasm Compatibility, Mathematical Certainty | Tag-Triggered (NPM/GitHub) |
+### A. Protocol / Core (`lib-conxian-core`, `Conxian`)
+- Strict mathematical verification.
+- Mandatory code coverage gates.
 
-## 3. Assurance & Trust Boundaries
+### B. Gateway / Middleware (`conxian-gateway`, `conxian-nexus`)
+- ZKC (Zero-Knowledge Compliance) audits.
+- Execution simulation validation.
 
-- **Non-Custodial**: All controls ensure that orchestration layers do not gain access to user private keys.
-- **Auditability**: All state-changing operations (governance, release) are recorded in `CHANGELOG.md` and pinned via Git tags.
-- **Transparency**: READMEs must explicitly state maturity and non-custodial positioning (CON-808).
+### C. UI / Client (`conxian_ui`, `conxius-wallet`)
+- "Vibe-verified" branding alignment.
+- Local-first cryptographic validation checks.
 
-## 4. Current Enforcement Status (June 2026)
-
-- **Platform**: 100% Audit Aligned.
-- **UI/Wallet**: Standardized Governance Files (CON-1186).
-- **Gateway/Nexus**: Phase 6 Core Alignment Complete.
+## 3. Assurance Evidence
+Verification evidence is persisted in `test-results/lifecycle-control-gates/` and linked in release pull requests.
 
 ---
 *Maintained by Jules (Sovereign Engineering Agent)*

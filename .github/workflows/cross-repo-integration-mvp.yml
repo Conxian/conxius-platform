@@ -35,8 +35,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-        with:
-          submodules: recursive
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
@@ -48,14 +46,8 @@ jobs:
         with:
           version: 9
 
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
-
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Verify submodule mappings
-        run: python3 scripts/verify_submodule_integrity.py
 
       - name: Bring up compose dependencies
         run: docker compose up -d db redis

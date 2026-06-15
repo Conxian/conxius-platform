@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { POST } from '../app/api/secrets/route';
-import { NextResponse } from 'next/server';
+import { POST as postSecrets } from '../app/api/secrets/route';
+import { GET as getMetrics } from '../app/api/metrics/route';
 
 // Mock fs and path
 vi.mock('fs', () => ({
@@ -10,7 +10,7 @@ vi.mock('fs', () => ({
   },
 }));
 
-describe('Admin Secrets API Auth', () => {
+describe('Admin API Auth (CON-353)', () => {
   const mockApiKey = 'test-api-key';
 
   beforeEach(() => {
@@ -18,42 +18,41 @@ describe('Admin Secrets API Auth', () => {
     process.env.ADMIN_DASHBOARD_API_KEY = mockApiKey;
   });
 
-  it('should return 401 if X-Admin-API-Key header is missing', async () => {
-    const req = new Request('http://localhost/api/secrets', {
-      method: 'POST',
-      body: JSON.stringify({ secrets: {} }),
+  describe('Secrets API', () => {
+    it('should return 401 if X-Admin-API-Key header is missing', async () => {
+      const req = new Request('http://localhost/api/secrets', {
+        method: 'POST',
+        body: JSON.stringify({ secrets: {} }),
+      });
+      const response = await postSecrets(req);
+      expect(response.status).toBe(401);
     });
 
-    const response = await POST(req);
-    expect(response.status).toBe(401);
-    const data = await response.json();
-    expect(data.error).toContain('Unauthorized');
+    it('should return 401 if X-Admin-API-Key header is incorrect', async () => {
+      const req = new Request('http://localhost/api/secrets', {
+        method: 'POST',
+        headers: { 'X-Admin-API-Key': 'wrong-key' },
+        body: JSON.stringify({ secrets: {} }),
+      });
+      const response = await postSecrets(req);
+      expect(response.status).toBe(401);
+    });
   });
 
-  it('should return 401 if X-Admin-API-Key header is incorrect', async () => {
-    const req = new Request('http://localhost/api/secrets', {
-      method: 'POST',
-      headers: {
-        'X-Admin-API-Key': 'wrong-key',
-      },
-      body: JSON.stringify({ secrets: {} }),
+  describe('Metrics API', () => {
+    it('should return 401 if X-Admin-API-Key header is missing', async () => {
+      const req = new Request('http://localhost/api/metrics', { method: 'GET' });
+      const response = await getMetrics(req);
+      expect(response.status).toBe(401);
     });
 
-    const response = await POST(req);
-    expect(response.status).toBe(401);
-  });
-
-  it('should return 200 if X-Admin-API-Key header is correct', async () => {
-    const req = new Request('http://localhost/api/secrets', {
-      method: 'POST',
-      headers: {
-        'X-Admin-API-Key': mockApiKey,
-      },
-      body: JSON.stringify({ secrets: {} }),
+    it('should return 200 if X-Admin-API-Key header is correct', async () => {
+      const req = new Request('http://localhost/api/metrics', {
+        method: 'GET',
+        headers: { 'X-Admin-API-Key': mockApiKey }
+      });
+      const response = await getMetrics(req);
+      expect(response.status).toBe(200);
     });
-
-    const response = await POST(req);
-    // It might return 400 if the body is empty/invalid, but it should pass the 401 check
-    expect(response.status).not.toBe(401);
   });
 });

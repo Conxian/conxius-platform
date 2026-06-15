@@ -1,0 +1,31 @@
+name: Reusable Hygiene Audit
+
+on:
+  workflow_call:
+
+jobs:
+  hygiene:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Run Hygiene Audit
+        run: |
+          if [ ! -f scripts/maintenance/system_audit.py ]; then
+            echo "Warning: system_audit.py not found in local path."
+          else
+            python3 -c "
+import sys
+sys.path.append('scripts/maintenance')
+from system_audit import audit_security
+if not audit_security():
+    sys.exit(1)
+"
+          fi

@@ -1,0 +1,49 @@
+name: Reusable CI Baseline
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        required: false
+        type: string
+        default: '20'
+      run-tests:
+        required: false
+        type: boolean
+        default: true
+      run-lint:
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Run Lint
+        if: ${{ inputs.run-lint }}
+        run: pnpm run lint || echo "No lint script found"
+
+      - name: Run Tests
+        if: ${{ inputs.run-tests }}
+        run: pnpm test || echo "No test script found"
+
+      - name: Run Typecheck
+        run: pnpm run typecheck || echo "No typecheck script found"

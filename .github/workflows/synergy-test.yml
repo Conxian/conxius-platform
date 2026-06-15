@@ -2,64 +2,47 @@ name: End-to-End Synergy Testing
 
 on:
   push:
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - 'CODEOWNERS'
-      - 'LICENSE'
+    paths-ignore: ['**.md', 'docs/**', 'CODEOWNERS', 'LICENSE']
     branches: [ main ]
   pull_request:
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - 'CODEOWNERS'
-      - 'LICENSE'
+    paths-ignore: ['**.md', 'docs/**', 'CODEOWNERS', 'LICENSE']
     branches: [ main ]
   schedule:
-    - cron: '0 2 * * *' # Run nightly
+    - cron: '0 2 * * *'
 
 jobs:
   synergy-test:
     runs-on: ubuntu-latest
-
+    env:
+      GRAFANA_PASSWORD: ci-temporary-pass
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v4
-
     - name: Install pnpm
       uses: pnpm/action-setup@v4
-      with:
-        version: 9
-
     - name: Set up Environment Variables
       run: cp .env.schema .env
-
     - name: Start Platform Stack
       run: |
+        pnpm config set only-built-dependencies sharp
         docker compose up -d --build admin-dashboard db redis
         echo "Waiting for services to initialize..."
         sleep 30
-
     - name: Run Admin Dashboard Health Check
       run: |
         curl -f http://localhost:3002/api/health || curl -f http://localhost:3002/ || echo "✅ Admin Dashboard accessible"
-
     - name: Run Benchmark Script
       run: bash scripts/run-benchmarks.sh || echo "⚠️ Benchmarks skipped in synergy test"
-
     - name: Upload test artifacts
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: test-artifacts
-        path: |
-          test-results
+        path: test-results
         if-no-files-found: ignore
         retention-days: 14
-
     - name: Tear Down Stack
       if: always()
       run: docker compose down -v

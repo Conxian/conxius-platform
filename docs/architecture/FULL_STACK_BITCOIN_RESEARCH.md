@@ -84,3 +84,6 @@ This document summarizes the research into the components required to achieve a 
 ## 13. Research Papers & Peer Review
 - **[Draft] Verifiable Multi-Step Settlements via IVC**: A research paper draft exploring the use of Incrementally Verifiable Computation for complex cross-chain swaps.
 - **[Draft] Sovereign Identity in UTXO Environments**: Exploring the intersection of BIP-174 and Decentralized Identifiers (DIDs).
+
+## 14. Expansion: Operational Resilience
+- **Containerization Hardening**: Resolved issues with `pnpm` built dependencies in Docker environments by explicitly allowlisting `sharp`. This ensures consistent builds across CI, local development, and production targets.

@@ -7,7 +7,7 @@ FROM base AS deps
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 # Use root-provided onlyBuiltDependencies via package.json
-RUN pnpm install --no-frozen-lockfile
+RUN pnpm config set only-built-dependencies sharp && pnpm install --no-frozen-lockfile
 
 FROM base AS builder
 WORKDIR /app

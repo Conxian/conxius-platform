@@ -46,6 +46,7 @@ jobs:
           CORE_DB_URI: postgresql://conxian:test-server-secure@db:5432/conxian_db
           NEXT_PUBLIC_CORE_API_URL: http://localhost:8080
         run: |
+          pnpm config set only-built-dependencies sharp
           docker compose up -d --build admin-dashboard db redis prometheus grafana
       - name: Wait for services
         run: sleep 30
@@ -54,7 +55,9 @@ jobs:
           curl -f http://localhost:3002/api/health || curl -f http://localhost:3002/ || echo "✅ Admin Dashboard accessible"
       - name: Cleanup
         if: always()
-        run: docker compose down -v
+        run: |
+          export GRAFANA_PASSWORD=temp
+          docker compose down -v
 
   test-cloud:
     name: Cloud (Blueprint validation)

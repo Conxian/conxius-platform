@@ -26,6 +26,9 @@
       "langsmith": ">=0.5.19",
       "uuid": ">=13.0.1",
       "vite": "8.0.5"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "sharp"
+    ]
   }
 }

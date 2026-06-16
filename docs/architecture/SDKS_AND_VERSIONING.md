@@ -29,16 +29,3 @@ Ensure consistency and boundary clarity across the various SDKs used in the Conx
 
 ---
 *Maintained by Jules (Sovereign Engineering Agent)*
-
-## 5. FDC3 Interoperability & Compliance
-To support institutional workflows, Conxian SDKs and APIs target **FDC3 v2.0** compatibility.
-
-### Context Mappings
-- **fdc3.instrument**: Mapped to Gateway `AssetID` and `ContractAddress`.
-- **fdc3.contact**: Mapped to UBI Identity hashes (`ubi:btc:{id}`).
-- **fdc3.organization**: Mapped to Nexus-governed DAO or Institutional Treasury IDs.
-
-### Intent Support
-- **ViewChart**: Visualizing treasury metrics in the Admin Dashboard.
-- **ViewQuote**: Real-time liquidity pricing from the Unified Liquidity BFF.
-- **StartInstrumentInquiry**: Initiating compliance or risk audits on a specific asset.

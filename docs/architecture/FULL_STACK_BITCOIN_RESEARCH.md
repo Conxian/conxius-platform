@@ -3,20 +3,12 @@
 This document summarizes the research into the components required to achieve a "Full Bitcoin Stack" within the Conxian ecosystem.
 
 ## 1. RGB over Lightning
-- **Technical Specifics**:
-  - **Channel State Management**: Peer-to-peer exchange of consignment data during HTLC commitment flows.
-  - **Verification**: Client-side validation of asset history before state transitions are committed to the channel.
-  - **Rollback Protection**: Leveraging LN penalty mechanisms to enforce RGB state integrity.
 - **Concept**: Utilizing the Lightning Network as a transport and state-transition layer for RGB assets.
 - **Benefits**: Enables private, high-throughput smart contracts on Bitcoin without bloating the L1.
 - **Reference**: Iris Wallet patterns, RGB Daemon (Broker/Dispatcher model).
 - **Status**: Research lane (Partner integration).
 
 ## 2. BitVM Bridge (BBN)
-- **Technical Specifics**:
-  - **Verification Logic**: BitVM2 style SNARK verification via Bitcoin Script. Provers commit to execution traces; Verifiers challenge via pre-signed taproot trees.
-  - **Peg-in/Peg-out**: 1-of-N trust assumption for withdrawal safety.
-  - **Fault Proofs**: Off-chain fraud-proof generation with on-chain arbitration.
 - **Concept**: Optimistic verification for trustless Bitcoin bridges.
 - **Components**:
   - **Bridge App**: Peg-in/Peg-out interactions.

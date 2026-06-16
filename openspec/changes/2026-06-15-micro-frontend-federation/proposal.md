@@ -1,45 +1,32 @@
 # OpenSpec Proposal: Micro-Frontend Federation for Admin Dashboard
 
-## 1. Abstract and Problem Statement
-The Admin Dashboard is currently a monolithic Next.js application. As Phase 7 expands domain scope (BitVM monitoring, RGB asset management, settlement orchestration, AI allocation, governance, and institutional integrations), the monolith increases deployment bottlenecks, regression blast radius, and coordination friction.
-
-This proposal defines a transition to a federated Micro-Frontend (MFE) architecture to improve scalability, local-first resilience, and independent delivery.
+## 1. Abstract
+This proposal defines the transition of the Conxian Admin Dashboard from a monolithic Next.js application to a federated Micro-Frontend (MFE) architecture. This shift enables independent development, local-first execution, and improved scalability for the Phase 7 Sovereign Redesign.
 
 ## 2. Motivation
-A federated architecture enables:
-- **Independent Release Cycles**: Ship updates to one domain (e.g., Liquidity Pulse or Settlement Engine) without full-dashboard revalidation.
-- **Resilience**: Localized failures in one module do not crash the entire admin experience.
-- **Local-First Development/Execution**: Teams can run and evolve individual MFEs in isolation.
-- **Technology Agnosticism**: Select modules can evolve toward Rust/Wasm where heavy verification is required.
+The current Admin Dashboard is growing in complexity, integrating liquidity monitoring, settlement orchestration, AI allocation, and governance. Decomposing these into MFEs allows:
+- **Independent Release Cycles**: Deploys for the Liquidity Pulse don't require re-validating the Settlement Engine.
+- **Local-First Resilience**: Critical components can run locally even if the central shell is unreachable.
+- **Technology Agnosticism**: Specific modules can eventually be implemented in different frameworks (e.g., Rust/Wasm for heavy verification).
 
-## 3. Proposed Architecture
-### Key MFEs
-- **Core-Shell**: Shared layout, navigation, authentication, and global orchestration.
-- **Liquidity-Pulse**: Unified telemetry for BTC, sBTC, and L2 liquidity/yield.
-- **Settlement-Engine**: USI intent drafting, cross-chain swap orchestration, and PSBT coordination.
-- **Governance-Console**: DAO governance, treasury controls, and policy management.
+## 3. Architecture
+- **Core-Shell**: The primary orchestrator handling authentication, navigation, and global state.
+- **Liquidity-Pulse**: Real-time monitoring of BTC, sBTC, and L2 pools.
+- **Settlement-Engine**: Orchestration of cross-chain swaps and attestations.
+- **Governance-Console**: Protocol governance and treasury control.
 
-### Technical Requirements
-- **Framework**: Next.js with Webpack 5 Module Federation (or `@module-federation/nextjs-mf`) and/or Next.js Multi-Zones where route isolation is preferable.
-- **Shared Library**: Common primitives and types from `@conxian/core-sdk`.
-- **Cross-MFE Communication**: Custom Events or shared Redux/Zustand slices for global context (e.g., auth, active asset).
+### Implementation Path
+1. **Next.js Multi-Zones**: Initial decomposition using Next.js Multi-Zones for route-based isolation.
+2. **Module Federation**: Transition to Webpack/Rspack Module Federation for runtime component sharing.
+3. **Wasm Integration**: Embedding Wasm-based verification logic directly into the MFE modules.
 
-## 4. Implementation Path
-1. Build an initial federation POC between Core-Shell and Liquidity-Pulse.
-2. Use Next.js Multi-Zones for early route-level decomposition.
-3. Introduce Module Federation for runtime component sharing across MFEs.
-4. Establish shared CI gates for cross-MFE integration and regression control.
-5. Migrate existing monolithic pages incrementally into federated zones.
-6. Integrate Wasm-based verification modules where protocol-heavy logic benefits.
+## 4. Verification & Testing
+- Each MFE must maintain its own test suite and play-only mode.
+- Shell-level integration tests will verify the orchestration layer.
 
-## 5. Verification and Testing
-- Each MFE must maintain isolated unit/integration test coverage and a play-only/local mode.
-- Shell-level integration tests validate orchestration across federated boundaries.
-- Shared CI should enforce compatibility contracts between Core-Shell and domain MFEs.
-
-## 6. Timeline
-- **Q3 2026**: Core-Shell + Liquidity-Pulse federation prototype.
-- **Q4 2026**: Full federation across the four primary modules.
+## 5. Timeline
+- **Q3 2026**: Core-Shell and Liquidity-Pulse prototype.
+- **Q4 2026**: Full federation across all four primary modules.
 
 ---
 *Proposed by Jules (Sovereign Engineering Agent)*

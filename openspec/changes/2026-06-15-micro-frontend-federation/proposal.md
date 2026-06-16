@@ -1,28 +1,32 @@
-# Proposal: Micro-Frontend Federation for Admin Dashboard
+# OpenSpec Proposal: Micro-Frontend Federation for Admin Dashboard
 
-## 1. Problem Statement
-The Admin Dashboard is currently a monolithic Next.js application. As Phase 7 introduces complex domains like BitVM monitoring, RGB asset management, and Institutional ERP integration, the monolith creates organizational friction, deployment bottlenecks, and increased blast radii for regressions.
+## 1. Abstract
+This proposal defines the transition of the Conxian Admin Dashboard from a monolithic Next.js application to a federated Micro-Frontend (MFE) architecture. This shift enables independent development, local-first execution, and improved scalability for the Phase 7 Sovereign Redesign.
 
-## 2. Proposed Solution
-Implement Module Federation (or Next.js Multi-Zones) to decompose the dashboard into independent, local-first micro-frontends.
+## 2. Motivation
+The current Admin Dashboard is growing in complexity, integrating liquidity monitoring, settlement orchestration, AI allocation, and governance. Decomposing these into MFEs allows:
+- **Independent Release Cycles**: Deploys for the Liquidity Pulse don't require re-validating the Settlement Engine.
+- **Local-First Resilience**: Critical components can run locally even if the central shell is unreachable.
+- **Technology Agnosticism**: Specific modules can eventually be implemented in different frameworks (e.g., Rust/Wasm for heavy verification).
 
-### Key MFEs:
-- **Core-Shell**: Shared layout, navigation, and authentication.
-- **Liquidity-Pulse**: Unified balance and yield telemetry.
-- **Settlement-Engine**: USI intent drafting and PSBT coordination.
-- **Governance-Console**: DAO voting and policy management.
+## 3. Architecture
+- **Core-Shell**: The primary orchestrator handling authentication, navigation, and global state.
+- **Liquidity-Pulse**: Real-time monitoring of BTC, sBTC, and L2 pools.
+- **Settlement-Engine**: Orchestration of cross-chain swaps and attestations.
+- **Governance-Console**: Protocol governance and treasury control.
 
-## 3. Technical Requirements
-- **Framework**: Next.js with Webpack 5 Module Federation or `@module-federation/nextjs-mf`.
-- **Shared Library**: Core primitives and types from `@conxian/core-sdk`.
-- **Communication**: Custom Events or a shared Redux/Zustand store slice for global context (Auth, Active Asset).
+### Implementation Path
+1. **Next.js Multi-Zones**: Initial decomposition using Next.js Multi-Zones for route-based isolation.
+2. **Module Federation**: Transition to Webpack/Rspack Module Federation for runtime component sharing.
+3. **Wasm Integration**: Embedding Wasm-based verification logic directly into the MFE modules.
 
-## 4. Expected Benefits
-- **Independent Scalability**: Teams can deploy updates to the Settlement Engine without affecting the Governance Console.
-- **Resilience**: A failure in the BitVM explorer doesn't crash the core treasury dashboard.
-- **Local-First Development**: Developers can run only the specific MFE they are working on.
+## 4. Verification & Testing
+- Each MFE must maintain its own test suite and play-only mode.
+- Shell-level integration tests will verify the orchestration layer.
 
-## 5. Implementation Path
-1. Proof-of-Concept federation between Shell and Liquidity-Pulse.
-2. Establish shared CI gates for cross-MFE integration testing.
-3. Migrate existing pages to federated zones.
+## 5. Timeline
+- **Q3 2026**: Core-Shell and Liquidity-Pulse prototype.
+- **Q4 2026**: Full federation across all four primary modules.
+
+---
+*Proposed by Jules (Sovereign Engineering Agent)*

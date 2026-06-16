@@ -3,20 +3,12 @@
 This document summarizes the research into the components required to achieve a "Full Bitcoin Stack" within the Conxian ecosystem.
 
 ## 1. RGB over Lightning
-- **Technical Specifics**:
-  - **Channel State Management**: Peer-to-peer exchange of consignment data during HTLC commitment flows.
-  - **Verification**: Client-side validation of asset history before state transitions are committed to the channel.
-  - **Rollback Protection**: Leveraging LN penalty mechanisms to enforce RGB state integrity.
 - **Concept**: Utilizing the Lightning Network as a transport and state-transition layer for RGB assets.
 - **Benefits**: Enables private, high-throughput smart contracts on Bitcoin without bloating the L1.
 - **Reference**: Iris Wallet patterns, RGB Daemon (Broker/Dispatcher model).
 - **Status**: Research lane (Partner integration).
 
 ## 2. BitVM Bridge (BBN)
-- **Technical Specifics**:
-  - **Verification Logic**: BitVM2 style SNARK verification via Bitcoin Script. Provers commit to execution traces; Verifiers challenge via pre-signed taproot trees.
-  - **Peg-in/Peg-out**: 1-of-N trust assumption for withdrawal safety.
-  - **Fault Proofs**: Off-chain fraud-proof generation with on-chain arbitration.
 - **Concept**: Optimistic verification for trustless Bitcoin bridges.
 - **Components**:
   - **Bridge App**: Peg-in/Peg-out interactions.
@@ -80,3 +72,18 @@ This document summarizes the research into the components required to achieve a 
 
 ---
 *Last Verified by Jules (Sovereign Engineering Agent) - 2026-06-15*
+
+## 11. Expansion: Micro-Frontend Federation
+- **Local-First Execution**: MFEs enable users to run specific business logic modules (e.g., Settlement Engine) in a local-only mode, reducing reliance on centralized cloud providers.
+- **Resource Isolation**: Prevents "vibe-drift" by ensuring each module adheres to its own strict design and logic boundaries while sharing the 'Sovereign Earthy' design tokens.
+
+## 12. Expansion: Wasm-First Architecture
+- **Portability**: Transitioning logic to Wasm targets allows the same codebase to power the Gateway, the CLI (Orbit), and the Browser-based Wallet.
+- **Security**: Wasm provides a sandboxed execution environment, enhancing the "Sentinel Security" model across the Conxian ecosystem.
+
+## 13. Research Papers & Peer Review
+- **[Draft] Verifiable Multi-Step Settlements via IVC**: A research paper draft exploring the use of Incrementally Verifiable Computation for complex cross-chain swaps.
+- **[Draft] Sovereign Identity in UTXO Environments**: Exploring the intersection of BIP-174 and Decentralized Identifiers (DIDs).
+
+## 14. Expansion: Operational Resilience
+- **Containerization Hardening**: Resolved issues with `pnpm` built dependencies in Docker environments by explicitly allowlisting `sharp`. This ensures consistent builds across CI, local development, and production targets.

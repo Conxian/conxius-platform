@@ -1,22 +1,22 @@
-# Strategic Proposal: Wasm-First Gateway Execution
+# Strategy: Wasm-First Gateway Execution (Phase 7)
 
-## 1. Context
-The Conxian Gateway currently implements critical protocol logic in Rust. While highly performant, this creates a dependency on a server-side runtime for verification, conflicting with the "Local-First" Sovereign Computing goal.
+## 1. Vision
+To enable "Local-First" sovereign verification, the Conxian Gateway must be capable of running anywhere: Server (native Rust), Browser (Wasm), and Mobile (Wasm/Native).
 
-## 2. Objective
-Transition performance-critical and verification-heavy logic from native Rust to WebAssembly (Wasm) targets.
+## 2. Strategic Objectives
+- **Bit-for-Bit Parity**: Ensure identical execution results across all platforms.
+- **Reduced Latency**: Eliminate round-trips to central servers for verification-heavy tasks.
+- **Sovereign Verification**: Allow users to verify protocol state on their own hardware using the same logic as the primary Gateway.
 
-## 3. Scope
-- **Protocol Parsers**: RGB, sBTC, and PSBT decoding logic.
-- **Verification Engine**: State transition validation and proof verification.
-- **Client SDKs**: Distributing the same Wasm binary to the Gateway (Server), Admin Dashboard (Browser), and Conxius Wallet (Mobile).
+## 3. Implementation Plan
+- **Module Decomposition**: Refactor native Rust crates into target-agnostic libraries.
+- **Wasm-Bindgen**: Utilize `wasm-bindgen` and `tsify` for high-fidelity TypeScript bindings.
+- **Performance Benchmarking**: Comparative analysis of Native vs. Wasm execution (targeting <1.5x overhead).
 
-## 4. Technical Strategy
-- **Shared Crate**: Maintain a `conxian-core-wasm` crate in `lib-conxian-core`.
-- **Target Optimization**: Use `wasm-bindgen` for JS/TS environments and `wasmer`/`wasmtime` for server-side Rust embedding.
-- **Zero-Copy Serialization**: Leveraging `rkyv` or `bincode` for high-efficiency data exchange between Wasm and the host.
+## 4. Key Modules for Transition
+- **UTXO Adapter Logic**: Transaction construction and witness verification.
+- **Proof-of-Reserves**: ZK-proof generation and validation.
+- **Identity (UBI)**: DID and attestation handling.
 
-## 5. Benefits
-- **Deterministic Parity**: Identical execution logic across all surfaces.
-- **Security**: Sandboxed execution of protocol logic.
-- **Sovereign Verification**: Users can run the *exact same* verification logic locally in their browser/wallet as the Gateway runs on the server.
+---
+*Drafted by Jules (Sovereign Engineering Agent)*

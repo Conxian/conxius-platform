@@ -26,7 +26,6 @@ jobs:
       run: cp .env.schema .env
     - name: Start Platform Stack
       run: |
-        pnpm config set only-built-dependencies sharp
         docker compose up -d --build admin-dashboard db redis
         echo "Waiting for services to initialize..."
         sleep 30

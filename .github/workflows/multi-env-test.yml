@@ -46,7 +46,6 @@ jobs:
           CORE_DB_URI: postgresql://conxian:test-server-secure@db:5432/conxian_db
           NEXT_PUBLIC_CORE_API_URL: http://localhost:8080
         run: |
-          pnpm config set only-built-dependencies sharp
           docker compose up -d --build admin-dashboard db redis prometheus grafana
       - name: Wait for services
         run: sleep 30

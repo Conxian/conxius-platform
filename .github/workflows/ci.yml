@@ -1,0 +1,26 @@
+name: CI Baseline
+
+on:
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'CODEOWNERS'
+      - 'LICENSE'
+    branches: [ main, develop ]
+  push:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'CODEOWNERS'
+      - 'LICENSE'
+    branches: [ main, develop ]
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: ./.github/workflows/reusable-ci.yml
+    permissions:
+      contents: read

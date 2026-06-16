@@ -1,16 +1,16 @@
 # Conxius Platform
 
-The `conxius-platform` repository contains platform, orchestration, and environment scaffolding for composing parts of the broader Conxian ecosystem locally and in managed environments.
+The `conxius-platform` repository contains development and control-plane scaffolding for composing parts of the Conxian stack locally and in managed environments.
 
 ## Status
 
-**Active development.** This is a platform and orchestration repository and should be read primarily as contributor and operator infrastructure rather than as a protocol source of truth or end-user product surface.
+**Active development.** This is a platform control-plane repository and should be read primarily as contributor and operator infrastructure rather than as an end-user product surface.
 
 This repository uses formal versioned releases tracked in `CHANGELOG.md` and published via GitHub Releases.
 
 ## Positioning
 
-Conxian provides zero-custody, zero-raw-data infrastructure. This repository supports deployment, composition, and operational scaffolding around that model rather than owning protocol economics or governance.
+Conxian provides non-custodial control and orchestration surfaces; it does not take possession of customer funds or operate as a raw customer-data system of record.
 
 ## Purpose
 
@@ -35,25 +35,39 @@ GitHub Actions workflows in [`.github/workflows`](./.github/workflows) are the s
 
 ## Scope
 
-`conxius-platform` is a platform and orchestration repository. Keep root-level content focused on:
+`conxius-platform` is a platform control-plane repository. Keep root-level content focused on:
 
 - environment and runtime orchestration
 - CI and release automation
 - integration harnesses and developer tooling
 - platform architecture and repository-boundary guidance
 
-Out of scope here: protocol governance authority, community treasury logic, portfolio strategy narratives, legal or financial operations material, and non-platform product planning.
+Out of scope here: portfolio strategy narratives, legal or financial operations material, and non-platform product planning. Route those to the owning repository in [Repository Taxonomy](./docs/REPOSITORY_TAXONOMY.md) or the Conxian Linear `CON` workspace.
 
 ## Governance relation
 
-This repository is maintained by Conxian-Labs. It supports development and operational enablement around Conxian, but it is not itself a governance authority for the protocol.
+This repository is maintained by Conxian Labs. It supports development and operational enablement around the public Conxian stack, but it is not itself a governance authority for the protocol.
 
 ## Relationship to the Conxian stack
 
-- `Conxian` is the protocol and DAO-facing layer.
+- `Conxian` is the protocol and public ecosystem layer.
 - `conxius-wallet` is the sovereign wallet and reference client.
-- `conxian-gateway` and `conxian-nexus` provide middleware and verification support.
-- `conxian-labs-site` is the Conxian-Labs portfolio and discovery surface.
+- `conxian-gateway` and `conxian-nexus` provide middleware and service-side coordination surfaces.
+- `conxian-labs-site` is the public narrative and discovery surface.
+
+## Technical documentation map
+
+- [Conxian Unified Theory v2](./docs/CONXIAN_UNIFIED_THEORY_v2.md)
+- [Sovereign Computing Redesign (2026)](./docs/architecture/SOVEREIGN_REPR_2026.md)
+- [Whitepaper](./docs/WHITEPAPER.md)
+- [System Architecture Graph](./docs/architecture/SYSTEM_GRAPH.md)
+- [Alignment Strategy](./docs/architecture/ALIGNMENT.md)
+- [Ecosystem Synergy](./docs/architecture/SYNERGY.md)
+- [Gap Analysis](./GAPS.md)
+- [Repository Taxonomy](./docs/REPOSITORY_TAXONOMY.md)
+- [ADR 001: Repo Ownership](./docs/architecture/ADR-001_REPO_OWNERSHIP_AND_BOUNDARIES.md)
+- [Repository Evolution Plan](./docs/architecture/REPO_EVOLUTION_PLAN.md)
+- [Alignment Blueprint 2026](./docs/architecture/ALIGNMENT_BLUEPRINT_2026.md)
 
 ## Quick start
 

@@ -6,8 +6,7 @@ RUN corepack enable
 FROM base AS deps
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
-# Allow sharp build during install
-RUN pnpm config set only-built-dependencies sharp &&     pnpm install --no-frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 FROM base AS builder
 WORKDIR /app

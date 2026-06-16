@@ -27,3 +27,31 @@ Moving away from imperative, bash-driven orchestration toward a declarative, her
 
 ---
 *Proposed by Jules (Sovereign Engineering Agent) - June 2026*
+
+## 6. Data Contract Examples (USI)
+
+### Settlement Intent (JSON-Schema)
+```json
+{
+  "type": "settlement_intent",
+  "version": "1.0",
+  "intent_id": "uuid-v4",
+  "source_layer": "stacks-l2",
+  "destination_layer": "bitcoin-l1",
+  "asset": { "symbol": "sBTC", "amount": "0.5" },
+  "proof_requirement": "nexus-ivc-v1",
+  "expiration_height": 845000
+}
+```
+
+### Verification Proof (Nexus OS)
+```json
+{
+  "proof_id": "uuid-v4",
+  "intent_id": "uuid-v4",
+  "status": "verified",
+  "proof_payload": "base64-zk-snark-proof",
+  "attestation_pubkey": "npub1...",
+  "verified_at": "2026-06-15T10:45:00Z"
+}
+```

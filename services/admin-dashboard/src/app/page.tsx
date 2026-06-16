@@ -39,7 +39,7 @@ type TelemetryService = {
 async function fetchJsonWithFallback(baseUrl: string, paths: string[]): Promise<any> {
   for (const p of paths) {
     try {
-      const r = await fetch(\`\${baseUrl}\${p}\`, { cache: 'no-store' });
+      const r = await fetch(`${baseUrl}${p}`, { cache: 'no-store' });
       if (r.ok) return await r.json();
     } catch (e) {
       // continue
@@ -79,7 +79,7 @@ function BlueprintCard() {
     setError(null);
     try {
       const res = await fetch("/api/deployment/blueprint");
-      if (!res.ok) throw new Error(\`HTTP \${res.status}\`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setBlueprint(data);
       setShow(true);
@@ -212,7 +212,7 @@ export default function AdminPage() {
         <StatCard title="Gateway Health" value={stats?.status ?? "Unknown"} color="#2E403B" />
         <StatCard title="Engine Version" value={stats?.version ?? "N/A"} />
         <StatCard title="Requests Handled" value={stats?.processedHeight ?? 0} />
-        <StatCard title="Uptime" value={stats?.uptimeSeconds ? \`\${Math.floor(stats.uptimeSeconds / 60)}m \${stats.uptimeSeconds % 60}s\` : "0s"} />
+        <StatCard title="Uptime" value={stats?.uptimeSeconds ? `${Math.floor(stats.uptimeSeconds / 60)}m ${stats.uptimeSeconds % 60}s` : "0s"} />
       </div>
 
       <div style={{ marginTop: '3rem', display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '2rem' }}>
@@ -282,7 +282,7 @@ function StatCard({ title, value, color }: { title: string, value: string | numb
       backgroundColor: 'white',
       borderRadius: '8px',
       boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
-      borderLeft: color ? \`4px solid \${color}\` : 'none'
+      borderLeft: color ? `4px solid ${color}` : 'none'
     }}>
       <h4 style={{ margin: '0 0 0.5rem 0', color: '#666', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{title}</h4>
       <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: color || '#333' }}>{value}</div>

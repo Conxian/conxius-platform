@@ -17,22 +17,19 @@ Moving away from imperative, bash-driven orchestration toward a declarative, her
 - **Hermetic Secret Provisioning**: Integration with sops-nix and age for secure, declarative secret management without environment drift.
 
 ## 4. Institutional Interoperability (FDC3 & ISO 20022)
-- **FDC3 Context Bridging**: Mapping Conxian's internal CJCS (Conxian Job Card Schema) to standard FDC3 contexts (Instrument, Contact) for seamless Bloomberg/Symphony integration.
-- **ISO 20022 Messaging**: Implementing pacs.008/009 adapters within the Gateway for high-fidelity tradfi settlement reporting.
+- **FDC3 Context Bridging**: Mapping Conxian's internal CJCS (Conxian Job Card Schema) to standard FDC3 contexts (Instrument, Contact). For example, a CJCS "DEX Swap" job maps to an FDC3 "Instrument" context with ISIN/Ticker and a "Trade" intent.
+- **ISO 20022 Messaging**: Implementing pacs.008 (Financial Institution Credit Transfer) and pacs.009 (Financial Institution Direct Debit) adapters within the Gateway. This allows the Conxian settlement engine to emit standard messages for legacy bank reconcilement.
 
-## 5. Success Criteria & Validation (CON-1197)
+## 5. Implementation Expansion: Peer-to-Peer Transport (Nostr)
+To eliminate reliance on centralized coordination for RGB asset transfers, the USI will utilize the Nostr protocol (Kind 20626 and custom consignment relay kinds) for the asynchronous delivery of state-transition data. This ensures that the platform remains censorship-resistant at the transport layer.
+
+## 6. High-Assurance Verification (Coq-Clarity)
+For high-value institutional settlement, the USI will integrate with formal verification toolchains. Research into Coq-Clarity bindings will allow for the mathematical proof of contract correctness before any liquidity is committed to mainnet vaults.
+
+## 7. Success Criteria & Validation (CON-1197)
 - **Zero-Trust Validation**: All release artifacts must pass ZSE (Zero Secret Egress) and Lifecycle Control Gate checks.
 - **Nakamoto-Ready**: Full compatibility with Stacks 3.1/Nakamoto finality and sBTC logic.
 - **Local-First Verification**: Every settlement must be verifiable locally by the Conxius Wallet using Wasm-compiled core logic.
 
 ---
 *Proposed by Jules (Sovereign Engineering Agent) - June 2026*
-
-## 6. Implementation Expansion: Peer-to-Peer Transport (Nostr)
-To eliminate reliance on centralized coordination for RGB asset transfers, the USI will utilize the Nostr protocol (Kind 20626 and custom consignment relay kinds) for the asynchronous delivery of state-transition data. This ensures that the platform remains censorship-resistant at the transport layer.
-
-## 7. High-Assurance Verification (Coq-Clarity)
-For high-value institutional settlement, the USI will integrate with formal verification toolchains. Research into Coq-Clarity bindings will allow for the mathematical proof of contract correctness before any liquidity is committed to mainnet vaults.
-
----
-*Updated by Jules (Sovereign Engineering Agent) - 2026-06-16*

@@ -2,14 +2,18 @@
 
 This document summarizes the research into the components required to achieve a "Full Bitcoin Stack" within the Conxian ecosystem.
 
-## 1. RGB over Lightning
+## 1. RGB over Lightning (Broker/Dispatcher Model)
 - **Concept**: Utilizing the Lightning Network as a transport and state-transition layer for RGB assets.
+- **Broker/Dispatcher model**: The RGB node is split into a "Broker" (holding state) and a "Dispatcher" (handling LN communication). This allows the Conxius Wallet to interact with assets while the node stays isolated.
 - **Benefits**: Enables private, high-throughput smart contracts on Bitcoin without bloating the L1.
-- **Reference**: Iris Wallet patterns, RGB Daemon (Broker/Dispatcher model).
+- **Reference**: Iris Wallet patterns, LNP/BP standards.
 - **Status**: Research lane (Partner integration).
 
 ## 2. BitVM Bridge (BBN)
 - **Concept**: Optimistic verification for trustless Bitcoin bridges.
+- **Peg-in/Peg-out Logic**:
+  - **Peg-in**: Users lock BTC into a Taproot-based BitVM script. The prover commits to the minting state.
+  - **Peg-out**: Users burn the L2 asset. The prover initiates a Bitcoin withdrawal. If the prover cheats, any verifier can challenge on-chain via BitVM fraud proofs.
 - **Components**:
   - **Bridge App**: Peg-in/Peg-out interactions.
   - **Bridge Explorer**: Off-chain verification visibility.
@@ -18,12 +22,13 @@ This document summarizes the research into the components required to achieve a 
 
 ## 3. IVC-based Execution Layers (Nexus OS)
 - **Concept**: Transitioning Nexus from a passive indexer to an Incrementally Verifiable Computation (IVC) machine.
+- **IVC Machine Design**: Each block processing step generates a SNARK proof that is folded into the previous proof. This allows a client to verify the entire history of the Nexus state by checking a single small proof.
 - **Goal**: ZK-verifiable off-chain orchestration with rapid settlement.
 - **Status**: Conceptual redesign (Nakamoto-Style integrity).
 
 ## 4. Decentralized Secret Management (DSM)
 - **Concept**: Commit-and-reveal schemes (F3B architecture) to neutralize MEV and front-running on Stacks DEX Factory V2.
-- **Mechanism**: Local encryption of transaction intents with committee-held decryption keys.
+- **Mechanism**: User intents are encrypted locally. The transaction is included in a block. Only after inclusion is the decryption key revealed by a decentralized committee, ensuring the miner cannot front-run the trade.
 
 ---
 *Maintained by Jules (Sovereign Engineering Agent)*
@@ -87,3 +92,30 @@ This document summarizes the research into the components required to achieve a 
 
 ## 14. Expansion: Operational Resilience
 - **Containerization Hardening**: Resolved issues with `pnpm` built dependencies in Docker environments by explicitly allowlisting `sharp`. This ensures consistent builds across CI, local development, and production targets.
+
+## 15. Universal Settlement Interface (USI) Integration (CON-1197)
+The USI establishes a protocol-agnostic layer for cross-chain settlement.
+- **Signed Intents**: Standardizing on BIP-322 for Bitcoin message signing and Clarity-native signing for Stacks.
+- **Verification Logic**: Integrating `lib-conxian-core` (Wasm) into the Wallet-BFF to perform bit-for-bit parity checks on PSBTs before broadcast.
+- **Atomic Swap Orchestration**: Leveraging BitVM for trustless, optimistic verification of cross-chain liquidity transfers.
+
+## 16. Expansion: Peer-to-Peer State Transport
+- **Nostr as a Transport Layer**: Utilizing Nostr relays for the asynchronous delivery of RGB state-transition data (consignment) between counter-parties.
+- **Benefits**: Eliminates the need for a centralized "consignment server," aligning with the sovereign computing ethos.
+
+## 17. Research: Formal Verification of Clarity Contracts
+- **Coq-Clarity**: Exploring the use of the Coq proof assistant to formally verify high-value sBTC vault contracts.
+- **Impact**: Provides mathematical certainty of contract correctness, crucial for institutional adoption.
+
+---
+*Updated by Jules (Sovereign Engineering Agent) - 2026-06-16*
+
+## 18. Tier 1 UTXO Adapter Families (CON-710 to CON-713)
+Research into secondary settlement layers to ensure multidimensional redundancy.
+- **Liquid Network (CON-710)**: Implementation of Elements-based sidechain adapters for rapid, confidential issuance.
+- **Rootstock (CON-711)**: EVM-compatible Bitcoin sidechain integration for legacy smart contract bridging.
+- **Babylon (CON-712)**: Leveraging Bitcoin timestamping for PoS chain security and remote staking.
+- **BitVM (CON-713)**: The primary optimism-based verification path for trustless bridges.
+
+---
+*Updated by Jules (Sovereign Engineering Agent) - 2026-06-16*

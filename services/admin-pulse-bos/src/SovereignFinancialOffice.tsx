@@ -46,8 +46,8 @@ export default function SovereignFinancialOffice() {
   const nakamotoGold = "#D4A017";
 
   return (
-    <div className="sfo-container" style={{ padding: '1.5rem', backgroundColor: '#1a2421', color: '#f1f5f9', borderRadius: '0.75rem', border: \`1px solid \${forestGreen}\`, boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.5)' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', borderBottom: \`1px solid \${forestGreen}\`, paddingBottom: '1rem' }}>
+    <div className="sfo-container" style={{ padding: '1.5rem', backgroundColor: '#1a2421', color: '#f1f5f9', borderRadius: '0.75rem', border: `1px solid ${forestGreen}`, boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.5)' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', borderBottom: `1px solid ${forestGreen}`, paddingBottom: '1rem' }}>
         <div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.025em', color: nakamotoGold }}>Sovereign Financial Office</h1>
           <p style={{ color: '#94a3b8', fontSize: '0.875rem' }}>Asset Orchestration & Liquidity Management</p>
@@ -70,7 +70,7 @@ export default function SovereignFinancialOffice() {
               fontWeight: 500,
               transition: 'all 0.2s',
               backgroundColor: selectedUnit === name ? 'rgba(212, 160, 23, 0.2)' : 'rgba(46, 64, 59, 0.4)',
-              border: selectedUnit === name ? \`1px solid \${nakamotoGold}\` : \`1px solid \${forestGreen}\`,
+              border: selectedUnit === name ? `1px solid ${nakamotoGold}` : `1px solid ${forestGreen}`,
               color: selectedUnit === name ? '#fff' : '#94a3b8',
               cursor: 'pointer'
             }}
@@ -83,7 +83,7 @@ export default function SovereignFinancialOffice() {
       <div style={{ backgroundColor: 'rgba(46, 64, 59, 0.2)', padding: '1.5rem', borderRadius: '0.75rem', border: '1px solid rgba(46, 64, 59, 0.5)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
           <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#e2e8f0' }}>Unit Intelligence: {selectedUnit}</h2>
-          <span style={{ padding: '0.25rem 0.5rem', backgroundColor: 'rgba(212, 160, 23, 0.1)', color: nakamotoGold, fontSize: '0.75rem', borderRadius: '0.25rem', border: \`1px solid \${nakamotoGold}\` }}>
+          <span style={{ padding: '0.25rem 0.5rem', backgroundColor: 'rgba(212, 160, 23, 0.1)', color: nakamotoGold, fontSize: '0.75rem', borderRadius: '0.25rem', border: `1px solid ${nakamotoGold}` }}>
             {fiscalData.status}
           </span>
         </div>
@@ -106,11 +106,11 @@ export default function SovereignFinancialOffice() {
         <div style={{ display: 'flex', gap: '1rem' }}>
           <button
             onClick={harvestYield}
-            style={{ flex: 1, padding: '0.75rem', backgroundColor: forestGreen, color: 'white', border: \`1px solid \${nakamotoGold}\`, borderRadius: '0.5rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}
+            style={{ flex: 1, padding: '0.75rem', backgroundColor: forestGreen, color: 'white', border: `1px solid ${nakamotoGold}`, borderRadius: '0.5rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}
           >
             Harvest Yield
           </button>
-          <button style={{ flex: 1, padding: '0.75rem', backgroundColor: 'transparent', color: 'white', border: \`1px solid \${forestGreen}\`, borderRadius: '0.5rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}>
+          <button style={{ flex: 1, padding: '0.75rem', backgroundColor: 'transparent', color: 'white', border: `1px solid ${forestGreen}`, borderRadius: '0.5rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}>
             Rebalance Assets
           </button>
         </div>

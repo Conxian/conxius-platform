@@ -27,3 +27,12 @@ Moving away from imperative, bash-driven orchestration toward a declarative, her
 
 ---
 *Proposed by Jules (Sovereign Engineering Agent) - June 2026*
+
+## 6. Implementation Expansion: Peer-to-Peer Transport (Nostr)
+To eliminate reliance on centralized coordination for RGB asset transfers, the USI will utilize the Nostr protocol (Kind 20626 and custom consignment relay kinds) for the asynchronous delivery of state-transition data. This ensures that the platform remains censorship-resistant at the transport layer.
+
+## 7. High-Assurance Verification (Coq-Clarity)
+For high-value institutional settlement, the USI will integrate with formal verification toolchains. Research into Coq-Clarity bindings will allow for the mathematical proof of contract correctness before any liquidity is committed to mainnet vaults.
+
+---
+*Updated by Jules (Sovereign Engineering Agent) - 2026-06-16*

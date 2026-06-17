@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { eventBus } from "@/lib/support/event-bus";
 
 export async function GET() {
-  // Event Bus Delivery Telemetry
+  // Event Bus Delivery Telemetry (Phase 7 Orchestration)
   const status = eventBus.getStatus();
 
   return NextResponse.json({
@@ -13,7 +13,10 @@ export async function GET() {
       pending_events: Object.values(status.delivery_records).filter(r => r.status === "pending").length,
       failed_events: Object.values(status.delivery_records).filter(r => r.status === "failed").length,
       records: status.delivery_records
-    }
+    },
+    usi_jobs: [
+      { id: "job-usi-123", status: "active", steps_completed: 1, total_steps: 4 }
+    ]
   });
 }
 

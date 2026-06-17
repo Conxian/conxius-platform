@@ -1,20 +1,16 @@
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
-  // Nostr P&L Telemetry (Phase 7 Sovereign Reporting)
-  // Provides decentralized operational reporting using Nostr Event Kind 20626.
+  // Governance-Console BFF (Phase 7 Protocol Control)
   const authHeader = req.headers.get("X-Admin-API-Key");
   if (!authHeader || authHeader !== process.env.ADMIN_DASHBOARD_API_KEY) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   return NextResponse.json({
-    kind: 20626,
-    content: "P&L Report: BTC +0.42% | STX +1.2%",
-    tags: [
-      ["p", "npub1..."],
-      ["t", "pl-report"]
+    proposals: [
+      { id: "prop-1", title: "Enable USI L2 Bridge", status: "active" }
     ],
-    sovereign_proof: "nostr:event:..."
+    treasury_governance: "multisig-required"
   });
 }

@@ -6,7 +6,7 @@
   "scripts": {
     "lint": "echo 'No linting configured for this package yet.'",
     "test": "echo 'No tests configured for this package yet.'",
-    "typecheck": "echo 'No typechecking configured for this package yet.'"
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "react": "^19.2.7",

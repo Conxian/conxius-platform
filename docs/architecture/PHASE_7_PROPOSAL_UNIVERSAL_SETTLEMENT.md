@@ -18,7 +18,7 @@ Moving away from imperative, bash-driven orchestration toward a declarative, her
 
 ## 4. Institutional Interoperability (FDC3 & ISO 20022)
 - **FDC3 Context Bridging**: Mapping Conxian's internal CJCS (Conxian Job Card Schema) to standard FDC3 contexts (Instrument, Contact). For example, a CJCS "DEX Swap" job maps to an FDC3 "Instrument" context with ISIN/Ticker and a "Trade" intent.
-- **ISO 20022 Messaging**: Implementing pacs.008 (Financial Institution Credit Transfer) and pacs.009 (Financial Institution Direct Debit) adapters within the Gateway. This allows the Conxian settlement engine to emit standard messages for legacy bank reconcilement.
+- **ISO 20022 Messaging**: Implementing pacs.008 (Financial Institution Credit Transfer) and pacs.003 (Direct Debit) adapters within the Gateway. This allows the Conxian settlement engine to emit standard messages for legacy bank reconcilement.
 
 ## 5. Implementation Expansion: Peer-to-Peer Transport (Nostr)
 To eliminate reliance on centralized coordination for RGB asset transfers, the USI will utilize the Nostr protocol (Kind 20626 and custom consignment relay kinds) for the asynchronous delivery of state-transition data. This ensures that the platform remains censorship-resistant at the transport layer.

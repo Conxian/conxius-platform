@@ -33,3 +33,18 @@ For high-value institutional settlement, the USI will integrate with formal veri
 
 ---
 *Proposed by Jules (Sovereign Engineering Agent) - June 2026*
+
+## 8. Multi-Layer Settlement Topology
+The USI will orchestrate settlements across three distinct layers:
+- **Layer 1 (Finality)**: Bitcoin L1 (via PSBT and BitVM2).
+- **Layer 2 (Throughput)**: Stacks sBTC and Lightning/RGB (via Broker/Dispatcher model).
+- **Institutional (Compatibility)**: Traditional banking rails via ISO 20022 and FDC3 context sharing.
+
+## 9. USI Registry & Capability Mapping
+To prevent "universal" claim drift, the USI will maintain a capability registry:
+- **T1 (Hardened)**: Bitcoin L1, Stacks (Mainnet), sBTC. Full bit-for-bit parity verification required.
+- **T2 (Standard)**: Liquid, Rootstock. Consensus-level verification via adapter.
+- **T3 (Experimental)**: Babylon Staking, RGB (client-side validation). Simulation-only or pilot readiness.
+
+---
+*Updated by Jules (Sovereign Engineering Agent) - June 20, 2026*

@@ -119,3 +119,35 @@ Research into secondary settlement layers to ensure multidimensional redundancy.
 
 ---
 *Updated by Jules (Sovereign Engineering Agent) - 2026-06-16*
+
+
+## 19. Expanded Tier 1 UTXO Research (CON-710 - CON-713)
+- **Liquid Network Implementation Details**:
+  - Utilizing `elements-miniscript` for policy-based confidential assets.
+  - Researching Dynamic Federations (DynaFed) for adaptive block signing.
+- **Rootstock (RSK) Bridge Patterns**:
+  - Evaluating Powpeg security models vs. BitVM-based optimism.
+  - Standardizing on RSK-native RIF (Rootstock Infrastructure Framework) for decentralized storage and naming.
+- **Babylon Bitcoin Staking**:
+  - Integration of EOTS (Extractable One-Time Signatures) for slashable security on PoS chains.
+  - Mapping the "Finality Provider" role to the Conxian Gateway operator profile.
+- **BitVM2 "Covenant-less" Verification**:
+  - Shifting from BitVM1 (single prover/verifier) to BitVM2 (multi-verifier, optimistic) for the sBTC bridge logic.
+  - Researching 'Winternitz One-Time Signatures' for efficient on-chain challenges.
+
+## 20. Research Bibliography & Academic Foundations
+- **Verifiable Computation**:
+  - *Proof-Carrying Data (PCD) via Folding Schemes* (Nova, Sangria).
+  - *Incrementally Verifiable Computation (IVC)* - P. Valiant (2008).
+- **Bitcoin Scripting & Covenants**:
+  - *BitVM: Compute Anything on Bitcoin* - Robin Linus (2023).
+  - *Simplicity: A New Language for Blockchains* - Russell O'Connor (2017).
+- **Privacy & Assets**:
+  - *RGB: Scalable & Confidential Smart Contracts on Bitcoin/Lightning* - Dr. Maxim Orlovsky.
+  - *Taproot Assets (formerly Taro)* - Roasbeef (2022).
+- **Cross-chain Interoperability**:
+  - *LayerZero: Trustless Omni-chain Interoperability Protocol* - Zarick et al. (2021).
+  - *Axelar: Cross-Chain Communication for the Multi-Chain Future* - Gorbunov et al. (2022).
+
+---
+*Updated by Jules (Sovereign Engineering Agent) - June 20, 2026*

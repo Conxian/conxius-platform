@@ -12,7 +12,7 @@ This document defines what `conxius-platform` is allowed to own for BOS-related 
 
 `conxius-platform` must not become the home for core Nexus/Gateway production logic. Those changes belong in their owning repositories.
 
-## Chain-specific operator/deployment repositories
+## Chain-specific operator/deployment repositories (ITIL V5 Alignment)
 
 Chain-specific deployment/operator repositories (including Conxius Orbit / `Conxian/conxius-orbit`) are subordinate to this parent control model:
 

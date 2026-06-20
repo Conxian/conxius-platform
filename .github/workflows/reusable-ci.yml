@@ -36,6 +36,8 @@ jobs:
 
       - name: Install Dependencies
         run: pnpm install --no-frozen-lockfile
+      - name: Verify sharp for Docker compatibility
+        run: pnpm list sharp
 
       - name: Run Lint
         if: ${{ inputs.run-lint }}

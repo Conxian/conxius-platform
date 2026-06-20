@@ -68,6 +68,9 @@ This repository is maintained by Conxian Labs. It supports development and opera
 - [ADR 001: Repo Ownership](./docs/architecture/ADR-001_REPO_OWNERSHIP_AND_BOUNDARIES.md)
 - [Repository Evolution Plan](./docs/architecture/REPO_EVOLUTION_PLAN.md)
 - [Alignment Blueprint 2026](./docs/architecture/ALIGNMENT_BLUEPRINT_2026.md)
+- [Full Stack Bitcoin Research (Phase 7)](./docs/architecture/FULL_STACK_BITCOIN_RESEARCH.md)
+- [Phase 7 BFF Topology](./docs/architecture/PHASE_7_BFF_TOPOLOGY.md)
+- [Universal Settlement Interface (USI)](./docs/architecture/PHASE_7_PROPOSAL_UNIVERSAL_SETTLEMENT.md)
 
 ## Quick start
 
@@ -101,3 +104,10 @@ Use templates and generated local secrets for development only. Do not commit re
 - Support: [SUPPORT.md](SUPPORT.md) | [support@conxian-labs.com](mailto:support@conxian-labs.com)
 - Security: [security@conxian-labs.com](mailto:security@conxian-labs.com)
 - General: [info@conxian-labs.com](mailto:info@conxian-labs.com)
+
+## CI/CD Hardening
+This repository uses a hardened CI baseline with the following gates:
+- **Secret Scan**: Gitleaks enforcement across all branches.
+- **Repository Hygiene**: Automated detection of committed artifacts and sensitive files.
+- **Lifecycle Control**: Verification of repository boundaries, submodule integrity, and contamination guards.
+- **Dependency Review**: Security scanning for all new package additions.

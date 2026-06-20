@@ -24,6 +24,9 @@ Aligned with **CON-769** and **CON-770**:
 Aligned with **CON-774**:
 
 ### Q2 2026: Foundation & Boundary Hardening
+- **Usage Validation Instrumentation**: Implement the first usage-validation layer across packages, docs, and app entry points (CON-1263).
+- **Customer Request Intake**: Stand up the routing workflow for external signals in Linear (CON-1261).
+- **Governance Lane Disambiguation**: Finalize the separation of historical context from live execution truth (CON-1258).
 - **Refactor `system_audit.py`**: Transition from local file checks to a cross-repo auditor using shallow clones or GitHub APIs to verify alignment across external repositories.
 - **Scaffold `apps/control-plane`**: Implement the Next.js scaffold for the internal BOS interface (CON-770).
 - **Admin API Skeleton**: Add `/admin/v1` handlers to Nexus for release and governance approvals (CON-775).
@@ -45,4 +48,4 @@ All future enhancements must adhere to:
 - **Trust**: Local-first, client-side validation, and PSBT hand-offs.
 
 ---
-*Prepared by Jules (Sovereign Computing Agent) - June 3, 2026*
+*Prepared by Jules (Sovereign Computing Agent) - June 20, 2026*

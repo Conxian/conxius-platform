@@ -29,3 +29,18 @@ Ensure consistency and boundary clarity across the various SDKs used in the Conx
 
 ---
 *Maintained by Jules (Sovereign Engineering Agent)*
+
+## 4. Phase 7 SDK Strategy: Wasm-First & Multi-Chain (CON-1178)
+- **Universal SDK (`lib-conxian-core`)**:
+  - Primary source of truth for protocol logic, signing templates, and verification.
+  - Targets: Rust (Gateway), Wasm (Wallet/UI), and C-bindings (Mobile Enclave).
+- **UTXO Adapter Libraries**:
+  - `elements-miniscript`: For Liquid/Confidential assets.
+  - `rsk-native-sdk`: For RSK sidechain interactions.
+  - `babylon-staking-lib`: For remote Bitcoin staking flows.
+- **Verification Toolchains**:
+  - `coq-clarity`: Formal verification for Stacks smart contracts.
+  - `bitvm-verify`: Prover/Verifier logic for trustless Bitcoin bridging.
+
+---
+*Updated by Jules (Sovereign Engineering Agent) - June 20, 2026*

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import SovereignFinancialOffice from '../pulse-bos-stub';
+import Fdc3Console from './Fdc3Console';
 
 export default function MultidimensionalDashboard() {
   const [data, setData] = useState<any>(null);
@@ -143,9 +144,10 @@ export default function MultidimensionalDashboard() {
 
       </div>
 
-      <section style={{ marginBottom: '4rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '4rem' }}>
+        <Fdc3Console />
         <SovereignFinancialOffice />
-      </section>
+      </div>
 
       <footer style={{ marginTop: '4rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.875rem' }}>
         Conxian Business Operations System • Multi-dimensional Pulse • {new Date().getFullYear()}

@@ -151,3 +151,35 @@ Research into secondary settlement layers to ensure multidimensional redundancy.
 
 ---
 *Updated by Jules (Sovereign Engineering Agent) - June 20, 2026*
+
+## 21. Technical Deep Dive: BitVM2 Verification Floor (v1.9.2)
+- **Groth16 Chunking**: Verification is split into **364 independent taps**.
+  - **VALIDATING_TAPS (1)**: Core arithmetic verification logic.
+  - **HASHING_TAPS (363)**: Hash chain verification for intermediate state transitions.
+- **On-Chain Execution**: Utilizing `bitvm::groth16::verifier::Verifier::hinted_verify` to generate scripts and hints.
+- **Optimistic Bridge**: Provers commit to state; verifiers can challenge any of the 364 chunks if fraud is detected.
+
+## 22. Institutional Bridge: FDC3 Native Resolver (v1.9.2)
+- **Standard**: FINOS FDC3 v2.0 Desktop Agent.
+- **Core API**: `getAgent()` for intent raising and context sharing.
+- **Intent Mapping**:
+  - `ViewInstrument`: Maps to Conxian sBTC/BTC asset pairs.
+  - `ViewContact`: Maps to UBI-linked sovereign identities.
+  - `RaiseIntent('Trade')`: Orchestrates USI settlement flows via Wallet-BFF.
+- **Module Roles**: Utilizing `@finos/fdc3-agent-proxy` for client-side DACP implementation.
+
+## 23. Sovereign P&L Transport (Nostr Kind 20626)
+- **Concept**: Decentralized, censorship-resistant delivery of operational telemetry and P&L reports.
+- **Implementation**: Gateway Sentinel signs Kind 20626 events; Wallet-BFF acts as a proxy to Nostr relays.
+- **Benefit**: Provides institutional auditability and "Proof of Solvency" signals without centralized cloud dependencies.
+- **Alignment**: Phase 7 BFF Topology (CON-800).
+
+## 24. USI Proof Folding (Nova/Sangria)
+- **Concept**: Utilizing IVC folding schemes to condense multi-step settlement proofs into a single, compact verification artifact.
+- **Orchestration**: Nexus OS performs the folding; UI-BFF provides the "Last Mile" verification endpoint.
+- **Efficiency**: Reduces client-side verification time from ~500ms to <50ms for complex swap sequences.
+
+## 25. Ark V-UTXO Protocol (v1.9.2)
+- **V-UTXO Management**: Deterministic derivation using Blake2s PRF for stateless recovery.
+- **Forfeit Signing**: Automated signing of forfeit transactions during V-UTXO transfers to ensure ASP atomicity.
+- **Roadmap**: Integration into the Wallet-BFF for non-custodial scalability.

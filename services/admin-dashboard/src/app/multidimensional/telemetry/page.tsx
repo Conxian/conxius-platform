@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import UsageDashboard from "./UsageDashboard";
 
 export default function TelemetryPage() {
   const [data, setData] = useState<any>(null);
@@ -66,6 +67,8 @@ export default function TelemetryPage() {
               </tbody>
             </table>
           </div>
+
+          <UsageDashboard />
         </div>
       )}
     </div>

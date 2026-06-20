@@ -48,3 +48,12 @@ To prevent "universal" claim drift, the USI will maintain a capability registry:
 
 ---
 *Updated by Jules (Sovereign Engineering Agent) - June 20, 2026*
+
+## 10. BitVM2 Floor Implementation (CON-1264)
+- **Floor Logic**: All USI settlements spanning Bitcoin L1 require a BitVM2 floor verification if institutional thresholds are met.
+- **Orchestration**: The Settlement-Engine-BFF (`/api/v1/settlement-engine`) acts as the "Floor Manager," generating the 364 verification taps using the `bitvm` SDK.
+- **Evidence Trail**: Each tap execution is recorded as a `verification-result.json` artifact, signed by the Gateway Sentinel.
+
+## 11. FDC3 App Directory & Intent Resolution
+- **AppD**: Conxian services will be registered in a private FDC3 App Directory, allowing institutional desktops (Bloomberg, Symphony) to discover "Conxian Settlement" as a handler for `ViewInstrument` and `Trade` intents.
+- **Context Handling**: Standardizing on `fdc3.instrument` and `fdc3.contact` as the primary input for USI intent assembly.

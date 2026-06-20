@@ -36,3 +36,22 @@ This document tracks the resolution of gaps and identifies new technical require
 
 ---
 *Maintained by Jules (Sovereign Engineering Agent)*
+
+## 4. Gap-to-Research Mapping (Phase 7 Alignment)
+
+| Gap ID | Description | Research Reference | Implementation Path |
+| :--- | :--- | :--- | :--- |
+| **G-01** | BitVM2 Verification Floor | [FULL_STACK_BITCOIN_RESEARCH.md#21](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#21) | `lib-conxian-core/bitvm` |
+| **G-02** | FDC3 Native Resolver | [FDC3_INTEROPERABILITY.md](./architecture/FDC3_INTEROPERABILITY.md) | `admin-dashboard/src/lib/fdc3` |
+| **G-03** | Usage Validation | [usage-validation-instrumentation-v1.spec.md](../openspec/specs/usage-validation-instrumentation-v1.spec.md) | `admin-dashboard/src/lib/sidl/usageValidation.ts` |
+| **G-04** | Wasm Wallet-BFF | [FULL_STACK_BITCOIN_RESEARCH.md#15](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#15) | `lib-conxian-core` (Wasm) |
+| **G-05** | MFE Federation | [SOVEREIGN_REPR_2026.md#3](./architecture/SOVEREIGN_REPR_2026.md#3) | Webpack Module Federation |
+
+---
+*Updated by Jules (Sovereign Engineering Agent) - June 2026*
+
+## 5. Implementation Status (June 2026 Update)
+- **G-02 (FDC3 Native Resolver)**: 🟢 **Implemented (Console Scaffold)**. Standardized mapping in `resolver.ts`.
+- **G-03 (Usage Validation)**: 🟢 **Implemented (Instrumentation)**. Score-based triage in `usageValidation.ts`.
+- **G-01 (BitVM2 Floor)**: 🟡 **Research Complete**. Implementation pending in `lib-conxian-core`.
+- **G-04 (Wasm-First Wallet)**: 🟡 **Design Complete**. USI integration documented in `PHASE_7_PROPOSAL_UNIVERSAL_SETTLEMENT.md`.

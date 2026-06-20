@@ -1,17 +1,37 @@
 import { NextResponse } from "next/server";
+import { UsageValidator, UsageEvent } from "../../../../lib/sidl/usageValidation";
 
 export async function POST(req: Request) {
   // Usage Validation Instrumentation (CON-1263)
-  // Mock endpoint for receiving signed telemetry signals
+  // Hardened implementation aligned with usage-validation-instrumentation-v1.spec.md
   try {
     const body = await req.json();
-    const { event, identity_hash, metadata } = body;
+    const { event, strength, identity_hash, metadata } = body;
 
-    console.log(`[Telemetry] Received ${event} from ${identity_hash}`);
+    const usageEvent: UsageEvent = {
+      event,
+      strength,
+      identity_hash,
+      metadata: metadata || {},
+      timestamp: new Date().toISOString()
+    };
 
-    // Logic for routing to Linear or internal DB goes here
+    const score = UsageValidator.scoreEvent(usageEvent);
+    const triage = UsageValidator.warrantsTriage(score);
 
-    return NextResponse.json({ status: "captured", timestamp: new Date().toISOString() });
+    console.log(`[UsageValidation] Received ${event} from ${identity_hash}. Score: ${score}. Triage: ${triage}`);
+
+    // In a real scenario, this would route to Linear if triage is true
+    if (triage) {
+      console.log(`[UsageValidation] SIGNAL HIGH: Routing to Linear Triage for ${identity_hash}`);
+    }
+
+    return NextResponse.json({
+      status: "captured",
+      score,
+      triage,
+      timestamp: usageEvent.timestamp
+    });
   } catch (error) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }

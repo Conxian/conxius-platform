@@ -4,13 +4,12 @@ import { useState } from "react";
 import { FDC3Resolver, CJCSJob } from "../../lib/fdc3/resolver";
 
 export default function Fdc3Console() {
-  const [jobId, setJobId] = useState("");
   const [jobType, setJobType] = useState("DEX_SWAP");
   const [result, setResult] = useState<any>(null);
 
   const resolveJob = () => {
     const job: CJCSJob = {
-      id: jobId || "job-123",
+      id: "job-123",
       type: jobType,
       instrument: "BTC/sBTC",
       counterparty: "ubi:btc:counterparty-456"

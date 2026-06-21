@@ -55,3 +55,9 @@ This document tracks the resolution of gaps and identifies new technical require
 - **G-03 (Usage Validation)**: 🟢 **Implemented (Instrumentation)**. Score-based triage in `usageValidation.ts`.
 - **G-01 (BitVM2 Floor)**: 🟡 **Research Complete**. Implementation pending in `lib-conxian-core`.
 - **G-04 (Wasm-First Wallet)**: 🟡 **Design Complete**. USI integration documented in `PHASE_7_PROPOSAL_UNIVERSAL_SETTLEMENT.md`.
+
+| **G-06** | DLC Native Finance | [FULL_STACK_BITCOIN_RESEARCH.md#26](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#26) | `lib-conxian-core/dlc` |
+| **G-07** | Nostr Wallet Connect (NWC) | [FULL_STACK_BITCOIN_RESEARCH.md#27](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#27) | `admin-dashboard/src/lib/support/nwc.ts` |
+| **G-08** | ZK-Rollup T1 Adapters (Citrea/Strata) | [FULL_STACK_BITCOIN_RESEARCH.md#28](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#28) | `conxian-nexus/adapters` |
+| **G-09** | BIP-322 Signed Intents | [FULL_STACK_BITCOIN_RESEARCH.md#29](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#29) | `lib-conxian-core` (Wasm) |
+| **G-10** | MuSig2 Aggregation | [FULL_STACK_BITCOIN_RESEARCH.md#31](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#31) | `lib-conxian-core` (MuSig2) |

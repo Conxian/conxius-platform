@@ -27,6 +27,7 @@ Initialize **G-03** (Foundational Telemetry) and **G-02** (FDC3 Resolver) as the
 | **G-08** | **ZK-Rollup T1 Adapters** | 9 | 7 | 7 | **23** | [ZK-Rollup Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#28) |
 | **G-09** | **BIP-322 Signed Intents** | 10 | 6 | 8 | **24** | [BIP-322 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#29) |
 | **G-10** | **MuSig2 Aggregation** | 9 | 6 | 7 | **22** | [MuSig2 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#31) |
+| **G-11** | **Silent Payments (BIP-352)** | 8 | 7 | 6 | **21** | [Silent Payments Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#30) |
 
 ## Refined Best Candidate Implementation Plan (v1.9.2)
 1. **Strategic Anchor**: **G-09 (BIP-322)** - High alignment, medium complexity. Provides the signature foundation for all other USI intents.

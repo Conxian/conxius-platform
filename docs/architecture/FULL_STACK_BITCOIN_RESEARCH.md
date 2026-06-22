@@ -183,3 +183,88 @@ Research into secondary settlement layers to ensure multidimensional redundancy.
 - **V-UTXO Management**: Deterministic derivation using Blake2s PRF for stateless recovery.
 - **Forfeit Signing**: Automated signing of forfeit transactions during V-UTXO transfers to ensure ASP atomicity.
 - **Roadmap**: Integration into the Wallet-BFF for non-custodial scalability.
+
+## 26. Deep Dive: Discreet Log Contracts (DLC) Maturity (v1.9.2)
+- **Concept**: DLCs allow for private, efficient, and trustless financial contracts on Bitcoin (e.g., derivatives, insurance) using an oracle to sign the outcome without the oracle knowing the contract details.
+- **Implementation (rust-dlc)**: Leveraging  and  for contract execution.
+- **Integration**: Mapped to the USI for "Layer 1 Native Finance".
+- **Roadmap**: Pilot phase for DLC-based stablecoin collateralization (ctUSD alignment).
+
+## 27. Nostr Wallet Connect (NWC) & Remote Signing (NIP-46/47)
+- **Non-Custodial Auth**: Utilizing NWC (NIP-47) for authorizing Lightning payments without sharing macaroons or static keys.
+- **Bunker (NIP-46)**: Remote signing of USI intents. The Conxius Wallet acts as a "Bunker Client", while the user's mobile enclave acts as the "Bunker".
+- **Transport Layer**: Nostr relays provide the censorship-resistant transport for signed USI intents (Kind 20626).
+
+## 28. Bitcoin ZK-Rollups: Citrea & Strata (v1.9.2)
+- **Citrea (Clementine Bridge)**:
+  - Uses BitVM2 for 1-of-N trust-minimized settlement.
+  - EVM-compatible execution environment on Bitcoin.
+- **Strata (Alpen Labs)**:
+  - Focus on a high-throughput "settlement layer" for Bitcoin.
+  - Utilizing recursive ZK-proofs to scale transaction density.
+- **Strategic Path**: Tier 1 Adapter integration for both Citrea and Strata to ensure "Multidimensional Liquidity".
+
+## 29. BIP-322: Universal Message Signing
+- **Standard**: Standardizing on BIP-322 for all USI "Signed Intents".
+- **Verification**:  (Wasm) performs BIP-322 signature verification for Bitcoin L1 addresses (P2WPKH, P2TR).
+- **Benefit**: Unified signature format for legacy, segwit, and taproot addresses.
+
+## 26. Deep Dive: Discreet Log Contracts (DLC) Maturity (v1.9.2)
+- **Concept**: DLCs allow for private, efficient, and trustless financial contracts on Bitcoin (e.g., derivatives, insurance) using an oracle to sign the outcome without the oracle knowing the contract details.
+- **Implementation (rust-dlc)**: Leveraging `pdlc` and `rust-dlc` for contract execution.
+- **Integration**: Mapped to the USI for "Layer 1 Native Finance".
+- **Roadmap**: Pilot phase for DLC-based stablecoin collateralization (ctUSD alignment).
+
+## 27. Nostr Wallet Connect (NWC) & Remote Signing (NIP-46/47)
+- **Non-Custodial Auth**: Utilizing NWC (NIP-47) for authorizing Lightning payments without sharing macaroons or static keys.
+- **Bunker (NIP-46)**: Remote signing of USI intents. The Conxius Wallet acts as a "Bunker Client", while the user's mobile enclave acts as the "Bunker".
+- **Transport Layer**: Nostr relays provide the censorship-resistant transport for signed USI intents (Kind 20626).
+
+## 28. Bitcoin ZK-Rollups: Citrea & Strata (v1.9.2)
+- **Citrea (Clementine Bridge)**:
+  - Uses BitVM2 for 1-of-N trust-minimized settlement.
+  - EVM-compatible execution environment on Bitcoin.
+- **Strata (Alpen Labs)**:
+  - Focus on a high-throughput "settlement layer" for Bitcoin.
+  - Utilizing recursive ZK-proofs to scale transaction density.
+- **Strategic Path**: Tier 1 Adapter integration for both Citrea and Strata to ensure "Multidimensional Liquidity".
+
+## 29. BIP-322: Universal Message Signing
+- **Standard**: Standardizing on BIP-322 for all USI "Signed Intents".
+- **Verification**: `lib-conxian-core` (Wasm) performs BIP-322 signature verification for Bitcoin L1 addresses (P2WPKH, P2TR).
+- **Benefit**: Unified signature format for legacy, segwit, and taproot addresses.
+
+## 26. Deep Dive: Discreet Log Contracts (DLC) Maturity (v1.9.2)
+- **Concept**: DLCs allow for private, efficient, and trustless financial contracts on Bitcoin (e.g., derivatives, insurance) using an oracle to sign the outcome without the oracle knowing the contract details.
+- **Implementation (rust-dlc)**: Leveraging `pdlc` and `rust-dlc` for contract execution.
+- **Integration**: Mapped to the USI for "Layer 1 Native Finance".
+- **Roadmap**: Pilot phase for DLC-based stablecoin collateralization (ctUSD alignment).
+
+## 27. Nostr Wallet Connect (NWC) & Remote Signing (NIP-46/47)
+- **Non-Custodial Auth**: Utilizing NWC (NIP-47) for authorizing Lightning payments without sharing macaroons or static keys.
+- **Bunker (NIP-46)**: Remote signing of USI intents. The Conxius Wallet acts as a "Bunker Client", while the user's mobile enclave acts as the "Bunker".
+- **Transport Layer**: Nostr relays provide the censorship-resistant transport for signed USI intents (Kind 20626).
+
+## 28. Bitcoin ZK-Rollups: Citrea & Strata (v1.9.2)
+- **Citrea (Clementine Bridge)**:
+  - Uses BitVM2 for 1-of-N trust-minimized settlement.
+  - EVM-compatible execution environment on Bitcoin.
+- **Strata (Alpen Labs)**:
+  - Focus on a high-throughput "settlement layer" for Bitcoin.
+  - Utilizing recursive ZK-proofs to scale transaction density.
+- **Strategic Path**: Tier 1 Adapter integration for both Citrea and Strata to ensure "Multidimensional Liquidity".
+
+## 29. BIP-322: Universal Message Signing
+- **Standard**: Standardizing on BIP-322 for all USI "Signed Intents".
+- **Verification**: `lib-conxian-core` (Wasm) performs BIP-322 signature verification for Bitcoin L1 addresses (P2WPKH, P2TR).
+- **Benefit**: Unified signature format for legacy, segwit, and taproot addresses.
+
+## 30. Silent Payments (BIP-352): Reusable Privacy
+- **Concept**: Reusable donation addresses that don't reveal the recipient's identity on-chain and prevent address reuse without per-transaction interaction.
+- **Implementation**: `lib-conxian-core` implementation for scanning and spending Silent Payments.
+- **Benefit**: Enhances privacy for corporate treasury and payroll without the overhead of BIP-47 Notification transactions.
+
+## 31. MuSig2 (BIP-327): Efficient Multi-Sig
+- **Concept**: Next-generation Schnorr-based multi-signature scheme that allows multiple signers to aggregate their keys and signatures into a single public key and signature.
+- **Integration**: Standardizing USI multi-sig intents on MuSig2 for Taproot (P2TR) script paths.
+- **Performance**: Reduces transaction size and fee cost by ~30-50% compared to legacy `OP_CHECKMULTISIG`.

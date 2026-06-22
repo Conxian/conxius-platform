@@ -22,3 +22,13 @@ This matrix scores the identified gaps based on Strategic Alignment, Implementat
 
 **Best Candidate Implementation Plan**:
 Initialize **G-03** (Foundational Telemetry) and **G-02** (FDC3 Resolver) as the initial "live" alignment bridge for Phase 7.
+| **G-06** | **DLC Native Finance** | 9 | 8 | 6 | **23** | [DLC Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#26) |
+| **G-07** | **Nostr Wallet Connect (NWC)** | 8 | 5 | 9 | **22** | [NWC Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#27) |
+| **G-08** | **ZK-Rollup T1 Adapters** | 9 | 7 | 7 | **23** | [ZK-Rollup Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#28) |
+| **G-09** | **BIP-322 Signed Intents** | 10 | 6 | 8 | **24** | [BIP-322 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#29) |
+| **G-10** | **MuSig2 Aggregation** | 9 | 6 | 7 | **22** | [MuSig2 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#31) |
+
+## Refined Best Candidate Implementation Plan (v1.9.2)
+1. **Strategic Anchor**: **G-09 (BIP-322)** - High alignment, medium complexity. Provides the signature foundation for all other USI intents.
+2. **Operational Bridge**: **G-07 (NWC)** - Low complexity, high signal. Immediate non-custodial authorization value.
+3. **Institutional Anchor**: **G-01 (BitVM2)** - Highest strategic score. Essential for sBTC trust-minimization.

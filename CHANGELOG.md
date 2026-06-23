@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.6] - 2026-06-23
+
+### Added
+- **Expanded Bitcoin Stack Research**: Added deep dives for FROST (G-14), OP_CAT (G-15), and Fedimint (G-16) to FULL_STACK_BITCOIN_RESEARCH.md.
+- **BIP-353 DNS Payment Implementation**: Initialized foundational bridge and resolution logic for human-readable Bitcoin addresses (G-12).
+- **Strategic Scoring Update**: Updated SCORING_MATRIX.md and GAPS.md with scores and implementation paths for Phase 7 candidates.
+
 ## [0.2.4] - 2026-06-13
 
 ### Added

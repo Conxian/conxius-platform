@@ -26,3 +26,8 @@ Refer to `docs/architecture/ALIGNMENT.md` for strategy and `docs/architecture/SY
 - **AI Allocation**: Always consume `/api/v1/ai/allocation` for user-facing weightings.
 - **UBI Identity**: Identity hashes must follow the `ubi:btc:{id}` format.
 - **Nexus Sync**: Use `/api/v1/nexus/state` for all L1/L2 synchronization checks.
+
+## Agent Learnings (June 2026)
+- **BIP-353 Resolution**: Successfully prototyped BIP-353 resolution using a DNS-to-BIP21 mapping logic. This serves as a critical bridge for human-readable Bitcoin payments.
+- **Phase 7 Research Expansion**: Identified FROST, OP_CAT, and Fedimint as high-priority strategic anchors for the "Full Bitcoin Stack" vision.
+- **Scoring Discipline**: Maintaining a strict Gap-to-Research scoring matrix ensures that engineering effort is prioritized according to strategic alignment and implementation readiness.

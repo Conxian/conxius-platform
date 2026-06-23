@@ -17,6 +17,9 @@ This matrix scores the identified gaps based on Strategic Alignment, Implementat
 | **G-11** | **Silent Payments (BIP-352)** | 8 | 7 | 6 | **21** | [Silent Payments Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#30) |
 | **G-12** | **BIP-353 DNS Payments** | 7 | 5 | 8 | **20** | [BIP-353 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#32) |
 | **G-13** | **Layer 3 DeFi Rollups** | 6 | 8 | 5 | **19** | [L3 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#33) |
+| **G-14** | **FROST Threshold Signatures** | 9 | 8 | 7 | **24** | [FROST Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#34) |
+| **G-15** | **OP_CAT Recursive Covenants** | 10 | 7 | 6 | **23** | [OP_CAT Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#35) |
+| **G-16** | **Fedimint Community Liquidity** | 8 | 7 | 8 | **23** | [Fedimint Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#36) |
 
 ## Scoring Rubric (1-10)
 - **Strategic Alignment**: How critical is this to the "Full Bitcoin Stack" vision?

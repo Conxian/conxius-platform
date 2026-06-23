@@ -22,10 +22,10 @@ jobs:
             echo "Warning: system_audit.py not found in local path."
           else
             python3 -c "
-import sys
-sys.path.append('scripts/maintenance')
-from system_audit import audit_security
-if not audit_security():
-    sys.exit(1)
-"
+          import sys
+          sys.path.append('scripts/maintenance')
+          from system_audit import audit_security
+          if not audit_security():
+              sys.exit(1)
+          "
           fi

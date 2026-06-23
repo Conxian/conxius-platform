@@ -268,3 +268,15 @@ Research into secondary settlement layers to ensure multidimensional redundancy.
 - **Concept**: Next-generation Schnorr-based multi-signature scheme that allows multiple signers to aggregate their keys and signatures into a single public key and signature.
 - **Integration**: Standardizing USI multi-sig intents on MuSig2 for Taproot (P2TR) script paths.
 - **Performance**: Reduces transaction size and fee cost by ~30-50% compared to legacy `OP_CHECKMULTISIG`.
+
+## 32. BIP-353: DNS Payment Instructions (v1.9.2)
+- **Concept**: Standard for encoding BIP-21 URI schemes in DNS TXT records using DNSSEC for cryptographic verification.
+- **Integration**: Mapping human-readable names (e.g., ₿user@domain) to Conxian payment instructions.
+- **Verification**: UI-BFF and Wallet-BFF perform DNSSEC-validated lookups to resolve intents.
+- **Benefit**: Provides a global, hierarchical namespace for payment discovery that works with existing hardware wallets and maintains relative privacy via ISP/VPN proxies.
+
+## 33. Layer 3 Application-Specific Rollups (v1.9.2)
+- **Concept**: Specialized execution layers (L3s) built on top of Bitcoin L2s (like Stacks or Citrea) to provide tailored environments for specific Conxian DeFi primitives.
+- **Strategic Value**: Allows for hyper-optimized performance for the DEX Factory V2 or high-frequency order books without competing for L1/L2 block space.
+- **Implementation**: Researching the use of "Rollup-as-a-Service" (RaaS) providers that support Bitcoin settlement.
+- **Alignment**: Enhances the "Multidimensional Liquidity" model by providing dedicated execution lanes.

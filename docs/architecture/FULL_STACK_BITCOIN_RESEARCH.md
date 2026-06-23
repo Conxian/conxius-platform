@@ -280,3 +280,28 @@ Research into secondary settlement layers to ensure multidimensional redundancy.
 - **Strategic Value**: Allows for hyper-optimized performance for the DEX Factory V2 or high-frequency order books without competing for L1/L2 block space.
 - **Implementation**: Researching the use of "Rollup-as-a-Service" (RaaS) providers that support Bitcoin settlement.
 - **Alignment**: Enhances the "Multidimensional Liquidity" model by providing dedicated execution lanes.
+
+## 34. FROST (Flexible Round-Optimized Schnorr Threshold Signatures)
+- **Concept**: A threshold signature scheme (TSS) that allows $t$-of-$n$ signers to produce a standard Schnorr signature.
+- **Benefits**:
+  - **Single Round**: Allows for single-round signing in the non-interactive case.
+  - **Standard Signature**: Produces a signature that is indistinguishable from a single-party Schnorr signature on-chain.
+  - **Privacy**: Hides the signer set and threshold from the blockchain.
+- **Integration**: Target for Conxian corporate treasury and institutional vault management.
+- **Implementation**: Leveraging `frost-dalek` or `roast` for robust multi-party computation.
+
+## 35. OP_CAT: Recursive Covenants and Beyond
+- **Concept**: A proposed (restored) opcode that concatenates two elements on the stack.
+- **Strategic Impact**:
+  - **Recursive Covenants**: Enables complex spending conditions that can persist across transaction chains.
+  - **Vaults**: Simplifies the implementation of secure Bitcoin vaults.
+  - **L2 Scaling**: Provides a foundation for more efficient ZK-rollup bridges (e.g., Starknet on Bitcoin).
+- **Alignment**: Monitoring the BIP-347 progress for integration into the Conxian USI.
+
+## 36. Fedimint: Federated Chaumian Mints
+- **Concept**: A modular framework for building federated Chaumian mints that settle on Bitcoin and Lightning.
+- **Value Proposition**:
+  - **Privacy**: Strong sender/receiver anonymity within the federation.
+  - **Scalability**: High-throughput off-chain transactions.
+  - **Community Custody**: 1-of-$N$ trust model based on community guardians.
+- **Integration**: Researching Fedimint as a Tier 2 adapter for community-scale liquidity pools.

@@ -8,6 +8,7 @@ This file serves as a registry for tracking strategic, financial, and institutio
 | :--- | :--- | :--- | :--- | :--- |
 | 2026-06-08 | Automated Test Suite (ATS) | Platform-wide verification | Pass | `docs/runbooks/ATS_EXECUTION_REPORT_JUNE_2026.md` |
 | 2026-06-08 | Multidimensional Alignment | Pulse and SFO integration | Aligned | `docs/SOVEREIGN_ALIGNMENT_STATUS_2026.md` |
+| 2026-06-23 | Phase 7 Research Expansion | GAPS G-14 to G-16 added | Expanded | docs/architecture/FULL_STACK_BITCOIN_RESEARCH.md |
 
 ## Upcoming Reviews
 

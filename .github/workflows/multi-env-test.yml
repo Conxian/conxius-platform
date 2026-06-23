@@ -22,7 +22,7 @@ jobs:
       CORE_BITCOIN_NETWORK: testnet
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
       - name: Set up Node
@@ -64,7 +64,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Verify Admin Dashboard Dockerfile
         run: |
           docker build -f ./services/admin-dashboard/Dockerfile ./services/admin-dashboard -t admin-build

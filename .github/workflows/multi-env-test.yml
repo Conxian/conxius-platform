@@ -30,7 +30,7 @@ jobs:
         with:
           node-version: '22'
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
       - name: Configure environment
         run: |
           cp .env.schema .env

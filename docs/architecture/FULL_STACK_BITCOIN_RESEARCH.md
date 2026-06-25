@@ -305,3 +305,33 @@ Research into secondary settlement layers to ensure multidimensional redundancy.
   - **Scalability**: High-throughput off-chain transactions.
   - **Community Custody**: 1-of-$N$ trust model based on community guardians.
 - **Integration**: Researching Fedimint as a Tier 2 adapter for community-scale liquidity pools.
+
+## 37. Simplicity: High-Assurance Verification
+- **Concept**: A low-level, functional language for Bitcoin smart contracts that allows for formal verification of safety and correctness.
+- **Role in USI**: Providing a "High-Assurance" lane for settlement intents where the logic is provably correct.
+- **Integration**: `lib-conxian-core` (Wasm) acting as a Simplicity runtime or bridge to an external verifier.
+
+## 38. BIP-324: Encrypted P2P Transport
+- **Concept**: A new encrypted transport protocol for the Bitcoin P2P network to protect against censorship and eavesdropping.
+- **Strategic Value**: Enhancing the privacy of Gateway-to-Nexus and Nexus-to-Relay communication.
+- **Implementation**: Integrating a Rust-based BIP-324 library into the Nexus transport layer.
+
+## 39. Spider Network: Scalable Routing
+- **Concept**: A proposed scaling layer for Bitcoin that utilizes state-channel-based routing to achieve high throughput.
+- **Alignment**: Providing a decentralized transport for USI "Maneuver" events (Kind 20626).
+- **Research**: Monitoring the integration path for Spider-compatible relays.
+
+## 40. BitVM3: Adaptive Proof Verification
+- **Concept**: The next evolution of BitVM, focusing on reduced on-chain footprint and "Adaptive" fraud proofs.
+- **Benefit**: Significantly lowers the cost of "Disprove" transactions and increases verifier efficiency.
+- **Roadmap**: Planned upgrade for the G-01 BitVM2 Verification Floor once the specification stabilizes.
+
+## 41. Taproot Assets (v1.9.3)
+- **Concept**: A Taproot-native protocol for issuing and transferring assets on the Bitcoin blockchain, utilizing Merkleized Abstract Syntax Trees (MAST).
+- **Integration**: Mapped to the USI as a Tier 2 adapter.
+- **Benefit**: High efficiency and compatibility with the Lightning Network for multi-asset routing.
+
+## 42. PTLCs (Point Time Locked Contracts)
+- **Concept**: Next-generation Lightning payment primitive using adaptor signatures instead of hashes (HTLCs).
+- **Advantage**: Prevents payment correlation across routes and enables more complex multi-hop conditions.
+- **Roadmap**: Planned transition for the Wallet-BFF and Lightning adapters in Phase 8.

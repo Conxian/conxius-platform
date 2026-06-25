@@ -102,3 +102,24 @@ describe('Phase 7 Alignment: BIP-322 USI Intents', () => {
     expect(result.error).toContain('address format');
   });
 });
+
+describe('Phase 7 Alignment: BitVM2 Multi-Party Aggregation (G-11)', () => {
+  it('should collect and aggregate partial signatures', async () => {
+    const proofId = 'proof-agg-123';
+    await BitVMBridge.verifyFloor('a'.repeat(64), proofId);
+
+    const agg1 = await BitVMBridge.submitSignature(proofId, 'verifier-1', 'sig-1');
+    expect(agg1).toBeDefined();
+    expect(agg1?.signatures.length).toBe(1);
+    expect(agg1?.is_complete).toBe(true); // Since required defaults to 1
+
+    const state = BitVMBridge.getAggregation(proofId);
+    expect(state?.is_complete).toBe(true);
+    expect(state?.signatures[0].verifier_id).toBe('verifier-1');
+  });
+
+  it('should handle missing aggregation requests', async () => {
+    const result = await BitVMBridge.submitSignature('non-existent', 'v', 's');
+    expect(result).toBeUndefined();
+  });
+});

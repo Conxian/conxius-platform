@@ -1,8 +1,9 @@
 /**
  * G-01: BitVM2 Verification Floor
+ * G-11: BitVM2 Multi-Party Aggregation (CON-1306)
  *
- * This module provides the BFF-level coordination for BitVM2 verification.
- * It manages the generation of Groth16 verification taps and challenges.
+ * This module provides the BFF-level coordination for BitVM2 verification
+ * and multi-party signature aggregation.
  */
 
 export type BitVMStatus = 'pending' | 'verifying' | 'verified' | 'challenged' | 'disproved' | 'slashed';
@@ -24,8 +25,22 @@ export interface BitVMFlowState {
   lastUpdate: string;
 }
 
+export interface PartialSignature {
+  verifier_id: string;
+  signature: string;
+  timestamp: string;
+}
+
+export interface AggregationState {
+  proofId: string;
+  signatures: PartialSignature[];
+  required: number;
+  is_complete: boolean;
+}
+
 export class BitVMBridge {
   private static states: Map<string, BitVMFlowState> = new Map();
+  private static aggregations: Map<string, AggregationState> = new Map();
 
   /**
    * Orchestrates the verification floor for a given USI settlement proof.
@@ -57,6 +72,14 @@ export class BitVMBridge {
 
     this.states.set(proofId, state);
 
+    // Initialize multi-party aggregation for this proof
+    this.aggregations.set(proofId, {
+      proofId,
+      signatures: [],
+      required: 1, // Default to 1-of-N model
+      is_complete: false
+    });
+
     // Simulate verification process
     state.status = 'verified';
     state.lastUpdate = new Date().toISOString();
@@ -68,6 +91,32 @@ export class BitVMBridge {
       status: state.status,
       timestamp: state.lastUpdate
     };
+  }
+
+  /**
+   * Submits a partial signature for a BitVM proof aggregation.
+   */
+  static async submitSignature(
+    proofId: string,
+    verifierId: string,
+    signature: string
+  ): Promise<AggregationState | undefined> {
+    const agg = this.aggregations.get(proofId);
+    if (!agg) return undefined;
+
+    console.log(`[BitVM2] Verifier ${verifierId} submitted signature for proof: ${proofId}`);
+
+    agg.signatures.push({
+      verifier_id: verifierId,
+      signature,
+      timestamp: new Date().toISOString()
+    });
+
+    if (agg.signatures.length >= agg.required) {
+      agg.is_complete = true;
+    }
+
+    return agg;
   }
 
   /**
@@ -90,5 +139,12 @@ export class BitVMBridge {
    */
   static getState(proofId: string): BitVMFlowState | undefined {
     return this.states.get(proofId);
+  }
+
+  /**
+   * Retrieves the current aggregation state for a proof.
+   */
+  static getAggregation(proofId: string): AggregationState | undefined {
+    return this.aggregations.get(proofId);
   }
 }

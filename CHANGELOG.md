@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.2.6] - 2026-06-23
+### Added
+- **BitVMX High-Efficiency Computation (G-44)**: Transitioned to Active Scaffolding with foundational state machine and adaptive challenge logic.
+- **Expanded Phase 7 Research (v1.9.4)**: Added BIP-119, BIP-324, ZKCP, and decentralized transport research anchors.
+- **CI/CD Hardening**: Unified `test:phase7` script in admin-dashboard for targeted verification.
+
 
 ### Added
 - **Expanded Bitcoin Stack Research**: Added deep dives for FROST (G-14), OP_CAT (G-15), and Fedimint (G-16) to FULL_STACK_BITCOIN_RESEARCH.md.

@@ -33,8 +33,20 @@ This matrix scores the identified gaps based on Strategic Alignment, Implementat
 | **G-44** | **BitVMX Computation** | 10 | 9 | 6 | **25** | [BitVMX Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#44) |
 | **G-45** | **BOLT-12 Offers** | 8 | 7 | 8 | **23** | [BOLT-12 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#45) |
 | **G-46** | **RGB++ Protocol** | 7 | 8 | 6 | **21** | [RGB++ Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#46) |
+| **G-47** | **BIP-119 (CTV) Vaults** | 9 | 7 | 6 | **22** | [BIP-119 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#47) |
+| **G-48** | **BIP-324 V2 Transport** | 8 | 6 | 7 | **21** | [BIP-324 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#48) |
+| **G-49** | **Decentralized USI Transport** | 9 | 5 | 9 | **23** | [Nostr/Waku Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#49) |
+| **G-50** | **ZK Contingent Payments** | 10 | 9 | 7 | **26** | [ZKCP Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#50) |
+
+## Scoring Rubric (1-10)
+- **Strategic Alignment**: How critical is this to the "Full Bitcoin Stack" vision?
+- **Complexity**: Effort required to implementation (10 = Hyper-complex).
+- **Validation Signal**: Current demand/interest from corporate treasury or developers.
 
 ## Final Candidate Selection (v1.9.4)
-1. **G-01 (BitVM2)** - **26 Points**. Highest Strategic Alignment. Foundation for sBTC trust-minimized settlement.
-2. **G-11 (Multi-Party Aggregation)** - **26 Points**. Essential for BitVM2 1-of-N trust model.
+1. **G-01 (BitVM2) / G-11 (Aggregation)** - **26 Points**. Highest Strategic Alignment. Foundation for sBTC trust-minimized settlement.
+2. **G-50 (ZKCP)** - **26 Points**. Zero-trust exchange of information for value.
 3. **G-20 (BitVM3) / G-44 (BitVMX)** - **25 Points**. Future-proof adaptation for the verification floor.
+
+---
+*Updated by Jules (Sovereign Engineering Agent) - June 2026*

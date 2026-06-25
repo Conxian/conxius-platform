@@ -36,3 +36,22 @@ This matrix scores the identified gaps based on Strategic Alignment, Implementat
 1. **Strategic Anchor**: **G-09 (BIP-322)** - High alignment, medium complexity. Provides the signature foundation for all other USI intents.
 2. **Operational Bridge**: **G-07 (NWC)** - Low complexity, high signal. Immediate non-custodial authorization value.
 3. **Institutional Anchor**: **G-01 (BitVM2)** - Highest strategic score. Essential for sBTC trust-minimization.
+| **G-17** | **Simplicity Verification** | 8 | 9 | 5 | **22** | [Simplicity Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#37) |
+| **G-18** | **BIP-324 Transport** | 7 | 6 | 7 | **20** | [BIP-324 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#38) |
+| **G-19** | **Spider Network Routing** | 6 | 8 | 5 | **19** | [Spider Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#39) |
+| **G-20** | **BitVM3 Adaptive Proofs** | 10 | 9 | 6 | **25** | [BitVM3 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#40) |
+
+## Updated Phase 7 Research Conclusion (v1.9.3)
+- **G-20 (BitVM3)** is now the second highest strategic priority after G-01.
+- **G-01 (BitVM2)** remains the immediate foundational requirement for sBTC.
+- **G-09 (BIP-322)** is the implementation anchor for USI Intent verification.
+| **G-21** | **Sangria/Nova Proof Folding** | 9 | 9 | 6 | **24** | [Proof Folding](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#24) |
+| **G-22** | **ctUSD Stablecoin Logic** | 8 | 7 | 9 | **24** | [DLC Stablecoin](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#26) |
+| **G-23** | **Ark V-UTXO Protocol** | 8 | 8 | 7 | **23** | [Ark Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#25) |
+
+## Final Candidate Selection (v1.9.4)
+1. **G-01 (BitVM2)** - **26 Points**. Highest Strategic Alignment. Foundation for sBTC trust-minimization.
+2. **G-20 (BitVM3)** - **25 Points**. Future-proof adaptation for G-01.
+3. **G-21/G-22** - **24 Points**. High signal and alignment.
+| **G-41** | **Taproot Assets** | 8 | 6 | 8 | **22** | [Taproot Assets Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#41) |
+| **G-42** | **PTLCs** | 9 | 7 | 6 | **22** | [PTLC Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#42) |

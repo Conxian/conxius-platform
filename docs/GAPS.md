@@ -69,3 +69,13 @@ This document tracks the resolution of gaps and identifies new technical require
 - **G-09 (BIP-322 Intents)**: 🟢 **Implemented (Bridge Scaffold)**. Foundational bridge in `bip322.ts`.
 - **G-01 (BitVM2 Floor)**: 🟡 **Research Complete**. Implementation pending in `lib-conxian-core`.
 - **G-04 (Wasm-First Wallet)**: 🟡 **Design Complete**. USI integration documented in `PHASE_7_PROPOSAL_UNIVERSAL_SETTLEMENT.md`.
+
+| **G-17** | Simplicity Verification | [FULL_STACK_BITCOIN_RESEARCH.md#37](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#37) | `lib-conxian-core/simplicity` |
+| **G-18** | BIP-324 Transport | [FULL_STACK_BITCOIN_RESEARCH.md#38](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#38) | `conxian-nexus/transport` |
+| **G-19** | Spider Network Routing | [FULL_STACK_BITCOIN_RESEARCH.md#39](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#39) | `conxian-nexus/spider` |
+| **G-20** | BitVM3 Adaptive Proofs | [FULL_STACK_BITCOIN_RESEARCH.md#40](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#40) | `lib-conxian-core/bitvm3` |
+| **G-21** | Sangria/Nova Proof Folding | [FULL_STACK_BITCOIN_RESEARCH.md#24](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#24) | `lib-conxian-core/sangria` |
+| **G-22** | ctUSD Stablecoin Logic | [FULL_STACK_BITCOIN_RESEARCH.md#26](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#26) | `services/admin-dashboard/src/lib/usi/stablecoin.ts` |
+| **G-23** | Ark V-UTXO Protocol | [FULL_STACK_BITCOIN_RESEARCH.md#25](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#25) | `lib-conxian-core/ark` |
+| **G-41** | Taproot Assets | [FULL_STACK_BITCOIN_RESEARCH.md#41](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#41) | `conxian-nexus/adapters/taproot-assets` |
+| **G-42** | PTLCs | [FULL_STACK_BITCOIN_RESEARCH.md#42](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#42) | `lib-conxian-core/ptlc` |

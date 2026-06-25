@@ -356,3 +356,22 @@ Research into secondary settlement layers to ensure multidimensional redundancy.
 - **Concept**: An extension of the RGB protocol that utilizes a "turing-complete" L2 (like CKB) as a data availability and execution layer for Bitcoin-native assets.
 - **Benefit**: Simplifies the management of RGB assets while maintaining the security of the Bitcoin L1.
 - **Alignment**: Tier 2 Adapter candidate for multi-asset liquidity.
+
+## 47. BIP-119: OP_CHECKTEMPLATEVERIFY (CTV)
+- **Concept**: A proposed opcode that allows a transaction output to restrict the form of the transaction that spends it.
+- **Strategic Value**: Enables non-interactive payment pools, secure vaults without pre-signing, and efficient congestion control.
+- **Alignment**: Tier 1 primitive for Conxian corporate treasury vaults.
+
+## 48. BIP-324: V2 P2P Transport Protocol
+- **Concept**: A new version of the Bitcoin P2P transport protocol that provides opportunistic encryption and better protection against censorship and eavesdropping.
+- **Benefit**: Hardens the transport layer between Gateway, Nexus, and the broader Bitcoin network.
+- **Integration**: Target for Nexus node transport layer.
+
+## 49. Decentralized USI Transport (Waku/Nostr)
+- **Concept**: Utilizing decentralized messaging protocols like Waku or Nostr (Kind 20626) to transport USI "Signed Intents" before they are finalized on-chain.
+- **Benefit**: Prevents single points of failure in intent delivery and provides censorship-resistant coordination.
+- **Implementation**: Active in UI-BFF and Wallet-BFF via Nostr Kind 20626.
+
+## 50. Zero-Knowledge Contingent Payments (ZKCP)
+- **Concept**: A protocol that allows for the trustless exchange of information for Bitcoin, where the buyer only pays if the information is valid according to a ZK-proof.
+- **Strategic Impact**: Foundation for decentralized data markets and trustless "pay-for-proof" services in the Nexus network.

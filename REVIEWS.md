@@ -13,3 +13,4 @@ This file serves as a registry for tracking strategic, financial, and institutio
 ## Upcoming Reviews
 
 - **Phase 7 Sovereign Redesign Review**: Target 2026-Q3.
+| 2026-06-25 | Phase 7 Best Candidate Init | G-44 BitVMX Initialized | Aligned | docs/architecture/BITVMX_RESEARCH.md |

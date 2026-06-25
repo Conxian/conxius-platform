@@ -16,6 +16,7 @@ This document proactively manages delivery, dependency, security, and adoption r
 - [x] **[R-7-01]** Initiate BitVM2 Floor Manager in Settlement-Engine-BFF (Implemented June 2026).
 - [x] **[R-7-02]** Scaffolding for FDC3 Native Resolver Console (Done June 2026).
 - [x] **[R-7-03]** Benchmark Wasm-based PSBT assembly versus server-side (Pilot complete).
+- [x] **[R-7-05]** BitVMX binary search state machine implemented (Scaffold complete June 2026).
 - [x] **[R-7-04]** Define Nostr Kind 20626 P&L transport spec (Done June 2026).
 
 ## 3. Scoring Rubric
@@ -26,3 +27,4 @@ This document proactively manages delivery, dependency, security, and adoption r
 
 ---
 *Created via CON-1197 Sovereign Alignment track.*
+| **R-7-05** | BitVMX binary search challenge depth increases latency | Performance | Medium | Medium | **MEDIUM** | @botshelomokoka | Research parallel challenge lookups and early-exit conditions. | 2026-08-15 |

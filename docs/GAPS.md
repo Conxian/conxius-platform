@@ -70,11 +70,16 @@ This document tracks the resolution of gaps and identifies new technical require
 | **G-44** | BitVMX Computation | [FULL_STACK_BITCOIN_RESEARCH.md#44](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#44) | 🏗️ **Active Research**. CON-1311 initialized. |
 | **G-45** | BOLT-12 Offers | [FULL_STACK_BITCOIN_RESEARCH.md#45](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#45) | `lib-conxian-core/lightning` |
 | **G-46** | RGB++ Protocol | [FULL_STACK_BITCOIN_RESEARCH.md#46](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#46) | `conxian-nexus/adapters/rgbpp` |
+| **G-47** | BIP-119 (CTV) Vaults | [FULL_STACK_BITCOIN_RESEARCH.md#47](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#47) | `lib-conxian-core/covenants` |
+| **G-48** | BIP-324 V2 Transport | [FULL_STACK_BITCOIN_RESEARCH.md#48](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#48) | `conxian-nexus/transport` |
+| **G-49** | Decentralized USI Transport | [FULL_STACK_BITCOIN_RESEARCH.md#49](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#49) | `services/admin-dashboard/src/lib/support/event-bus.ts` |
+| **G-50** | ZK Contingent Payments | [FULL_STACK_BITCOIN_RESEARCH.md#50](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#50) | `lib-conxian-core/zkcp` |
 
 ---
 *Updated by Jules (Sovereign Engineering Agent) - June 2026*
 
 ## 5. Implementation Status (June 2026 Update)
+- **G-44 (BitVMX)**: 🏗️ **Active Scaffolding**. Initialized via CON-1311.
 - **G-02 (FDC3 Native Resolver)**: 🟢 **Implemented**.
 - **G-03 (Usage Validation)**: 🟢 **Implemented**.
 - **G-07 (NWC Transport)**: 🟢 **Implemented**.
@@ -83,3 +88,4 @@ This document tracks the resolution of gaps and identifies new technical require
 - **G-01 (BitVM2 Floor)**: 🏗️ **Active Scaffolding**.
 - **G-11 (BitVM2 Multi-Party)**: 🏗️ **Active Scaffolding**.
 - **G-05 (Silent Payments)**: 🏗️ **Active Scaffolding**.
+- **G-44 (BitVMX Computation)**: 🏗️ **Active Scaffolding**.

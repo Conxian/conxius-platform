@@ -74,6 +74,10 @@ This document tracks the resolution of gaps and identifies new technical require
 | **G-48** | BIP-324 V2 Transport | [FULL_STACK_BITCOIN_RESEARCH.md#48](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#48) | `conxian-nexus/transport` |
 | **G-49** | Decentralized USI Transport | [FULL_STACK_BITCOIN_RESEARCH.md#49](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#49) | `services/admin-dashboard/src/lib/support/event-bus.ts` |
 | **G-50** | ZK Contingent Payments | [FULL_STACK_BITCOIN_RESEARCH.md#50](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#50) | `lib-conxian-core/zkcp` |
+| **G-51** | BitVM2 Optimized Verifier | [FULL_STACK_BITCOIN_RESEARCH.md#51](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#51) | `lib-conxian-core/bitvm` |
+| **G-52** | BRC-20 / Runes Integration | [FULL_STACK_BITCOIN_RESEARCH.md#52](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#52) | `conxian-nexus/adapters` |
+| **G-53** | Lightning Async Payments | [FULL_STACK_BITCOIN_RESEARCH.md#53](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#53) | `lib-conxian-core/lightning` |
+| **G-54** | OP_VAULT (BIP-345) | [FULL_STACK_BITCOIN_RESEARCH.md#54](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#54) | `lib-conxian-core/covenants` |
 
 ---
 *Updated by Jules (Sovereign Engineering Agent) - June 2026*

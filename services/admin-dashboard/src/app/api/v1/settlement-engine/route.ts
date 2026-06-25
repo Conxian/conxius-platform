@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { BitVMBridge } from "@/lib/support/bitvm";
+import { zkcpBridge } from "@/lib/support/zkcp";
 
 export async function POST(req: Request) {
   // Settlement-Engine BFF (Phase 7 USI Orchestration)
@@ -9,7 +10,8 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { action, proof, proofId, verifierId, signature } = await req.json();
+    const payload = await req.json();
+    const { action, proof, proofId, verifierId, signature } = payload;
 
     if (action === "orchestrate") {
       // Logic for multi-step cross-chain orchestration
@@ -63,6 +65,25 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Aggregation not found" }, { status: 404 });
       }
       return NextResponse.json(agg);
+    }
+
+    // G-50: ZKCP (Zero-Knowledge Contingent Payments) Actions
+    if (action === "zkcp-initialize") {
+      const { id, amount, encryptedDataHash, proofHash, sellerAddress, buyerAddress } = payload;
+      const intent = zkcpBridge.initializeIntent({ id, amount, encryptedDataHash, proofHash, sellerAddress, buyerAddress });
+      return NextResponse.json(intent);
+    }
+
+    if (action === "zkcp-verify") {
+      const { id, proof: zkProof } = payload;
+      const isValid = zkcpBridge.verifyProof(id, zkProof);
+      return NextResponse.json({ id, verified: isValid, status: zkcpBridge.getIntent(id)?.status });
+    }
+
+    if (action === "zkcp-finalize") {
+      const { id, paymentHash } = payload;
+      const key = zkcpBridge.finalizeSettlement(id, paymentHash);
+      return NextResponse.json({ id, decryptionKey: key, status: "finalized" });
     }
 
     return NextResponse.json({ success: true, status: "idle" });

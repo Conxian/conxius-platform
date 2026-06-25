@@ -29,7 +29,7 @@ graph TD
         UI[Conxian UI - Next.js / Wasm]
         ADM[Admin Dashboard - NixOS Status]
         W[Conxius Wallet - Secure Enclave]
-        ORB[StacksOrbit - TUI Deployer]
+        ORB[Conxius Orbit - TUI Deployer]
     end
 
     subgraph "Protocol Layer (Nakamoto / sBTC)"

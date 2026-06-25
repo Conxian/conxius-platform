@@ -79,3 +79,11 @@ This document tracks the resolution of gaps and identifies new technical require
 | **G-23** | Ark V-UTXO Protocol | [FULL_STACK_BITCOIN_RESEARCH.md#25](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#25) | `lib-conxian-core/ark` |
 | **G-41** | Taproot Assets | [FULL_STACK_BITCOIN_RESEARCH.md#41](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#41) | `conxian-nexus/adapters/taproot-assets` |
 | **G-42** | PTLCs | [FULL_STACK_BITCOIN_RESEARCH.md#42](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#42) | `lib-conxian-core/ptlc` |
+| **G-43** | Babylon Bitcoin Staking | [FULL_STACK_BITCOIN_RESEARCH.md#43](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#43) |  |
+| **G-44** | BitVMX Computation | [FULL_STACK_BITCOIN_RESEARCH.md#44](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#44) |  |
+| **G-45** | BOLT-12 Offers | [FULL_STACK_BITCOIN_RESEARCH.md#45](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#45) |  |
+| **G-46** | RGB++ Protocol | [FULL_STACK_BITCOIN_RESEARCH.md#46](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#46) |  |
+| **G-43** | Babylon Bitcoin Staking | [FULL_STACK_BITCOIN_RESEARCH.md#43](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#43) | `conxian-nexus/adapters/babylon` |
+| **G-44** | BitVMX Computation | [FULL_STACK_BITCOIN_RESEARCH.md#44](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#44) | `lib-conxian-core/bitvmx` |
+| **G-45** | BOLT-12 Offers | [FULL_STACK_BITCOIN_RESEARCH.md#45](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#45) | `lib-conxian-core/lightning` |
+| **G-46** | RGB++ Protocol | [FULL_STACK_BITCOIN_RESEARCH.md#46](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#46) | `conxian-nexus/adapters/rgbpp` |

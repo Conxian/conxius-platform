@@ -9,7 +9,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { intent, action, proof, proofId, verifierId, signature } = await req.json();
+    const { action, proof, proofId, verifierId, signature } = await req.json();
 
     if (action === "orchestrate") {
       // Logic for multi-step cross-chain orchestration

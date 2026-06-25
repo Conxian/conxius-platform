@@ -9,7 +9,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { intent, action, proof, proofId } = await req.json();
+    const { intent, action, proof, proofId, verifierId, signature } = await req.json();
 
     if (action === "orchestrate") {
       // Logic for multi-step cross-chain orchestration
@@ -40,6 +40,29 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "State not found" }, { status: 404 });
       }
       return NextResponse.json(state);
+    }
+
+    // G-11: Multi-Party Aggregation Actions
+    if (action === "submit-signature") {
+      if (!proofId || !verifierId || !signature) {
+        return NextResponse.json({ error: "Missing required fields for signature submission" }, { status: 400 });
+      }
+      const agg = await BitVMBridge.submitSignature(proofId, verifierId, signature);
+      if (!agg) {
+        return NextResponse.json({ error: "Aggregation not found for proof" }, { status: 404 });
+      }
+      return NextResponse.json(agg);
+    }
+
+    if (action === "get-aggregation") {
+      if (!proofId) {
+        return NextResponse.json({ error: "Missing proofId" }, { status: 400 });
+      }
+      const agg = BitVMBridge.getAggregation(proofId);
+      if (!agg) {
+        return NextResponse.json({ error: "Aggregation not found" }, { status: 404 });
+      }
+      return NextResponse.json(agg);
     }
 
     return NextResponse.json({ success: true, status: "idle" });

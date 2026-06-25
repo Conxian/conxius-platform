@@ -51,7 +51,11 @@ This matrix scores the identified gaps based on Strategic Alignment, Implementat
 
 ## Final Candidate Selection (v1.9.4)
 1. **G-01 (BitVM2)** - **26 Points**. Highest Strategic Alignment. Foundation for sBTC trust-minimization.
-2. **G-20 (BitVM3)** - **25 Points**. Future-proof adaptation for G-01.
-3. **G-21/G-22** - **24 Points**. High signal and alignment.
+2. **G-20 (BitVM3) / G-44 (BitVMX)** - **25 Points**. Future-proof adaptation and high-efficiency computation for the verification floor.
+3. **G-21 / G-22 / G-43 (Babylon) / G-14 (FROST)** - **24 Points**. High signal, institutional yield, and advanced signature aggregation.
 | **G-41** | **Taproot Assets** | 8 | 6 | 8 | **22** | [Taproot Assets Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#41) |
 | **G-42** | **PTLCs** | 9 | 7 | 6 | **22** | [PTLC Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#42) |
+| **G-43** | **Babylon Bitcoin Staking** | 9 | 8 | 7 | **24** | [Babylon Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#43) |
+| **G-44** | **BitVMX Computation** | 10 | 9 | 6 | **25** | [BitVMX Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#44) |
+| **G-45** | **BOLT-12 Offers** | 8 | 7 | 8 | **23** | [BOLT-12 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#45) |
+| **G-46** | **RGB++ Protocol** | 7 | 8 | 6 | **21** | [RGB++ Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#46) |

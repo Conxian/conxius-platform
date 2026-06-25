@@ -335,3 +335,24 @@ Research into secondary settlement layers to ensure multidimensional redundancy.
 - **Concept**: Next-generation Lightning payment primitive using adaptor signatures instead of hashes (HTLCs).
 - **Advantage**: Prevents payment correlation across routes and enables more complex multi-hop conditions.
 - **Roadmap**: Planned transition for the Wallet-BFF and Lightning adapters in Phase 8.
+
+## 43. Babylon Bitcoin Staking (CON-712)
+- **Concept**: A trustless Bitcoin staking protocol that allows BTC holders to stake their coins to secure Proof-of-Stake (PoS) chains without giving up custody or using a bridge.
+- **Mechanism**: Utilizes Bitcoin's scripting capabilities (specifically Taproot) to implement slasher conditions and staking contracts.
+- **Integration**: Mapped as a Tier 3 Experimental adapter for USI.
+- **Benefit**: Provides a new yield-generating primitive for Conxian corporate treasury.
+
+## 44. BitVMX: High-Efficiency Computation
+- **Concept**: A successor to the BitVM design that optimizes for general-purpose computation on Bitcoin with significantly reduced on-chain overhead.
+- **Strategic Value**: Providing a more flexible execution environment for the Nexus Glass Node.
+- **Alignment**: Part of the Phase 7 "Verification Floor" evolution path.
+
+## 45. BOLT-12 (Lightning Offers)
+- **Concept**: A proposal for static, reusable Lightning invoices that support refunds, subscriptions, and recurring payments.
+- **Advantage**: Eliminates the need for a backend to generate invoices for every payment, enhancing privacy and reducing infrastructure load.
+- **Integration**: Target for the Wallet-BFF and Merchant-BFF interfaces.
+
+## 46. RGB++ Protocol
+- **Concept**: An extension of the RGB protocol that utilizes a "turing-complete" L2 (like CKB) as a data availability and execution layer for Bitcoin-native assets.
+- **Benefit**: Simplifies the management of RGB assets while maintaining the security of the Bitcoin L1.
+- **Alignment**: Tier 2 Adapter candidate for multi-asset liquidity.

@@ -37,6 +37,10 @@ This matrix scores the identified gaps based on Strategic Alignment, Implementat
 | **G-48** | **BIP-324 V2 Transport** | 8 | 6 | 7 | **21** | [BIP-324 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#48) |
 | **G-49** | **Decentralized USI Transport** | 9 | 5 | 9 | **23** | [Nostr/Waku Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#49) |
 | **G-50** | **ZK Contingent Payments** | 10 | 9 | 7 | **26** | [ZKCP Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#50) |
+| **G-51** | **BitVM2 Optimized Verifier** | 9 | 8 | 7 | **24** | [Verifier Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#51) |
+| **G-52** | **BRC-20 / Runes Integration** | 7 | 6 | 9 | **22** | [Indexer Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#52) |
+| **G-53** | **Lightning Async Payments** | 8 | 7 | 9 | **24** | [Async Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#53) |
+| **G-54** | **OP_VAULT (BIP-345)** | 9 | 8 | 6 | **23** | [Vault Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#54) |
 
 ## Scoring Rubric (1-10)
 - **Strategic Alignment**: How critical is this to the "Full Bitcoin Stack" vision?

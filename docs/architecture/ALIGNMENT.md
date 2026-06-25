@@ -22,7 +22,7 @@ This document serves as the authoritative guide for aligning business logic, des
 
 - **Orchestration**: `conxius-platform` is transitioning to a NixOS-driven declarative control plane.
 - **Secrets**: Moving toward decentralized secret management (DSM); `provision-secrets.sh` is deprecated.
-- **Deployment**: Unified via Render (Pulse), GCP (Sovereign Service), and Conxius Orbit (legacy: StacksOrbit) (TUI).
+- **Deployment**: Unified via Render (Pulse), GCP (Sovereign Service), and Conxius Orbit (legacy: Conxius Orbit) (TUI).
 - **Code is Law**: Decisions are encoded in Rust and Clarity.
 
 - **Anchoring**: All temporal logic is anchored to Bitcoin burn-block-height (Nakamoto Consensus).

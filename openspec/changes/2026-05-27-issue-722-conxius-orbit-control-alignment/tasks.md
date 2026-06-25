@@ -3,7 +3,7 @@
 ## Implementation checklist
 - [x] Create OpenSpec change folder for issue #722.
 - [x] Add policy bindings in taxonomy/governance/production-boundary/releasing docs.
-- [x] Replace deprecated `StacksOrbit` naming with `Conxius Orbit` in active guidance docs.
+- [x] Replace deprecated `Conxius Orbit` naming with `Conxius Orbit` in active guidance docs.
 - [x] Run lightweight verification commands and record exact commands used.
 
 ## Requirement-to-evidence map

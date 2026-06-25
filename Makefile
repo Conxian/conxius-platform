@@ -12,7 +12,7 @@ help:
 	@echo "  make update-all  - Pull the latest main branches for all submodules"
 	@echo "  make logs        - Tail logs for all services"
 	@echo "  make bench       - Run automated performance benchmarks"
-	@echo "  make deploy      - Run deployment workflows (StacksOrbit/GCP)"
+	@echo "  make deploy      - Run deployment workflows (Conxius Orbit/GCP)"
 
 init:
 	@echo "Initializing submodules..."
@@ -48,5 +48,5 @@ bench:
 
 deploy:
 	@echo "Starting deployment workflow..."
-	@echo "Checking environment for StacksOrbit..."
-	@if command -v stacksorbit >/dev/null 2>&1; then 		stacksorbit deploy --all; 	else 		echo "⚠️  StacksOrbit TUI not found. Using standard GCP/Render fallback."; 		echo "Deploying Gateway to GCP..."; 		echo "Deploying UI to Render..."; 	fi
+	@echo "Checking environment for Conxius Orbit..."
+	@if command -v stacksorbit >/dev/null 2>&1; then 		stacksorbit deploy --all; 	else 		echo "⚠️  Conxius Orbit TUI not found. Using standard GCP/Render fallback."; 		echo "Deploying Gateway to GCP..."; 		echo "Deploying UI to Render..."; 	fi

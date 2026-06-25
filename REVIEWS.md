@@ -14,3 +14,16 @@ This file serves as a registry for tracking strategic, financial, and institutio
 
 - **Phase 7 Sovereign Redesign Review**: Target 2026-Q3.
 | 2026-06-25 | Phase 7 Best Candidate Init | G-44 BitVMX Initialized | Aligned | docs/architecture/BITVMX_RESEARCH.md |
+Render Remediation Status: Documented and verified against current environment limits. GH Actions baseline standardized.
+
+## [2026-06-25] Comprehensive Research Audit & Phase 7 Expansion (v1.9.4)
+- **CI/CD Baseline**: GitHub Action versions standardized to @v4/@v5 baseline org-wide.
+- **Naming Harmonization**: Deprecated `StacksOrbit` purged in favor of `Conxius Orbit`.
+- **Research Expansion**: Added G-51 (BitVM2 Verifier), G-52 (BRC-20/Runes), G-53 (Async Payments), and G-54 (OP_VAULT) to the Full Stack Bitcoin Research.
+- **Scaffolding Initialized**:
+  - G-50 (ZKCP): Bridge, BFF endpoints, and tests.
+  - G-12 (ERC-7683): Solver ranking engine and tests.
+  - G-08 (Citrea): ZK-Rollup adapter and tests.
+  - G-20 (BitVM3): Recursive verification logic.
+  - G-23 (Ark): V-UTXO protocol adapter.
+- **Status**: All tests passing. Alignment verified via system audit.

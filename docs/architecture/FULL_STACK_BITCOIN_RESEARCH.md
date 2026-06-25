@@ -375,3 +375,23 @@ Research into secondary settlement layers to ensure multidimensional redundancy.
 ## 50. Zero-Knowledge Contingent Payments (ZKCP)
 - **Concept**: A protocol that allows for the trustless exchange of information for Bitcoin, where the buyer only pays if the information is valid according to a ZK-proof.
 - **Strategic Impact**: Foundation for decentralized data markets and trustless "pay-for-proof" services in the Nexus network.
+
+## 51. BitVM2 Optimized Snark Verifier (v1.9.4)
+- **Concept**: Optimizing the Groth16 SNARK verifier specifically for Bitcoin Script limits, focusing on reduction of script size and stack depth.
+- **Research**: Investigating the use of "chunked" pairings and optimized field arithmetic to fit within the 4MB block limit while maintaining security.
+- **Benefit**: Increases the efficiency of G-01 (Verification Floor) and reduces the cost of settlement.
+
+## 52. BRC-20 & Runes USI Integration
+- **Concept**: Providing native support for Bitcoin-based meta-protocols (BRC-20, Runes) within the Universal Settlement Interface (USI).
+- **Mechanism**: Indexer-aware intent routing that validates asset ownership via external indexer APIs (e.g., Unisat, BestinSlot) before signing intents.
+- **Alignment**: Tier 2 Adapter candidates for the Conxian Multi-Asset Treasury.
+
+## 53. Lightning Async Payments (BIP-351+)
+- **Concept**: Enabling Lightning payments to recipients who are currently offline by utilizing a third-party Lightning Service Provider (LSP) as a temporary holding area.
+- **Advantage**: Significantly improves UX for mobile-first users and reduces the "online requirement" friction of the Lightning Network.
+- **Integration**: Target for the Wallet-BFF asynchronous event handler.
+
+## 54. Bitcoin Covenants: OP_VAULT (BIP-345)
+- **Concept**: A specialized covenant opcode designed for creating secure, multi-stage Bitcoin vaults with recovery paths and spend delays.
+- **Strategic Value**: Providing institutional-grade security for Conxian liquidity pools and treasury management without the complexity of general-purpose covenants.
+- **Research**: Monitoring the consensus progress and prototyping vault logic in the USI simulation environment.

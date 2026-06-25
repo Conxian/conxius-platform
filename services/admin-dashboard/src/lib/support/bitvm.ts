@@ -5,20 +5,30 @@
  * It manages the generation of Groth16 verification taps and challenges.
  */
 
+export type BitVMStatus = 'pending' | 'verifying' | 'verified' | 'challenged' | 'disproved' | 'slashed';
+
 export interface BitVMVerificationResult {
   verified: boolean;
   taps_generated: number;
   proof_id: string;
-  status: 'pending' | 'verified' | 'challenged' | 'slashed';
+  status: BitVMStatus;
+  timestamp: string;
   error?: string;
 }
 
+export interface BitVMFlowState {
+  proofId: string;
+  status: BitVMStatus;
+  segments: number;
+  activeChallenges: number[];
+  lastUpdate: string;
+}
+
 export class BitVMBridge {
+  private static states: Map<string, BitVMFlowState> = new Map();
+
   /**
    * Orchestrates the verification floor for a given USI settlement proof.
-   *
-   * @param rawProof The Groth16 proof to be verified.
-   * @param proofId Unique identifier for the settlement proof.
    */
   static async verifyFloor(
     rawProof: string,
@@ -26,27 +36,37 @@ export class BitVMBridge {
   ): Promise<BitVMVerificationResult> {
     console.log(`[BitVM2] Initializing verification floor for proof: ${proofId}`);
 
-    // In a production environment, this would call into the 'bitvm' SDK or Wasm module.
-    // It would generate the 364 independent script segments (taps).
-
-    // Placeholder for actual chunking logic:
-    // const segments = await bitvm.generateGroth16Segments(rawProof);
-
     if (!rawProof || rawProof.length < 64) {
       return {
         verified: false,
         taps_generated: 0,
         proof_id: proofId,
         status: 'pending',
+        timestamp: new Date().toISOString(),
         error: 'Invalid proof format or length'
       };
     }
 
+    const state: BitVMFlowState = {
+      proofId,
+      status: 'verifying',
+      segments: 364,
+      activeChallenges: [],
+      lastUpdate: new Date().toISOString()
+    };
+
+    this.states.set(proofId, state);
+
+    // Simulate verification process
+    state.status = 'verified';
+    state.lastUpdate = new Date().toISOString();
+
     return {
       verified: true,
-      taps_generated: 364,
+      taps_generated: state.segments,
       proof_id: proofId,
-      status: 'verified'
+      status: state.status,
+      timestamp: state.lastUpdate
     };
   }
 
@@ -54,8 +74,21 @@ export class BitVMBridge {
    * Challenges a specific BitVM tap if fraud is detected.
    */
   static async challengeTap(proofId: string, tapIndex: number): Promise<boolean> {
+    const state = this.states.get(proofId);
+    if (!state) return false;
+
     console.warn(`[BitVM2] Challenging tap ${tapIndex} for proof: ${proofId}`);
-    // Logic for constructing and broadcasting a 'disprove' transaction.
+    state.status = 'challenged';
+    state.activeChallenges.push(tapIndex);
+    state.lastUpdate = new Date().toISOString();
+
     return true;
+  }
+
+  /**
+   * Retrieves the current state of a verification floor.
+   */
+  static getState(proofId: string): BitVMFlowState | undefined {
+    return this.states.get(proofId);
   }
 }

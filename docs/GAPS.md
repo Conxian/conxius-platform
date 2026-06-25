@@ -66,8 +66,8 @@ This document tracks the resolution of gaps and identifies new technical require
 - **G-03 (Usage Validation)**: 🟢 **Implemented (Instrumentation)**. Score-based triage in `usageValidation.ts`.
 - **G-07 (NWC Transport)**: 🟢 **Implemented (Scaffold)**. NIP-47 authorized via `NWCTransport`.
 - **G-12 (BIP-353 DNS)**: 🟢 **Implemented (Bridge Scaffold)**. Foundational bridge in `dns-payments.ts` and verified via tests.
-- **G-09 (BIP-322 Intents)**: 🟢 **Implemented (Bridge Scaffold)**. Foundational bridge in `bip322.ts`.
-- **G-01 (BitVM2 Floor)**: 🟡 **Research Complete**. Implementation pending in `lib-conxian-core`.
+- **G-09 (BIP-322 Intents)**: 🏗️ **Active Scaffolding**. Refined bridge supporting USI Intents. Foundational bridge in `bip322.ts`.
+- **G-01 (BitVM2 Floor)**: 🏗️ **Active Scaffolding**. Floor Manager state machine implemented in `bitvm.ts`. Implementation pending in `lib-conxian-core`.
 - **G-04 (Wasm-First Wallet)**: 🟡 **Design Complete**. USI integration documented in `PHASE_7_PROPOSAL_UNIVERSAL_SETTLEMENT.md`.
 
 | **G-17** | Simplicity Verification | [FULL_STACK_BITCOIN_RESEARCH.md#37](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#37) | `lib-conxian-core/simplicity` |

@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { FDC3Resolver, CJCSJob } from '../lib/fdc3/resolver';
 import { UsageValidator, UsageEvent } from '../lib/sidl/usageValidation';
+import { BitVMBridge } from '../lib/support/bitvm';
+import { Bip322Bridge } from '../lib/support/bip322';
 
 describe('Phase 7 Alignment: FDC3 Resolver', () => {
   it('should map DEX_SWAP to fdc3.instrument', () => {
@@ -47,5 +49,56 @@ describe('Phase 7 Alignment: Usage Validation', () => {
     expect(strongScore).toBeGreaterThan(weakScore);
     expect(UsageValidator.warrantsTriage(strongScore)).toBe(true);
     expect(UsageValidator.warrantsTriage(weakScore)).toBe(false);
+  });
+});
+
+describe('Phase 7 Alignment: BitVM2 Floor Manager', () => {
+  it('should initialize verification floor and generate 364 taps', async () => {
+    const proof = 'a'.repeat(64);
+    const proofId = 'proof-123';
+    const result = await BitVMBridge.verifyFloor(proof, proofId);
+
+    expect(result.verified).toBe(true);
+    expect(result.taps_generated).toBe(364);
+    expect(result.status).toBe('verified');
+
+    const state = BitVMBridge.getState(proofId);
+    expect(state).toBeDefined();
+    expect(state?.status).toBe('verified');
+  });
+
+  it('should handle invalid proofs', async () => {
+    const result = await BitVMBridge.verifyFloor('short', 'proof-456');
+    expect(result.verified).toBe(false);
+    expect(result.error).toBeDefined();
+  });
+
+  it('should support challenging a tap', async () => {
+    const proofId = 'proof-789';
+    await BitVMBridge.verifyFloor('a'.repeat(64), proofId);
+    const challenged = await BitVMBridge.challengeTap(proofId, 42);
+
+    expect(challenged).toBe(true);
+    const state = BitVMBridge.getState(proofId);
+    expect(state?.status).toBe('challenged');
+    expect(state?.activeChallenges).toContain(42);
+  });
+});
+
+describe('Phase 7 Alignment: BIP-322 USI Intents', () => {
+  it('should verify a valid USI intent signature', async () => {
+    const address = 'bc1qtestaddress';
+    const intent = { type: 'usi:settlement', amount: 1000 };
+    const signature = 'base64signaturelongerthan10';
+
+    const result = await Bip322Bridge.verify(address, JSON.stringify(intent), signature);
+    expect(result.valid).toBe(true);
+    expect(result.intent_type).toBe('usi:settlement');
+  });
+
+  it('should reject invalid address formats', async () => {
+    const result = await Bip322Bridge.verify('invalid', 'msg', 'sig');
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain('address format');
   });
 });

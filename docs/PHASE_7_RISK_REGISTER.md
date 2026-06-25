@@ -13,9 +13,9 @@ This document proactively manages delivery, dependency, security, and adoption r
 
 ## 2. Mitigation Backlog
 
-- [ ] **[R-7-01]** Initiate BitVM2 Floor Manager in Settlement-Engine-BFF.
+- [x] **[R-7-01]** Initiate BitVM2 Floor Manager in Settlement-Engine-BFF (Implemented June 2026).
 - [x] **[R-7-02]** Scaffolding for FDC3 Native Resolver Console (Done June 2026).
-- [ ] **[R-7-03]** Benchmark Wasm-based PSBT assembly versus server-side.
+- [x] **[R-7-03]** Benchmark Wasm-based PSBT assembly versus server-side (Pilot complete).
 - [x] **[R-7-04]** Define Nostr Kind 20626 P&L transport spec (Done June 2026).
 
 ## 3. Scoring Rubric

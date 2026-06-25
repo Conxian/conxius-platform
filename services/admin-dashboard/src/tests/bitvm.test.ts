@@ -22,7 +22,13 @@ describe('BitVMBridge', () => {
   });
 
   it('should challenge a specific tap', async () => {
-    const success = await BitVMBridge.challengeTap('proof-789', 123);
+    const proofId = 'proof-789';
+    await BitVMBridge.verifyFloor('a'.repeat(64), proofId);
+    const success = await BitVMBridge.challengeTap(proofId, 123);
     expect(success).toBe(true);
+
+    const state = BitVMBridge.getState(proofId);
+    expect(state?.status).toBe('challenged');
+    expect(state?.activeChallenges).toContain(123);
   });
 });

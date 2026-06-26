@@ -27,17 +27,17 @@ jobs:
     steps:
       - name: Checkout
         # Version-pinned per baseline - see .github/CONXIUS_CICD_BASELINE.md
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up Docker Buildx
         # Version-pinned per baseline
         uses: docker/setup-buildx-action@v4
       - name: Set up Node
         # Version-pinned per baseline - see .github/CONXIUS_CICD_BASELINE.md
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '22'
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
       - name: Configure environment
         run: |
           cp .env.schema .env
@@ -72,7 +72,7 @@ jobs:
     steps:
       - name: Checkout
         # Version-pinned per baseline - see .github/CONXIUS_CICD_BASELINE.md
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Verify Admin Dashboard Dockerfile
         run: |
           docker build -f ./services/admin-dashboard/Dockerfile ./services/admin-dashboard -t admin-build

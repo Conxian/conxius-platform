@@ -57,6 +57,7 @@ This repository is maintained by Conxian Labs. It supports development and opera
 
 ## Technical documentation map
 
+- [Information Hierarchy & Maintenance Rules](./docs/INFORMATION_HIERARCHY.md)
 - [Conxian Unified Theory v2](./docs/CONXIAN_UNIFIED_THEORY_v2.md)
 - [Sovereign Computing Redesign (2026)](./docs/architecture/SOVEREIGN_REPR_2026.md)
 - [Whitepaper](./docs/WHITEPAPER.md)

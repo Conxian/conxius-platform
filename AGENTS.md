@@ -19,6 +19,15 @@ Welcome, Agent. You are tasked with maintaining and extending the Conxian DeFi e
 ## Documentation
 Refer to `docs/architecture/ALIGNMENT.md` for strategy and `docs/architecture/SYNERGY.md` for inter-repo workflows.
 
+### Information Hierarchy
+All documentation in this repository follows a four-tier hierarchy defined in [`docs/INFORMATION_HIERARCHY.md`](./docs/INFORMATION_HIERARCHY.md). When reading or writing documentation:
+- **Canonical** documents are authoritative truth sources (updated via OpenSpec proposals only).
+- **Operational** documents track active execution (GAPS.md, SCORING_MATRIX.md, runbooks).
+- **Evidence** documents are immutable verification artifacts.
+- **Historical** documents are read-only archived materials.
+
+Every decision area has exactly **one active reading chain** rooted in this file. Follow the chain; never short-circuit to historical or evidence layers for decision-making.
+
 ---
 © 2026 Conxian Labs. Code is Law.
 

@@ -18,3 +18,4 @@ When documenting roadmap or implementation status in this repository:
 1. Prefer linking to the canonical references above instead of duplicating status snapshots.
 2. Treat OpenSpec change artifacts in [`openspec/changes/`](../openspec/changes/) as the source for change-by-change history.
 3. Keep this index concise and factual.
+4. Follow the [Information Hierarchy & Maintenance Rules](./INFORMATION_HIERARCHY.md) for document placement and reading-chain enforcement.

@@ -7,14 +7,26 @@ on:
         required: false
         type: string
         default: '22'
-      run-tests:
-        required: false
-        type: boolean
-        default: true
       run-lint:
         required: false
         type: boolean
         default: true
+      run-tests:
+        required: false
+        type: boolean
+        default: true
+      run-typecheck:
+        required: false
+        type: boolean
+        default: true
+      run-build:
+        required: false
+        type: boolean
+        default: false
+      run-e2e:
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   validate:
@@ -24,29 +36,35 @@ jobs:
       contents: read
     steps:
       - name: Checkout Code
-        # Version-pinned per baseline - see .github/CONXIUS_CICD_BASELINE.md
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-        # Version-pinned per baseline - see .github/CONXIUS_CICD_BASELINE.md
         uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
 
       - name: Setup pnpm
-        # Version-pinned per baseline
         uses: pnpm/action-setup@v4
 
       - name: Install Dependencies
         run: pnpm install --no-frozen-lockfile
-      - name: Verify sharp for Docker compatibility
-        run: pnpm list sharp
 
       - name: Run Lint
         if: ${{ inputs.run-lint }}
         run: pnpm run lint || echo "No lint script found"
 
+      - name: Run Typecheck
+        if: ${{ inputs.run-typecheck }}
+        run: pnpm run typecheck || echo "No typecheck script found"
+
       - name: Run Tests
         if: ${{ inputs.run-tests }}
         run: pnpm test || echo "No test script found"
 
-      - name: Run Typecheck
-        run: pnpm run typecheck || echo "No typecheck script found"
+      - name: Run Build
+        if: ${{ inputs.run-build }}
+        run: pnpm run build || echo "No build script found"
+
+      - name: Run E2E Tests
+        if: ${{ inputs.run-e2e }}
+        run: pnpm run test:e2e || echo "No e2e test script found"

@@ -120,6 +120,28 @@ This repository MUST maintain these workflows:
 - `hygiene.yml` - Repository hygiene audit
 - `release.yml` - Tag-based release automation
 
+### 5.1.1 Reusable Workflows (consumable by downstream repos)
+These workflows are designed to be consumed by other Conxian repositories:
+
+| Workflow | Ecosystem | Coverage |
+|----------|-----------|----------|
+| `reusable-ci.yml` | TypeScript/Node.js | Lint, typecheck, unit test, build, optional e2e |
+| `reusable-rust-ci.yml` | Rust | fmt, clippy, test, cargo-audit |
+| `reusable-secret-scan.yml` | All | Gitleaks secret scanning |
+| `reusable-dependency-review.yml` | All | Dependency vulnerability scanning |
+| `reusable-hygiene.yml` | All | Security and hygiene audit |
+
+Downstream repos consume these via:
+```yaml
+jobs:
+  ci:
+    uses: Conxian/conxius-platform/.github/workflows/reusable-ci.yml@main
+  rust-ci:
+    uses: Conxian/conxius-platform/.github/workflows/reusable-rust-ci.yml@main
+    with:
+      working-directory: ./services/my-rust-service
+```
+
 ### 5.2 CODEOWNERS Requirements
 - All `.github/workflows/**` must be owned by `@botshelomokoka @admin-conxian-labs`
 - Release configuration owned by security admins
@@ -139,6 +161,10 @@ Other repositories may consume workflows from this repo:
 jobs:
   ci:
     uses: Conxian/conxius-platform/.github/workflows/reusable-ci.yml@main
+  rust-ci:
+    uses: Conxian/conxius-platform/.github/workflows/reusable-rust-ci.yml@main
+    with:
+      working-directory: ./services/my-rust-service
   secret-scan:
     uses: Conxian/conxius-platform/.github/workflows/reusable-secret-scan.yml@main
 ```
@@ -148,6 +174,17 @@ Repositories inheriting from this baseline must:
 - Define their own `production` environment with protection rules
 - Document any deviations from this baseline
 - Include deviation rationale in their `CONTRIBUTING.md`
+
+### 6.3 When to Deploy from Actions vs GitOps
+
+| Path | Trigger | Deployment Model | Examples |
+|------|---------|-----------------|----------|
+| **Docs/Previews** | PR merge to main | Direct from Actions | `docs/`, preview deploys, static sites |
+| **Testnet** | PR merge to main or `develop` | Direct from Actions with env gating | Testnet services, staging infra |
+| **Staging/Pre-prod** | Approved deployment | Actions with environment protection rules | Staging environments |
+| **Production** | Git tag or approved promotion | GitOps only (ArgoCD/Flux) | Long-lived production services |
+
+**Rule of thumb**: If an action can be undone with low blast radius (docs, previews), deploy from Actions. If the change affects production state or has high blast radius, defer to GitOps.
 
 ## 7. Future GitOps Ownership
 

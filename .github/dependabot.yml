@@ -4,18 +4,47 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      dev-dependencies:
+        patterns:
+          - "@playwright/*"
+          - "playwright"
+          - "vite"
+          - "typescript"
+          - "@types/*"
+      production-dependencies:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "@playwright/*"
+          - "playwright"
+          - "vite"
+          - "typescript"
+          - "@types/*"
   - package-ecosystem: "npm"
     directory: "/services/admin-dashboard"
     schedule:
       interval: "weekly"
+    groups:
+      dashboard-dependencies:
+        patterns:
+          - "*"
   - package-ecosystem: "npm"
     directory: "/services/conxian-ui"
     schedule:
       interval: "weekly"
+    groups:
+      ui-dependencies:
+        patterns:
+          - "*"
   - package-ecosystem: "npm"
     directory: "/services/elizaos-plugin-conxian"
     schedule:
       interval: "weekly"
+    groups:
+      elizaos-dependencies:
+        patterns:
+          - "*"
   - package-ecosystem: "cargo"
     directory: "/services/lib-conxian-core"
     schedule:
@@ -28,7 +57,15 @@ updates:
     directory: "/services/lib-conxian-core/gateway"
     schedule:
       interval: "weekly"
+    groups:
+      gateway-dependencies:
+        patterns:
+          - "*"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      github-actions:
+        patterns:
+          - "*"

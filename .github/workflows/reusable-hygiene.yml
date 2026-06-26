@@ -1,5 +1,8 @@
 name: Reusable Hygiene Audit
 
+# Reusable hygiene audit per Issue #968 - CI/CD Baseline Hardening
+# See: .github/CONXIUS_CICD_BASELINE.md
+
 on:
   workflow_call:
 
@@ -7,12 +10,15 @@ jobs:
   hygiene:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # Minimal permissions per .github/CONXIUS_CICD_BASELINE.md
     permissions:
       contents: read
     steps:
       - name: Checkout Code
+        # Version-pinned per baseline - see .github/CONXIUS_CICD_BASELINE.md
         uses: actions/checkout@v4
       - name: Set up Python
+        # Version-pinned per baseline - see .github/CONXIUS_CICD_BASELINE.md
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'

@@ -21,14 +21,16 @@ export interface ZKCPIntent {
   round: number;
   paymentHash?: string;
   decryptionKey?: string;
-  proofSystem?: 'groth16' | 'plonk' | 'stark';
+  proofSystem?: ZKProofSystem;
   createdAt: string;
   updatedAt: string;
 }
 
+export type ZKProofSystem = 'groth16' | 'plonk' | 'stark';
+
 export interface ZKVerificationResult {
   valid: boolean;
-  proofSystem: string;
+  proofSystem: ZKProofSystem;
   verifiedAt: string;
   error?: string;
 }

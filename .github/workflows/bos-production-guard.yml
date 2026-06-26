@@ -1,5 +1,9 @@
 name: BOS production boundary guard
 
+# BOS production boundary guard per Issue #968
+# Validates control-plane ownership boundaries
+# See: .github/CONXIUS_CICD_BASELINE.md
+
 on:
   push:
     paths-ignore:
@@ -22,9 +26,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
+        # Version-pinned per baseline - see .github/CONXIUS_CICD_BASELINE.md
         uses: actions/checkout@v4
 
       - name: Set up Python
+        # Version-pinned per baseline - see .github/CONXIUS_CICD_BASELINE.md
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"

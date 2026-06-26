@@ -1,5 +1,9 @@
 name: Multi-Environment Deployment Validation
 
+# Multi-environment deployment testing per Issue #968
+# Demonstrates control-plane deployment orchestration capabilities
+# See: .github/CONXIUS_CICD_BASELINE.md
+
 on:
   push:
     paths-ignore: ['**.md', 'docs/**', 'CODEOWNERS', 'LICENSE']
@@ -22,10 +26,13 @@ jobs:
       CORE_BITCOIN_NETWORK: testnet
     steps:
       - name: Checkout
+        # Version-pinned per baseline - see .github/CONXIUS_CICD_BASELINE.md
         uses: actions/checkout@v4
       - name: Set up Docker Buildx
+        # Version-pinned per baseline
         uses: docker/setup-buildx-action@v4
       - name: Set up Node
+        # Version-pinned per baseline - see .github/CONXIUS_CICD_BASELINE.md
         uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -64,6 +71,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout
+        # Version-pinned per baseline - see .github/CONXIUS_CICD_BASELINE.md
         uses: actions/checkout@v4
       - name: Verify Admin Dashboard Dockerfile
         run: |

@@ -1,5 +1,9 @@
 name: Cross-Repo Integration Harness MVP
 
+# Cross-repo integration testing per Issue #968
+# Validates control-plane cross-service orchestration
+# See: .github/CONXIUS_CICD_BASELINE.md
+
 on:
   push:
     paths-ignore: ['**.md', 'docs/**', 'CODEOWNERS', 'LICENSE']
@@ -25,8 +29,10 @@ jobs:
       GRAFANA_PASSWORD: ci-grafana-password
     steps:
       - name: Checkout repository
+        # Version-pinned per baseline - see .github/CONXIUS_CICD_BASELINE.md
         uses: actions/checkout@v4
       - name: Set up Node.js
+        # Version-pinned per baseline - see .github/CONXIUS_CICD_BASELINE.md
         uses: actions/setup-node@v4
         with:
           node-version: "22"

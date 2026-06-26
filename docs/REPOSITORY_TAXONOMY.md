@@ -24,6 +24,7 @@ Ownership authority remains defined in each repository's root `CODEOWNERS` file.
 | [`Conxian/conxian-nexus`](https://github.com/Conxian/conxian-nexus) | State/indexing engineers and backend maintainers | Public | `@Conxian/core-devs`, `@botshelomokoka`, `@admin-conxian-labs` | State/indexing service | Maintains the Nexus/Glass Node API bridge and state synchronization surface | Baseline v0.2.4 (Active; last push 2026-06-20) |
 | [`Conxian/conxian-business`](https://github.com/Conxian/conxian-business) | Internal leadership, strategy, legal, and operations teams | Private | `@botshelomokoka`, `@admin-conxian-labs` | Business operations (private) | Stores non-public strategic, legal, and operational documentation | Baseline v0.2.4 (Active; last push 2026-06-20) |
 | [`Conxian/conxius-enclave-sdk`](https://github.com/Conxian/conxius-enclave-sdk) | Security/mobile engineers integrating hardware enclave capabilities | Public | `@botshelomokoka`, `@admin-conxian-labs` | Security/enclave SDK | Provides cross-platform enclave abstractions for sovereign computing | Baseline v0.2.4 (Active; last push 2026-06-20) |
+| [`Conxian/demo-repository`](https://github.com/Conxian/demo-repository) | Demo/scaffold audience, contributors evaluating Conxian ecosystem | Public | `@botshelomokoka`, `@admin-conxian-labs` | Demo/scaffold | Minimal scaffold repository for demonstrating Conxian ecosystem integration patterns | Active (pending hardening per [conxius-platform#1064](https://github.com/Conxian/conxius-platform/issues/1064)): governance files and lock file required before investor-ready status. |
 
 ## Narrative taxonomy (summary)
 
@@ -47,6 +48,9 @@ Ownership authority remains defined in each repository's root `CODEOWNERS` file.
 
 ### 4. Public communications surface
 - `Conxian/conxian-labs-site`
+
+### 5. Demo/scaffold surfaces
+- `Conxian/demo-repository` (pending hardening per [conxius-platform#1064](https://github.com/Conxian/conxius-platform/issues/1064))
 
 ## Mandatory governance control-review inclusion (do not omit)
 
@@ -86,4 +90,5 @@ Update this table when an exception is added, re-scoped, or closed. Keep entries
 | `lib-conxian-core` | `Conxian` | Transitional protocol standardization (planned/in progress) | Redesign defines this repository as shared source of truth for cryptographic/protocol logic, compiled to Wasm for client and middleware reuse. | Unified shared primitives/Wasm SDK across UI, wallet, and BFF components. | Phase 7 Sovereign Redesign (`2026-Q3` target). | `docs/architecture/SOVEREIGN_REPR_2026.md`; `GAPS.md` §4 |
 | `conxian-nexus` | `Conxian` | Transitional indexer redesign (planned) | Phase 7 tracks Nexus transition from current indexer role to IVC-based Nexus OS design. | Nexus OS / IVC-driven verifiable off-chain computation interface. | Phase 7 Sovereign Redesign (`2026-Q3` target). | `GAPS.md` §4; `SYSTEM_GRAPH.md` repository roles |
 | `admin-pulse-bos` | `Conxian` | Intentional dev-only exception (active) | Explicitly designated as dev-only and excluded from production boundary wiring. | Remain isolated from production unless production-boundary policy is explicitly revised. | `TBD` (review cadence not yet documented). | `docs/PRODUCTION_BOUNDARY.md` (Dev-only surfaces) |
+| `demo-repository` | `Conxian` | Investor-readiness hardening (in progress) | Live repo review found missing governance files, no lock file, and unpinned workflows. | Governance-hardened demo repo with lock file, SHA-pinned actions, and proper READMEs. | `conxius-platform#1064` resolution | `conxius-platform#1064` |
 | `TBD` (visibility-boundary scope) | `TBD` | Documentation gap for repository-level visibility exceptions | `CON-324` records visibility-boundary audit completion, but current docs do not enumerate repository-by-repository visibility decisions for ongoing review. | Replace this row with repository-specific visibility entries once documented. | `TBD` | `docs/FINAL_ALIGNMENT_REPORT.md` (`CON-324`) |

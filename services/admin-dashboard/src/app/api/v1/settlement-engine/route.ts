@@ -75,15 +75,36 @@ export async function POST(req: Request) {
     }
 
     if (action === "zkcp-verify") {
-      const { id, proof: zkProof } = payload;
-      const isValid = zkcpBridge.verifyProof(id, zkProof);
+      const { id, proof, publicInputs } = payload;
+      const isValid = await zkcpBridge.verifyProof(id, proof, publicInputs ?? []);
       return NextResponse.json({ id, verified: isValid, status: zkcpBridge.getIntent(id)?.status });
+    }
+
+    if (action === "zkcp-watch") {
+      const { id } = payload;
+      const result = await zkcpBridge.watchForPayment(id);
+      return NextResponse.json({ id, ...result, status: zkcpBridge.getIntent(id)?.status });
     }
 
     if (action === "zkcp-finalize") {
       const { id, paymentHash } = payload;
       const key = zkcpBridge.finalizeSettlement(id, paymentHash);
       return NextResponse.json({ id, decryptionKey: key, status: "finalized" });
+    }
+
+    if (action === "zkcp-list") {
+      const { status } = payload;
+      const intents = status
+        ? zkcpBridge.listIntentsByStatus(status)
+        : zkcpBridge.listIntents();
+      return NextResponse.json({ intents, count: intents.length });
+    }
+
+    if (action === "zkcp-get") {
+      const { id } = payload;
+      const intent = zkcpBridge.getIntent(id);
+      if (!intent) return NextResponse.json({ error: "Intent not found" }, { status: 404 });
+      return NextResponse.json(intent);
     }
 
     return NextResponse.json({ success: true, status: "idle" });

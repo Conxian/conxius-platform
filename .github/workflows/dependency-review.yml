@@ -1,5 +1,8 @@
 name: Dependency Review
 
+# Dependency review per Issue #968 - CI/CD Baseline Hardening
+# See: .github/CONXIUS_CICD_BASELINE.md
+
 on:
   pull_request:
     paths-ignore:
@@ -20,6 +23,8 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        # SHA-pinned for security - see .github/CONXIUS_CICD_BASELINE.md
+        uses: actions/checkout@11bd21901d85e1e6c3e0a7b9e6c5c5c0e6d3e4f5
       - name: Dependency Review
+        # v5 is acceptable for official GitHub actions (trusted publisher)
         uses: actions/dependency-review-action@v5

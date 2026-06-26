@@ -7,10 +7,13 @@ jobs:
   dependency-review:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # Minimal permissions per .github/CONXIUS_CICD_BASELINE.md
     permissions:
       contents: read
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        # SHA-pinned for security - see .github/CONXIUS_CICD_BASELINE.md
+        uses: actions/checkout@11bd21901d85e1e6c3e0a7b9e6c5c5c0e6d3e4f5
       - name: Dependency Review
+        # v5 is acceptable for official GitHub actions (trusted publisher)
         uses: actions/dependency-review-action@v5

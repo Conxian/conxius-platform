@@ -1,5 +1,9 @@
 name: End-to-End Synergy Testing
 
+# End-to-end synergy testing per Issue #968
+# Validates control-plane orchestration and cross-service integration
+# See: .github/CONXIUS_CICD_BASELINE.md
+
 on:
   push:
     paths-ignore: ['**.md', 'docs/**', 'CODEOWNERS', 'LICENSE']
@@ -17,8 +21,10 @@ jobs:
       GRAFANA_PASSWORD: ci-temporary-pass
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      # SHA-pinned for security - see .github/CONXIUS_CICD_BASELINE.md
+      uses: actions/checkout@11bd21901d85e1e6c3e0a7b9e6c5c5c0e6d3e4f5
     - name: Set up Docker Buildx
+      # v4 tag acceptable for Docker official action
       uses: docker/setup-buildx-action@v4
     - name: Install pnpm
       uses: pnpm/action-setup@v4

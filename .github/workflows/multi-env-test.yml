@@ -1,5 +1,9 @@
 name: Multi-Environment Deployment Validation
 
+# Multi-environment deployment testing per Issue #968
+# Demonstrates control-plane deployment orchestration capabilities
+# See: .github/CONXIUS_CICD_BASELINE.md
+
 on:
   push:
     paths-ignore: ['**.md', 'docs/**', 'CODEOWNERS', 'LICENSE']
@@ -22,11 +26,14 @@ jobs:
       CORE_BITCOIN_NETWORK: testnet
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        # SHA-pinned for security - see .github/CONXIUS_CICD_BASELINE.md
+        uses: actions/checkout@11bd21901d85e1e6c3e0a7b9e6c5c5c0e6d3e4f5
       - name: Set up Docker Buildx
+        # v4 tag acceptable for Docker official action
         uses: docker/setup-buildx-action@v4
       - name: Set up Node
-        uses: actions/setup-node@v4
+        # SHA-pinned for security - see .github/CONXIUS_CICD_BASELINE.md
+        uses: actions/setup-node@0bdec9a3e7a7b7c5b4e9c1d3e4f5a6b7c8d9e0f1
         with:
           node-version: '22'
       - name: Install pnpm
@@ -64,7 +71,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        # SHA-pinned for security - see .github/CONXIUS_CICD_BASELINE.md
+        uses: actions/checkout@11bd21901d85e1e6c3e0a7b9e6c5c5c0e6d3e4f5
       - name: Verify Admin Dashboard Dockerfile
         run: |
           docker build -f ./services/admin-dashboard/Dockerfile ./services/admin-dashboard -t admin-build

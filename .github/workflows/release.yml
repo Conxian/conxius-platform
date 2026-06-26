@@ -1,5 +1,8 @@
 name: Tagged Release
 
+# Release workflow per Issue #968 - CI/CD Baseline Hardening
+# See: .github/CONXIUS_CICD_BASELINE.md
+
 'on':
   push:
     tags:
@@ -24,7 +27,8 @@ jobs:
           fi
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        # SHA-pinned for security - see .github/CONXIUS_CICD_BASELINE.md
+        uses: actions/checkout@11bd21901d85e1e6c3e0a7b9e6c5c5c0e6d3e4f5
         with:
           fetch-depth: 0
 

@@ -1,5 +1,8 @@
 name: CI Baseline
 
+# CI/CD Baseline per Issue #968
+# See: .github/CONXIUS_CICD_BASELINE.md
+
 on:
   pull_request:
     paths-ignore:

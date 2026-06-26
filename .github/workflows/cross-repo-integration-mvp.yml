@@ -29,11 +29,11 @@ jobs:
       GRAFANA_PASSWORD: ci-grafana-password
     steps:
       - name: Checkout repository
-        # SHA-pinned for security - see .github/CONXIUS_CICD_BASELINE.md
-        uses: actions/checkout@11bd21901d85e1e6c3e0a7b9e6c5c5c0e6d3e4f5
+        # Version-pinned per baseline - see .github/CONXIUS_CICD_BASELINE.md
+        uses: actions/checkout@v4
       - name: Set up Node.js
-        # SHA-pinned for security - see .github/CONXIUS_CICD_BASELINE.md
-        uses: actions/setup-node@0bdec9a3e7a7b7c5b4e9c1d3e4f5a6b7c8d9e0f1
+        # Version-pinned per baseline - see .github/CONXIUS_CICD_BASELINE.md
+        uses: actions/setup-node@v4
         with:
           node-version: "22"
       - name: Install pnpm

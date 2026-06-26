@@ -27,8 +27,8 @@ jobs:
           fi
 
       - name: Checkout repository
-        # SHA-pinned for security - see .github/CONXIUS_CICD_BASELINE.md
-        uses: actions/checkout@11bd21901d85e1e6c3e0a7b9e6c5c5c0e6d3e4f5
+        # Version-pinned per baseline - see .github/CONXIUS_CICD_BASELINE.md
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 

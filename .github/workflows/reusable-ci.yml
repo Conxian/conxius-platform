@@ -24,15 +24,15 @@ jobs:
       contents: read
     steps:
       - name: Checkout Code
-        # SHA-pinned for security - see .github/CONXIUS_CICD_BASELINE.md
-        uses: actions/checkout@11bd21901d85e1e6c3e0a7b9e6c5c5c0e6d3e4f5
+        # Version-pinned per baseline - see .github/CONXIUS_CICD_BASELINE.md
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        # SHA-pinned for security - see .github/CONXIUS_CICD_BASELINE.md
-        uses: actions/setup-node@0bdec9a3e7a7b7c5b4e9c1d3e4f5a6b7c8d9e0f1
+        # Version-pinned per baseline - see .github/CONXIUS_CICD_BASELINE.md
+        uses: actions/setup-node@v4
 
       - name: Setup pnpm
-        # v4 tag is acceptable for package managers (low security risk)
+        # Version-pinned per baseline
         uses: pnpm/action-setup@v4
 
       - name: Install Dependencies

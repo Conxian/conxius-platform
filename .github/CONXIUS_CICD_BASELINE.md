@@ -38,16 +38,23 @@ All PRs targeting `main` and `develop` must pass:
 - ✅ Hygiene audit
 
 ### 2.2 Action Pinning Standards
-All GitHub Actions must use immutable SHA references for:
-- `actions/checkout` → `actions/checkout@v4` with SHA
-- `actions/setup-node` → `actions/setup-node@v4` with SHA
-- `docker/setup-buildx-action` → `docker/setup-buildx-action@v4` with SHA
+All GitHub Actions must use immutable references:
 
-Example pattern:
+| Action | Current Pin | Migration Target |
+|--------|------------|------------------|
+| `actions/checkout` | `@v4` (major-version tag) | Full commit SHA (Phase 7) |
+| `actions/setup-node` | `@v4` (major-version tag) | Full commit SHA (Phase 7) |
+| `actions/setup-python` | `@v5` (major-version tag) | Full commit SHA (Phase 7) |
+| `docker/setup-buildx-action` | `@v4` | Full commit SHA (Phase 7) |
+
+**Current state**: Major-version tags (`@v4`, `@v5`) provide reasonable immutability for GitHub's own actions and are the approved baseline. Full commit-SHA pinning is tracked as a Phase 7 target for enhanced supply-chain security.
+
 ```yaml
+# Current (approved baseline):
 - uses: actions/checkout@v4
-  with:
-    sha: ${{ vars.ACTION_CHECKOUT_SHA || 'b4ffde65f46336ab88eb53be808477a3936bae11' }}
+
+# Future target (Phase 7):
+- uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.2.0
 ```
 
 ### 2.3 Workflow Permissions

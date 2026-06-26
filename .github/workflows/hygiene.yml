@@ -27,12 +27,12 @@ jobs:
 
     steps:
       - name: Checkout Code
-        # SHA-pinned for security - see .github/CONXIUS_CICD_BASELINE.md
-        uses: actions/checkout@11bd21901d85e1e6c3e0a7b9e6c5c5c0e6d3e4f5
+        # Version-pinned per baseline - see .github/CONXIUS_CICD_BASELINE.md
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        # SHA-pinned for security - see .github/CONXIUS_CICD_BASELINE.md
-        uses: actions/setup-python@0bdec9a3e7a7b7c5b4e9c1d3e4f5a6b7c8d9e0f1
+        # Version-pinned per baseline - see .github/CONXIUS_CICD_BASELINE.md
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 

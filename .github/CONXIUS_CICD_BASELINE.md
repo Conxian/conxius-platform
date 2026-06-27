@@ -198,7 +198,23 @@ Repositories inheriting from this baseline must:
 2. Near-term: Enhanced environment protection + approval gates
 3. Target: GitOps-based declarative infrastructure
 
+### 7.3 Deployment Promotion and Control-Plane Boundary
+The `conxius-platform` repository serves as the control plane for deployment promotion across Conxian repositories. See [`docs/DEPLOYMENT_PROMOTION_MODEL.md`](../docs/DEPLOYMENT_PROMOTION_MODEL.md) for:
+- The three-tier boundary between repo CI, release orchestration, and deployment promotion
+- Environment promotion ladder and gating rules
+- Cross-repo coordination patterns
+- Where GitOps manifests live and how they are promoted
+
+Application repositories must not self-deploy to production directly from CI. Production changes must route through the control plane's promotion model.
+
+### 7.4 Shared Deployment Schemas
+Cross-repo deployment artifacts use standardized schemas defined in [`schemas/`](../schemas/):
+- `deployment-manifest.schema.json` — what was deployed, where, with evidence
+- `verification-result.schema.json` — gating evidence for promotion decisions
+
+These schemas are consumed by Platform, Gateway, Nexus, and release workflows.
+
 ---
 
 *Maintained per Issue #968 - Org-wide CI/CD Governance Baseline*
-*Last updated: June 2026*
+*Last updated: June 2026 (v2 — control-plane boundary and promotion model per #975)*

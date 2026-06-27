@@ -28,6 +28,12 @@ All documentation in this repository follows a four-tier hierarchy defined in [`
 
 Every decision area has exactly **one active reading chain** rooted in this file. Follow the chain; never short-circuit to historical or evidence layers for decision-making.
 
+**Governance Lane Awareness**: The repository operates three governance lanes defined in [`GOVERNANCE.md`](./GOVERNANCE.md): governance baseline (policy rules), live issue-execution (active work), and historical context (read-only archive). When routing work or resolving conflicts:
+- Governance baseline documents (GOVERNANCE.md, CODEOWNERS, SECURITY.md, etc.) are the final authority for policy and process questions.
+- Live execution artifacts (issues, PRs, runbooks) are where you work; they derive authority from the baseline.
+- Historical documents (archived-reports, archived-tasks, archived-scripts) are preserved for reference but have zero decision authority.
+- If a live artifact appears to conflict with the governance baseline, the baseline wins — flag it for correction, don't work around it.
+
 ---
 © 2026 Conxian Labs. Code is Law.
 

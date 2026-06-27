@@ -2,6 +2,62 @@
 
 This repository is governed by Conxian Labs and uses a pull-request-first workflow.
 
+## Lane Model: Governance Baseline, Live Execution, and Historical Context
+
+This repository operates three distinct governance lanes that must not be collapsed into one another. The lane model is a practical bridge between the governance rules below and the four-tier [Information Hierarchy](./docs/INFORMATION_HIERARCHY.md) (canonical → operational → evidence → historical).
+
+### 1. Governance Baseline Lane (*how and why we govern*)
+
+The governance baseline is the set of policies, contracts, and control rules that define how this repository is managed. It lives in:
+
+- This file ([`GOVERNANCE.md`](./GOVERNANCE.md))
+- [`CODEOWNERS`](./CODEOWNERS) — authoritative ownership and review assignment
+- [`SECURITY.md`](./SECURITY.md) — vulnerability reporting and disclosure
+- [`REVIEWS.md`](./REVIEWS.md) — code review standards
+- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — contribution workflow and issue routing
+- [`RELEASING.md`](./RELEASING.md) — release and versioning discipline
+- [`docs/REPO_BOUNDARY_CONTRACT_V1.md`](./docs/REPO_BOUNDARY_CONTRACT_V1.md) — cross-repository ownership boundaries
+- [`docs/PRODUCTION_BOUNDARY.md`](./docs/PRODUCTION_BOUNDARY.md) — production boundary and operator-safety constraints
+
+Changes to governance baseline documents must follow the OpenSpec-first model and are reviewed by the owners mapped in `CODEOWNERS`. These documents are the *source of truth* for how the repository is operated; they are never overridden by live execution artifacts or historical context.
+
+### 2. Live Issue-Execution Lane (*what we are doing right now*)
+
+The live execution lane is where active development work happens. It lives in:
+
+- GitHub Issues and Pull Requests on this repository
+- OpenSpec proposals under [`openspec/changes/`](./openspec/changes/)
+- CI workflow definitions in [`.github/workflows`](./.github/workflows)
+- Operational tracking documents: [`GAPS.md`](./docs/GAPS.md), [`SCORING_MATRIX.md`](./docs/SCORING_MATRIX.md), runbooks
+
+Live execution artifacts are ephemeral by nature — issues close, PRs merge, runbooks evolve. They derive their authority from the governance baseline and may not supersede it. When a live execution artifact (e.g., a runbook update) needs to change a policy, the change must flow through the governance baseline update path.
+
+### 3. Historical Context Lane (*what happened before*)
+
+Historical context preserves institutional memory without competing with live governance truth. It lives in:
+
+- [`docs/archived-reports/`](./docs/archived-reports/) — superseded alignment reports, phase reviews, scorecards
+- [`docs/archived-tasks/`](./docs/archived-tasks/) — completed enhancement plans and task summaries
+- [`docs/archived-scripts/`](./docs/archived-scripts/) — superseded maintenance scripts
+- [`openspec/changes/archive/`](./openspec/changes/archive/) — archived OpenSpec proposals
+
+Historical documents are **strictly read-only**. They must never be cited as authority for current decisions, must never appear in active reading chains, and must not be updated in place. If a historical document contains information that needs revision, create a new document in the appropriate active lane and archive the old one per the [Information Hierarchy](./docs/INFORMATION_HIERARCHY.md) archival process.
+
+| Aspect | Governance Baseline | Live Execution | Historical Context |
+| :--- | :--- | :--- | :--- |
+| **Purpose** | Define rules and policies | Execute active work | Preserve past state |
+| **Mutability** | Change via OpenSpec proposal | Ephemeral; flows per workflow | Immutable (read-only) |
+| **Authority** | Authoritative for decisions | Derived from baseline | None for current decisions |
+| **Influences** | Live execution lane | Nothing (feeds into baseline) | Nothing (read-only) |
+| **Examples** | `GOVERNANCE.md`, `CODEOWNERS`, `SECURITY.md` | GitHub Issues, PRs, runbooks, `GAPS.md` | `archived-reports/`, `archived-tasks/` |
+
+### Lane Overlap Prevention
+
+- **A governance baseline document** that becomes stale is updated via an OpenSpec proposal, not overridden by a live execution artifact.
+- **A live execution artifact** (issue, PR, runbook) that disagrees with the governance baseline is out of alignment and must be corrected — the baseline wins.
+- **A historical document** that appears to conflict with current practice has no authority; its content is preserved for reference but must not influence active decisions.
+- **Repository sweeps and audits** that produce reports are classified as historical evidence once published. They inform future governance baseline updates through the OpenSpec path but do not directly modify live execution priorities.
+
 ## Ownership
 
 - Root [`CODEOWNERS`](./CODEOWNERS) is the authoritative source for repository code-review and merge ownership.

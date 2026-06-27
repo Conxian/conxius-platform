@@ -12,9 +12,11 @@ For service-specific conventions, see:
 
 ## Issue routing
 
-Use this repository's issues for platform/orchestration work only (CI/workflows, environment scaffolding, integration harnesses, and operator tooling).
+Use this repository's issues for platform/orchestration work only (CI/workflows, environment scaffolding, integration harnesses, and operator tooling). This is the **live issue-execution lane** as defined in [`GOVERNANCE.md`](./GOVERNANCE.md#2-live-issue-execution-lane-what-we-are-doing-right-now).
 
 For portfolio strategy, legal/finance operations, or non-platform product planning, route work to the owning repository in `docs/REPOSITORY_TAXONOMY.md` or the Conxian Linear `CON` workspace.
+
+Historical sweep reports, closed-phase review findings, and archived task summaries are preserved in the **historical context lane** (`docs/archived-reports/`, `docs/archived-tasks/`, `docs/archived-scripts/`). Do not create live issues to re-litigate closed historical findings unless a new governance baseline change is proposed via OpenSpec.
 
 ## Getting started
 

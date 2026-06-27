@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Conxian/conxius-platform/schemas/deployment-manifest.schema.json",
+  "title": "Deployment Manifest",
+  "description": "Cross-repo deployment manifest emitted by the control plane or its delegates. Describes what was deployed, where, and with what evidence.",
+  "type": "object",
+  "required": [
+    "manifestVersion",
+    "repo",
+    "version",
+    "environment",
+    "timestamp",
+    "artifacts"
+  ],
+  "properties": {
+    "manifestVersion": {
+      "type": "string",
+      "description": "SemVer of the manifest schema itself.",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "repo": {
+      "type": "string",
+      "description": "GitHub repository in owner/repo format.",
+      "pattern": "^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$"
+    },
+    "version": {
+      "type": "string",
+      "description": "Application version or Git tag being deployed.",
+      "pattern": "^v?[0-9]+\\.[0-9]+\\.[0-9]+"
+    },
+    "environment": {
+      "type": "string",
+      "description": "Target environment: dev, staging, production, or a named variant.",
+      "enum": ["dev", "staging", "production", "testnet", "preview"]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 deployment timestamp."
+    },
+    "commitSha": {
+      "type": "string",
+      "description": "Full Git commit SHA that triggered the deployment.",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "trigger": {
+      "type": "string",
+      "description": "What triggered the deployment.",
+      "enum": ["tag", "push", "manual", "scheduled", "promotion"]
+    },
+    "promotionSource": {
+      "type": "string",
+      "description": "If this is a promotion, the environment it was promoted from.",
+      "enum": ["dev", "staging", "testnet", null]
+    },
+    "artifacts": {
+      "type": "array",
+      "description": "Deployed artifacts.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["type", "name", "checksum"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Artifact type.",
+            "enum": ["docker-image", "npm-package", "nixos-config", "static-site", "binary", "wasm-bundle"]
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable artifact name."
+          },
+          "reference": {
+            "type": "string",
+            "description": "Registry reference, tag, or path."
+          },
+          "checksum": {
+            "type": "string",
+            "description": "SHA-256 hex digest of the artifact.",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      }
+    },
+    "verificationRef": {
+      "type": "string",
+      "description": "Path or URI to the verification-result.json for this deployment."
+    },
+    "status": {
+      "type": "string",
+      "description": "Deployment outcome.",
+      "enum": ["succeeded", "failed", "partial", "rolled-back"]
+    },
+    "error": {
+      "type": "object",
+      "description": "Error details if status is failed or partial.",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "if": {
+    "properties": { "status": { "const": "failed" } }
+  },
+  "then": {
+    "required": ["error"]
+  }
+}

@@ -9,8 +9,8 @@ This document defines the strict functional and architectural boundaries between
 
 ## 2. Platform ↔ Business Boundary
 - **Business (The "Strategy Store")**: Owns mandates, hiring criteria, institutional specs (ISO 20022), and legal/regulatory templates.
-- **Platform (The "Control Plane")**: Owns CI/CD automation, deployment orchestration, and live-system telemetry ingestion.
-- **Interface**: Platform implements triggers defined in Business mandates.
+- **Platform (The "Control Plane")**: Owns CI/CD automation, deployment orchestration, live-system telemetry ingestion, cross-repo deployment schemas, and environment promotion rules. See [`DEPLOYMENT_PROMOTION_MODEL.md`](./DEPLOYMENT_PROMOTION_MODEL.md) for the full promotion ladder and gating model.
+- **Interface**: Platform implements triggers defined in Business mandates. Deployment manifests (`schemas/deployment-manifest.schema.json`) and verification results (`schemas/verification-result.schema.json`) serve as the machine-readable contract between orchestration and promotion.
 
 ## 3. Core ↔ Conclave SDK Boundary
 - **Core (The "Protocol Base")**: Owns shared protocol models, MuSig2 logic, and platform-agnostic cryptography.

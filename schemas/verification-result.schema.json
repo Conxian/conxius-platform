@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Conxian/conxius-platform/schemas/verification-result.schema.json",
+  "title": "Verification Result",
+  "description": "Deterministic verification result emitted after deployment or promotion checks. Consumed by Platform, Gateway, Nexus, and release workflows.",
+  "type": "object",
+  "required": [
+    "resultVersion",
+    "manifestRef",
+    "timestamp",
+    "outcome",
+    "checks"
+  ],
+  "properties": {
+    "resultVersion": {
+      "type": "string",
+      "description": "SemVer of the verification-result schema itself.",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "manifestRef": {
+      "type": "string",
+      "description": "Path, URI, or checksum linking to the deployment-manifest.json being verified."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when verification completed."
+    },
+    "verifier": {
+      "type": "string",
+      "description": "Identity of the verifier (workflow name, tool, or actor)."
+    },
+    "outcome": {
+      "type": "string",
+      "description": "Aggregate verification outcome.",
+      "enum": ["passed", "failed", "degraded", "skipped"]
+    },
+    "checks": {
+      "type": "array",
+      "description": "Individual verification checks executed.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "status"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Check name, e.g. 'secret-scan', 'lifecycle-gates', 'integration-test'."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["passed", "failed", "skipped", "error"]
+          },
+          "durationMs": {
+            "type": "integer",
+            "description": "Check duration in milliseconds."
+          },
+          "evidence": {
+            "type": "object",
+            "description": "Machine-readable evidence for the check result.",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["log", "artifact-uri", "screenshot", "metrics", "attestation"]
+              },
+              "uri": {
+                "type": "string",
+                "format": "uri"
+              },
+              "summary": {
+                "type": "string",
+                "description": "Human-readable summary of the evidence."
+              }
+            }
+          },
+          "error": {
+            "type": "object",
+            "description": "Error details for failed or errored checks.",
+            "properties": {
+              "code": { "type": "string" },
+              "message": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "promotionGate": {
+      "type": "object",
+      "description": "Promotion gate result, if this verification gates environment promotion.",
+      "properties": {
+        "promotable": {
+          "type": "boolean",
+          "description": "Whether the deployment can be promoted to the next environment."
+        },
+        "targetEnvironment": {
+          "type": "string",
+          "enum": ["staging", "production", "testnet"]
+        },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Reasons promotion is blocked (only present when promotable is false)."
+        }
+      }
+    }
+  }
+}

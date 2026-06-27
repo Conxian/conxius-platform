@@ -8,15 +8,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Control-Plane Boundary & Deployment Promotion Model**: Defined the three-tier boundary between repo CI, release orchestration, and deployment promotion. Added `docs/DEPLOYMENT_PROMOTION_MODEL.md` with environment promotion ladder, gating rules, and cross-repo coordination patterns.
+- **Cross-Repo Deployment Schemas**: Added `schemas/deployment-manifest.schema.json` and `schemas/verification-result.schema.json` as standardized artifacts for cross-repo deployment metadata and promotion gating (per #966, #975).
 - **BitVMX High-Efficiency Computation (G-44)**: Transitioned to Active Scaffolding with foundational state machine and adaptive challenge logic.
 - **Expanded Phase 7 Research (v1.9.4)**: Added BIP-119, BIP-324, ZKCP, and decentralized transport research anchors.
-- **CI/CD Hardening**: Unified `test:phase7` script in admin-dashboard for targeted verification.
-
-
-### Added
 - **Expanded Bitcoin Stack Research**: Added deep dives for FROST (G-14), OP_CAT (G-15), and Fedimint (G-16) to FULL_STACK_BITCOIN_RESEARCH.md.
 - **BIP-353 DNS Payment Implementation**: Initialized foundational bridge and resolution logic for human-readable Bitcoin addresses (G-12).
 - **Strategic Scoring Update**: Updated SCORING_MATRIX.md and GAPS.md with scores and implementation paths for Phase 7 candidates.
+- **CI/CD Hardening**: Unified `test:phase7` script in admin-dashboard for targeted verification.
+
+### Fixed
+- **CHANGELOG Hygiene**: Removed duplicate `[0.2.5]` section and merged duplicate `[Unreleased]` entries.
+
+## [0.2.5] - 2026-06-15
+
+### Added
+- **SIDL Hardening**: Implemented mandatory API key authentication for state-changing SIDL endpoints (CON-353).
+- **Full Bitcoin Stack Research**: Published 'docs/architecture/FULL_STACK_BITCOIN_RESEARCH.md' covering RGB, BitVM, and FDC3.
+- **Architectural Clarity**: Added 'CONTROL_ASSURANCE_MAPPING.md' and updated 'ARCHITECTURE_MODEL.md'.
+
+### Fixed
+- **Workflow Realignment**: Corrected repository paths in 'multi-env-test.yml' and 'synergy-test.yml' to reflect monorepo pivot.
+- **Render Remediation**: Updated blueprint API with correct build/start commands for UI and Labs Site (CON-739).
+- **Docker Compose**: Standardized 'docker-compose.yml' to orchestrate external service stubs and hardened internal services.
+- **CI Resilience**: Standardized all workflows to 'self-hosted' runners and added 'paths-ignore' for documentation.
 
 ## [0.2.4] - 2026-06-13
 
@@ -99,16 +114,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Kwil Transactional State**: Migrated Nexus Glass Node state and history storage to Kwil.
 - **Sovereign AI Allocation**: Real-time compute weighting and risk-optimized asset management.
 - **Hardware Security**: Integrated HSM FIPS 140-2 Level 3 status tracking.
-
-## [0.2.5] - 2026-06-15
-
-### Added
-- **SIDL Hardening**: Implemented mandatory API key authentication for state-changing SIDL endpoints (CON-353).
-- **Full Bitcoin Stack Research**: Published 'docs/architecture/FULL_STACK_BITCOIN_RESEARCH.md' covering RGB, BitVM, and FDC3.
-- **Architectural Clarity**: Added 'CONTROL_ASSURANCE_MAPPING.md' and updated 'ARCHITECTURE_MODEL.md'.
-
-### Fixed
-- **Workflow Realignment**: Corrected repository paths in 'multi-env-test.yml' and 'synergy-test.yml' to reflect monorepo pivot.
-- **Render Remediation**: Updated blueprint API with correct build/start commands for UI and Labs Site (CON-739).
-- **Docker Compose**: Standardized 'docker-compose.yml' to orchestrate external service stubs and hardened internal services.
-- **CI Resilience**: Standardized all workflows to 'self-hosted' runners and added 'paths-ignore' for documentation.

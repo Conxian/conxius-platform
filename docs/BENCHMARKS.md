@@ -1,10 +1,12 @@
 # Conxius Platform: Performance Benchmarks (Updated June 2026)
 
-## 1. Gateway Latency (Production/GCP)
+> **Classification note:** All figures below are test-context benchmark snapshots and are not yet backed by production SLO evidence. They should not be cited as production performance guarantees.
+
+## 1. Gateway Latency (Test Context)
 - **Endpoint**: /api/v1/status
-- **Environment**: Production Rust (Actix-web)
+- **Environment**: Rust (Actix-web) — local benchmark
 - **Results**:
-    - Average Latency: ~0.8ms (High-performance Actix-web)
+    - Average Latency: ~0.8ms (test-context benchmark)
     - Min: 0.5ms
     - Max: 1.2ms
 
@@ -27,7 +29,10 @@
 - **ElizaOS Plugin**: ~80MB RAM
 
 ## 5. Targets (2026 Roadmap)
-- **Throughput**: 10,000 requests/sec per Gateway instance.
+
+> Targets are aspirational and not yet evidenced in production.
+
+- **Throughput**: 10,000 requests/sec per Gateway instance (target, not yet verified).
 - **Latency**: <30ms P99 for sovereign node proxies.
 - **Nexus Sync**: Handle 1M+ state updates per hour with <1s Merkle root propagation.
 - **TVL Handling**: Scale to 0B+ TAM support.

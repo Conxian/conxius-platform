@@ -33,10 +33,10 @@ Verifiable, cryptographically signed risk scoring (Risk Proofs) that can be cons
 Mobile secure enclave integration for local intent signing, providing hardware-level security for retail and institutional users. Verified by the Gateway.
 
 ## 4. Roadmap Alignment
-- **Phase 1-3 (Completed)**: Core Foundation, Monitoring, and Institutional Tiers.
-- **Phase 4 (Completed)**: Liquidity Aggregation and Deep Protocol Handlers.
-- **Phase 5 (Completed)**: Global Liquidity Mesh, Risk Oracle, and Wallet Depth.
-- **Phase 6 (Active)**: Sovereign AI-Driven Asset Allocation and Universal Bitcoin Identity.
+- **Phase 1-3 (Hardening)**: Core Foundation, Monitoring, and Institutional Tiers.
+- **Phase 4 (Hardening)**: Liquidity Aggregation and Deep Protocol Handlers.
+- **Phase 5 (Hardening)**: Global Liquidity Mesh, Risk Oracle, and Wallet Depth.
+- **Phase 6 (Active — in progress)**: Sovereign AI-Driven Asset Allocation and Universal Bitcoin Identity.
 - **Phase 7 (Transition in progress)**: Sovereign Redesign toward local-first control-plane and BFF topology.
 
 ---

@@ -3,7 +3,7 @@
 This document provides a high-level overview of the Conxian platform's alignment with Phase 6 and Phase 7 Sovereign Business Operations.
 
 ## 1. Executive Summary (Baseline v0.2.4)
-The platform has successfully transitioned to a multidimensional operational model, integrating Bitcoin-native business intelligence with real-time infrastructure telemetry. Legacy implementation drift has been remediated, and the core Gateway engine is now production-aligned.
+The platform is transitioning to a multidimensional operational model, integrating Bitcoin-native business intelligence with real-time infrastructure telemetry. Legacy implementation drift remediation is in progress, and the core Gateway engine is undergoing hardening toward production alignment.
 
 ## 2. Capability Matrix
 
@@ -17,7 +17,7 @@ The platform has successfully transitioned to a multidimensional operational mod
 | **Security (ZSE)** | ✅ Active | Hardened audit suite with Zero Secret Egress enforcement. |
 
 ## 3. Operational Pulse (Real-time)
-- **Gateway Health**: Optimal (~0.8ms latency).
+- **Gateway Health**: Nominal (test-context benchmark ~0.8ms; production SLO evidence pending).
 - **Compliance Rating**: A+ (Automated UBI/KYC validation).
 - **Treasury Strategy**: BTC-Standard (sBTC reserve optimized).
 - **Deployment Strategy**: Transitioning to declarative NixOS (Phase 7 roadmap).

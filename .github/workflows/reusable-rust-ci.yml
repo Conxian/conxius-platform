@@ -63,11 +63,11 @@ jobs:
 
       - name: Run clippy
         if: ${{ inputs.run-clippy }}
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: cargo clippy --locked --all-targets --all-features -- -D warnings
 
       - name: Run tests
         if: ${{ inputs.run-test }}
-        run: cargo test --all-features
+        run: cargo test --locked --all-features
 
       - name: Install cargo-audit
         if: ${{ inputs.run-audit }}

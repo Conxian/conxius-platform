@@ -32,7 +32,7 @@ jobs:
     steps:
       - name: Checkout Code
         # Version-pinned per baseline - see .github/CONXIUS_CICD_BASELINE.md
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
         # Version-pinned per baseline - see .github/CONXIUS_CICD_BASELINE.md

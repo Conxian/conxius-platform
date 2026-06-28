@@ -1,5 +1,8 @@
 name: Cross-Repo Integration Harness MVP
 
+permissions:
+  contents: read
+
 # Cross-repo integration testing per Issue #968
 # Validates control-plane cross-service orchestration
 # See: .github/CONXIUS_CICD_BASELINE.md

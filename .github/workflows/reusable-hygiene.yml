@@ -25,7 +25,8 @@ jobs:
       - name: Run Hygiene Audit
         run: |
           if [ ! -f scripts/maintenance/system_audit.py ]; then
-            echo "Warning: system_audit.py not found in local path."
+            echo "::error::system_audit.py not found — hygiene audit cannot run. Add scripts/maintenance/system_audit.py to your repository."
+            exit 1
           else
             python3 -c "
           import sys

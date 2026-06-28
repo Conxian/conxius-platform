@@ -1,5 +1,8 @@
 name: Repository Hygiene Guard
 
+permissions:
+  contents: read
+
 # Hygiene audit per Issue #968 - CI/CD Baseline Hardening
 # See: .github/CONXIUS_CICD_BASELINE.md
 

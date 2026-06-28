@@ -1,5 +1,8 @@
 name: End-to-End Synergy Testing
 
+permissions:
+  contents: read
+
 # End-to-end synergy testing per Issue #968
 # Validates control-plane orchestration and cross-service integration
 # See: .github/CONXIUS_CICD_BASELINE.md

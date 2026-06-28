@@ -1,5 +1,8 @@
 name: Lifecycle Control Gates
 
+permissions:
+  contents: read
+
 # Lifecycle control gates per Issue #968
 # Validates governance and lifecycle controls
 # See: .github/CONXIUS_CICD_BASELINE.md

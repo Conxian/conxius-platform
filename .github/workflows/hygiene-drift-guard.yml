@@ -1,5 +1,8 @@
 name: Implementation Drift Guard
 
+permissions:
+  contents: read
+
 # Implementation drift guard per Issue #968
 # Validates repository hygiene alignment
 # See: .github/CONXIUS_CICD_BASELINE.md

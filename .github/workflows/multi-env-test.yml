@@ -1,5 +1,8 @@
 name: Multi-Environment Deployment Validation
 
+permissions:
+  contents: read
+
 # Multi-environment deployment testing per Issue #968
 # Demonstrates control-plane deployment orchestration capabilities
 # See: .github/CONXIUS_CICD_BASELINE.md

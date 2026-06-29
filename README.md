@@ -73,6 +73,7 @@ This repository is maintained by Conxian Labs. It supports development and opera
 - [Full Stack Bitcoin Research (Phase 7)](./docs/architecture/FULL_STACK_BITCOIN_RESEARCH.md)
 - [Phase 7 BFF Topology](./docs/architecture/PHASE_7_BFF_TOPOLOGY.md)
 - [Universal Settlement Interface (USI)](./docs/architecture/PHASE_7_PROPOSAL_UNIVERSAL_SETTLEMENT.md)
+- [Orbit CLI Canonical Surface Contract](./docs/architecture/ORBIT_CLI_CONTRACT.md)
 
 ## Quick start
 

@@ -140,7 +140,7 @@ graph TD
 | **admin-dashboard** | Infrastructure Monitoring |
 | **Conxian** | Smart Contracts (L1/L2) |
 | **conxius-wallet** | Mobile Sovereign Enclave |
-| **stacksorbit** | TUI Deployment & Monitoring |
+| **conxius-orbit** | TUI Deployment & Monitoring |
 | **conxian-nexus** | Nexus OS / Glass Node / State Sync |
 
 For full details, see [REPOSITORY_TAXONOMY](docs/REPOSITORY_TAXONOMY.md).

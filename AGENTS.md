@@ -15,6 +15,7 @@ Welcome, Agent. You are tasked with maintaining and extending the Conxian DeFi e
 - **Rust (Gateway)**: Use Actix-web for the API and `tokio` for background orchestration. Maintain modular module boundaries (Mesh, Nexus, Compliance).
 - **TypeScript (UI)**: Use the consolidated `coreApi.ts` for all Gateway interactions. Ensure strict type safety and no `any` types.
 - **Clarity (Contracts)**: Prioritize mathematical certainty and sBTC integration.
+- **Orbit CLI (Python canonical, Node wrapper)**: The canonical CLI surface for `conxius-orbit` is Python (`conxius_orbit_cli.py`). The Node.js binary (`conxius-orbit`) is a wrapper that delegates core operations (deploy, monitor, verify, dashboard, diagnose, detect) to Python. The Node wrapper adds `config` and `wallet` commands not available in the Python surface. Automation and CI paths should target the Node binary entry point (`conxius-orbit`) as the stable user-facing contract; all deep deployment logic lives in Python.
 
 ## Documentation
 Refer to `docs/architecture/ALIGNMENT.md` for strategy and `docs/architecture/SYNERGY.md` for inter-repo workflows.

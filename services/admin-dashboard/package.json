@@ -13,11 +13,11 @@
     "prepublishOnly": "node -e \"console.error('pnpm publish is disabled for now in this repository; use Git tags and GitHub Releases.'); process.exit(1)\""
   },
   "dependencies": {
-    "imapflow": "^1.3.7",
-    "mailparser": "^3.9.10",
+    "imapflow": "^1.4.3",
+    "mailparser": "^3.9.12",
     "next": "16.2.9",
-    "nodemailer": "^9.0.0",
-    "nostr-tools": "^2.10.4",
+    "nodemailer": "^9.0.3",
+    "nostr-tools": "^2.23.8",
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "server-only": "^0.0.1"

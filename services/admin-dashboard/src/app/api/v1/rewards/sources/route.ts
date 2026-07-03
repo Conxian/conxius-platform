@@ -1,4 +1,5 @@
 import { validateAdminAuth } from "@/lib/support/auth";
+import { getTreasuryRevenue } from "@/lib/sidl/gateway";
 import { NextResponse } from "next/server";
 
 interface RevenueSource {
@@ -25,9 +26,10 @@ interface RewardSourcesData {
   last_updated: string;
   period: string;
   sfo_address: string;
+  data_source: "gateway" | "fallback";
 }
 
-function buildRewardSources(): RewardSourcesData {
+function buildFallbackRewardSources(): RewardSourcesData {
   const sources: RevenueSource[] = [
     {
       name: "Protocol Fees",
@@ -61,7 +63,7 @@ function buildRewardSources(): RewardSourcesData {
       amount_sats: 3_000_000_000,
       percentage: 40,
       description: "Contributor compensation, community grants, and ecosystem incentives funded by protocol revenue",
-      operational_units: ["Community Grants", "Conxian-Core"],
+      operational_units: ["Community Grants", "Core Protocol"],
     },
     {
       category: "Governance Rewards",
@@ -97,6 +99,7 @@ function buildRewardSources(): RewardSourcesData {
     last_updated: new Date().toISOString(),
     period: "2026-Q3",
     sfo_address: "sfo.cxd",
+    data_source: "fallback",
   };
 }
 
@@ -104,5 +107,10 @@ export async function GET(req: Request) {
   const authError = validateAdminAuth(req);
   if (authError) return authError;
 
-  return NextResponse.json(buildRewardSources());
+  const gatewayData = await getTreasuryRevenue();
+  if (gatewayData) {
+    return NextResponse.json({ ...gatewayData, data_source: "gateway" });
+  }
+
+  return NextResponse.json(buildFallbackRewardSources());
 }

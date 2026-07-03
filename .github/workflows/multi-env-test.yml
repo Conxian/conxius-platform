@@ -19,7 +19,7 @@ on:
 jobs:
   test-server:
     name: Server (Full Stack)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
       DEPLOYMENT_ENV: server
@@ -70,7 +70,7 @@ jobs:
 
   test-cloud:
     name: Cloud (Blueprint validation)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - name: Checkout
@@ -87,7 +87,7 @@ jobs:
 
   test-summary:
     name: Test Summary
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: always()
     needs: [ test-server, test-cloud ]
     env:

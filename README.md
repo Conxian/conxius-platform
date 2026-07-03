@@ -18,6 +18,10 @@ Provide platform configuration, orchestration, CI/release automation, and enviro
 
 [![Secret Scan](https://github.com/Conxian/conxius-platform/actions/workflows/secret-scan.yml/badge.svg)](https://github.com/Conxian/conxius-platform/actions/workflows/secret-scan.yml) [![Repository Hygiene Guard](https://github.com/Conxian/conxius-platform/actions/workflows/hygiene.yml/badge.svg)](https://github.com/Conxian/conxius-platform/actions/workflows/hygiene.yml) [![Lifecycle Control Gates](https://github.com/Conxian/conxius-platform/actions/workflows/lifecycle-control-gates.yml/badge.svg)](https://github.com/Conxian/conxius-platform/actions/workflows/lifecycle-control-gates.yml)
 
+## Session governance
+
+See [SESSION.md](SESSION.md) for the session standard — the enforcement baseline for grounding, verification, classification, and canonical updates across all Conxian-Labs sessions.
+
 ## Audience
 
 Use this repository if you need:

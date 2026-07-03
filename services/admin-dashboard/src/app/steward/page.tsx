@@ -2,46 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import type { ContributionData } from "@/lib/launch";
-
-type PointsData = {
-  total: number;
-  earned_this_cycle: number;
-  pending: number;
-  claimable: number;
-  level: string;
-  multiplier: number;
-  last_updated: string;
-  oracle_address: string;
-};
-
-type ReputationData = {
-  score: number;
-  rank: string;
-  badges: string[];
-  history: { period: string; score: number }[];
-  consensus_weight: number;
-  delegated_votes: number;
-  last_evaluation: string;
-};
-
-type StakingData = {
-  cxd_staked: number;
-  cxd_locked_vesting: number;
-  yield_apy: number;
-  yield_earned: number;
-  unlock_date: string;
-  staking_tier: string;
-  rewards_pending: number;
-  contract_address: string;
-};
-
-type StewardDashboard = {
-  points: PointsData;
-  reputation: ReputationData;
-  staking: StakingData;
-  contribution: ContributionData;
-  steward_address: string;
-};
+import type { StewardDashboard } from "@/lib/steward/types";
 
 function StatCard({ title, value, subtitle, color }: { title: string; value: string | number; subtitle?: string; color?: string }) {
   return (
@@ -354,6 +315,28 @@ export default function StewardDashboardPage() {
               <div style={{ fontSize: "2rem", fontWeight: 800, color: "#1E40AF" }}>{data?.staking?.yield_earned?.toLocaleString() ?? "—"}</div>
               <div style={{ fontSize: "0.75rem", color: "#1D4ED8" }}>CXD</div>
             </div>
+          </div>
+          <div style={{ marginTop: "1.5rem", textAlign: "center", paddingTop: "1.5rem", borderTop: "1px solid #E2E8F0" }}>
+            <a
+              href="/rewards"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                padding: "0.5rem 1.25rem",
+                backgroundColor: "#2E403B",
+                color: "white",
+                borderRadius: "6px",
+                textDecoration: "none",
+                fontSize: "0.85rem",
+                fontWeight: 600,
+              }}
+            >
+              📊 View Reward Source Breakdown
+            </a>
+            <p style={{ fontSize: "0.75rem", color: "#94A3B8", marginTop: "0.5rem" }}>
+              See how protocol revenue funds community, governance, and operational rewards
+            </p>
           </div>
         </div>
       </section>

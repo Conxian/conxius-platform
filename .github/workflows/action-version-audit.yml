@@ -2,11 +2,11 @@ name: Action Version Audit
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, dev, 'release/**']
     paths:
       - '.github/workflows/**'
   push:
-    branches: [main]
+    branches: [main, dev, 'release/**']
     paths:
       - '.github/workflows/**'
   schedule:

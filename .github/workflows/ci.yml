@@ -10,14 +10,14 @@ on:
       - 'docs/**'
       - 'CODEOWNERS'
       - 'LICENSE'
-    branches: [ main, develop ]
+    branches: [ main, develop, dev, 'release/**' ]
   push:
     paths-ignore:
       - '**.md'
       - 'docs/**'
       - 'CODEOWNERS'
       - 'LICENSE'
-    branches: [ main, develop ]
+    branches: [ main, develop, dev, 'release/**' ]
 
 permissions:
   contents: read

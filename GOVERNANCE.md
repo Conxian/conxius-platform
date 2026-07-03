@@ -90,6 +90,10 @@ Historical documents are **strictly read-only**. They must never be cited as aut
 
 ## Branch and promotion guidance (current repo)
 
-- `main` is the default branch.
-- Use short-lived feature/fix branches and merge via pull request to `main`.
-- Cut releases from tagged commits (`vX.Y.Z`) after required checks pass.
+- `main` is the default branch and the production-ready surface.
+- The portfolio release cycle uses `dev` → `release/x.y` → `main` per [`RELEASE_POLICY.md`](./RELEASE_POLICY.md).
+- Feature and fix branches merge into `dev` via pull request with required CI and review.
+- Release branches (`release/x.y`) are cut from `dev` for stabilisation and promoted to `main` after all promotion gates pass.
+- `lts/*` branches carry extended maintenance commitments per the LTS Gate Policy.
+- Cut releases from tagged commits (`vX.Y.Z`) on `main` after required checks pass.
+- Branch lifecycle and protection rules are defined in [`docs/BRANCH-MAINTENANCE.md`](./docs/BRANCH-MAINTENANCE.md).

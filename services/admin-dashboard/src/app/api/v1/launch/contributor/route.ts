@@ -15,6 +15,7 @@ function buildContributorProfile(address: string): ContributorProfile {
 
   const contributor_level = getContributorLevel({
     total_contributions,
+    votes_cast,
     proposals_passed,
   });
 
@@ -48,7 +49,7 @@ function buildContributorProfile(address: string): ContributorProfile {
 
 function buildEmptyContributorProfile(address: string): ContributorProfile {
   return {
-    contributor_level: getContributorLevel({ total_contributions: 0, proposals_passed: 0 }),
+    contributor_level: getContributorLevel({ total_contributions: 0, votes_cast: 0, proposals_passed: 0 }),
     total_contributions: 0,
     active_governance_proposals: 0,
     votes_cast: 0,

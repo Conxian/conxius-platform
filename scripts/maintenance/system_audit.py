@@ -103,6 +103,19 @@ def audit_governance():
                 print(f"  FAILED: {f} is missing in {svc}.")
                 all_passed = False
 
+    # Workspace Hygiene (Check for redundant lockfiles/workspaces in services)
+    redundant_files = ["pnpm-lock.yaml", "pnpm-workspace.yaml"]
+    workspace_hygiene_passed = True
+    for svc in services:
+        for f in redundant_files:
+            path = os.path.join(svc, f)
+            if os.path.exists(path):
+                print(f"  FAILED: Redundant workspace file found in service: {path}")
+                all_passed = False
+                workspace_hygiene_passed = False
+    if workspace_hygiene_passed:
+        print("PASSED: No redundant workspace files found in services.")
+
     # Implementation Drift Checks (Replacement for legacy Gateway/UI checks)
     print("\nVerifying implementation alignment (Drift Check)...")
     drift_checks = [

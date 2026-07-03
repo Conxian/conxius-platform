@@ -16,6 +16,7 @@ The governance baseline is the set of policies, contracts, and control rules tha
 - [`REVIEWS.md`](./REVIEWS.md) — code review standards
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md) — contribution workflow and issue routing
 - [`RELEASING.md`](./RELEASING.md) — release and versioning discipline
+- [`RELEASE_POLICY.md`](./RELEASE_POLICY.md) — release promotion cycle and LTS gate policy
 - [`docs/REPO_BOUNDARY_CONTRACT_V1.md`](./docs/REPO_BOUNDARY_CONTRACT_V1.md) — cross-repository ownership boundaries
 - [`docs/PRODUCTION_BOUNDARY.md`](./docs/PRODUCTION_BOUNDARY.md) — production boundary and operator-safety constraints
 

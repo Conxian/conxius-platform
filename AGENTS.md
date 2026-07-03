@@ -321,3 +321,35 @@ This file is a **living knowledge base** that grows with every agent session. Ea
 - Steward page and API route had fully duplicated type definitions — always check for this pattern
 - Navigation is inline `<a>` tags, not a component — adding a page requires editing layout.tsx directly
 - Both SFO files use different naming conventions — verify the target context before referencing units
+
+### 2026-07-03 — Gap Audit Remediation: Immediate + Short-Term Fixes
+**Trigger**: Executed the plan from `.agents_tmp/PLAN.md` gap audit
+**What was done**:
+- **T3-1**: Synced SFO stub (`pulse-bos-stub.tsx`) with canonical source (`SovereignFinancialOffice.tsx` v4.2.5). Updated naming: `SBC_LIST` → `OPERATIONAL_UNITS`, `selectedSBC` → `selectedUnit`, `syi` → `yieldIndexBps`, `globalSymmetry` → `totalLiquidity`, `Cell Intel` → `Unit Intelligence`, `Harvest Sovereign Yield` → `Harvest Yield`, `Deploy Symmetry` → `Rebalance Assets`, subtitle and header labels updated.
+- **T3-4**: Archived 20 completed OpenSpec proposals from `changes/` to `changes/archive/`. 16 active + 21 archived (was 35 active + 1 archived).
+- **T4-4**: Pinned all 18 `ubuntu-latest` occurrences across 16 CI workflow files to `ubuntu-24.04`. Verified zero remaining floating tags.
+- **T1-1**: Fixed `MAINTAINER_BOUNTY_RUNBOOK.md` — removed references to non-existent `revenue-automation.clar` contract. Updated to reference `BOUNTY_PAYOUT_ACTIVE` env var and Gateway admin API.
+- **T2-2**: Extended `gateway.ts` with reusable `fetchGateway<T>()` helper and `getTreasuryRevenue()` function targeting `GET /api/v1/treasury/revenue`. Updated rewards API route to fetch from Gateway with hardcoded fallback. Added `data_source` field (`"gateway" | "fallback"`) to response.
+- **T2-7**: Replaced simulated `dns-payments.ts` with real DNS-over-HTTPS implementation. Queries Cloudflare DoH for TXT records at `_bitcoin-payment.{user}._at.{domain}` with DNSSEC validation (AD flag). Updated tests from 3 to 9 cases covering: valid BIP-353, NXDOMAIN, no TXT, invalid URI, HTTP failure, network failure, lightning: URI support.
+**Key discoveries**:
+- Three different env var naming conventions for same Gateway (port 8080): `CORE_API_URL` (admin dashboard), `CONXIAN_GATEWAY_URL` (ElizaOS), `GATEWAY_PORT` (platform config)
+- Gateway clients don't send auth headers despite `GATEWAY_JWT_SECRET` and `GATEWAY_ADMIN_API_KEY` being defined in schema
+- No `.env.admin` file exists on disk despite being referenced in `.env.schema`
+- Only 4 Gateway API endpoints are consumed by clients: status, lorenzo/stats, ai/allocation, identity/ubi
+**Files touched**:
+- `services/admin-dashboard/src/app/pulse-bos-stub.tsx` (modified — synced to v4.2.5)
+- `services/admin-dashboard/src/lib/support/dns-payments.ts` (modified — real DoH implementation)
+- `services/admin-dashboard/src/tests/dnsPayments.test.ts` (modified — 9 tests covering all paths)
+- `services/admin-dashboard/src/lib/sidl/gateway.ts` (modified — added fetchGateway helper + getTreasuryRevenue)
+- `services/admin-dashboard/src/app/api/v1/rewards/sources/route.ts` (modified — gateway-first with fallback)
+- `docs/runbooks/MAINTAINER_BOUNTY_RUNBOOK.md` (modified — removed revenue-automation.clar refs)
+- `.github/workflows/*.yml` (16 files modified — ubuntu-latest → ubuntu-24.04)
+- `openspec/changes/archive/` (20 new archived proposal directories)
+**Gaps identified**:
+- Gateway `GET /api/v1/treasury/revenue` endpoint doesn't exist yet — rewards API uses fallback until it's implemented
+- DNS resolver has no integration/E2E test with a real BIP-353-enabled domain
+- 15 OpenSpec proposals remain active — 7 have zero tasks completed (still planning stage)
+**Gotchas**:
+- The `sed -i` replacement for ubuntu-latest had to be verified separately (grep confirmed zero remaining)
+- The rollback action in the runbook initially had a duplicated sentence due to edit overlap — caught and fixed
+- All DNS tests require `vi.spyOn(globalThis, 'fetch')` mocks since we can't control public DNS records — this is a justified use of mocks

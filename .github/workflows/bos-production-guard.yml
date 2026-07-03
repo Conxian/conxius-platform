@@ -26,7 +26,7 @@ on:
 
 jobs:
   bos-production-guard:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         # Version-pinned per baseline - see .github/CONXIUS_CICD_BASELINE.md

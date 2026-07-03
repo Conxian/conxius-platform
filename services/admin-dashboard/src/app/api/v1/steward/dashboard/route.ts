@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { type ContributionData, getContributorLevel } from "@/lib/launch";
 
 interface PointsData {
   total: number;
@@ -30,16 +31,6 @@ interface StakingData {
   staking_tier: string;
   rewards_pending: number;
   contract_address: string;
-}
-
-interface ContributionData {
-  contributor_level: string;
-  total_contributions: number;
-  active_governance_proposals: number;
-  votes_cast: number;
-  proposals_created: number;
-  proposals_passed: number;
-  last_contribution_date: string;
 }
 
 interface StewardDashboard {
@@ -93,14 +84,21 @@ function buildStakingData(): StakingData {
 }
 
 function buildContributionData(): ContributionData {
+  const total_contributions = 47;
+  const active_governance_proposals = 3;
+  const votes_cast = 28;
+  const proposals_created = 5;
+  const proposals_passed = 4;
+  const last_contribution_date = new Date().toISOString();
+
   return {
-    contributor_level: "Core",
-    total_contributions: 47,
-    active_governance_proposals: 3,
-    votes_cast: 28,
-    proposals_created: 5,
-    proposals_passed: 4,
-    last_contribution_date: new Date().toISOString(),
+    contributor_level: getContributorLevel({ total_contributions, proposals_passed }),
+    total_contributions,
+    active_governance_proposals,
+    votes_cast,
+    proposals_created,
+    proposals_passed,
+    last_contribution_date,
   };
 }
 

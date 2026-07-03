@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getContributorLevel } from "@/lib/contracts/self-launch";
 
 interface PointsData {
   total: number;
@@ -93,13 +94,17 @@ function buildStakingData(): StakingData {
 }
 
 function buildContributionData(): ContributionData {
+  const total_contributions = 47;
+  const votes_cast = 28;
+  const proposals_passed = 4;
+
   return {
-    contributor_level: "Core",
-    total_contributions: 47,
+    contributor_level: getContributorLevel({ total_contributions, votes_cast, proposals_passed }),
+    total_contributions,
     active_governance_proposals: 3,
-    votes_cast: 28,
+    votes_cast,
     proposals_created: 5,
-    proposals_passed: 4,
+    proposals_passed,
     last_contribution_date: new Date().toISOString(),
   };
 }

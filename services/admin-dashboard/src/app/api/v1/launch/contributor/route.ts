@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getContributorLevel } from "@/lib/contracts/self-launch";
 
 interface MintedTokenEntry {
   token_id: string;
@@ -20,13 +21,17 @@ interface ContributorProfile {
 }
 
 function buildContributorProfile(): ContributorProfile {
+  const total_contributions = 47;
+  const votes_cast = 28;
+  const proposals_passed = 4;
+
   return {
-    contributor_level: "Core",
-    total_contributions: 47,
+    contributor_level: getContributorLevel({ total_contributions, votes_cast, proposals_passed }),
+    total_contributions,
     active_governance_proposals: 3,
-    votes_cast: 28,
+    votes_cast,
     proposals_created: 5,
-    proposals_passed: 4,
+    proposals_passed,
     last_contribution_date: new Date().toISOString(),
     contributor_address: "SP2AQGJQXS0KG3RB6MBK8M9NQPF1WE3N6NNPKF0NE",
     minted_token_history: [
@@ -48,7 +53,7 @@ function buildContributorProfile(): ContributorProfile {
 
 function buildEmptyContributorProfile(): ContributorProfile {
   return {
-    contributor_level: "",
+    contributor_level: getContributorLevel({ total_contributions: 0, votes_cast: 0, proposals_passed: 0 }),
     total_contributions: 0,
     active_governance_proposals: 0,
     votes_cast: 0,

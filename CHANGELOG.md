@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **CHANGELOG Hygiene**: Removed duplicate `[0.2.5]` section and merged duplicate `[Unreleased]` entries.
+- **Repository Maintenance & Hygiene**: Hardened root `.gitignore` with environment files and common build artifacts. Remediated workspace drift by removing redundant lockfiles and workspace manifests from service subdirectories. Enhanced `system_audit.py` to enforce workspace hygiene and updated service Dockerfiles to align with the single-lockfile monorepo structure.
 
 ## [0.2.5] - 2026-06-15
 

@@ -1,11 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { createHash, randomUUID } from "node:crypto";
-import { DEFAULT_CART_MANDATES, DEFAULT_SIDL_PROPOSALS } from "./defaults";
+import { DEFAULT_CART_MANDATES, DEFAULT_OPERATORS, DEFAULT_SIDL_PROPOSALS } from "./defaults";
 import type {
   CartMandate,
   CheckoutEvent,
   CheckoutLifecycleState,
+  OperatorEntry,
+  OperatorRegistry,
   SidlProposal,
   VoteChoice,
   VoteEvent,
@@ -30,6 +32,7 @@ export type PersistedSidlState = {
   voteTallies: Record<string, VoteTally>;
   cartMandates: Record<string, CartMandate>;
   checkoutByMandate: Record<string, PersistedCheckoutRecord>;
+  operators: Record<string, OperatorEntry>;
   updatedAtIso: string;
 };
 
@@ -70,6 +73,10 @@ function cloneCheckoutRecord(record: PersistedCheckoutRecord): PersistedCheckout
   };
 }
 
+function cloneOperatorEntry(entry: OperatorEntry): OperatorEntry {
+  return { ...entry };
+}
+
 function cloneState(state: PersistedSidlState): PersistedSidlState {
   return {
     schemaVersion: state.schemaVersion,
@@ -80,6 +87,7 @@ function cloneState(state: PersistedSidlState): PersistedSidlState {
     checkoutByMandate: Object.fromEntries(
       Object.entries(state.checkoutByMandate).map(([id, record]) => [id, cloneCheckoutRecord(record)])
     ),
+    operators: Object.fromEntries(Object.entries(state.operators).map(([id, entry]) => [id, cloneOperatorEntry(entry)])),
     updatedAtIso: state.updatedAtIso,
   };
 }
@@ -242,6 +250,35 @@ function parseCheckoutRecord(mandateId: string, raw: unknown): PersistedCheckout
   };
 }
 
+function parseOperatorEntry(id: string, raw: unknown): OperatorEntry | null {
+  if (!isRecord(raw)) return null;
+
+  const validRoles = ["frontend-host", "delegate", "maintainer", "steward"];
+  const role = typeof raw.role === "string" && validRoles.includes(raw.role)
+    ? (raw.role as OperatorEntry["role"])
+    : "steward";
+
+  const validStatuses = ["active", "inactive"];
+  const status = typeof raw.status === "string" && validStatuses.includes(raw.status)
+    ? (raw.status as OperatorEntry["status"])
+    : "active";
+
+  if (typeof raw.name !== "string" || raw.name.trim().length === 0) return null;
+  if (typeof raw.service !== "string" || raw.service.trim().length === 0) return null;
+
+  return {
+    id,
+    name: raw.name.trim(),
+    role,
+    service: raw.service.trim(),
+    description: typeof raw.description === "string" && raw.description.trim().length > 0 ? raw.description.trim() : raw.service.trim(),
+    recognizedBy: typeof raw.recognizedBy === "string" ? raw.recognizedBy : "",
+    recognizedAtIso: toIsoTimestamp(raw.recognizedAtIso, new Date().toISOString()),
+    status,
+    contact: typeof raw.contact === "string" && raw.contact.trim().length > 0 ? raw.contact.trim() : undefined,
+  };
+}
+
 function resolveStatePath(): string {
   const configured = process.env[STATE_FILE_ENV]?.trim();
   return configured ? path.resolve(configured) : path.resolve(process.cwd(), DEFAULT_STATE_FILE);
@@ -276,6 +313,9 @@ function createDefaultState(nowIso: string): PersistedSidlState {
       Object.entries(DEFAULT_CART_MANDATES).map(([id, mandate]) => [id, cloneCartMandate(mandate)])
     ),
     checkoutByMandate: {},
+    operators: Object.fromEntries(
+      Object.entries(DEFAULT_OPERATORS).map(([id, entry]) => [id, cloneOperatorEntry(entry)])
+    ),
     updatedAtIso: nowIso,
   };
 }
@@ -292,6 +332,7 @@ function hydrateState(raw: unknown, nowIso: string): PersistedSidlState {
     voteTallies: {},
     cartMandates: {},
     checkoutByMandate: {},
+    operators: {},
   };
 
   if (isRecord(raw.proposals)) {
@@ -336,6 +377,15 @@ function hydrateState(raw: unknown, nowIso: string): PersistedSidlState {
     }
   }
 
+  if (isRecord(raw.operators)) {
+    for (const [id, entryRaw] of Object.entries(raw.operators)) {
+      const parsed = parseOperatorEntry(id, entryRaw);
+      if (parsed) {
+        hydrated.operators[id] = parsed;
+      }
+    }
+  }
+
   hydrated.updatedAtIso = toIsoTimestamp(raw.updatedAtIso, nowIso);
   applySeedDefaults(hydrated, nowIso);
 
@@ -360,6 +410,13 @@ function applySeedDefaults(state: PersistedSidlState, nowIso: string): boolean {
   for (const [mandateId, mandate] of Object.entries(DEFAULT_CART_MANDATES)) {
     if (!state.cartMandates[mandateId]) {
       state.cartMandates[mandateId] = cloneCartMandate(mandate);
+      changed = true;
+    }
+  }
+
+  for (const [operatorId, entry] of Object.entries(DEFAULT_OPERATORS)) {
+    if (!state.operators[operatorId]) {
+      state.operators[operatorId] = cloneOperatorEntry(entry);
       changed = true;
     }
   }
@@ -638,4 +695,15 @@ export function getSidlStateSnapshot(): PersistedSidlState {
   const filePath = resolveStatePath();
   const state = loadState(filePath);
   return cloneState(state);
+}
+
+export function getOperatorRegistry(): OperatorRegistry {
+  const filePath = resolveStatePath();
+  const state = loadState(filePath);
+  return {
+    operators: Object.fromEntries(
+      Object.entries(state.operators).map(([id, entry]) => [id, cloneOperatorEntry(entry)])
+    ),
+    updatedAtIso: state.updatedAtIso,
+  };
 }

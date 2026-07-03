@@ -29,13 +29,17 @@ The Conxius Platform must NOT own:
 ## 2. Mandatory CI Controls
 
 ### 2.1 PR Validation on Protected Branches
-All PRs targeting `main` and `develop` must pass:
+All PRs targeting `main`, `develop`, `dev`, and `release/*` must pass:
 - ✅ Lint validation (`pnpm lint`)
 - ✅ Typecheck validation (`pnpm typecheck`)
 - ✅ Unit tests (`pnpm test`)
 - ✅ Secret scanning (gitleaks)
 - ✅ Dependency review
 - ✅ Hygiene audit
+
+Protected branches follow the promotion cycle defined in [`RELEASE_POLICY.md`](../RELEASE_POLICY.md):
+`feature/*` → `dev` → `release/x.y` → `main`. Branch lifecycle and protection rules are
+detailed in [`docs/BRANCH-MAINTENANCE.md`](../docs/BRANCH-MAINTENANCE.md).
 
 ### 2.2 Action Pinning Standards
 All GitHub Actions must use immutable references:

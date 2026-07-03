@@ -16,10 +16,10 @@ permissions:
 on:
   push:
     paths-ignore: ['**.md', 'docs/**', 'CODEOWNERS', 'LICENSE']
-    branches: [ main ]
+    branches: [ main, dev, 'release/**' ]
   pull_request:
     paths-ignore: ['**.md', 'docs/**', 'CODEOWNERS', 'LICENSE']
-    branches: [ main ]
+    branches: [ main, dev, 'release/**' ]
   schedule:
     - cron: '0 2 * * *'
 

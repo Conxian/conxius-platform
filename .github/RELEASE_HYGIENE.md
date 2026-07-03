@@ -10,14 +10,23 @@ Legacy CircleCI configuration is deprecated for this repository, and `.circleci/
 - Keep PRs focused and reviewable.
 - Ensure `CODEOWNERS`-routed review is satisfied before merge.
 
-## Checks to monitor for PRs to `main`
+## Checks to monitor for PRs to protected branches
 
-As of this baseline, the workflows that run on `push`/`pull_request` for `main` are:
+As of this baseline, the workflows that run on `push`/`pull_request` for protected branches
+(`main`, `dev`, `release/*`) are:
 
 - [`bos-production-guard.yml`](./workflows/bos-production-guard.yml) (`BOS production boundary guard`)
 - [`synergy-test.yml`](./workflows/synergy-test.yml) (`End-to-End Synergy Testing`)
+- [`ci.yml`](./workflows/ci.yml) (`CI Baseline`)
+- [`secret-scan.yml`](./workflows/secret-scan.yml) (`Secret Scan`)
+- [`dependency-review.yml`](./workflows/dependency-review.yml) (`Dependency Review`)
+- [`hygiene.yml`](./workflows/hygiene.yml) (`Repository Hygiene Guard`)
+- [`lifecycle-control-gates.yml`](./workflows/lifecycle-control-gates.yml) (`Lifecycle Control Gates`)
 
 Use the PR checks UI as the final source of truth for required status checks.
+
+Branch protection rules and the release promotion cycle are defined in
+[`RELEASE_POLICY.md`](../RELEASE_POLICY.md) and [`docs/BRANCH-MAINTENANCE.md`](../docs/BRANCH-MAINTENANCE.md).
 
 ## Release discipline
 

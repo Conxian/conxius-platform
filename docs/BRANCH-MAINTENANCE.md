@@ -10,13 +10,18 @@ Traceability: supports [conxius-platform#915](https://github.com/Conxian/conxius
 
 These branches are permanent, subject to branch protection rules, and must never be deleted:
 
-| Branch      | Purpose                                              | Protection        |
-|-------------|------------------------------------------------------|--------------------|
-| `main`      | Production-ready, release-tagged surface             | Full (rules, PRs)  |
-| `staged`    | Pre-release integration and secret-scan gate         | Full (rules, PRs)  |
-| `develop`   | Active integration branch (when in use)              | Full (rules, PRs)  |
+| Branch        | Purpose                                              | Protection        |
+|---------------|------------------------------------------------------|--------------------|
+| `main`        | Production-ready, release-tagged surface             | Full (rules, PRs)  |
+| `staged`      | Pre-release integration and secret-scan gate         | Full (rules, PRs)  |
+| `develop`     | Active integration branch (when in use)              | Full (rules, PRs)  |
+| `dev`         | Active development; feature branches merge here      | Full (rules, PRs)  |
+| `release/*`   | Stabilisation branch for version x.y; cut from `dev` | Full (rules, PRs)  |
+| `lts/*`       | Long-Term Support track for a release line           | Full (rules, PRs)  |
 
-The secret-scan and hygiene CI workflows already treat `main`, `staged`, `develop`, and `dev` as protected trigger branches. These branches are excluded from all automated stale-branch detection and deletion.
+The `dev` → `release/x.y` → `main` promotion cycle is governed by [`RELEASE_POLICY.md`](../RELEASE_POLICY.md). The `lts/*` branches are declared per the LTS Gate Policy in that document.
+
+The secret-scan and hygiene CI workflows already treat `main`, `staged`, `develop`, and `dev` as protected trigger branches. These branches and `release/*` and `lts/*` patterns are excluded from all automated stale-branch detection and deletion.
 
 ### Short-lived working branches
 
@@ -37,7 +42,9 @@ Short-lived branches must be deleted after merge. Branches left open after merge
 
 `staged` is treated as a **protected long-lived branch**. It serves as the pre-release integration surface where secret-scan, hygiene, and integration gates run before promotion to `main`. It is excluded from stale-branch detection and deletion.
 
-If additional long-lived integration or environment branches are introduced (e.g., `dev`, `qa`, `release/*`), they must be:
+`dev` is the active development branch where feature branches merge. `release/*` branches are short-lived stabilisation branches cut from `dev` and promoted to `main`. `lts/*` branches carry extended maintenance commitments. All are registered as protected in the table above.
+
+If additional long-lived integration or environment branches are introduced (e.g., `qa`), they must be:
 - Registered in this document as protected
 - Added to the stale-branch-review workflow exclusion list
 - Subject to the same branch protection rules as `main`

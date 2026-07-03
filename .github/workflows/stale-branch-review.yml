@@ -31,6 +31,7 @@ jobs:
 
           # Protected branches — excluded from stale detection and deletion
           PROTECTED="main master staged develop dev gh-pages"
+          PROTECTED_PATTERNS="^release/ ^lts/"
 
           NOW=$(date +%s)
           STALE_DAYS=90
@@ -51,11 +52,17 @@ jobs:
           for branch in $(git branch -r --format='%(refname:short)' | grep -v 'HEAD'); do
             local_name="${branch#origin/}"
 
-            # Skip protected branches
+            # Skip protected branches (exact match)
             skip=false
             for p in $PROTECTED; do
               [[ "$local_name" == "$p" ]] && skip=true && break
             done
+            # Skip protected branches (pattern match: release/*, lts/*)
+            if [[ "$skip" != "true" ]]; then
+              for pattern in $PROTECTED_PATTERNS; do
+                [[ "$local_name" =~ $pattern ]] && skip=true && break
+              done
+            fi
             [[ "$skip" == "true" ]] && continue
 
             # Get last commit timestamp

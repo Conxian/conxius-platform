@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import type { ContributorProfile } from "@/lib/launch";
+import type { ContributorProfile, CommunityStats } from "@/lib/launch";
 
 const DEFAULT_CONTRIBUTOR_ADDRESS = "SP2AQGJQXS0KG3RB6MBK8M9NQPF1WE3N6NNPKF0NE";
 
@@ -49,7 +49,22 @@ function StatCard({
   );
 }
 
-function EmptyState() {
+function FundingProgressBar({ raised, target }: { raised: number; target: number }) {
+  const pct = target > 0 ? Math.min((raised / target) * 100, 100) : 0;
+  return (
+    <div style={{ width: "100%" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "#6B7280", marginBottom: "0.5rem" }}>
+        <span>{raised.toLocaleString()} CXD</span>
+        <span>{pct.toFixed(1)}% of {target.toLocaleString()} CXD</span>
+      </div>
+      <div style={{ width: "100%", height: "12px", backgroundColor: "#F1F5F9", borderRadius: "6px", overflow: "hidden" }}>
+        <div style={{ width: `${pct}%`, height: "100%", backgroundColor: "#059669", borderRadius: "6px", transition: "width 1s ease-in-out" }} />
+      </div>
+    </div>
+  );
+}
+
+function EmptyState({ message }: { message?: string }) {
   return (
     <div
       style={{
@@ -63,7 +78,7 @@ function EmptyState() {
     >
       <div style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>🛠️</div>
       <h3 style={{ color: "#2E403B", margin: "0 0 0.5rem 0", fontSize: "1.1rem" }}>
-        No Contribution History Yet
+        {message || "No Contribution History Yet"}
       </h3>
       <p style={{ color: "#6B7280", margin: 0, fontSize: "0.9rem", maxWidth: "420px", marginInline: "auto" }}>
         Your contributions will appear here once you start engaging with the
@@ -76,19 +91,23 @@ function EmptyState() {
 
 export default function LaunchPage() {
   const [profile, setProfile] = useState<ContributorProfile | null>(null);
+  const [communityStats, setCommunityStats] = useState<CommunityStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchProfile = async () => {
+  const fetchData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(
-        `/api/v1/launch/contributor?address=${encodeURIComponent(DEFAULT_CONTRIBUTOR_ADDRESS)}`,
-      );
-      if (!res.ok) throw new Error(`Failed to fetch contributor profile: ${res.status}`);
-      const d = await res.json();
-      setProfile(d);
+      const [profileRes, communityRes] = await Promise.all([
+        fetch(`/api/v1/launch/contributor?address=${encodeURIComponent(DEFAULT_CONTRIBUTOR_ADDRESS)}`),
+        fetch("/api/v1/launch/community"),
+      ]);
+      if (!profileRes.ok) throw new Error(`Failed to fetch contributor profile: ${profileRes.status}`);
+      if (!communityRes.ok) throw new Error(`Failed to fetch community stats: ${communityRes.status}`);
+      const [profileData, communityData] = await Promise.all([profileRes.json(), communityRes.json()]);
+      setProfile(profileData);
+      setCommunityStats(communityData);
     } catch (err: any) {
       console.error(err);
       setError(err.message);
@@ -98,7 +117,7 @@ export default function LaunchPage() {
   };
 
   useEffect(() => {
-    fetchProfile();
+    fetchData();
   }, []);
 
   if (loading && !profile) {
@@ -111,7 +130,7 @@ export default function LaunchPage() {
           fontSize: "1.1rem",
         }}
       >
-        Loading Launch Contributor Profile...
+        Loading Launch...
       </div>
     );
   }
@@ -160,7 +179,7 @@ export default function LaunchPage() {
           )}
         </div>
         <button
-          onClick={fetchProfile}
+          onClick={fetchData}
           disabled={loading}
           style={{
             padding: "0.6rem 1.2rem",
@@ -190,6 +209,63 @@ export default function LaunchPage() {
         >
           Error: {error}
         </div>
+      )}
+
+      {/* Community Overview */}
+      {communityStats && (
+        <section style={{ marginBottom: "3rem" }}>
+          <h2
+            style={{
+              color: "#2E403B",
+              borderBottom: "2px solid #D4A017",
+              paddingBottom: "0.5rem",
+              marginBottom: "1.5rem",
+              fontSize: "1.25rem",
+            }}
+          >
+            🌐 Community Overview
+          </h2>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+              gap: "1rem",
+              marginBottom: "1.5rem",
+            }}
+          >
+            <StatCard title="Contributors" value={communityStats.total_contributors.toLocaleString()} color="#2E403B" subtitle={`${communityStats.community_members.toLocaleString()} members`} />
+            <StatCard title="Total Contributions" value={communityStats.total_contributions.toLocaleString()} color="#059669" />
+            <StatCard title="Active Proposals" value={communityStats.active_proposals.toLocaleString()} color="#D4A017" subtitle={`${communityStats.proposals_passed} passed`} />
+            <StatCard title="Votes Cast" value={communityStats.total_votes_cast.toLocaleString()} color="#7C3AED" />
+          </div>
+          <div
+            style={{
+              backgroundColor: "white",
+              padding: "1.5rem",
+              borderRadius: "12px",
+              boxShadow: "0 4px 6px rgba(0,0,0,0.05)",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "0.8rem",
+                color: "#6B7280",
+                marginBottom: "1rem",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+              }}
+            >
+              💰 Funding Progress
+            </div>
+            <FundingProgressBar raised={communityStats.funding_raised_cxd} target={communityStats.funding_target_cxd} />
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: "1rem", fontSize: "0.8rem", color: "#6B7280" }}>
+              <span>🪙 Total CXD Minted: {communityStats.total_cxd_minted.toLocaleString()}</span>
+              <span style={{ color: "#94A3B8", fontSize: "0.75rem" }}>
+                Updated: {new Date(communityStats.last_updated).toLocaleDateString()}
+              </span>
+            </div>
+          </div>
+        </section>
       )}
 
       {!hasContributions ? (

@@ -21,3 +21,11 @@ This document defines the strict functional and architectural boundaries between
 - **UI (The "Portal")**: Owns the dashboard experience, system monitoring, and cross-repo telemetry visualization.
 - **Wallet (The "Execution Client")**: Owns private key management, transaction construction, and account-scoped policy enforcement.
 - **Interface**: UI invokes Wallet for execution intent signing.
+
+## 5. Platform ↔ Orbit Boundary
+
+- **Platform (The "Control Plane")**: Owns deployment orchestration, environment promotion, lifecycle control gates, cross-repo verification, and control-plane telemetry ingestion. Platform defines *what* gets deployed and *whether* it passes gates.
+- **Orbit (The "Execution Surface")**: Owns chain-specific deployment execution, chain-aware monitoring, diagnostics, anomaly detection, template generation, and devnet provisioning. Orbit executes *how* a deployment lands on a target chain.
+- **Interface**: Platform emits deployment manifests (`schemas/deployment-manifest.schema.json`) and consumes verification results (`schemas/verification-result.schema.json`). Orbit consumes deployment manifests and produces verification results. The capability registry (`schemas/capabilities.json`) enumerates the first-wave capability set with ownership, schema references, side-effect classes, authentication expectations, and retryability semantics.
+- **Governance**: Orbit is subordinate to Platform governance and production-boundary controls (see [`GOVERNANCE.md`](../GOVERNANCE.md), [`docs/PRODUCTION_BOUNDARY.md`](./PRODUCTION_BOUNDARY.md)). Orbit operator surfaces are treated as untrusted and must not require protocol-signing key custody.
+- **Canonical CLI surface**: The `conxius-orbit` Node binary is the stable user-facing entry point; Python (`conxius_orbit_cli.py`) is the canonical implementation surface. See [`ORBIT_CLI_CONTRACT.md`](./architecture/ORBIT_CLI_CONTRACT.md) for the full command coverage map.

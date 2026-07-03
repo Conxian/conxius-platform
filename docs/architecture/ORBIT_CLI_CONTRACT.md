@@ -86,6 +86,8 @@ operating model in
 ## References
 
 - [Conxian/conxius-orbit](https://github.com/Conxian/conxius-orbit) — source repository
+- [REPO_BOUNDARY_CONTRACT_V1.md](../REPO_BOUNDARY_CONTRACT_V1.md) — Platform–Orbit boundary contract (canonical)
+- [Capability Registry](../../schemas/capabilities.json) — first-wave capability set with ownership and semantics
 - [REPOSITORY_TAXONOMY.md](../REPOSITORY_TAXONOMY.md) — inventory and ownership
 - [RELEASING.md](../../RELEASING.md) — cross-repo release discipline
 - [GOVERNANCE.md](../../GOVERNANCE.md) — cross-repository control alignment

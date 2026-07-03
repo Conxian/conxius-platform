@@ -1,0 +1,285 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Conxian/conxius-platform/schemas/capabilities.json",
+  "title": "Platform–Orbit Capability Registry",
+  "description": "First-wave capability registry defining the boundary between conxius-platform (control plane) and conxius-orbit (execution surface). Each capability record includes ownership, schema references, side-effect classification, authentication expectations, and retryability semantics.",
+  "contractVersion": "1.0.0",
+  "published": "2026-07-03",
+  "canonicalContract": "https://github.com/Conxian/conxius-platform/blob/main/docs/REPO_BOUNDARY_CONTRACT_V1.md",
+  "firstWaveCapabilitySet": [
+    "deploy-orchestrate",
+    "promote-environment",
+    "verify-deployment",
+    "lifecycle-gate",
+    "monitor-control",
+    "deploy-chain",
+    "monitor-chain",
+    "diagnose",
+    "detect",
+    "template",
+    "devnet",
+    "verify-chain",
+    "config",
+    "wallet"
+  ],
+  "capabilities": [
+    {
+      "id": "deploy-orchestrate",
+      "name": "Deployment Orchestration",
+      "owner": "platform",
+      "description": "Top-level deployment orchestration that emits deployment manifests, coordinates cross-repo artifact assembly, and triggers chain-specific execution.",
+      "inputSchema": {
+        "ref": "schemas/deployment-manifest.schema.json",
+        "description": "Deployment manifest describing what to deploy, where, and with what evidence."
+      },
+      "outputSchema": {
+        "ref": "schemas/verification-result.schema.json",
+        "description": "Verification result produced after deployment gate checks."
+      },
+      "sideEffectClass": "write",
+      "authentication": "GitHub Actions OIDC or platform service account",
+      "retryability": "idempotent — retry with same manifest produces same target state"
+    },
+    {
+      "id": "promote-environment",
+      "name": "Environment Promotion",
+      "owner": "platform",
+      "description": "Gates and executes environment promotion (e.g. staging → production) based on verification results and lifecycle control checks.",
+      "inputSchema": {
+        "ref": "schemas/verification-result.schema.json",
+        "description": "Verification result that gates promotion eligibility."
+      },
+      "outputSchema": {
+        "ref": "schemas/deployment-manifest.schema.json",
+        "description": "Updated deployment manifest reflecting the promoted target environment."
+      },
+      "sideEffectClass": "write",
+      "authentication": "GitHub Actions OIDC with promotion gate approval",
+      "retryability": "idempotent — promotion to same target with same evidence is safe to retry"
+    },
+    {
+      "id": "verify-deployment",
+      "name": "Deployment Verification",
+      "owner": "platform",
+      "description": "Cross-repo verification gate that validates deployment manifests against lifecycle, security, and integrity controls.",
+      "inputSchema": {
+        "ref": "schemas/deployment-manifest.schema.json",
+        "description": "Deployment manifest to verify."
+      },
+      "outputSchema": {
+        "ref": "schemas/verification-result.schema.json",
+        "description": "Structured verification result with per-check status and evidence."
+      },
+      "sideEffectClass": "read",
+      "authentication": "Platform CI/CD service account",
+      "retryability": "safe to retry — verification is a pure read-side check"
+    },
+    {
+      "id": "lifecycle-gate",
+      "name": "Lifecycle Control Gate",
+      "owner": "platform",
+      "description": "Enforces repository lifecycle controls including submodule integrity, production boundary guards, and contamination checks.",
+      "inputSchema": {
+        "ref": "internal",
+        "description": "Repository metadata, branch protection state, and workflow conformance signals."
+      },
+      "outputSchema": {
+        "ref": "schemas/verification-result.schema.json",
+        "description": "Gate result with pass/fail per lifecycle check."
+      },
+      "sideEffectClass": "read",
+      "authentication": "GitHub Actions with repo-scoped token",
+      "retryability": "safe to retry — gate evaluation is deterministic"
+    },
+    {
+      "id": "monitor-control",
+      "name": "Control-Plane Telemetry",
+      "owner": "platform",
+      "description": "Ingests and aggregates cross-repo telemetry, deployment status, and system health signals for the control-plane dashboard.",
+      "inputSchema": {
+        "ref": "internal",
+        "description": "Prometheus metrics, deployment status events, and system health probes."
+      },
+      "outputSchema": {
+        "ref": "internal",
+        "description": "Aggregated dashboard feeds and alerting signals."
+      },
+      "sideEffectClass": "read",
+      "authentication": "Prometheus service account with read-scoped tokens",
+      "retryability": "safe to retry — metric collection is lossy-tolerant"
+    },
+    {
+      "id": "deploy-chain",
+      "name": "Chain-Specific Deployment",
+      "owner": "orbit",
+      "description": "Executes deployment of contracts, configurations, and services onto a specific target chain (Stacks, Bitcoin L2, etc.).",
+      "inputSchema": {
+        "ref": "schemas/deployment-manifest.schema.json",
+        "description": "Platform-issued deployment manifest with target chain and artifact references."
+      },
+      "outputSchema": {
+        "ref": "schemas/verification-result.schema.json",
+        "description": "Chain-specific verification result confirming deployment outcome."
+      },
+      "sideEffectClass": "write",
+      "authentication": "Chain-specific deployer key (non-custodial, no protocol-signing custody)",
+      "retryability": "conditional — retry safe if previous attempt failed before on-chain confirmation; requires idempotency check"
+    },
+    {
+      "id": "monitor-chain",
+      "name": "Chain-Aware Monitoring",
+      "owner": "orbit",
+      "description": "Monitors deployed contracts and services on target chains, reporting health, block height, and transaction confirmation status.",
+      "inputSchema": {
+        "ref": "internal",
+        "description": "Chain RPC endpoints, contract addresses, and health probe configuration."
+      },
+      "outputSchema": {
+        "ref": "internal",
+        "description": "Monitoring events and health metrics consumable by platform telemetry."
+      },
+      "sideEffectClass": "read",
+      "authentication": "Read-only chain RPC access (no signing keys)",
+      "retryability": "safe to retry — monitoring is continuous and lossy-tolerant"
+    },
+    {
+      "id": "diagnose",
+      "name": "Diagnostic Operations",
+      "owner": "orbit",
+      "description": "Runs diagnostic checks against deployed contracts and chain state to surface anomalies, configuration drift, or performance degradation.",
+      "inputSchema": {
+        "ref": "internal",
+        "description": "Target chain, contract identifiers, and diagnostic check configuration."
+      },
+      "outputSchema": {
+        "ref": "internal",
+        "description": "Diagnostic report with findings, severity, and recommended actions."
+      },
+      "sideEffectClass": "read",
+      "authentication": "Read-only chain RPC access",
+      "retryability": "safe to retry — diagnostics are pure read-side operations"
+    },
+    {
+      "id": "detect",
+      "name": "Anomaly Detection",
+      "owner": "orbit",
+      "description": "Detects anomalous on-chain behavior, unexpected state transitions, or security-relevant events on target chains.",
+      "inputSchema": {
+        "ref": "internal",
+        "description": "Detection rules, chain event streams, and baseline behavior profiles."
+      },
+      "outputSchema": {
+        "ref": "internal",
+        "description": "Anomaly alerts with severity classification and evidence links."
+      },
+      "sideEffectClass": "read",
+      "authentication": "Read-only chain RPC and event stream access",
+      "retryability": "safe to retry — detection is event-driven and replayable"
+    },
+    {
+      "id": "template",
+      "name": "Template Generation",
+      "owner": "orbit",
+      "description": "Generates deployment templates, contract scaffolding, and configuration artifacts for target chain environments.",
+      "inputSchema": {
+        "ref": "internal",
+        "description": "Template parameters, target chain spec, and configuration overrides."
+      },
+      "outputSchema": {
+        "ref": "internal",
+        "description": "Generated template files ready for deployment execution."
+      },
+      "sideEffectClass": "write",
+      "authentication": "Local filesystem access (no remote auth required)",
+      "retryability": "safe to retry — template generation is deterministic for same inputs"
+    },
+    {
+      "id": "devnet",
+      "name": "Devnet Provisioning",
+      "owner": "orbit",
+      "description": "Provisions local or remote development network environments for testing and integration.",
+      "inputSchema": {
+        "ref": "internal",
+        "description": "Devnet configuration (chain params, funded accounts, contract pre-deploys)."
+      },
+      "outputSchema": {
+        "ref": "internal",
+        "description": "Provisioned devnet endpoint and access credentials."
+      },
+      "sideEffectClass": "write",
+      "authentication": "Local or container-scoped (no production credentials)",
+      "retryability": "destructive — retry tears down and recreates the devnet from scratch"
+    },
+    {
+      "id": "verify-chain",
+      "name": "Chain-Specific Verification",
+      "owner": "orbit",
+      "description": "Verifies on-chain deployment state against the expected manifest, including contract code hashes, storage values, and transaction finality.",
+      "inputSchema": {
+        "ref": "schemas/deployment-manifest.schema.json",
+        "description": "Deployment manifest with expected artifact checksums and contract references."
+      },
+      "outputSchema": {
+        "ref": "schemas/verification-result.schema.json",
+        "description": "Chain-verified result with on-chain evidence and checksum comparisons."
+      },
+      "sideEffectClass": "read",
+      "authentication": "Read-only chain RPC access",
+      "retryability": "safe to retry — verification is deterministic against on-chain state"
+    },
+    {
+      "id": "config",
+      "name": "Configuration Management",
+      "owner": "orbit",
+      "description": "Manages Orbit CLI configuration including initialization, validation, and environment-specific overrides.",
+      "inputSchema": {
+        "ref": "internal",
+        "description": "Configuration file paths, environment variables, and validation rules."
+      },
+      "outputSchema": {
+        "ref": "internal",
+        "description": "Validated configuration state."
+      },
+      "sideEffectClass": "write",
+      "authentication": "Local filesystem access (no remote auth required)",
+      "retryability": "safe to retry — config init/validate is deterministic"
+    },
+    {
+      "id": "wallet",
+      "name": "Wallet Bootstrap",
+      "owner": "orbit",
+      "description": "Generates and manages operator wallet keys for chain-specific deployment authorization. Keys are non-custodial and scoped to deployment operations only.",
+      "inputSchema": {
+        "ref": "internal",
+        "description": "Key generation parameters (curve, entropy source, output path)."
+      },
+      "outputSchema": {
+        "ref": "internal",
+        "description": "Generated key material (never transmitted off-machine)."
+      },
+      "sideEffectClass": "write",
+      "authentication": "Local entropy and filesystem (no remote transmission of private keys)",
+      "retryability": "not retryable — key generation produces new material each invocation; lost keys cannot be recovered"
+    }
+  ],
+  "sideEffectClasses": {
+    "read": "No persistent state mutation. Safe to invoke concurrently and repeatedly.",
+    "write": "Persistent state mutation. Requires idempotency guard or conditional retry logic.",
+    "mixed": "Both read and write. Requires careful retry semantics and state reconciliation.",
+    "none": "No observable side effects."
+  },
+  "authenticationTiers": {
+    "platform-service-account": "Platform CI/CD service accounts with repo-scoped tokens.",
+    "github-actions-oidc": "GitHub Actions OIDC tokens with workload identity.",
+    "chain-deployer-key": "Non-custodial chain-specific deployer keys (no protocol-signing custody).",
+    "chain-read-only": "Read-only chain RPC access (no signing capability).",
+    "local-only": "Local filesystem access only. No remote authentication."
+  },
+  "retryabilitySemantics": {
+    "idempotent": "Safe to retry with identical inputs. Produces the same outcome.",
+    "safe-to-retry": "No harmful side effects from repeated invocation.",
+    "conditional": "Retry is safe only under specific preconditions (e.g., no prior on-chain confirmation).",
+    "destructive": "Retry tears down and recreates state. Not safe for live environments.",
+    "not-retryable": "Each invocation produces unique, non-recoverable output."
+  }
+}

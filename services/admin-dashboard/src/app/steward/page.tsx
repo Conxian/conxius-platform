@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import type { ContributionData } from "@/lib/launch";
 
 type PointsData = {
   total: number;
@@ -32,16 +33,6 @@ type StakingData = {
   staking_tier: string;
   rewards_pending: number;
   contract_address: string;
-};
-
-type ContributionData = {
-  contributor_level: string;
-  total_contributions: number;
-  active_governance_proposals: number;
-  votes_cast: number;
-  proposals_created: number;
-  proposals_passed: number;
-  last_contribution_date: string;
 };
 
 type StewardDashboard = {

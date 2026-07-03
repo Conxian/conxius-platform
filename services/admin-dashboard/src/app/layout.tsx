@@ -37,6 +37,7 @@ export default function RootLayout({
              <a href="/multidimensional" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Pulse</a>
              <a href="/launch" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Launch</a>
              <a href="/steward" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Steward</a>
+             <a href="/rewards" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Rewards</a>
              <a href="/operators" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Operators</a>
              <a href="/tiers" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Tiers</a>
              <a href="/support" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Support</a>

@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server";
+import { validateAdminAuth } from "@/lib/support/auth";
 
 export async function GET(req: Request) {
-  // Nostr P&L Telemetry (Phase 7 Sovereign Reporting)
-  // Provides decentralized operational reporting using Nostr Event Kind 20626.
-  const authHeader = req.headers.get("X-Admin-API-Key");
-  if (!authHeader || authHeader !== process.env.ADMIN_DASHBOARD_API_KEY) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authError = validateAdminAuth(req);
+  if (authError) return authError;
 
   return NextResponse.json({
     kind: 20626,

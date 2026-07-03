@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { UsageValidator, UsageEvent } from "../../../../lib/sidl/usageValidation";
+import { validateAdminAuth } from "@/lib/support/auth";
 
 export async function POST(req: Request) {
+  const authError = validateAdminAuth(req);
+  if (authError) return authError;
+
   // Usage Validation Instrumentation (CON-1263)
   // Hardened implementation aligned with usage-validation-instrumentation-v1.spec.md
   try {

@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
 import { getCartMandate } from "@/lib/sidl/cart";
 import { observeSidlException, observeSidlResponse, startSidlTimer } from "@/lib/sidl/observability";
+import { validateAdminAuth } from "@/lib/support/auth";
 
 const ENDPOINT = "/api/cart/mandates/[id]";
 
 export const runtime = "nodejs";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const authError = validateAdminAuth(_req);
+  if (authError) return authError;
+
   const startedAt = startSidlTimer();
 
   try {

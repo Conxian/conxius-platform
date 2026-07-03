@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
 import { ImapWorker } from '@/lib/support/imap-worker';
+import { validateAdminAuth } from '@/lib/support/auth';
 
 export async function POST(request: Request) {
-  const authHeader = request.headers.get('X-Admin-API-Key');
-  if (authHeader !== process.env.ADMIN_DASHBOARD_API_KEY) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const authError = validateAdminAuth(request);
+  if (authError) return authError;
 
   try {
     const worker = new ImapWorker();

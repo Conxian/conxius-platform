@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
 import { Bip322Bridge } from "@/lib/support/bip322";
+import { validateAdminAuth } from "@/lib/support/auth";
 
 export async function POST(req: Request) {
-  // Wallet-BFF PSBT Pipe
-  // Coordination interface for multi-sig institutional signing
-  const authHeader = req.headers.get("X-Admin-API-Key");
-  if (!authHeader || authHeader !== process.env.ADMIN_DASHBOARD_API_KEY) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authError = validateAdminAuth(req);
+  if (authError) return authError;
 
   try {
     const { psbt, action, intent, signature, address } = await req.json();

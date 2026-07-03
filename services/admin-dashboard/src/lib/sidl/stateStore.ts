@@ -20,6 +20,23 @@ const STATE_SCHEMA_VERSION = 1;
 const STATE_FILE_ENV = "SIDL_STATE_FILE";
 const DEFAULT_STATE_FILE = ".sidl-state.json";
 
+// Simple synchronous mutex to serialize state writes across concurrent
+// async request handlers.  All file I/O in this module is synchronous,
+// so a boolean flag is sufficient for single-process serialization.
+let _writeBusy = false;
+
+function withWriteLock<T>(fn: () => T): T {
+  // Busy-wait is acceptable here because the lock is held only for the
+  // duration of a synchronous load-mutate-save cycle (typically < 1 ms).
+  while (_writeBusy) { /* spin */ }
+  _writeBusy = true;
+  try {
+    return fn();
+  } finally {
+    _writeBusy = false;
+  }
+}
+
 type PersistedCheckoutRecord = {
   state: CheckoutLifecycleState;
   events: CheckoutEvent[];
@@ -467,11 +484,13 @@ function loadState(filePath: string): PersistedSidlState {
 }
 
 function writeMutatedState(mutator: (state: PersistedSidlState) => void): PersistedSidlState {
-  const filePath = resolveStatePath();
-  const state = loadState(filePath);
-  mutator(state);
-  persistState(filePath, state);
-  return state;
+  return withWriteLock(() => {
+    const filePath = resolveStatePath();
+    const state = loadState(filePath);
+    mutator(state);
+    persistState(filePath, state);
+    return state;
+  });
 }
 
 function humanizeProposalId(proposalId: string): string {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import { validateAdminAuth } from "@/lib/support/auth";
 
 export const runtime = "nodejs";
 
@@ -50,16 +51,8 @@ function escapeEnvValue(rawValue: unknown) {
 }
 
 export async function POST(req: Request) {
-  // --- Security: API Key Authentication ---
-  const apiKeyHeader = req.headers.get("X-Admin-API-Key");
-  const expectedApiKey = process.env.ADMIN_DASHBOARD_API_KEY;
-
-  if (!expectedApiKey || apiKeyHeader !== expectedApiKey) {
-    return NextResponse.json(
-      { success: false, error: "Unauthorized: Invalid or missing X-Admin-API-Key" },
-      { status: 401 }
-    );
-  }
+  const authError = validateAdminAuth(req);
+  if (authError) return authError;
 
   try {
     let data: unknown;

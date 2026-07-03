@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
+import { validateAdminAuth } from "@/lib/support/auth";
 
-export async function GET() {
+export async function GET(req: Request) {
+  const authError = validateAdminAuth(req);
+  if (authError) return authError;
+
   // Deterministic Blueprint for AI Agents (Updated v0.2.4-remediated)
   const blueprint = {
     system: "Conxian Platform",

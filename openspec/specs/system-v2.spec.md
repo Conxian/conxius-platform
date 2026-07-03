@@ -1,7 +1,17 @@
 # Specification: Conxian Platform V2 (Phase 5)
 
+> **⚠️ DEPRECATED — 2026-07-03**
+>
+> This specification describes the **Phase 5** architecture (MeshModule, NexusModule,
+> ComplianceModule, IntentManager) and is **two phases behind the current codebase**.
+> It has been superseded by `sovereign-computing-v1.spec.md` which documents the
+> Phase 6/7 sovereign computing model (Pulse, SFO, Conxient, AgentOps, UBI).
+>
+> **Do not use this spec for new work.** It is retained for historical reference only.
+> For the current architecture, see `openspec/specs/sovereign-computing-v1.spec.md`.
+
 ## 1. Overview
-This specification defines the core architecture and functional requirements for the Conxian Platform as of Phase 5.
+This specification defines the core architecture and functional requirements for the Conxian Platform as of Phase 5. **This document is historical only.**
 
 ## 2. Business Architecture (Businesses)
 - **Sovereign Autonomous Business (SAB)**: Operational logic is autonomous and encoded in software.

@@ -1,7 +1,10 @@
+import { validateAdminAuth } from "@/lib/support/auth";
 import { NextResponse } from "next/server";
 import { eventBus } from "@/lib/support/event-bus";
 
-export async function GET() {
+export async function GET(req: Request) {
+  const authError = validateAdminAuth(req);
+  if (authError) return authError;
   // Event Bus Delivery Telemetry (Phase 7 Orchestration)
   const status = eventBus.getStatus();
 

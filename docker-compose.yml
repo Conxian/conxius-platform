@@ -1,7 +1,8 @@
 services:
   # Conxian Gateway - Orchestrated as an external dependency in Phase 7
   gateway:
-    image: ${GATEWAY_IMAGE:-nginx:alpine} # Default to stub if image not provided
+    image: ${GATEWAY_IMAGE:-nginx:1.27-alpine}
+    restart: unless-stopped
     ports:
       - "${GATEWAY_PORT:-8080}:8080"
     environment:
@@ -12,13 +13,22 @@ services:
     networks:
       - conxian-network
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   # Admin Dashboard - Managed locally in this monorepo
   admin-dashboard:
     build:
       context: ./services/admin-dashboard
+    restart: unless-stopped
     ports:
       - "3002:3001"
     environment:
@@ -26,21 +36,35 @@ services:
       - ADMIN_DASHBOARD_API_KEY=${ADMIN_DASHBOARD_API_KEY}
     networks:
       - conxian-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
 
   # Conxian UI - Orchestrated as an external dependency in Phase 7
   conxian-ui:
-    image: ${UI_IMAGE:-nginx:alpine} # Default to stub if image not provided
+    image: ${UI_IMAGE:-nginx:1.27-alpine}
+    restart: unless-stopped
     ports:
       - "${UI_PORT:-3000}:3000"
     environment:
       - NEXT_PUBLIC_CORE_API_URL=${NEXT_PUBLIC_CORE_API_URL}
     networks:
       - conxian-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   bisq-node:
     profiles:
       - bisq
     image: nginx:1.27-alpine
+    restart: unless-stopped
     environment:
       - RPC_STUB_PACK=bisq
       - RPC_STUB_PORT=${BISQ_RPC_PORT:-9999}
@@ -55,6 +79,7 @@ services:
     profiles:
       - rgb
     image: nginx:1.27-alpine
+    restart: unless-stopped
     environment:
       - RPC_STUB_PACK=rgb
       - RPC_STUB_PORT=${RGB_RPC_PORT:-9999}
@@ -69,6 +94,7 @@ services:
     profiles:
       - bitvm
     image: nginx:1.27-alpine
+    restart: unless-stopped
     environment:
       - RPC_STUB_PACK=bitvm
       - RPC_STUB_PORT=${BITVM_RPC_PORT:-9999}
@@ -81,6 +107,7 @@ services:
 
   db:
     image: postgres:15-alpine
+    restart: unless-stopped
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -89,14 +116,36 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - conxian-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     networks:
       - conxian-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
 
   prometheus:
     image: prom/prometheus:v2.55.1
+    restart: unless-stopped
     ports:
       - "9090:9090"
     command:
@@ -109,9 +158,16 @@ services:
       - conxian-network
     depends_on:
       - admin-dashboard
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   grafana:
     image: grafana/grafana:11.2.2
+    restart: unless-stopped
     ports:
       - "3001:3000"
     environment:
@@ -122,6 +178,12 @@ services:
       - conxian-network
     depends_on:
       - prometheus
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
 networks:
   conxian-network:

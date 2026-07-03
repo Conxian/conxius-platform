@@ -138,7 +138,6 @@ async def test_get_network_status(adapter):
         {"result": "0x64"},           # eth_blockNumber
         {"result": "0x4a817c800"},    # eth_gasPrice
         {"result": "0x8"},            # net_peerCount
-        {"result": "0xb87"},          # eth_chainId
     ]
 
     with patch.object(adapter, "_rpc", mock_rpc):

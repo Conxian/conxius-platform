@@ -1,0 +1,119 @@
+name: Stale Branch Review
+
+# Recurring branch maintenance per conxius-platform#915
+# See: docs/BRANCH-MAINTENANCE.md
+
+on:
+  schedule:
+    - cron: '0 8 1 * *'   # First day of every month at 08:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  review:
+    name: Stale branch review
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Identify stale branches
+        id: stale
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          # Protected branches — excluded from stale detection and deletion
+          PROTECTED="main master staged develop dev gh-pages"
+
+          NOW=$(date +%s)
+          STALE_DAYS=90
+          DELETE_DAYS=180
+          STALE_CUTOFF=$((NOW - STALE_DAYS * 86400))
+          DELETE_CUTOFF=$((NOW - DELETE_DAYS * 86400))
+
+          echo "Cutoff for stale (>${STALE_DAYS}d): $(date -d @${STALE_CUTOFF} +%Y-%m-%d)"
+          echo "Cutoff for deletion (>${DELETE_DAYS}d): $(date -d @${DELETE_CUTOFF} +%Y-%m-%d)"
+
+          # Fetch all branches
+          git fetch --prune --all --quiet
+
+          STALE_BRANCHES=""
+          DELETE_BRANCHES=""
+          ACTIVE_COUNT=0
+
+          for branch in $(git branch -r --format='%(refname:short)' | grep -v 'HEAD'); do
+            local_name="${branch#origin/}"
+
+            # Skip protected branches
+            skip=false
+            for p in $PROTECTED; do
+              [[ "$local_name" == "$p" ]] && skip=true && break
+            done
+            [[ "$skip" == "true" ]] && continue
+
+            # Get last commit timestamp
+            last_commit_ts=$(git log -1 --format=%ct "origin/$local_name" 2>/dev/null || echo 0)
+            last_commit_date=$(date -d "@$last_commit_ts" +%Y-%m-%d 2>/dev/null || echo "unknown")
+
+            if [[ "$last_commit_ts" -lt "$DELETE_CUTOFF" ]]; then
+              DELETE_BRANCHES="${DELETE_BRANCHES}- \`$local_name\` (last commit: $last_commit_date)\n"
+            elif [[ "$last_commit_ts" -lt "$STALE_CUTOFF" ]]; then
+              STALE_BRANCHES="${STALE_BRANCHES}- \`$local_name\` (last commit: $last_commit_date)\n"
+            else
+              ACTIVE_COUNT=$((ACTIVE_COUNT + 1))
+            fi
+          done
+
+          # Build report body
+          REPORT="## Stale branch review — $(date +%Y-%m-%d)\n\n"
+          REPORT="${REPORT}Automated monthly branch maintenance review per [BRANCH-MAINTENANCE.md](https://github.com/${REPO}/blob/main/docs/BRANCH-MAINTENANCE.md).\n\n"
+
+          if [[ -z "$STALE_BRANCHES" && -z "$DELETE_BRANCHES" ]]; then
+            REPORT="${REPORT}### :white_check_mark: No stale branches found\n\n"
+            REPORT="${REPORT}$ACTIVE_COUNT active working branches (excluding protected). All within the ${STALE_DAYS}-day activity window.\n"
+          else
+            if [[ -n "$DELETE_BRANCHES" ]]; then
+              REPORT="${REPORT}### :wastebasket: Deletion candidates (>${DELETE_DAYS} days inactive)\n\n"
+              REPORT="${REPORT}These branches have had no activity in over ${DELETE_DAYS} days and are candidates for deletion:\n\n"
+              REPORT="${REPORT}${DELETE_BRANCHES}\n"
+            fi
+            if [[ -n "$STALE_BRANCHES" ]]; then
+              REPORT="${REPORT}### :warning: Stale branches (>${STALE_DAYS} days inactive)\n\n"
+              REPORT="${REPORT}These branches have had no activity in over ${STALE_DAYS} days and should be reviewed:\n\n"
+              REPORT="${REPORT}${STALE_BRANCHES}\n"
+            fi
+            REPORT="${REPORT}### Next steps\n\n"
+            REPORT="${REPORT}- Review each branch above and decide to **keep** (add a comment with expected timeline) or **delete**\n"
+            REPORT="${REPORT}- Delete a branch: \`git push origin --delete <branch>\`\n"
+            REPORT="${REPORT}- Archive before deleting: \`git tag archive/<branch> origin/<branch> && git push origin --delete <branch> && git push origin archive/<branch>\`\n"
+          fi
+
+          # Write report to file for issue creation
+          echo -e "$REPORT" > /tmp/stale-branch-report.md
+
+          # Set output for conditional issue creation
+          if [[ -n "$STALE_BRANCHES" || -n "$DELETE_BRANCHES" ]]; then
+            echo "has_stale=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_stale=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create stale branch report issue
+        if: steps.stale.outputs.has_stale == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          TITLE="Stale branch review — $(date +%Y-%m)"
+          gh issue create \
+            --repo "$REPO" \
+            --title "$TITLE" \
+            --label "Hygiene" \
+            --body-file /tmp/stale-branch-report.md

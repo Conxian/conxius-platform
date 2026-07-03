@@ -166,3 +166,24 @@ export type EventBusState = {
   last_sequence_processed: number;
   delivery_records: Record<string, EventDeliveryRecord>;
 };
+
+export type OperatorRole = "frontend-host" | "delegate" | "maintainer" | "steward";
+
+export type OperatorStatus = "active" | "inactive";
+
+export type OperatorEntry = {
+  id: string;
+  name: string;
+  role: OperatorRole;
+  service: string;
+  description: string;
+  recognizedBy: string;
+  recognizedAtIso: string;
+  status: OperatorStatus;
+  contact?: string;
+};
+
+export type OperatorRegistry = {
+  operators: Record<string, OperatorEntry>;
+  updatedAtIso: string;
+};

@@ -92,7 +92,7 @@ function buildContributionData(): ContributionData {
   const last_contribution_date = new Date().toISOString();
 
   return {
-    contributor_level: getContributorLevel({ total_contributions, proposals_passed }),
+    contributor_level: getContributorLevel({ total_contributions, votes_cast, proposals_passed }),
     total_contributions,
     active_governance_proposals,
     votes_cast,

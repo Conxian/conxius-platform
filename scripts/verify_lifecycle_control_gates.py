@@ -65,9 +65,9 @@ def main() -> int:
     failures: list[str] = []
 
     required_files = [
-        "openspec/changes/2026-05-28-con-698-lifecycle-control-gates/proposal.md",
-        "openspec/changes/2026-05-28-con-698-lifecycle-control-gates/tasks.md",
-        "openspec/changes/2026-05-28-con-698-lifecycle-control-gates/spec-delta.md",
+        "openspec/changes/archive/2026-05-28-con-698-lifecycle-control-gates/proposal.md",
+        "openspec/changes/archive/2026-05-28-con-698-lifecycle-control-gates/tasks.md",
+        "openspec/changes/archive/2026-05-28-con-698-lifecycle-control-gates/spec-delta.md",
         "docs/architecture/CON-698_LIFECYCLE_CONTROL_DESIGN_IMPACT_REVIEW.md",
         "docs/runbooks/LIFECYCLE_CONTROL_VERIFICATION_EVIDENCE.md",
         "docs/runbooks/LIFECYCLE_CONTROL_GATE_OPERATIONS.md",

@@ -121,6 +121,7 @@ export default function AdminPage() {
   const [nexus, setNexus] = useState<NexusState | null>(null);
   const [erpData, setErpData] = useState<ErpDashboardData | null>(null);
   const [telemetry, setTelemetry] = useState<TelemetryService[]>([]);
+  const [rewardsData, setRewardsData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -159,6 +160,17 @@ export default function AdminPage() {
       if (telRes.ok) {
         const telJson = await telRes.json();
         setTelemetry(telJson.services);
+      }
+
+      // Fetch Reward Allocation
+      try {
+        const rewardsRes = await fetch("/api/v1/rewards/sources");
+        if (rewardsRes.ok) {
+          const rewardsJson = await rewardsRes.json();
+          setRewardsData(rewardsJson);
+        }
+      } catch {
+        setRewardsData(null);
       }
 
     } catch (err) {
@@ -246,6 +258,47 @@ export default function AdminPage() {
           </div>
         </section>
       </div>
+
+      {rewardsData && (
+        <section style={{ marginTop: "3rem" }}>
+          <h3 style={{ borderBottom: "2px solid #D4A017", paddingBottom: "0.5rem", color: "#2E403B", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <span>Protocol Reward Allocation</span>
+            <a href="/rewards" style={{ fontSize: "0.75rem", color: "#D4A017", textDecoration: "none" }}>View breakdown →</a>
+          </h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem", marginTop: "1rem" }}>
+            {rewardsData.allocation.map((a: any) => (
+              <div key={a.category} style={{
+                backgroundColor: "white",
+                padding: "1rem",
+                borderRadius: "8px",
+                boxShadow: "0 4px 6px rgba(0,0,0,0.05)",
+                textAlign: "center",
+              }}>
+                <div style={{ fontSize: "0.7rem", color: "#666", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem" }}>
+                  {a.category}
+                </div>
+                <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "#2E403B" }}>
+                  {a.percentage}%
+                </div>
+                <div style={{ fontSize: "0.7rem", color: "#999", marginTop: "0.25rem" }}>
+                  {(a.amount_sats / 100_000_000).toFixed(2)} BTC
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop: "0.75rem", display: "flex", borderRadius: "6px", overflow: "hidden", height: "8px" }}>
+            {rewardsData.allocation.map((a: any) => (
+              <div key={a.category} style={{
+                flex: a.amount_sats,
+                backgroundColor: a.category === "Community Rewards" ? "#059669" : a.category === "Governance Rewards" ? "#7C3AED" : a.category === "Operational Rewards" ? "#2563EB" : "#D4A017",
+              }} />
+            ))}
+          </div>
+          <p style={{ fontSize: "0.75rem", color: "#94A3B8", marginTop: "0.5rem" }}>
+            Total period revenue: {(rewardsData.total_revenue_sats / 100_000_000).toFixed(2)} BTC ({rewardsData.period}) &middot; SFO: {rewardsData.sfo_address}
+          </p>
+        </section>
+      )}
 
       <section style={{ marginTop: "3rem" }}>
         <h3 style={{ borderBottom: "2px solid #D4A017", paddingBottom: "0.5rem", color: "#2E403B" }}>Sovereign ERP Operations</h3>

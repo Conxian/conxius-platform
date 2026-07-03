@@ -1,25 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-
-interface MintedTokenEntry {
-  token_id: string;
-  amount: number;
-  minted_at: string;
-  tx_hash: string;
-}
-
-interface ContributorProfile {
-  contributor_level: string;
-  total_contributions: number;
-  active_governance_proposals: number;
-  votes_cast: number;
-  proposals_created: number;
-  proposals_passed: number;
-  last_contribution_date: string;
-  contributor_address: string;
-  minted_token_history: MintedTokenEntry[];
-}
+import type { ContributorProfile } from "@/lib/launch";
 
 const DEFAULT_CONTRIBUTOR_ADDRESS = "SP2AQGJQXS0KG3RB6MBK8M9NQPF1WE3N6NNPKF0NE";
 

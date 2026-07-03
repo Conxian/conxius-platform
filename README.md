@@ -102,6 +102,7 @@ Use templates and generated local secrets for development only. Do not commit re
 - [GOVERNANCE.md](GOVERNANCE.md)
 - [SUPPORT.md](SUPPORT.md)
 - [REVIEWS.md](REVIEWS.md)
+- [RELEASE_POLICY.md](RELEASE_POLICY.md)
 - [CODEOWNERS](CODEOWNERS)
 
 ## Contact

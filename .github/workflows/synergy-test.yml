@@ -6,6 +6,12 @@ permissions:
 # End-to-end synergy testing per Issue #968
 # Validates control-plane orchestration and cross-service integration
 # See: .github/CONXIUS_CICD_BASELINE.md
+#
+# Failure triage (Issue #954):
+# All observed failures were real application regressions in the admin-dashboard
+# Docker build (TypeScript errors during `pnpm build`). The workflow correctly
+# catches these — it is not a brittle or flaky test. Build errors surface in the
+# "Build admin-dashboard image" step; runtime errors in "Start services".
 
 on:
   push:
@@ -33,9 +39,14 @@ jobs:
       uses: pnpm/action-setup@v6
     - name: Set up Environment Variables
       run: cp .env.schema .env
-    - name: Start Platform Stack
+    - name: Build admin-dashboard image
+      # Isolated build step for clearer failure attribution (Issue #954).
+      # TypeScript errors in the admin-dashboard surface here rather than
+      # being buried in a combined build+run step.
+      run: docker compose build admin-dashboard
+    - name: Start services
       run: |
-        docker compose up -d --build admin-dashboard db redis
+        docker compose up -d admin-dashboard db redis
         echo "Waiting for services to initialize..."
         sleep 30
     - name: Run Admin Dashboard Health Check

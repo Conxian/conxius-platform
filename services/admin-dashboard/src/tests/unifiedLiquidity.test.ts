@@ -1,9 +1,22 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 import { GET } from "../app/api/v1/liquidity/unified/route";
 
+const MOCK_API_KEY = "test-api-key-unified";
+
 describe("Unified Liquidity API", () => {
+  beforeAll(() => {
+    process.env.ADMIN_DASHBOARD_API_KEY = MOCK_API_KEY;
+  });
+
+  afterAll(() => {
+    delete process.env.ADMIN_DASHBOARD_API_KEY;
+  });
+
   it("should return a unified liquidity object with the expected structure", async () => {
-    const response = await GET();
+    const request = new Request("http://localhost/api/v1/liquidity/unified", {
+      headers: { "X-Admin-API-Key": MOCK_API_KEY },
+    });
+    const response = await GET(request);
     const data = await response.json();
 
     expect(data).toHaveProperty("total_liquidity_usd");

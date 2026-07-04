@@ -36,6 +36,55 @@ const STATUS_STYLES: Record<string, { label: string; color: string; bg: string }
   },
 };
 
+const TIER_ORDER: Record<string, number> = { community: 0, secondary: 1, primary: 2 };
+const TIER_LABELS: Record<string, string> = {
+  community: "Community",
+  secondary: "Recognized",
+  primary: "Canonical",
+};
+const TIER_COLORS: Record<string, string> = {
+  community: "#D4A017",
+  secondary: "#6366F1",
+  primary: "#2E403B",
+};
+
+function TierIndicator({ currentTier }: { currentTier: string }) {
+  const tiers = ["community", "secondary", "primary"];
+  const currentIdx = TIER_ORDER[currentTier] ?? 0;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+      {tiers.map((tier, idx) => (
+        <React.Fragment key={tier}>
+          {idx > 0 && (
+            <div
+              style={{
+                width: "20px",
+                height: "2px",
+                backgroundColor: idx <= currentIdx ? TIER_COLORS[tier] : "#E5E7EB",
+                transition: "background-color 0.3s",
+              }}
+            />
+          )}
+          <div
+            title={TIER_LABELS[tier]}
+            style={{
+              width: "10px",
+              height: "10px",
+              borderRadius: "50%",
+              backgroundColor: idx <= currentIdx ? TIER_COLORS[tier] : "#E5E7EB",
+              border: `2px solid ${idx <= currentIdx ? TIER_COLORS[tier] : "#D1D5DB"}`,
+              transition: "all 0.3s",
+            }}
+          />
+        </React.Fragment>
+      ))}
+      <span style={{ fontSize: "0.7rem", color: TIER_COLORS[currentTier], fontWeight: 600, marginLeft: "0.5rem" }}>
+        {TIER_LABELS[currentTier]} Tier
+      </span>
+    </div>
+  );
+}
+
 function FrontendCard({ entry }: { entry: FrontendEntry }) {
   const labelStyle = LABEL_STYLES[entry.label] ?? LABEL_STYLES["community-hosted"];
   const statusStyle = STATUS_STYLES[entry.status] ?? STATUS_STYLES.inactive;
@@ -109,6 +158,11 @@ function FrontendCard({ entry }: { entry: FrontendEntry }) {
       <p style={{ margin: 0, fontSize: "0.85rem", color: "#6B7280", lineHeight: 1.6 }}>
         {entry.description}
       </p>
+
+      {/* Tier progression */}
+      <div style={{ padding: "0.35rem 0", borderTop: "1px solid #F3F4F6", borderBottom: "1px solid #F3F4F6" }}>
+        <TierIndicator currentTier={entry.tier} />
+      </div>
 
       {/* Operator + Recognition provenance */}
       <div
@@ -287,6 +341,124 @@ export default function FrontendsPage() {
       >
         <LegendItem emoji="🏛" label="Canonical" desc="Maintained by Conxian Labs under direct governance authority" />
         <LegendItem emoji="🏘" label="Community-Hosted" desc="Operated by governance-recognized community operators" />
+      </div>
+
+      {/* Decentralization Pathway */}
+      <div
+        style={{
+          backgroundColor: "#FFFFFF",
+          border: "1px solid #E5E7EB",
+          borderRadius: "12px",
+          padding: "1.5rem",
+          marginBottom: "2rem",
+        }}
+      >
+        <h3 style={{ margin: "0 0 1rem", fontSize: "1.1rem", color: "#2E403B", fontWeight: 700 }}>
+          Decentralization Pathway
+        </h3>
+        <p style={{ margin: "0 0 1.25rem", fontSize: "0.85rem", color: "#6B7280", lineHeight: 1.7 }}>
+          Frontend surfaces follow a three-tier progression from community-operated to canonical recognition.
+          Each step requires a governance proposal and operator approval.
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem", marginBottom: "1rem" }}>
+          {[
+            {
+              tier: "community",
+              emoji: "🏘",
+              title: "Community Tier",
+              desc: "Community-proposed frontends awaiting governance ratification. Listed in the registry with pending-review status. Anyone can submit a proposal to host a frontend.",
+              steps: ["Submit operator approval proposal", "Pass governance vote", "Receive community-tier recognition"],
+            },
+            {
+              tier: "secondary",
+              emoji: "🔷",
+              title: "Recognized Tier",
+              desc: "Governance-ratified community frontends with active operator status. Gain visibility in the registry and eligibility for official recognition badge.",
+              steps: ["Maintain 6+ months active operation", "Pass security & compliance review", "Upgrade proposal ratified by governance"],
+            },
+            {
+              tier: "primary",
+              emoji: "🏛",
+              title: "Canonical Tier",
+              desc: "The highest recognition tier. Currently held by Conxian Labs-maintained surfaces. Designed to be transferable to community governance as the protocol decentralizes.",
+              steps: ["Sustain recognized-tier operation", "Council super-majority approval", "Canonical ownership transfer governance"],
+            },
+          ].map((path) => (
+            <div
+              key={path.tier}
+              style={{
+                padding: "1.25rem",
+                borderRadius: "10px",
+                backgroundColor: path.tier === "primary" ? "rgba(46, 64, 59, 0.04)" : "rgba(249, 250, 251, 0.8)",
+                border: `1px solid ${path.tier === "primary" ? "rgba(46, 64, 59, 0.15)" : "#F3F4F6"}`,
+              }}
+            >
+              <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>{path.emoji}</div>
+              <h4 style={{ margin: "0 0 0.5rem", fontSize: "0.95rem", color: "#1F2937", fontWeight: 700 }}>
+                {path.title}
+              </h4>
+              <p style={{ margin: "0 0 1rem", fontSize: "0.8rem", color: "#6B7280", lineHeight: 1.6 }}>
+                {path.desc}
+              </p>
+              <div style={{ borderTop: "1px solid #F3F4F6", paddingTop: "0.75rem" }}>
+                {path.steps.map((step, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: "0.5rem",
+                      marginBottom: "0.4rem",
+                      fontSize: "0.78rem",
+                      color: "#4B5563",
+                    }}
+                  >
+                    <span style={{ color: TIER_COLORS[path.tier], fontWeight: 700, flexShrink: 0 }}>{i + 1}.</span>
+                    <span>{step}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Host a Frontend CTA */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "1.25rem 1.5rem",
+          backgroundColor: "rgba(46, 64, 59, 0.06)",
+          border: "1px solid rgba(46, 64, 59, 0.12)",
+          borderRadius: "12px",
+          marginBottom: "2rem",
+        }}
+      >
+        <div>
+          <strong style={{ color: "#2E403B", fontSize: "0.95rem" }}>
+            Want to host a frontend?
+          </strong>
+          <p style={{ margin: "0.25rem 0 0", color: "#6B7280", fontSize: "0.82rem" }}>
+            Submit an operator approval proposal for the <code style={{ backgroundColor: "rgba(46,64,59,0.08)", padding: "0.1rem 0.4rem", borderRadius: "4px" }}>frontend-host</code> role to list your surface in the registry.
+          </p>
+        </div>
+        <a
+          href="/proposal-templates"
+          style={{
+            padding: "0.6rem 1.2rem",
+            backgroundColor: "#2E403B",
+            color: "#FFFFFF",
+            borderRadius: "8px",
+            textDecoration: "none",
+            fontSize: "0.85rem",
+            fontWeight: 600,
+            whiteSpace: "nowrap",
+          }}
+        >
+          View Templates →
+        </a>
       </div>
 
       {/* Governance disclaimer */}

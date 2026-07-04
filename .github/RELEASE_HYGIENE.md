@@ -54,4 +54,9 @@ Branch protection rules and the release promotion cycle are defined in
 2. Verifies the tagged commit is contained in `origin/main`.
 3. Validates `.env.production.schema` is production-safe (no `development` / `testnet` defaults).
 4. Verifies the matching changelog section exists.
-5. Creates a GitHub Release for the tag.
+5. Generates a CycloneDX SBOM via `anchore/sbom-action@v1`.
+6. Creates a GitHub Release for the tag with the SBOM attached as a release asset.
+
+SBOM files are named `sbom-vX.Y.Z.cdx.json` and retained as release assets for
+audit and supply-chain transparency. For the full CI/CD baseline gap analysis,
+see [`../docs/CI_CD_BASELINE_GAP_ANALYSIS.md`](../docs/CI_CD_BASELINE_GAP_ANALYSIS.md).

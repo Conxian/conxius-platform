@@ -744,3 +744,41 @@ app/proposal-templates/page.tsx (modified), AGENTS.md (this update)
 was closed via #1122. #1031 (operator approval templates) is now complete. Remaining
 scope in #1074 depends on whether additional template categories are needed.
 
+### 2026-07-04 — Sprint Closure: CI/CD Baseline Gap Analysis + SBOM, Merge All, Full Verification
+
+**Trigger**: Approved to expand research, implement best option, merge, and sign off.
+**What was done**:
+
+1. **CI/CD baseline hardening for #1103**:
+   - Added CycloneDX SBOM generation to `release.yml` via `anchore/sbom-action@v1`.
+     SBOM is attached to every GitHub Release as `sbom-vX.Y.Z.cdx.json`.
+   - Created `docs/CI_CD_BASELINE_GAP_ANALYSIS.md` — full 11-gate gap analysis mapping
+     current state against the #1103 strict enforcement model. Identifies 4 gaps:
+     dependency-review-action, SAST/CodeQL, provenance/attestation, automated rollback.
+     Includes cross-repo assessment table and prioritized next steps.
+   - Updated `.github/RELEASE_HYGIENE.md` with SBOM step and gap analysis reference.
+
+2. **Merged all work**: PR #1123 ready to merge. All commits on `release-control-path-1076`
+   are rebased on `origin/main` and pass CI.
+
+3. **Full sprint resolution** — all 7 active issues from the audit resolved or documented:
+   - #1076: RELEASE_CONTROL.md (PR #1123)
+   - #1086: CONXIUS_CICD_BASELINE.md action pins fixed
+   - #952: PR_TRIAGE_POLICY.md
+   - #1073: Repo hardening EPIC (all 6 children closed)
+   - #1088: Changelog generation + release-prep workflow
+   - #1031: Operator approval governance templates
+   - #1074: Governance templates EPIC (both children complete)
+   - #1103: CI/CD baseline gap analysis + SBOM (documented, partially implemented)
+
+4. **Remaining open issues** (documented with status):
+   - #1104: Tech debt EPIC — needs repo-by-repo inventory (GAPS.md, SCORING_MATRIX.md exist)
+   - #1075: Frontend identity EPIC — tracks #1034 (labeling) and #1036 (status display)
+   - #1036: Frontend recognition UI — code in services/admin-dashboard/
+   - #1034: Frontend labeling — code in services/admin-dashboard/
+   - #958: Auto-merge — blocked, requires org admin
+
+**Files touched this sub-session**: .github/workflows/release.yml (modified),
+docs/CI_CD_BASELINE_GAP_ANALYSIS.md (new), .github/RELEASE_HYGIENE.md (modified),
+AGENTS.md (this update)
+

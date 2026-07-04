@@ -68,6 +68,53 @@ export interface TreasuryFundedRoleProfile {
   lastEvaluatedIso: string;
 }
 
+export interface PayoutRecord {
+  id: string;
+  roleId: string;
+  roleName: string;
+  stewardId: string;
+  stewardName: string;
+  amountSats: number;
+  allocationCategory: AllocationCategory;
+  fundingCadence: 'monthly' | 'quarterly' | 'per-milestone';
+  periodIso: string;
+  paidAtIso: string;
+  txHash?: string;
+  recognizedBy: string;
+}
+
+export interface ActivityRecord {
+  id: string;
+  roleId: string;
+  roleName: string;
+  stewardId: string;
+  stewardName: string;
+  activityType:
+    | 'vote-cast'
+    | 'proposal-created'
+    | 'policy-authored'
+    | 'policy-reviewed'
+    | 'delegation-received'
+    | 'badge-earned'
+    | 'operator-action';
+  description: string;
+  occurredAtIso: string;
+  metadata?: Record<string, string>;
+}
+
+export interface FundedRoleHistory {
+  stewardId: string;
+  stewardName: string;
+  roleId: string;
+  roleName: string;
+  allocationCategory: AllocationCategory;
+  payouts: PayoutRecord[];
+  activities: ActivityRecord[];
+  totalPayoutSats: number;
+  payoutCount: number;
+  activityCount: number;
+}
+
 export const FUNDED_ROLE_DEFINITIONS: FundedRoleDefinition[] = [
   {
     id: 'protocol-operator',
@@ -305,4 +352,197 @@ export function buildTreasuryFundedRoleProfile(
     allocationBreakdown,
     lastEvaluatedIso: new Date().toISOString(),
   };
+}
+
+export const HISTORICAL_PAYOUTS: PayoutRecord[] = [
+  {
+    id: 'payout-001',
+    roleId: 'protocol-operator',
+    roleName: 'Protocol Operator',
+    stewardId: 'steward-alice',
+    stewardName: 'Alice',
+    amountSats: 5_000_000,
+    allocationCategory: 'operational-rewards',
+    fundingCadence: 'monthly',
+    periodIso: '2026-06-01T00:00:00Z',
+    paidAtIso: '2026-07-01T12:00:00Z',
+    txHash: 'a1b2c3d4e5f6...',
+    recognizedBy: 'governance-prop-protocol-operator',
+  },
+  {
+    id: 'payout-002',
+    roleId: 'protocol-operator',
+    roleName: 'Protocol Operator',
+    stewardId: 'steward-alice',
+    stewardName: 'Alice',
+    amountSats: 5_000_000,
+    allocationCategory: 'operational-rewards',
+    fundingCadence: 'monthly',
+    periodIso: '2026-05-01T00:00:00Z',
+    paidAtIso: '2026-06-01T12:00:00Z',
+    txHash: 'b2c3d4e5f6a1...',
+    recognizedBy: 'governance-prop-protocol-operator',
+  },
+  {
+    id: 'payout-003',
+    roleId: 'governance-delegate',
+    roleName: 'Governance Delegate',
+    stewardId: 'steward-alice',
+    stewardName: 'Alice',
+    amountSats: 4_000_000,
+    allocationCategory: 'governance-rewards',
+    fundingCadence: 'quarterly',
+    periodIso: '2026-Q2',
+    paidAtIso: '2026-07-01T12:00:00Z',
+    txHash: 'c3d4e5f6a1b2...',
+    recognizedBy: 'governance-prop-governance-delegate',
+  },
+  {
+    id: 'payout-004',
+    roleId: 'policy-steward',
+    roleName: 'Policy Steward',
+    stewardId: 'steward-alice',
+    stewardName: 'Alice',
+    amountSats: 2_000_000,
+    allocationCategory: 'governance-rewards',
+    fundingCadence: 'per-milestone',
+    periodIso: '2026-06-15T00:00:00Z',
+    paidAtIso: '2026-06-20T09:00:00Z',
+    txHash: 'd4e5f6a1b2c3...',
+    recognizedBy: 'governance-prop-policy-steward',
+  },
+  {
+    id: 'payout-005',
+    roleId: 'protocol-operator',
+    roleName: 'Protocol Operator',
+    stewardId: 'steward-alice',
+    stewardName: 'Alice',
+    amountSats: 5_000_000,
+    allocationCategory: 'operational-rewards',
+    fundingCadence: 'monthly',
+    periodIso: '2026-04-01T00:00:00Z',
+    paidAtIso: '2026-05-01T12:00:00Z',
+    txHash: 'e5f6a1b2c3d4...',
+    recognizedBy: 'governance-prop-protocol-operator',
+  },
+];
+
+export const HISTORICAL_ACTIVITIES: ActivityRecord[] = [
+  {
+    id: 'act-001',
+    roleId: 'protocol-operator',
+    roleName: 'Protocol Operator',
+    stewardId: 'steward-alice',
+    stewardName: 'Alice',
+    activityType: 'operator-action',
+    description: 'Upgraded Citrea bridge node to v2.4.1',
+    occurredAtIso: '2026-07-02T14:30:00Z',
+    metadata: { component: 'citrea-bridge', version: '2.4.1' },
+  },
+  {
+    id: 'act-002',
+    roleId: 'governance-delegate',
+    roleName: 'Governance Delegate',
+    stewardId: 'steward-alice',
+    stewardName: 'Alice',
+    activityType: 'vote-cast',
+    description: 'Voted FOR on proposal CIP-42 (Treasury allocation rebalance)',
+    occurredAtIso: '2026-06-28T10:15:00Z',
+    metadata: { proposalId: 'CIP-42', choice: 'for' },
+  },
+  {
+    id: 'act-003',
+    roleId: 'policy-steward',
+    roleName: 'Policy Steward',
+    stewardId: 'steward-alice',
+    stewardName: 'Alice',
+    activityType: 'policy-authored',
+    description: 'Authored governance policy GP-12 on operator recognition criteria',
+    occurredAtIso: '2026-06-20T08:00:00Z',
+    metadata: { policyId: 'GP-12' },
+  },
+  {
+    id: 'act-004',
+    roleId: 'protocol-operator',
+    roleName: 'Protocol Operator',
+    stewardId: 'steward-alice',
+    stewardName: 'Alice',
+    activityType: 'operator-action',
+    description: 'Resolved incident: settlement engine stall during batch #1847',
+    occurredAtIso: '2026-06-25T03:45:00Z',
+    metadata: { component: 'settlement-engine', batchId: '1847' },
+  },
+  {
+    id: 'act-005',
+    roleId: 'governance-delegate',
+    roleName: 'Governance Delegate',
+    stewardId: 'steward-alice',
+    stewardName: 'Alice',
+    activityType: 'delegation-received',
+    description: 'Received delegation of 1,200 votes from steward-bob',
+    occurredAtIso: '2026-06-18T16:00:00Z',
+    metadata: { delegatorId: 'steward-bob', votingPower: '1200' },
+  },
+  {
+    id: 'act-006',
+    roleId: 'protocol-operator',
+    roleName: 'Protocol Operator',
+    stewardId: 'steward-alice',
+    stewardName: 'Alice',
+    activityType: 'badge-earned',
+    description: 'Earned guardian badge for protocol security contributions',
+    occurredAtIso: '2026-06-10T12:00:00Z',
+    metadata: { badgeId: 'guardian' },
+  },
+  {
+    id: 'act-007',
+    roleId: 'policy-steward',
+    roleName: 'Policy Steward',
+    stewardId: 'steward-alice',
+    stewardName: 'Alice',
+    activityType: 'policy-reviewed',
+    description: 'Reviewed and approved policy amendment GP-08b',
+    occurredAtIso: '2026-06-05T11:00:00Z',
+    metadata: { policyId: 'GP-08b' },
+  },
+  {
+    id: 'act-008',
+    roleId: 'governance-delegate',
+    roleName: 'Governance Delegate',
+    stewardId: 'steward-alice',
+    stewardName: 'Alice',
+    activityType: 'vote-cast',
+    description: 'Voted FOR on proposal CIP-40 (New operational unit: community-grants)',
+    occurredAtIso: '2026-05-22T09:30:00Z',
+    metadata: { proposalId: 'CIP-40', choice: 'for' },
+  },
+];
+
+export function buildFundedRolesHistory(
+  recognizedRoleIds: Set<string>,
+): FundedRoleHistory[] {
+  const histories: FundedRoleHistory[] = [];
+
+  for (const def of FUNDED_ROLE_DEFINITIONS) {
+    if (!recognizedRoleIds.has(def.id)) continue;
+
+    const payouts = HISTORICAL_PAYOUTS.filter((p) => p.roleId === def.id);
+    const activities = HISTORICAL_ACTIVITIES.filter((a) => a.roleId === def.id);
+    const totalPayoutSats = payouts.reduce((sum, p) => sum + p.amountSats, 0);
+
+    histories.push({
+      stewardId: payouts[0]?.stewardId ?? 'steward-alice',
+      stewardName: payouts[0]?.stewardName ?? 'Alice',
+      roleId: def.id,
+      roleName: def.name,
+      allocationCategory: def.allocationCategory,
+      payouts,
+      activities,
+      totalPayoutSats,
+      payoutCount: payouts.length,
+      activityCount: activities.length,
+    });
+  }
+
+  return histories;
 }

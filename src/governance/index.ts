@@ -17,6 +17,9 @@ export type {
   FundedRoleDefinition,
   FundedRoleAssignment,
   TreasuryFundedRoleProfile,
+  PayoutRecord,
+  ActivityRecord,
+  FundedRoleHistory,
 } from './treasury';
 
 export { BADGE_DEFINITIONS, ROLE_BADGE_MAP, computeBadges } from './badges';
@@ -31,6 +34,9 @@ export {
   computeFundingTier,
   computeFundedRoleEligibility,
   buildTreasuryFundedRoleProfile,
+  HISTORICAL_PAYOUTS,
+  HISTORICAL_ACTIVITIES,
+  buildFundedRolesHistory,
 } from './treasury';
 export {
   GovernanceParticipationIndicator,

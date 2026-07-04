@@ -24,8 +24,9 @@ export async function GET(req: Request) {
 }
 
 function calculateSuccessRate(status: Record<string, unknown>): number {
-  const total = Object.keys(status.delivery_records).length;
+  const records = (status.delivery_records ?? {}) as Record<string, Record<string, unknown>>;
+  const total = Object.keys(records).length;
   if (total === 0) return 100;
-  const delivered = Object.values(status.delivery_records).filter((r: Record<string, unknown>) => r.status === "delivered").length;
+  const delivered = Object.values(records).filter((r) => r.status === "delivered").length;
   return (delivered / total) * 100;
 }

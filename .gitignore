@@ -17,3 +17,4 @@ playwright-report/
 *.log
 .sidl-state.json
 *.tsbuildinfo
+.action-version-cache.json

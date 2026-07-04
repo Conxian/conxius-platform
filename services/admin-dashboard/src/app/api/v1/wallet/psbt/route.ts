@@ -31,6 +31,6 @@ export async function POST(req: Request) {
       psbt_id: "txid:..."
     });
   } catch (err: unknown) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }

@@ -5,7 +5,7 @@ import SovereignFinancialOffice from '../pulse-bos-stub';
 import Fdc3Console from './Fdc3Console';
 
 export default function MultidimensionalDashboard() {
-  const [data, setData] = useState<Record<string, unknown> | null>(null);
+  const [data, setData] = useState<Record<string, any> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

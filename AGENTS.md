@@ -419,7 +419,7 @@ CORE_API_URL / CONXIAN_GATEWAY_URL / GATEWAY_PORT (same Gateway, 3 names). ADMIN
 **Files touched**: (read-only exploration — no code changes)
 
 **Gaps identified**:
-- `reusable-rust-ci.yml` exists but no Rust code in this repo (the Gateway/Nexus Rust modules are in separate repos)
+- CI workflows use `ubuntu-24.04` (pinned). No Rust CI reusable workflow (removed — no Rust in this repo; the Gateway/Nexus Rust modules are in separate repos).
 - NixOS flake has inputs (nix-bitcoin, sops-nix) but no `nixosConfigurations` defined (all commented out)
 - `admin-pulse-bos` has no tests, no linting, no build — pure source-consumed package
 - SFO stub in admin-dashboard is out of sync with the canonical source in admin-pulse-bos (pre-CON-776 vs post-CON-776)

@@ -105,8 +105,6 @@ jobs:
     uses: Conxian/conxius-platform/.github/workflows/reusable-ci.yml@main
   secret-scan:
     uses: Conxian/conxius-platform/.github/workflows/reusable-secret-scan.yml@main
-  dependency-review:
-    uses: Conxian/conxius-platform/.github/workflows/reusable-dependency-review.yml@main
 ```
 
 Application repos retain ownership of their own build configuration but inherit security and hygiene gates from the control plane.

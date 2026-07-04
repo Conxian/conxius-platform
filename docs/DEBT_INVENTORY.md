@@ -52,7 +52,7 @@ Last updated: 2026-07-04.
 
 | ID | Item | Risk Class | Status |
 |----|------|-----------|--------|
-| D-13 | `reusable-rust-ci.yml` — no Rust code in this repo | Operational | ⬜ Keep: reusable workflow for cross-repo adoption |
+| D-13 | `reusable-rust-ci.yml` — no Rust code in this repo | Operational | ✅ Removed 2026-07 (no callers, no Rust code) |
 | D-14 | `CONXIUS_CICD_BASELINE.md` — referenced but not maintained | Operational | ⬜ Document exists and is referenced by workflows. Review for staleness. |
 | D-15 | `services/admin-pulse-bos/` — no tests, no linting, `noEmit: true` | Operational | ⬜ Source-consumed package. Acceptable for current architecture. |
 

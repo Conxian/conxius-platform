@@ -9,16 +9,8 @@ Standard PR validation for Node.js/TypeScript projects.
 - **Inputs**: `node-version`, `pnpm-version`, `run-tests`, `run-lint`.
 - **Features**: `pnpm install`, `lint`, `test`, `typecheck`.
 
-### B. Reusable Dependency Review (`reusable-dependency-review.yml`)
-Validates that new dependencies do not introduce vulnerabilities or licensing issues.
-- **Permissions**: `contents: read`.
-
-### C. Reusable Secret Scan (`reusable-secret-scan.yml`)
+### B. Reusable Secret Scan (`reusable-secret-scan.yml`)
 Runs `gitleaks` to prevent secret egress in every commit and pull request.
-- **Permissions**: `contents: read`.
-
-### D. Reusable Hygiene Audit (`reusable-hygiene.yml`)
-Runs the `system_audit.py` security check to verify repo hygiene.
 - **Permissions**: `contents: read`.
 
 ## 2. Usage Example

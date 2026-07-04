@@ -8,6 +8,7 @@ from typing import Optional
 class RollupType(Enum):
     CITREA = "citrea"
     STRATA = "strata"
+    BABYLON = "babylon"
 
 
 class NetworkMode(Enum):
@@ -77,3 +78,28 @@ class ShadowEvent:
     block_number: int
     timestamp: int
     payload: dict = field(default_factory=dict)
+
+
+@dataclass
+class StakingMetrics:
+    """Yield-bearing staking metrics for a protocol (Babylon, L2, etc.)."""
+    protocol: str
+    tvl_sats: int
+    apy_bps: int
+    active_stakers: int
+    finality_provider_count: int
+    min_stake_sats: int
+    max_stake_sats: int
+    is_active: bool
+    updated_at_iso: str
+
+
+@dataclass
+class YieldSource:
+    """Aggregated yield data from staking protocols for treasury allocation."""
+    protocol: str
+    source_type: str  # "native-staking", "liquid-staking", "l2-yield", "lending"
+    tvl_sats: int
+    apy_bps: int
+    allocation_bps: int
+    operational_unit: str

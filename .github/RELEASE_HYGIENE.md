@@ -34,6 +34,17 @@ Branch protection rules and the release promotion cycle are defined in
 - Cut tags from reviewed commits already merged to `main`.
 - `CHANGELOG.md` must contain a matching `## [X.Y.Z]` section before tag push.
 - Each release tag should correspond to a GitHub Release.
+- Use the **Release Preparation** workflow (`.github/workflows/release-prep.yml`)
+  to auto-generate the changelog section from conventional commits before tagging.
+
+## Release preparation workflow
+
+[`release-prep.yml`](./workflows/release-prep.yml) is triggered manually
+(`workflow_dispatch`) and:
+
+1. Generates a `CHANGELOG.md` section from conventional commits since the last tag.
+2. Opens a PR with the changelog update for review.
+3. After merge, the release manager pushes the tag to trigger the release workflow.
 
 ## Tag-triggered release workflow
 
@@ -43,4 +54,9 @@ Branch protection rules and the release promotion cycle are defined in
 2. Verifies the tagged commit is contained in `origin/main`.
 3. Validates `.env.production.schema` is production-safe (no `development` / `testnet` defaults).
 4. Verifies the matching changelog section exists.
-5. Creates a GitHub Release for the tag.
+5. Generates a CycloneDX SBOM via `anchore/sbom-action@v1`.
+6. Creates a GitHub Release for the tag with the SBOM attached as a release asset.
+
+SBOM files are named `sbom-vX.Y.Z.cdx.json` and retained as release assets for
+audit and supply-chain transparency. For the full CI/CD baseline gap analysis,
+see [`../docs/CI_CD_BASELINE_GAP_ANALYSIS.md`](../docs/CI_CD_BASELINE_GAP_ANALYSIS.md).

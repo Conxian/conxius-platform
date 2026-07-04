@@ -1,3 +1,7 @@
+import { createLogger } from "./logger";
+import { generateId } from "./idgen";
+const log = createLogger("Citrea");
+
 /**
  * G-08: ZK-Rollup T1 Adapters (Citrea/Strata)
  *
@@ -20,7 +24,7 @@ export class CitreaAdapter {
    * Initiates a peg-in to Citrea.
    */
   public async initiatePegIn(amount: number, dest: string): Promise<CitreaPegIn> {
-    const id = `pegin-${Math.random().toString(36).substr(2, 9)}`;
+    const id = `pegin-${generateId("pegin")}`;
     const pegin: CitreaPegIn = {
       id,
       bitcoinTxId: `txid-${id}`,
@@ -30,7 +34,7 @@ export class CitreaAdapter {
     };
 
     this.pegIns.set(id, pegin);
-    console.log(`[Citrea] Initiated peg-in ${id} for ${amount} sats to ${dest}`);
+    log.info(` Initiated peg-in ${id} for ${amount} sats to ${dest}`);
     return pegin;
   }
 
@@ -45,7 +49,7 @@ export class CitreaAdapter {
     if (pegin.status === 'pending') pegin.status = 'confirming';
     else if (pegin.status === 'confirming') pegin.status = 'finalized';
 
-    console.log(`[Citrea] Synced status for ${id}: ${pegin.status}`);
+    log.info(` Synced status for ${id}: ${pegin.status}`);
     return pegin;
   }
 }

@@ -1,3 +1,4 @@
+import { createLogger } from "./logger";
 /**
  * BIP-322: Universal Message Signing Implementation (Bridge)
  *

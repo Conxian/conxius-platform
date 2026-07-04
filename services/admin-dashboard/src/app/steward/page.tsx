@@ -66,9 +66,9 @@ export default function StewardDashboardPage() {
       if (!res.ok) throw new Error(`Failed to fetch steward data: ${res.status}`);
       const d = await res.json();
       setData(d);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message);
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }

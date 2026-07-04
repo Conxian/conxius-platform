@@ -106,7 +106,7 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ success: true, status: "idle" });
-  } catch (err: any) {
+  } catch (err: unknown) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

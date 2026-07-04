@@ -1,3 +1,7 @@
+import { createLogger } from "./logger";
+import { generateId } from "./idgen";
+const log = createLogger("Ark");
+
 /**
  * G-23: Ark V-UTXO Protocol
  *
@@ -19,7 +23,7 @@ export class ArkAdapter {
    * Receives a V-UTXO via an Ark ASP (Ark Service Provider).
    */
   public async receiveVUTXO(amount: number, owner: string): Promise<VUTXO> {
-    const id = `vutxo-${Math.random().toString(36).substr(2, 9)}`;
+    const id = `vutxo-${generateId("vutxo")}`;
     const vutxo: VUTXO = {
       id,
       amount,
@@ -28,7 +32,7 @@ export class ArkAdapter {
     };
 
     this.vutxos.set(id, vutxo);
-    console.log(`[Ark] Received V-UTXO ${id} for ${amount} sats`);
+    log.info(` Received V-UTXO ${id} for ${amount} sats`);
     return vutxo;
   }
 
@@ -40,7 +44,7 @@ export class ArkAdapter {
     if (!vutxo || vutxo.status !== 'available') return false;
 
     vutxo.status = 'spent';
-    console.log(`[Ark] Spent V-UTXO ${id}`);
+    log.info(` Spent V-UTXO ${id}`);
     return true;
   }
 }

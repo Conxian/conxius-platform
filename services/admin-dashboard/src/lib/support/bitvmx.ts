@@ -1,3 +1,7 @@
+import { createLogger } from "./logger";
+import { generateId } from "./idgen";
+const log = createLogger("BitVMX");
+
 /**
  * G-44: BitVMX High-Efficiency Computation
  *
@@ -24,7 +28,7 @@ export class BitVMXBridge {
    * Initializes a BitVMX intent for execution.
    */
   static async initializeIntent(programHash: string, inputData: string): Promise<BitVMXIntent> {
-    const id = `bitvmx-${Math.random().toString(36).substr(2, 9)}`;
+    const id = `bitvmx-${generateId("bitvmx")}`;
     const intent: BitVMXIntent = {
       id,
       programHash,
@@ -33,7 +37,7 @@ export class BitVMXBridge {
     };
 
     this.intents.set(id, intent);
-    console.log(`[BitVMX] Initialized intent: ${id} for program: ${programHash}`);
+    log.info(` Initialized intent: ${id} for program: ${programHash}`);
     return intent;
   }
 
@@ -48,7 +52,7 @@ export class BitVMXBridge {
     intent.outputData = outputData;
     intent.state = 'proving';
 
-    console.log(`[BitVMX] Proof submitted for intent: ${id}`);
+    log.info(` Proof submitted for intent: ${id}`);
     return true;
   }
 
@@ -62,7 +66,7 @@ export class BitVMXBridge {
     intent.state = 'challenged';
     intent.challengeRound = 1;
 
-    console.log(`[BitVMX] Challenging intent: ${id} (Round 1)`);
+    log.info(` Challenging intent: ${id} (Round 1)`);
     return intent.challengeRound;
   }
 
@@ -74,13 +78,13 @@ export class BitVMXBridge {
     if (!intent || intent.state !== 'challenged' || !intent.challengeRound) return -1;
 
     intent.challengeRound += 1;
-    console.log(`[BitVMX] Advancing challenge for intent: ${id} to Round ${intent.challengeRound}`);
+    log.info(` Advancing challenge for intent: ${id} to Round ${intent.challengeRound}`);
 
     // In BitVMX, if the challenge reaches the maximum depth (e.g., 32 rounds),
     // it results in a definitive proof or disprove.
     if (intent.challengeRound >= 32) {
       intent.state = 'disproved';
-      console.log(`[BitVMX] Intent ${id} disproved after 32 rounds.`);
+      log.info(` Intent ${id} disproved after 32 rounds.`);
     }
 
     return intent.challengeRound;

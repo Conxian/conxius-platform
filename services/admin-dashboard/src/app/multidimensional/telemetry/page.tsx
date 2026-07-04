@@ -54,7 +54,7 @@ export default function TelemetryPage() {
                 </tr>
               </thead>
               <tbody>
-                {Object.values(data?.event_bus?.records ?? {}).map((record: any) => (
+                {Object.values(data?.event_bus?.records ?? {}).map((record: Record<string, unknown>) => (
                   <tr key={record.event_id} style={{ borderBottom: "1px solid #f3f4f6" }}>
                     <td style={{ padding: "0.75rem", fontFamily: "monospace", fontSize: "0.85rem" }}>{record.event_id}</td>
                     <td style={{ padding: "0.75rem" }}>

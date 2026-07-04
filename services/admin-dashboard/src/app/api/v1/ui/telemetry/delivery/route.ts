@@ -23,9 +23,9 @@ export async function GET(req: Request) {
   });
 }
 
-function calculateSuccessRate(status: any): number {
+function calculateSuccessRate(status: Record<string, unknown>): number {
   const total = Object.keys(status.delivery_records).length;
   if (total === 0) return 100;
-  const delivered = Object.values(status.delivery_records).filter((r: any) => r.status === "delivered").length;
+  const delivered = Object.values(status.delivery_records).filter((r: Record<string, unknown>) => r.status === "delivered").length;
   return (delivered / total) * 100;
 }

@@ -98,8 +98,8 @@ export default function ProposalTemplatesPage() {
         if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`);
         setOpData(await res.json());
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
@@ -126,8 +126,8 @@ export default function ProposalTemplatesPage() {
         setSelectedId(id);
         setFormContent({});
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
     }
   };
 

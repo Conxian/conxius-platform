@@ -30,7 +30,7 @@ export async function POST(req: Request) {
       status: "pending-broadcast",
       psbt_id: "txid:..."
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

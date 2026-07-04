@@ -1,3 +1,4 @@
+import { generateTicketToken } from "./idgen";
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 import nodemailer from 'nodemailer';
@@ -177,11 +178,11 @@ export class ImapWorker {
 
   private generateTicketToken(): string {
     const date = new Date().toISOString().split('T')[0].replace(/-/g, '');
-    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    const random = generateTicketToken("SUP").split("-").pop() || "0000";
     return `SUP-${date}-${random}`;
   }
 
-  private async linearFetch(query: string, variables?: any) {
+  private async linearFetch(query: string, variables?: Record<string, unknown>) {
     const response = await fetch('https://api.linear.app/graphql', {
       method: 'POST',
       headers: {

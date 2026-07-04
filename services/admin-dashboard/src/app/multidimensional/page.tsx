@@ -5,7 +5,7 @@ import SovereignFinancialOffice from '../pulse-bos-stub';
 import Fdc3Console from './Fdc3Console';
 
 export default function MultidimensionalDashboard() {
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -17,9 +17,9 @@ export default function MultidimensionalDashboard() {
       if (!res.ok) throw new Error(`Failed to fetch metrics: ${res.status}`);
       const d = await res.json();
       setData(d);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message);
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
@@ -88,7 +88,7 @@ export default function MultidimensionalDashboard() {
         <section style={{ backgroundColor: '#fff', padding: '2rem', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', border: '1px solid #e2e8f0' }}>
           <h2 style={{ color: '#2E403B', marginBottom: '1.5rem', fontSize: '1.25rem' }}>Agentic Resource Allocation</h2>
           <div style={{ display: 'grid', gap: '1.25rem' }}>
-            {data?.agents?.map((agent: any) => (
+            {data?.agents?.map((agent: Record<string, unknown>) => (
               <div key={agent?.id}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.875rem' }}>
                   <span style={{ fontWeight: 600, color: '#334155' }}>{agent?.id}</span>

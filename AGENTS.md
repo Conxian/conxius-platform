@@ -566,3 +566,112 @@ CORE_API_URL / CONXIAN_GATEWAY_URL / GATEWAY_PORT (same Gateway, 3 names). ADMIN
 - The Gateway (conxian-gateway) was entirely missing from the taxonomy — this is the Rust backend the platform talks to
 - enclave-sdk uses lib-conclave-sdk as Cargo package name — different from repo name
 - conxian_ui uses static export + serve for production, not next start
+
+### 2026-07-04 — Comprehensive Issue Audit, Sprint Alignment & Cross-Reference Implementation
+
+**Trigger**: User requested review of all open issues, knowledge base evaluation, cross-issue mapping, and implementation.
+
+**Issue Audit — 12 Open Issues**:
+
+| # | Title | Type | Status |
+|---|-------|------|--------|
+| #1104 | [EPIC] Technical debt reduction, code quality hardening | EPIC | Open |
+| #1103 | [EPIC] Strict CI/CD baseline for build, test, verification, release | EPIC | Open |
+| #1088 | Add a release workflow for the monorepo | Task | Open — release.yml exists; needs changelog generation |
+| #1086 | Update stale Python setup action in sovereign guard workflow | Bug | Fixed this session — CONXIUS_CICD_BASELINE.md updated |
+| #1076 | Define explicit release control path for shipping repos | Task | PR #1123 open — RELEASE_CONTROL.md created |
+| #1075 | [EPIC] Canonical vs community-hosted frontend identity | EPIC | Open — tracks #1034, #1036 |
+| #1074 | [EPIC] Governance proposal template infrastructure | EPIC | Open — tracks #1031; #1033 closed via #1122 |
+| #1073 | [EPIC] Repo hardening: cross-repo CI/CD alignment | EPIC | **Ready to close** — all 6 child issues closed |
+| #1036 | Add official frontend recognition and status display | Task | Open — child of #1075 |
+| #1034 | Add canonical vs community-hosted frontend labeling | Task | Open — child of #1075 |
+| #1031 | Add governance proposal templates for operator approval | Task | Open — child of #1074 |
+| #958 | Enable auto-merge across Conxian-Labs repositories | Task | Open — requires org admin |
+| #952 | Standardize PR triage, issue linkage, dependency-update policy | Task | Fixed this session — PR_TRIAGE_POLICY.md created |
+
+**Cross-Issue Relationship Map**:
+
+```
+Release Governance Chain:
+  #1103 (CI/CD EPIC) ──→ #1076 (release control) ──→ PR #1123 (RELEASE_CONTROL.md)
+       │                      │
+       ├──→ #1088 (monorepo release workflow) ── release.yml exists, needs changelog gen
+       ├──→ #952 (PR triage policy) ── PR_TRIAGE_POLICY.md created
+       └──→ #1073 (repo hardening EPIC) ── ALL CHILD ISSUES CLOSED, ready to close
+
+Frontend Identity Chain:
+  #1075 (frontend EPIC) ──→ #1034 (labeling) + #1036 (status display)
+       └──→ Code lives in services/admin-dashboard/
+
+Governance Chain:
+  #1074 (templates EPIC) ──→ #1031 (operator approval) + #1033 (treasury, CLOSED via #1122)
+
+Debt/Quality Chain:
+  #1104 (tech debt EPIC) ──→ GAPS.md (35 gaps) + SCORING_MATRIX.md (prioritization)
+       └──→ PHASE_7_RISK_REGISTER.md, PHASE_5_6_RISK_REGISTER.md
+
+Infrastructure Quick Wins:
+  #1086 ── CONXIUS_CICD_BASELINE.md stale docs (FIXED)
+  #958  ── Auto-merge (requires org admin, cannot action from here)
+```
+
+**Changes Made This Session**:
+
+1. **#1076 — RELEASE_CONTROL.md** (new file, via PR #1123):
+   - Portfolio-wide release control path document
+   - Maps 9 release-bearing repos (7 critical + 2 public surface) + 1 support-only
+   - Two-tier gate system: strict (critical) and public-release (public surface)
+   - Cross-references existing RELEASE_POLICY.md, RELEASE_HYGIENE.md, RELEASE_CHECKLIST_TEMPLATE.md
+   - Registered in GOVERNANCE.md governance baseline
+
+2. **#1086 — CONXIUS_CICD_BASELINE.md** (updated):
+   - `actions/setup-python`: `@v5` → `@v6` (all workflows already use @v6)
+   - `actions/checkout`: `@v4` → `@v7` (all workflows already use @v7)
+   - Current state text updated: `@v4, @v5` → `@v4, @v6, @v7`
+   - Example code block updated to show checkout@v7
+
+3. **#952 — docs/PR_TRIAGE_POLICY.md** (new file):
+   - Issue linkage rules: when PRs must reference issues and format
+   - Dependency-update triage decision tree (CI green/red paths)
+   - Batching, retry, and staleness rules for Dependabot PRs
+   - Standard labels: dep-blocked, ci-known-flake, dep-batch, dep-security
+   - PR review checklist: linked issue, CI status, true blocker, merge readiness, owner
+   - Cross-repo alignment table with repo-specific overrides
+
+**Knowledge Base Evaluation**:
+
+- AGENTS.md: 568 lines, comprehensive session log, protocol revenue model, 14-repo inventory
+- GOVERNANCE.md: 3 governance lanes (Baseline/Live/Historical) — fully coherent
+- RELEASE_POLICY.md: Release promotion cycle (dev→release/x.y→main) + LTS gate policy — well-defined
+- GAPS.md: 35 scored gaps (G-01 through G-54) with implementation status
+- SCORING_MATRIX.md: 3-axis prioritization (Strategic/Complexity/Validation)
+- INFORMATION_HIERARCHY.md: 4-tier doc model (Canonical/Operational/Evidence/Historical) + 10 reading chains
+- REPOSITORY_TAXONOMY.md: 10 of 14 repos listed — missing .github, conxian-gateway, conxian-labs-site, conxius-enclave-sdk
+- 61 .md files under docs/ across 6 subdirectories
+
+**Sprint Status for Team Alignment**:
+
+✅ **Done this sprint/session**:
+- RELEASE_CONTROL.md defines explicit release control path (#1076, PR #1123)
+- CONXIUS_CICD_BASELINE.md action pins updated to match reality (#1086)
+- PR_TRIAGE_POLICY.md created (#952)
+- GOVERNANCE.md updated with RELEASE_CONTROL.md reference
+
+🟢 **Ready to close**:
+- #1073 (Repo hardening EPIC) — all 6 child issues (#974, #976, #978, #979, #1077, #1078) are closed
+
+🟡 **Partially addressed, needs follow-up**:
+- #1088 (Monorepo release workflow) — release.yml exists with tag validation + changelog verification + GitHub Release. Missing: automated CHANGELOG.md generation from conventional commits. Could add changesets or release-please.
+- #1074 (Governance templates EPIC) — #1033 closed, #1031 still open for operator approval templates
+- #1075 (Frontend identity EPIC) — #1034 and #1036 still open, code changes needed in services/admin-dashboard/
+
+🔴 **Blocked**:
+- #958 (Auto-merge) — requires GitHub org admin privileges
+
+📋 **Remaining EPIC scope**:
+- #1104 (Tech debt) — needs repo-by-repo debt inventory and classification
+- #1103 (CI/CD baseline) — cross-repo gap closure against reusable workflow baseline
+
+**Files touched**: RELEASE_CONTROL.md (new), GOVERNANCE.md (modified), CONXIUS_CICD_BASELINE.md (modified), PR_TRIAGE_POLICY.md (new), AGENTS.md (this update)
+**Key gotcha**: The sovereign-guard.yml workflow referenced in #1086 doesn't exist — it was likely renamed or integrated. The actual fix was updating the stale documentation in CONXIUS_CICD_BASELINE.md.
+

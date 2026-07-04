@@ -34,6 +34,17 @@ Branch protection rules and the release promotion cycle are defined in
 - Cut tags from reviewed commits already merged to `main`.
 - `CHANGELOG.md` must contain a matching `## [X.Y.Z]` section before tag push.
 - Each release tag should correspond to a GitHub Release.
+- Use the **Release Preparation** workflow (`.github/workflows/release-prep.yml`)
+  to auto-generate the changelog section from conventional commits before tagging.
+
+## Release preparation workflow
+
+[`release-prep.yml`](./workflows/release-prep.yml) is triggered manually
+(`workflow_dispatch`) and:
+
+1. Generates a `CHANGELOG.md` section from conventional commits since the last tag.
+2. Opens a PR with the changelog update for review.
+3. After merge, the release manager pushes the tag to trigger the release workflow.
 
 ## Tag-triggered release workflow
 

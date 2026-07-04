@@ -675,3 +675,35 @@ Infrastructure Quick Wins:
 **Files touched**: RELEASE_CONTROL.md (new), GOVERNANCE.md (modified), CONXIUS_CICD_BASELINE.md (modified), PR_TRIAGE_POLICY.md (new), AGENTS.md (this update)
 **Key gotcha**: The sovereign-guard.yml workflow referenced in #1086 doesn't exist — it was likely renamed or integrated. The actual fix was updating the stale documentation in CONXIUS_CICD_BASELINE.md.
 
+### 2026-07-04 — Implement #1088: Monorepo Release Changelog Generation
+
+**Trigger**: Approved to pick next priority work from the sprint backlog.
+**What was done**:
+- Created `scripts/generate-changelog.sh` — generates CHANGELOG.md sections from
+  conventional commits since the last tag. Groups commits by type (feat→Added,
+  fix→Fixed, refactor/perf→Changed, docs→Documentation, chore/build/ci→Maintenance).
+  Deduplicates entries and excludes merge commits.
+- Created `.github/workflows/release-prep.yml` — manually-triggered workflow that
+  runs the changelog script and opens a PR with the update. After merge, the
+  release manager pushes the tag to trigger the existing release workflow.
+- Updated `RELEASING.md` — added automated changelog preparation as the recommended
+  flow, keeping manual changelog as fallback.
+- Updated `.github/RELEASE_HYGIENE.md` — documented the release-prep workflow.
+
+**Design decisions**:
+- Release prep is manual (workflow_dispatch), not automatic — the release manager
+  initiates it, reviews the generated changelog, and controls when the tag is pushed.
+  This preserves the release-manager ownership model from RELEASE_POLICY.md.
+- Changelog generation uses `git log --no-merges` with conventional commit prefix
+  matching. No external tool dependencies (no changesets, no release-please).
+- The existing `release.yml` workflow is unchanged — it continues to validate
+  that the CHANGELOG.md section exists before creating the GitHub Release.
+- Dry-run mode available for previewing the generated changelog without creating
+  a PR.
+
+**Files touched**: scripts/generate-changelog.sh (new), .github/workflows/release-prep.yml (new),
+RELEASING.md (modified), .github/RELEASE_HYGIENE.md (modified), AGENTS.md (this update)
+**Key gotcha**: The repo has no git tags yet, so the first run will generate a
+changelog from all commits. Subsequent runs will only include commits since the
+last tag.
+

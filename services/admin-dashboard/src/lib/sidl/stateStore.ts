@@ -1,11 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { createHash, randomUUID } from "node:crypto";
-import { DEFAULT_CART_MANDATES, DEFAULT_OPERATORS, DEFAULT_SIDL_PROPOSALS } from "./defaults";
+import { DEFAULT_CART_MANDATES, DEFAULT_FRONTENDS, DEFAULT_OPERATORS, DEFAULT_SIDL_PROPOSALS } from "./defaults";
 import type {
   CartMandate,
   CheckoutEvent,
   CheckoutLifecycleState,
+  FrontendEntry,
+  FrontendRegistry,
   OperatorEntry,
   OperatorRegistry,
   SidlProposal,
@@ -50,6 +52,7 @@ export type PersistedSidlState = {
   cartMandates: Record<string, CartMandate>;
   checkoutByMandate: Record<string, PersistedCheckoutRecord>;
   operators: Record<string, OperatorEntry>;
+  frontends: Record<string, FrontendEntry>;
   updatedAtIso: string;
 };
 
@@ -94,6 +97,10 @@ function cloneOperatorEntry(entry: OperatorEntry): OperatorEntry {
   return { ...entry };
 }
 
+function cloneFrontendEntry(entry: FrontendEntry): FrontendEntry {
+  return { ...entry };
+}
+
 function cloneState(state: PersistedSidlState): PersistedSidlState {
   return {
     schemaVersion: state.schemaVersion,
@@ -105,6 +112,7 @@ function cloneState(state: PersistedSidlState): PersistedSidlState {
       Object.entries(state.checkoutByMandate).map(([id, record]) => [id, cloneCheckoutRecord(record)])
     ),
     operators: Object.fromEntries(Object.entries(state.operators).map(([id, entry]) => [id, cloneOperatorEntry(entry)])),
+    frontends: Object.fromEntries(Object.entries(state.frontends).map(([id, entry]) => [id, cloneFrontendEntry(entry)])),
     updatedAtIso: state.updatedAtIso,
   };
 }
@@ -296,6 +304,42 @@ function parseOperatorEntry(id: string, raw: unknown): OperatorEntry | null {
   };
 }
 
+function parseFrontendEntry(id: string, raw: unknown): FrontendEntry | null {
+  if (!isRecord(raw)) return null;
+
+  const validLabels = ["canonical", "community-hosted"];
+  const label = typeof raw.label === "string" && validLabels.includes(raw.label)
+    ? (raw.label as FrontendEntry["label"])
+    : "community-hosted";
+
+  const validStatuses = ["active", "inactive", "pending-governance-review"];
+  const status = typeof raw.status === "string" && validStatuses.includes(raw.status)
+    ? (raw.status as FrontendEntry["status"])
+    : "inactive";
+
+  const validTiers = ["primary", "secondary", "community"];
+  const tier = typeof raw.tier === "string" && validTiers.includes(raw.tier)
+    ? (raw.tier as FrontendEntry["tier"])
+    : "community";
+
+  if (typeof raw.name !== "string" || raw.name.trim().length === 0) return null;
+  if (typeof raw.url !== "string" || raw.url.trim().length === 0) return null;
+
+  return {
+    id,
+    name: raw.name.trim(),
+    url: raw.url.trim(),
+    label,
+    status,
+    description: typeof raw.description === "string" && raw.description.trim().length > 0 ? raw.description.trim() : raw.name.trim(),
+    operatorId: typeof raw.operatorId === "string" ? raw.operatorId : "",
+    operatorName: typeof raw.operatorName === "string" ? raw.operatorName : "",
+    recognizedBy: typeof raw.recognizedBy === "string" ? raw.recognizedBy : "",
+    recognizedAtIso: toIsoTimestamp(raw.recognizedAtIso, new Date().toISOString()),
+    tier,
+  };
+}
+
 function resolveStatePath(): string {
   const configured = process.env[STATE_FILE_ENV]?.trim();
   return configured ? path.resolve(configured) : path.resolve(process.cwd(), DEFAULT_STATE_FILE);
@@ -333,6 +377,9 @@ function createDefaultState(nowIso: string): PersistedSidlState {
     operators: Object.fromEntries(
       Object.entries(DEFAULT_OPERATORS).map(([id, entry]) => [id, cloneOperatorEntry(entry)])
     ),
+    frontends: Object.fromEntries(
+      Object.entries(DEFAULT_FRONTENDS).map(([id, entry]) => [id, cloneFrontendEntry(entry)])
+    ),
     updatedAtIso: nowIso,
   };
 }
@@ -350,6 +397,7 @@ function hydrateState(raw: unknown, nowIso: string): PersistedSidlState {
     cartMandates: {},
     checkoutByMandate: {},
     operators: {},
+    frontends: {},
   };
 
   if (isRecord(raw.proposals)) {
@@ -403,6 +451,15 @@ function hydrateState(raw: unknown, nowIso: string): PersistedSidlState {
     }
   }
 
+  if (isRecord(raw.frontends)) {
+    for (const [id, entryRaw] of Object.entries(raw.frontends)) {
+      const parsed = parseFrontendEntry(id, entryRaw);
+      if (parsed) {
+        hydrated.frontends[id] = parsed;
+      }
+    }
+  }
+
   hydrated.updatedAtIso = toIsoTimestamp(raw.updatedAtIso, nowIso);
   applySeedDefaults(hydrated, nowIso);
 
@@ -434,6 +491,13 @@ function applySeedDefaults(state: PersistedSidlState, nowIso: string): boolean {
   for (const [operatorId, entry] of Object.entries(DEFAULT_OPERATORS)) {
     if (!state.operators[operatorId]) {
       state.operators[operatorId] = cloneOperatorEntry(entry);
+      changed = true;
+    }
+  }
+
+  for (const [frontendId, entry] of Object.entries(DEFAULT_FRONTENDS)) {
+    if (!state.frontends[frontendId]) {
+      state.frontends[frontendId] = cloneFrontendEntry(entry);
       changed = true;
     }
   }
@@ -722,6 +786,17 @@ export function getOperatorRegistry(): OperatorRegistry {
   return {
     operators: Object.fromEntries(
       Object.entries(state.operators).map(([id, entry]) => [id, cloneOperatorEntry(entry)])
+    ),
+    updatedAtIso: state.updatedAtIso,
+  };
+}
+
+export function getFrontendRegistry(): FrontendRegistry {
+  const filePath = resolveStatePath();
+  const state = loadState(filePath);
+  return {
+    frontends: Object.fromEntries(
+      Object.entries(state.frontends).map(([id, entry]) => [id, cloneFrontendEntry(entry)])
     ),
     updatedAtIso: state.updatedAtIso,
   };

@@ -41,6 +41,7 @@ export default function RootLayout({
              <a href="/proposal-templates" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Proposals</a>
              <a href="/rewards" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Rewards</a>
              <a href="/operators" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Operators</a>
+             <a href="/frontends" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Frontends</a>
              <a href="/tiers" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Tiers</a>
              <a href="/support" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Support</a>
              <a href="/settings" style={{ color: 'inherit', textDecoration: 'none' }}>Settings</a>

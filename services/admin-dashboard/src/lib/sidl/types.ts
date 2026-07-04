@@ -187,3 +187,26 @@ export type OperatorRegistry = {
   operators: Record<string, OperatorEntry>;
   updatedAtIso: string;
 };
+
+export type FrontendLabel = "canonical" | "community-hosted";
+
+export type FrontendStatus = "active" | "inactive" | "pending-governance-review";
+
+export type FrontendEntry = {
+  id: string;
+  name: string;
+  url: string;
+  label: FrontendLabel;
+  status: FrontendStatus;
+  description: string;
+  operatorId: string;
+  operatorName: string;
+  recognizedBy: string;
+  recognizedAtIso: string;
+  tier: "primary" | "secondary" | "community";
+};
+
+export type FrontendRegistry = {
+  frontends: Record<string, FrontendEntry>;
+  updatedAtIso: string;
+};

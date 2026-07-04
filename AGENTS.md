@@ -208,6 +208,70 @@ This file is a **living knowledge base** that grows with every agent session. Ea
 
 ## Session Log
 
+### 2026-07-04 — Funded Roles Payout & Activity History + Multidimensional Enhancement (#1035, #1121)
+
+**Trigger**: Issue #1035 — "Add payout and activity history for funded community roles"
+**What was done**:
+- Added `PayoutRecord`, `ActivityRecord`, `FundedRoleHistory` types to `src/governance/treasury.ts` (source of truth + admin-dashboard lib copy)
+- Added 5 historical payouts and 8 activity events as fixture data with `buildFundedRolesHistory()` helper
+- Created `GET /api/v1/governance/funded-roles/history` API endpoint with grand total summary
+- Created `/funded-roles/history` page with per-role tabbed timeline (payouts + activities), grand total summary card, and transparency disclosure
+- Added "Funded Roles" nav link to admin dashboard layout and cross-link from funded-roles overview page
+- Opened PR #1121 against main
+
+**Key discoveries**:
+- Treasury module (`src/governance/treasury.ts`) is duplicated verbatim in `services/admin-dashboard/src/lib/governance/treasury.ts` — any type addition must touch both files
+- Funded roles page uses inline `<a>` tag navigation, not a component — adding nav links requires editing `layout.tsx` directly
+- All API routes use `validateAdminAuth()` from `@/lib/support/auth` as guard
+- The governance types module has 3 layers: `types.ts` (core governance), `treasury.ts` (funded roles + allocation), `badges.ts` (badge computation) — all barrel-exported through `index.ts`
+
+**Files touched**:
+- `src/governance/treasury.ts` (modified — new types, fixture data, build function)
+- `src/governance/index.ts` (modified — new exports)
+- `services/admin-dashboard/src/lib/governance/treasury.ts` (modified — synced from source)
+- `services/admin-dashboard/src/app/api/v1/governance/funded-roles/history/route.ts` (created)
+- `services/admin-dashboard/src/app/funded-roles/history/page.tsx` (created)
+- `services/admin-dashboard/src/app/funded-roles/page.tsx` (modified — added history CTA)
+- `services/admin-dashboard/src/app/layout.tsx` (modified — added Funded Roles nav)
+
+**Gaps identified**:
+- No shared chart/visualization component exists — each page builds SVG/div charts inline
+- History data is hardcoded fixture — needs on-chain treasury state integration
+- No query/filter capabilities on history API — no date range, role, or category filtering
+- No data linking between payout history and treasury metrics (multidimensional dimension)
+
+### 2026-07-04 — Multidimensional Architecture Deep-Dive & Knowledge Base Enhancement
+
+**Trigger**: Research expansion into data linking, dynamic graphing, and query techniques
+**What was done**:
+- Explored full multidimensional architecture: 4 data dimensions (Treasury, AI Agents, L2 Settlements, UBI Distribution)
+- Traced data flow: Gateway/Nexus/Stacks/Bitcoin → SIDL layer → API routes → Frontend
+- Analyzed scoring/linking patterns: ERC-7683 solver ranking (Reputation 40%/Fee 40%/Latency 20%), usage event scoring (strong/weak signals), platform metrics (C_R, O_C, V_X, A_S, N_E)
+- Mapped FDC3 interoperability: CJCS→FDC3 context mapping, intent resolution → USI actions
+
+**Key discoveries**:
+- The multidimensional pulse merges 4 independent data sources into a unified real-time dashboard at `/multidimensional`
+- Platform metrics spec defines 5 canonical metrics: C_R (Correctness Rate), O_C (Operational Capacity), V_X (Variability Index), A_S (Availability Score), N_E (Normalized Efficiency)
+- 54 tracked gaps (G-01 through G-54) in `docs/SCORING_MATRIX.md` with readiness tiers
+- Phase 7 BFF topology has 5 specialized BFFs: UI-BFF, Wallet-BFF, Settlement-Engine-BFF, Governance-Console-BFF, Nostr-Proxy
+- SIDL observability wraps every API handler with latency/error metrics collection
+- FDC3 console maps CJCS job types (DEX_SWAP→instrument, SETTLEMENT→contact) to FDC3 contexts and intents
+- `scripts/verify_multidimensional_alignment.py` validates route existence and ElizaOS integration
+
+**Data linking patterns identified for reuse**:
+- **Gateway-first with fallback**: `fetchGateway<T>(path)` attempts Gateway API, falls back to hardcoded data — used in rewards API, applicable to history
+- **Cross-dimensional correlation**: Multidimensional metrics aggregate 4 dimensions; history data can be enriched with treasury metrics for payout-to-budget ratios
+- **Observability chaining**: `observeSidl(fn, context)` pattern can wrap history queries for latency/error tracking
+- **Score-based triage**: Usage validation scores events to determine triage eligibility — applicable to activity significance ranking
+
+**Gaps identified**:
+- No shared SVG/Canvas chart component — every visualization is built inline
+- History API has no filtering (date range, role, category, activity type)
+- No time-series aggregation (payout trends over months, activity volume by week)
+- No cross-referencing between payout data and treasury reserves/multidimensional metrics
+
+
+
 ### 2026-07-03 — Deep Exploration: Full Repository Topography
 
 **Trigger**: Systematic exploration of all services, workflows, and configuration

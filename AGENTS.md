@@ -206,6 +206,76 @@ This file is a **living knowledge base** that grows with every agent session. Ea
 
 ---
 
+
+## Repository Knowledge Graph (Full Synthesis — July 2026)
+
+This section is the canonical cross-reference of every system, type, API, document, and relationship in the repository. Generated from exhaustive deep-reads of all 150+ documentation files, 63 source files, 22 scripts, 19 CI workflows, and 7 specs.
+
+### Complete Type System Map
+
+**Governance Types:** Vote, Delegation, PolicyActivity, StewardProfile (6 roles), GovernanceBadge (10 badges, 4 categories, 4 tiers), ParticipationStreak, RecentVotingActivity, GovernanceParticipation
+
+**Treasury Types:** FundingTier (3), AllocationCategory (4), OperationalUnit (4), FundedRoleDefinition (8 roles), FundedRoleAssignment, TreasuryFundedRoleProfile, PayoutRecord, ActivityRecord (7 activity types), FundedRoleHistory
+
+**SIDL Types:** FarcasterFrameActionPayload, YieldSnapshot, VoteChoice/Receipt/Tally, SidlProposal, VoteEvent, CartItem/Mandate, X402PaymentRequired, CheckoutEvent/LifecycleState, ErpDashboardData, CrossChainEvent, EventBusState, OperatorEntry/Registry
+
+**Steward Types:** PointsData, ReputationData, StakingData, StewardDashboard
+
+**Launch Types:** MintedTokenEntry, ContributorProfile, ContributionData, CommunityStats, 6 ContributorLevels
+
+### Complete API Surface (26 admin routes + 2 public frames)
+
+All admin routes gated by validateAdminAuth(). Public: /frames/vote, /frames/sbtc (Farcaster).
+Key routes: /api/v1/governance/funded-roles, /api/v1/governance/funded-roles/history, /api/v1/rewards/sources, /api/v1/steward/dashboard, /api/multidimensional/metrics, /api/v1/settlement-engine
+
+### 8 Funded Roles (1M-25M sats/month range)
+
+Protocol Operator (5M active), Frontend Operator (3M), Governance Delegate (4M), Policy Steward (4M), Community Steward (4M), Council Member (12M), Security Guardian (6M), Treasury Custodian (8M)
+
+### 10 Governance Badges
+
+first-vote, consistent-voter, vote-streak-10, vote-streak-25, delegate, policy-author, guardian, council, policy-shaper, community-pillar
+
+### 6 Contributor Levels
+
+Newcomer(0)→Contributor(1)→Regular(2)→Core(3)→Champion(4)→Steward(5)
+
+### 19 CI Workflows
+
+5 reusable: ci, dependency-review, hygiene, rust-ci, secret-scan. 14 entrypoint: ci, hygiene, hygiene-drift-guard, secret-scan, dependency-review, lifecycle-control-gates, bos-production-guard, cross-repo-integration-mvp, multi-env-test, synergy-test, release, stale-branch-review, action-version-audit
+
+### Documentation Hierarchy (4 tiers)
+
+Tier 0 Canonical (specs, schemas, GOVERNANCE) → Tier 1 Architectural (docs/architecture, AGENTS) → Tier 2 Operational (runbooks, GAPS, SCORING_MATRIX) → Tier 3 Historical (archived-*)
+
+### Key Cross-References
+
+- Funded Roles ↔ Rewards: allocation categories match (community/governance/operational/treasury-reserve)
+- Funded Roles ↔ Steward: eligibility uses StewardProfile + badges + contributor level + votes
+- Multidimensional ↔ Treasury: metrics API returns treasury dimension; history API adds TreasuryDataLink
+- SIDL ↔ Governance: vote recording flows through stateStore → API routes → observability wrapper
+- Bitcoin Stack: bip322, nwc, ark, bitvm/bitvm3/bitvmx, zkcp, dns-payments, solver — all in lib/support/
+
+### 7 Reusable Patterns
+
+1. Gateway-first with fallback 2. observeSidl wrapper 3. File-based state persistence 4. Weighted scoring 5. validateAdminAuth guard 6. Inline <a> tag navigation 7. Dual-module pattern (src/governance/ + lib/governance/)
+
+### Critical Gaps
+
+NixOS transition (in progress), Local-first UI Wasm (in progress), MFE Federation (scaffolded), Contributor Claim Ledger (spec-only), Proof-carrying treasury analytics (spec-only), SFO yield harvesting (Math.random() stubs)
+
+### Cross-Repo Dependencies
+
+lib-conxian-core (Rust SDK→Wasm), conxian-ui (local-first dashboard), Conxian (Clarity contracts), conxius-wallet (mobile enclave), conxius-orbit (TUI deployment), conxian-nexus (Glass Node), conxian-business (strategy vault)
+
+### Test Coverage: 22 test files, ~161 tests
+
+Governance: 4 files/~40 tests. SIDL: 3/~25. Support: 5/~30. Bitcoin stack: 5/~35. Python: 3/22. E2E: 1/1.
+
+### Environment Variables
+
+CORE_API_URL / CONXIAN_GATEWAY_URL / GATEWAY_PORT (same Gateway, 3 names). ADMIN_DASHBOARD_API_KEY for auth. GATEWAY_JWT_SECRET + GATEWAY_ADMIN_API_KEY defined but unused by clients.
+
 ## Session Log
 
 ### 2026-07-04 — Funded Roles Payout & Activity History + Multidimensional Enhancement (#1035, #1121)

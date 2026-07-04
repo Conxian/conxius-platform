@@ -130,20 +130,15 @@ These workflows are designed to be consumed by other Conxian repositories:
 | Workflow | Ecosystem | Coverage |
 |----------|-----------|----------|
 | `reusable-ci.yml` | TypeScript/Node.js | Lint, typecheck, unit test, build, optional e2e |
-| `reusable-rust-ci.yml` | Rust | fmt, clippy, test, cargo-audit |
 | `reusable-secret-scan.yml` | All | Gitleaks secret scanning |
-| `reusable-dependency-review.yml` | All | Dependency vulnerability scanning |
-| `reusable-hygiene.yml` | All | Security and hygiene audit |
 
 Downstream repos consume these via:
 ```yaml
 jobs:
   ci:
     uses: Conxian/conxius-platform/.github/workflows/reusable-ci.yml@main
-  rust-ci:
-    uses: Conxian/conxius-platform/.github/workflows/reusable-rust-ci.yml@main
-    with:
-      working-directory: ./services/my-rust-service
+  secret-scan:
+    uses: Conxian/conxius-platform/.github/workflows/reusable-secret-scan.yml@main
 ```
 
 ### 5.2 CODEOWNERS Requirements
@@ -165,10 +160,6 @@ Other repositories may consume workflows from this repo:
 jobs:
   ci:
     uses: Conxian/conxius-platform/.github/workflows/reusable-ci.yml@main
-  rust-ci:
-    uses: Conxian/conxius-platform/.github/workflows/reusable-rust-ci.yml@main
-    with:
-      working-directory: ./services/my-rust-service
   secret-scan:
     uses: Conxian/conxius-platform/.github/workflows/reusable-secret-scan.yml@main
 ```

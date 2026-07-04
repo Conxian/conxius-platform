@@ -11,7 +11,7 @@ defined in [#1103](../../issues/1103). Last updated: 2026-07-04 (v2 — post-aud
 | No required checks, no merge | ✅ `hygiene.yml`, `hygiene-drift-guard.yml`, `secret-scan.yml` required on `main` | Strict | **Met** |
 | No pinned actions, no workflow acceptance | ✅ All actions pinned to major versions. CONXIUS_CICD_BASELINE.md documents pins. Drift guard validates. | Strict | **Met** |
 | No secret scan, no merge | ✅ `secret-scan.yml` (Gitleaks) required on PRs. Reusable at `reusable-secret-scan.yml` | Strict | **Met** |
-| No dependency review, no merge | ✅ `dependency-review.yml` runs `actions/dependency-review-action@v5.0.0` on all PRs. Reusable at `reusable-dependency-review.yml`. | Strict | **Met** |
+| No dependency review, no merge | ✅ `dependency-review.yml` runs `actions/dependency-review-action@v5.0.0` on all PRs. | Strict | **Met** |
 | No static analysis, no merge | 🏗️ CodeQL workflow added (`codeql.yml`). TypeScript strict mode enabled. No SAST previously. | Strict (critical repos) | **In progress** |
 | No SBOM, no release | ✅ `anchore/sbom-action@v0.24.0` in `release.yml` generates CycloneDX SBOM per release | Strict | **Met** |
 | No provenance/attestation, no release | 🏗️ SLSA provenance generator added to `release.yml` via `slsa-framework/slsa-github-generator`. Previously SBOM-only. | Strict (build-artifact repos) | **In progress** |
@@ -26,8 +26,7 @@ defined in [#1103](../../issues/1103). Last updated: 2026-07-04 (v2 — post-aud
 ### 1. Dependency Review on PRs — ✅ RESOLVED
 
 `dependency-review.yml` runs `actions/dependency-review-action@v5.0.0` on all PRs.
-A reusable variant (`reusable-dependency-review.yml`) is available for cross-repo
-adoption. The previous gap analysis incorrectly reported this as missing.
+The reusable variant was removed in 2026-07 (no callers).
 
 ### 2. Static Analysis (SAST) — 🏗️ IN PROGRESS
 

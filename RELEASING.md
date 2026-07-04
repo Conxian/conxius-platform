@@ -15,6 +15,20 @@ Create a release when user-facing behavior, platform operations, security postur
 
 ## Minimum public-repo release workflow
 
+### Automated changelog preparation (recommended)
+
+Use the **Release Preparation** workflow to auto-generate the CHANGELOG.md
+section from conventional commits:
+
+1. Go to **Actions → Release Preparation → Run workflow**.
+2. Enter the version number (e.g. `0.3.0`).
+3. The workflow generates the changelog section and opens a PR.
+4. Review the PR, adjust entries as needed, and merge.
+
+After the prep PR is merged, the standard tag-and-release flow applies:
+
+### Manual changelog + tag flow
+
 1. **Prepare a release PR.**
    - Move items from `## [Unreleased]` into `## [X.Y.Z] - YYYY-MM-DD` in `CHANGELOG.md`.
    - Keep `## [Unreleased]` present for subsequent work.

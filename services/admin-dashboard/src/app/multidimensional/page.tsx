@@ -88,7 +88,7 @@ export default function MultidimensionalDashboard() {
         <section style={{ backgroundColor: '#fff', padding: '2rem', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', border: '1px solid #e2e8f0' }}>
           <h2 style={{ color: '#2E403B', marginBottom: '1.5rem', fontSize: '1.25rem' }}>Agentic Resource Allocation</h2>
           <div style={{ display: 'grid', gap: '1.25rem' }}>
-            {data?.agents?.map((agent: Record<string, unknown>) => (
+            {data?.agents?.map((agent: Record<string, any>) => (
               <div key={agent?.id}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.875rem' }}>
                   <span style={{ fontWeight: 600, color: '#334155' }}>{agent?.id}</span>

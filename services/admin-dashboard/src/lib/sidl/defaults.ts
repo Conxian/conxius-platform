@@ -1,4 +1,4 @@
-import type { CartMandate, OperatorEntry, SidlProposal } from "./types";
+import type { CartMandate, FrontendEntry, OperatorEntry, SidlProposal } from "./types";
 
 export const DEFAULT_SIDL_PROPOSALS: Record<string, SidlProposal> = {
   "conxian-sbtc-yield-policy": {
@@ -71,5 +71,60 @@ export const DEFAULT_OPERATORS: Record<string, OperatorEntry> = {
     recognizedAtIso: "2026-06-20T00:00:00.000Z",
     status: "active",
     contact: "carol@conxian-community.io",
+  },
+};
+
+export const DEFAULT_FRONTENDS: Record<string, FrontendEntry> = {
+  "frontend-canonical-admin": {
+    id: "frontend-canonical-admin",
+    name: "Conxian Admin Dashboard",
+    url: "https://admin.conxian-labs.com",
+    label: "canonical",
+    status: "active",
+    description: "The canonical Conxian administrative interface maintained by Conxian Labs. Serves as the primary governance, treasury, and monitoring surface for the protocol.",
+    operatorId: "op-frontend-host-1",
+    operatorName: "Conxian Labs",
+    recognizedBy: "governance-prop-42",
+    recognizedAtIso: "2026-04-01T00:00:00.000Z",
+    tier: "primary",
+  },
+  "frontend-canonical-app": {
+    id: "frontend-canonical-app",
+    name: "Conxian dApp",
+    url: "https://app.conxian-labs.com",
+    label: "canonical",
+    status: "active",
+    description: "The canonical Conxian decentralized application for swaps, liquidity pools, vault management, and Stacks wallet integration.",
+    operatorId: "op-frontend-host-1",
+    operatorName: "Conxian Labs",
+    recognizedBy: "governance-prop-42",
+    recognizedAtIso: "2026-04-01T00:00:00.000Z",
+    tier: "primary",
+  },
+  "frontend-community-eu": {
+    id: "frontend-community-eu",
+    name: "Community Dashboard EU",
+    url: "https://eu.conxian-community.io",
+    label: "community-hosted",
+    status: "active",
+    description: "A community-hosted administrative dashboard serving European region users with GDPR-compliant infrastructure and localized governance participation.",
+    operatorId: "op-frontend-host-eu",
+    operatorName: "EU Community Collective",
+    recognizedBy: "governance-prop-95",
+    recognizedAtIso: "2026-06-15T00:00:00.000Z",
+    tier: "secondary",
+  },
+  "frontend-community-apac": {
+    id: "frontend-community-apac",
+    name: "Conxian Explorer APAC",
+    url: "https://apac.conxian-explorer.io",
+    label: "community-hosted",
+    status: "pending-governance-review",
+    description: "A community-proposed block explorer and analytics frontend targeting the APAC region. Pending governance ratification for official recognition.",
+    operatorId: "op-frontend-host-apac",
+    operatorName: "APAC Explorer Guild",
+    recognizedBy: "governance-prop-102",
+    recognizedAtIso: "2026-07-01T00:00:00.000Z",
+    tier: "community",
   },
 };

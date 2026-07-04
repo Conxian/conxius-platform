@@ -122,6 +122,7 @@ export default function AdminPage() {
   const [erpData, setErpData] = useState<ErpDashboardData | null>(null);
   const [telemetry, setTelemetry] = useState<TelemetryService[]>([]);
   const [rewardsData, setRewardsData] = useState<any>(null);
+  const [frontendsData, setFrontendsData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -171,6 +172,17 @@ export default function AdminPage() {
         }
       } catch {
         setRewardsData(null);
+      }
+
+      // Fetch Frontend Registry
+      try {
+        const frontendsRes = await fetch("/api/v1/frontends");
+        if (frontendsRes.ok) {
+          const frontendsJson = await frontendsRes.json();
+          setFrontendsData(frontendsJson);
+        }
+      } catch {
+        setFrontendsData(null);
       }
 
     } catch (err) {
@@ -296,6 +308,32 @@ export default function AdminPage() {
           </div>
           <p style={{ fontSize: "0.75rem", color: "#94A3B8", marginTop: "0.5rem" }}>
             Total period revenue: {(rewardsData.total_revenue_sats / 100_000_000).toFixed(2)} BTC ({rewardsData.period}) &middot; SFO: {rewardsData.sfo_address}
+          </p>
+        </section>
+      )}
+
+      {frontendsData && (
+        <section style={{ marginTop: "3rem" }}>
+          <h3 style={{ borderBottom: "2px solid #D4A017", paddingBottom: "0.5rem", color: "#2E403B", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <span>Frontend Surfaces</span>
+            <a href="/frontends" style={{ fontSize: "0.75rem", color: "#D4A017", textDecoration: "none" }}>View registry →</a>
+          </h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem", marginTop: "1rem" }}>
+            <div style={{ backgroundColor: "white", padding: "1rem", borderRadius: "8px", boxShadow: "0 4px 6px rgba(0,0,0,0.05)", textAlign: "center" }}>
+              <div style={{ fontSize: "0.7rem", color: "#666", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem" }}>Total</div>
+              <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "#2E403B" }}>{frontendsData.summary.total}</div>
+            </div>
+            <div style={{ backgroundColor: "white", padding: "1rem", borderRadius: "8px", boxShadow: "0 4px 6px rgba(0,0,0,0.05)", textAlign: "center", borderLeft: "3px solid #059669" }}>
+              <div style={{ fontSize: "0.7rem", color: "#666", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem" }}>🏛 Canonical</div>
+              <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "#059669" }}>{frontendsData.summary.canonical}</div>
+            </div>
+            <div style={{ backgroundColor: "white", padding: "1rem", borderRadius: "8px", boxShadow: "0 4px 6px rgba(0,0,0,0.05)", textAlign: "center", borderLeft: "3px solid #D4A017" }}>
+              <div style={{ fontSize: "0.7rem", color: "#666", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem" }}>🏘 Community</div>
+              <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "#D4A017" }}>{frontendsData.summary.communityHosted}</div>
+            </div>
+          </div>
+          <p style={{ fontSize: "0.75rem", color: "#94A3B8", marginTop: "0.5rem" }}>
+            {frontendsData.frontends.filter((f: any) => f.status === "pending-governance-review").length} pending governance review
           </p>
         </section>
       )}

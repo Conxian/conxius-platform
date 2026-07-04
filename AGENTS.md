@@ -707,3 +707,40 @@ RELEASING.md (modified), .github/RELEASE_HYGIENE.md (modified), AGENTS.md (this 
 changelog from all commits. Subsequent runs will only include commits since the
 last tag.
 
+### 2026-07-04 — Implement #1031: Operator Approval Governance Proposal Templates
+
+**Trigger**: Approved to proceed to next priority work from sprint backlog.
+**What was done**:
+- Created `services/admin-dashboard/src/lib/governance/operators.ts` — full
+  operator approval governance module with 6 operator types (frontend-host,
+  delegate, service-provider, indexer-operator, bridge-operator, oracle-operator),
+  each with defined approval body, vote thresholds, badge requirements, and renewal
+  intervals. Templates include structured proposal sections with governance context,
+  post-approval steps, and decentralization impact statements.
+- Created `services/admin-dashboard/src/app/api/v1/governance/operator-approval-templates/route.ts` —
+  API endpoint with admin-auth gating, type filtering, and single-template lookup.
+- Updated `services/admin-dashboard/src/app/proposal-templates/page.tsx` — added
+  tabbed UI with "Treasury Funding" and "Operator Approval" tabs, operator-specific
+  template cards with decentralization impact preview, approval body display,
+  renewal info, and operator-type filtering.
+- Operator templates follow the same governance proposal pattern as the treasury
+  templates (#1122) but are focused on *recognition* rather than funding.
+
+**Design decisions**:
+- Operator approval is distinct from treasury funding — templates cover the
+  *governance act* of recognizing operators, not funding them. Funding for
+  approved operators flows through the treasury proposal path separately.
+- Templates have a `decentralizationImpact` field explaining how each operator
+  type reduces dependency on default Conxian-Labs control.
+- High-trust operator types (bridge, oracle) require super-majority council
+  approval; lower-trust types (frontend host, service provider) use community vote.
+- All operator types require renewal (6-12 months) with re-approval through
+  governance.
+
+**Files touched**: lib/governance/operators.ts (new), api/v1/governance/operator-approval-templates/route.ts (new),
+app/proposal-templates/page.tsx (modified), AGENTS.md (this update)
+
+**Impact on #1074**: Partially addresses the governance templates EPIC. #1033 (treasury templates)
+was closed via #1122. #1031 (operator approval templates) is now complete. Remaining
+scope in #1074 depends on whether additional template categories are needed.
+

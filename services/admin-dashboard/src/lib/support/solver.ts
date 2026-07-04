@@ -47,7 +47,7 @@ export class SolverSelectionEngine {
 
         return { ...solver, score };
       })
-      .sort((a: Record<string, number>, b: Record<string, number>) => b.score - a.score);
+      .sort((a: any, b: any) => b.score - a.score);
   }
 
   /**

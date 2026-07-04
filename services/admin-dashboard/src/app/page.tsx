@@ -145,7 +145,7 @@ export default function AdminPage() {
             uptimeSeconds: getNumber(statusJson, "uptime_seconds"),
           });
           const nexusJson = await fetchJsonWithFallback(baseUrl, ["/api/v1/nexus/state"]);
-          setNexus(normalizeNexusState(nexusJson, statusJson));
+          setNexus(normalizeNexusState(nexusJson!, statusJson!));
         }
       }
 

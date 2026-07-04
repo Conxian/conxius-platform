@@ -54,7 +54,7 @@ This document tracks the resolution of gaps and identifies new technical require
 | **G-11** | BitVM2 Multi-Party Aggregation | [FULL_STACK_BITCOIN_RESEARCH.md#31](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#31) | 🏗️ **Active Scaffolding**. CON-1306 initialized. |
 | **G-12** | ERC-7683 Solver Selection | [FULL_STACK_BITCOIN_RESEARCH.md#32](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#32) | 🏗️ **Active Scaffolding**. CON-1307 initialized. |
 | **G-13** | MFE Federation | [SOVEREIGN_REPR_2026.md#3](./architecture/SOVEREIGN_REPR_2026.md#3) | Webpack Module Federation |
-| **G-14** | FROST Threshold Signatures | [FULL_STACK_BITCOIN_RESEARCH.md#34](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#34) | `lib-conxian-core/frost` |
+| **G-14** | FROST Threshold Signatures | [FULL_STACK_BITCOIN_RESEARCH.md#34](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#34) | 🏗️ **Active Scaffolding**. TypeScript coordination types in `frost.ts`. Rust crypto target: `lib-conxian-core/frost`. |
 | **G-15** | OP_CAT Recursive Covenants | [FULL_STACK_BITCOIN_RESEARCH.md#35](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#35) | `lib-conxian-core/covenants` |
 | **G-16** | Fedimint Community Liquidity | [FULL_STACK_BITCOIN_RESEARCH.md#36](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#36) | `conxian-nexus/fedimint` |
 | **G-17** | BIP-353 DNS Payments | [FULL_STACK_BITCOIN_RESEARCH.md#32](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#32) | 🟢 **Implemented**. Foundational bridge active. |
@@ -62,11 +62,11 @@ This document tracks the resolution of gaps and identifies new technical require
 | **G-19** | Spider Network Routing | [FULL_STACK_BITCOIN_RESEARCH.md#39](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#39) | `conxian-nexus/spider` |
 | **G-20** | BitVM3 Adaptive Proofs | [FULL_STACK_BITCOIN_RESEARCH.md#40](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#40) | `lib-conxian-core/bitvm3` |
 | **G-21** | Sangria/Nova Proof Folding | [FULL_STACK_BITCOIN_RESEARCH.md#24](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#24) | `lib-conxian-core/sangria` |
-| **G-22** | ctUSD Stablecoin Logic | [FULL_STACK_BITCOIN_RESEARCH.md#26](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#26) | `services/admin-dashboard/src/lib/usi/stablecoin.ts` |
+| **G-22** | ctUSD Stablecoin Logic | [FULL_STACK_BITCOIN_RESEARCH.md#26](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#26) | 🏗️ **Active Scaffolding**. TypeScript types in `lib/usi/stablecoin.ts`. OpenSpec proposal at `openspec/changes/2026-07-04-ctusd-dlc-stablecoin/`. |
 | **G-23** | Ark V-UTXO Protocol | [FULL_STACK_BITCOIN_RESEARCH.md#25](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#25) | `lib-conxian-core/ark` |
 | **G-41** | Taproot Assets | [FULL_STACK_BITCOIN_RESEARCH.md#41](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#41) | `conxian-nexus/adapters/taproot-assets` |
 | **G-42** | PTLCs | [FULL_STACK_BITCOIN_RESEARCH.md#42](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#42) | `lib-conxian-core/ptlc` |
-| **G-43** | Babylon Bitcoin Staking | [FULL_STACK_BITCOIN_RESEARCH.md#43](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#43) | `conxian-nexus/adapters/babylon` |
+| **G-43** | Babylon Bitcoin Staking | [FULL_STACK_BITCOIN_RESEARCH.md#43](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#43) | 🏗️ **Active Scaffolding**. `BabylonAdapter` in `conxian-nexus/adapters/babylon.py`. Yield source in rewards API. |
 | **G-44** | BitVMX Computation | [FULL_STACK_BITCOIN_RESEARCH.md#44](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#44) | 🏗️ **Active Research**. CON-1311 initialized. |
 | **G-45** | BOLT-12 Offers | [FULL_STACK_BITCOIN_RESEARCH.md#45](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#45) | `lib-conxian-core/lightning` |
 | **G-46** | RGB++ Protocol | [FULL_STACK_BITCOIN_RESEARCH.md#46](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#46) | `conxian-nexus/adapters/rgbpp` |

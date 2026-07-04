@@ -13,6 +13,7 @@ permissions:
   actions: read
   id-token: write
   packages: read
+  attestations: write
 
 jobs:
   release:
@@ -64,6 +65,11 @@ jobs:
           path: ./
           format: cyclonedx-json
           output-file: "sbom-${{ github.ref_name }}.cdx.json"
+
+      - name: Generate SLSA provenance attestation
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: "sbom-${{ github.ref_name }}.cdx.json"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3

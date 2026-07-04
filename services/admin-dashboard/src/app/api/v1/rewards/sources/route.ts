@@ -50,10 +50,10 @@ function buildFallbackRewardSources(): RewardSourcesData {
       description: "Sovereign Yield Index (SYI) returns from BTC-standard reserve management",
     },
     {
-      name: "Service Revenue",
+      name: "Babylon BTC Staking",
       amount_sats: 1_050_000_000,
       percentage: 14,
-      description: "Operator and solver service fees from settlement engine and BitVM bridge",
+      description: "Native Bitcoin staking yield via Babylon protocol — BTC locked in UTXO timelocks earning PoS security rewards",
     },
   ];
 

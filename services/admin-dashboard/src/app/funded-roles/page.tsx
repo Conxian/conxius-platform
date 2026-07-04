@@ -404,24 +404,44 @@ export default function FundedRolesPage() {
             textAlign: "center",
           }}
         >
-          <a
-            href="/funded-roles/history"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              padding: "0.75rem 1.5rem",
-              backgroundColor: "#2E403B",
-              color: "white",
-              borderRadius: "8px",
-              textDecoration: "none",
-              fontSize: "0.95rem",
-              fontWeight: 600,
-              transition: "all 0.2s",
-            }}
-          >
-            📊 View Payout &amp; Activity History
-          </a>
+          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+            <a
+              href="/proposal-templates"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                padding: "0.75rem 1.5rem",
+                backgroundColor: "#D4A017",
+                color: "white",
+                borderRadius: "8px",
+                textDecoration: "none",
+                fontSize: "0.95rem",
+                fontWeight: 600,
+                transition: "all 0.2s",
+              }}
+            >
+              📋 Submit Funding Proposal
+            </a>
+            <a
+              href="/funded-roles/history"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                padding: "0.75rem 1.5rem",
+                backgroundColor: "#2E403B",
+                color: "white",
+                borderRadius: "8px",
+                textDecoration: "none",
+                fontSize: "0.95rem",
+                fontWeight: 600,
+                transition: "all 0.2s",
+              }}
+            >
+              📊 View Payout &amp; Activity History
+            </a>
+          </div>
           <p style={{ fontSize: "0.75rem", color: "#94A3B8", marginTop: "0.5rem" }}>
             See how treasury funds have been disbursed and what funded stewards have been working on
           </p>

@@ -115,6 +115,71 @@ export interface FundedRoleHistory {
   activityCount: number;
 }
 
+/** Governance proposal template for treasury-funded community roles. */
+export interface TreasuryFundingProposalTemplate {
+  /** Unique template ID, e.g. 'prop-tpl-protocol-operator' */
+  id: string;
+  /** Human-readable template title */
+  title: string;
+  /** Role this template funds */
+  roleId: string;
+  /** Role display name */
+  roleName: string;
+  /** Allocation category for the funding */
+  allocationCategory: AllocationCategory;
+  /** Funding cadence */
+  fundingCadence: 'monthly' | 'quarterly' | 'per-milestone';
+  /** Minimum votes required for approval */
+  minVotesRequired: number;
+  /** Badges required to submit this proposal */
+  requiredSubmitterBadges: string[];
+  /** Structured sections the proposal must contain */
+  sections: ProposalTemplateSection[];
+  /** Pre-filled governance context */
+  governanceContext: {
+    /** Why this role requires a governance proposal */
+    rationale: string;
+    /** What governance body ratifies this */
+    ratificationBody: string;
+    /** Post-approval steps */
+    postApprovalSteps: string[];
+  };
+}
+
+export interface ProposalTemplateSection {
+  id: string;
+  heading: string;
+  description: string;
+  placeholder: string;
+  required: boolean;
+  /** Whether this section expects a funding amount */
+  expectsAmount?: boolean;
+}
+
+/** A completed proposal instance based on a template */
+export interface TreasuryFundingProposal {
+  id: string;
+  templateId: string;
+  roleId: string;
+  stewardId: string;
+  stewardName: string;
+  title: string;
+  status: 'draft' | 'submitted' | 'voting' | 'approved' | 'rejected';
+  requestedTier: FundingTier;
+  requestedAmountSats: number;
+  sections: ProposalTemplateSectionResponse[];
+  createdAtIso: string;
+  submittedAtIso?: string;
+  proposalRef?: string;
+}
+
+export interface ProposalTemplateSectionResponse {
+  sectionId: string;
+  heading: string;
+  content: string;
+}
+
+
 export const FUNDED_ROLE_DEFINITIONS: FundedRoleDefinition[] = [
   {
     id: 'protocol-operator',
@@ -545,4 +610,249 @@ export function buildFundedRolesHistory(
   }
 
   return histories;
+}
+
+/** Standard proposal sections shared across all treasury funding templates. */
+const STANDARD_PROPOSAL_SECTIONS: ProposalTemplateSection[] = [
+  {
+    id: 'problem-statement',
+    heading: 'Problem Statement',
+    description: 'What operational or governance need does this funded role address?',
+    placeholder: 'Describe the gap this role fills and why community treasury funding is the right mechanism...',
+    required: true,
+  },
+  {
+    id: 'scope-of-work',
+    heading: 'Scope of Work',
+    description: 'Specific responsibilities, deliverables, and operational cadence for the funding period.',
+    placeholder: 'List the key responsibilities and expected outcomes for this funding period...',
+    required: true,
+  },
+  {
+    id: 'funding-request',
+    heading: 'Funding Request',
+    description: 'Amount requested and justification aligned with the role funding tier.',
+    placeholder: 'Specify the funding tier (probationary/active/senior) and amount in sats. Reference the role definition funding range...',
+    required: true,
+    expectsAmount: true,
+  },
+  {
+    id: 'success-metrics',
+    heading: 'Success Metrics',
+    description: 'Measurable outcomes that demonstrate the funded work delivered value.',
+    placeholder: 'Define 3-5 measurable metrics such as: uptime %, proposals reviewed, community engagements completed, audits passed...',
+    required: true,
+  },
+  {
+    id: 'governance-requirements',
+    heading: 'Governance Requirements',
+    description: 'Voting threshold, required badges, and ratification process.',
+    placeholder: 'This proposal requires {{minVotesRequired}} votes and the following submitter badges: {{requiredBadges}}...',
+    required: true,
+  },
+  {
+    id: 'steward-declaration',
+    heading: 'Steward Declaration',
+    description: 'Steward identity, qualifications, and commitment to the role.',
+    placeholder: 'State your steward ID, relevant badges held, contributor level, and commitment to the role responsibilities...',
+    required: true,
+  },
+];
+
+/** Governance proposal templates for treasury-funded community roles.
+ *  Each template corresponds to a FundedRoleDefinition and pre-fills
+ *  the governance context, allocation category, and funding parameters. */
+export const TREASURY_FUNDING_PROPOSAL_TEMPLATES: TreasuryFundingProposalTemplate[] = [
+  {
+    id: 'prop-tpl-protocol-operator',
+    title: 'Protocol Operator Funding Proposal',
+    roleId: 'protocol-operator',
+    roleName: 'Protocol Operator',
+    allocationCategory: 'operational-rewards',
+    fundingCadence: 'monthly',
+    minVotesRequired: 15,
+    requiredSubmitterBadges: ['guardian', 'consistent-voter'],
+    sections: STANDARD_PROPOSAL_SECTIONS,
+    governanceContext: {
+      rationale: 'Protocol operators maintain critical infrastructure (nodes, bridges, settlement engines). Continuous treasury funding ensures reliability and decentralised operation of core protocol services.',
+      ratificationBody: 'Governance Council + Community Vote',
+      postApprovalSteps: [
+        'Treasury custodian reviews and countersigns the approved proposal',
+        'Monthly payouts begin on the next funding cycle',
+        'Operator submits monthly activity reports to maintain eligibility',
+        'Funding tier re-evaluated quarterly based on performance metrics',
+      ],
+    },
+  },
+  {
+    id: 'prop-tpl-frontend-operator',
+    title: 'Frontend Operator Funding Proposal',
+    roleId: 'frontend-operator',
+    roleName: 'Frontend Operator',
+    allocationCategory: 'operational-rewards',
+    fundingCadence: 'monthly',
+    minVotesRequired: 5,
+    requiredSubmitterBadges: ['first-vote'],
+    sections: STANDARD_PROPOSAL_SECTIONS,
+    governanceContext: {
+      rationale: 'Frontend operators host and maintain community-facing web interfaces. Treasury funding shifts frontend ownership from Conxian-Labs to the protocol community.',
+      ratificationBody: 'Community Vote',
+      postApprovalSteps: [
+        'Treasury custodian reviews the approved proposal',
+        'Monthly payouts begin on the next funding cycle',
+        'Operator must display recognised frontend status badge',
+        'Annual community review of frontend quality and uptime',
+      ],
+    },
+  },
+  {
+    id: 'prop-tpl-governance-delegate',
+    title: 'Governance Delegate Funding Proposal',
+    roleId: 'governance-delegate',
+    roleName: 'Governance Delegate',
+    allocationCategory: 'governance-rewards',
+    fundingCadence: 'quarterly',
+    minVotesRequired: 25,
+    requiredSubmitterBadges: ['delegate', 'consistent-voter'],
+    sections: STANDARD_PROPOSAL_SECTIONS,
+    governanceContext: {
+      rationale: 'Governance delegates represent community voting power and steward protocol direction. Funding ensures delegates can dedicate time to proposal review, community engagement, and informed voting.',
+      ratificationBody: 'Governance Council + Community Vote',
+      postApprovalSteps: [
+        'Treasury custodian reviews and countersigns the approved proposal',
+        'Quarterly payouts with mid-quarter activity checkpoint',
+        'Delegate voting record published quarterly for community review',
+        'Delegation power subject to community recall if participation drops below threshold',
+      ],
+    },
+  },
+  {
+    id: 'prop-tpl-policy-steward',
+    title: 'Policy Steward Funding Proposal',
+    roleId: 'policy-steward',
+    roleName: 'Policy Steward',
+    allocationCategory: 'governance-rewards',
+    fundingCadence: 'per-milestone',
+    minVotesRequired: 10,
+    requiredSubmitterBadges: ['policy-author', 'policy-shaper'],
+    sections: STANDARD_PROPOSAL_SECTIONS,
+    governanceContext: {
+      rationale: 'Policy stewards author, review, and maintain governance policies. Per-milestone funding aligns incentives with policy delivery rather than time spent.',
+      ratificationBody: 'Governance Council',
+      postApprovalSteps: [
+        'Treasury custodian reviews and countersigns the approved proposal',
+        'Payout released upon milestone completion verified by council',
+        'Policy document merged into canonical governance repository',
+        'Community review period for each completed policy milestone',
+      ],
+    },
+  },
+  {
+    id: 'prop-tpl-community-steward',
+    title: 'Community Steward Funding Proposal',
+    roleId: 'community-steward',
+    roleName: 'Community Steward',
+    allocationCategory: 'community-rewards',
+    fundingCadence: 'quarterly',
+    minVotesRequired: 10,
+    requiredSubmitterBadges: ['consistent-voter', 'community-pillar'],
+    sections: STANDARD_PROPOSAL_SECTIONS,
+    governanceContext: {
+      rationale: 'Community stewards drive engagement, onboarding, and ecosystem growth. Treasury funding ensures community work is recognised as protocol-critical, not volunteer-dependent.',
+      ratificationBody: 'Community Vote',
+      postApprovalSteps: [
+        'Treasury custodian reviews the approved proposal',
+        'Quarterly payouts with community sentiment checkpoint',
+        'Steward publishes quarterly community health report',
+        'Community feedback mechanism for steward performance review',
+      ],
+    },
+  },
+  {
+    id: 'prop-tpl-council-member',
+    title: 'Council Member Funding Proposal',
+    roleId: 'council-member',
+    roleName: 'Council Member',
+    allocationCategory: 'governance-rewards',
+    fundingCadence: 'quarterly',
+    minVotesRequired: 50,
+    requiredSubmitterBadges: ['council', 'vote-streak-10'],
+    sections: STANDARD_PROPOSAL_SECTIONS,
+    governanceContext: {
+      rationale: 'Council members provide strategic governance oversight and high-stakes decision-making. Funding reflects the significant responsibility and time commitment of council service.',
+      ratificationBody: 'Governance Council (super-majority) + Community Ratification Vote',
+      postApprovalSteps: [
+        'Treasury custodian reviews and countersigns the approved proposal',
+        'Quarterly payouts with public council activity report',
+        'Council voting record and meeting minutes published monthly',
+        'Council seat subject to annual re-election cycle',
+      ],
+    },
+  },
+  {
+    id: 'prop-tpl-security-guardian',
+    title: 'Security Guardian Funding Proposal',
+    roleId: 'security-guardian',
+    roleName: 'Security Guardian',
+    allocationCategory: 'operational-rewards',
+    fundingCadence: 'monthly',
+    minVotesRequired: 10,
+    requiredSubmitterBadges: ['guardian'],
+    sections: STANDARD_PROPOSAL_SECTIONS,
+    governanceContext: {
+      rationale: 'Security guardians monitor protocol security, respond to incidents, and maintain the circuit breaker and safety mechanisms. Continuous funding ensures 24/7 security coverage.',
+      ratificationBody: 'Governance Council',
+      postApprovalSteps: [
+        'Treasury custodian reviews and countersigns the approved proposal',
+        'Monthly payouts begin on the next funding cycle',
+        'Guardian submits monthly security posture report',
+        'Security incident response SLA reviewed quarterly',
+      ],
+    },
+  },
+  {
+    id: 'prop-tpl-treasury-custodian',
+    title: 'Treasury Custodian Funding Proposal',
+    roleId: 'treasury-custodian',
+    roleName: 'Treasury Custodian',
+    allocationCategory: 'treasury-reserve',
+    fundingCadence: 'quarterly',
+    minVotesRequired: 20,
+    requiredSubmitterBadges: ['guardian', 'vote-streak-10', 'community-pillar'],
+    sections: STANDARD_PROPOSAL_SECTIONS,
+    governanceContext: {
+      rationale: 'Treasury custodians manage protocol funds, countersign payouts, and maintain treasury reserve health. This is the highest-trust funded role requiring multiple governance badges.',
+      ratificationBody: 'Governance Council (super-majority) + Community Ratification Vote',
+      postApprovalSteps: [
+        'Existing treasury custodian(s) review and countersign the approved proposal',
+        'Quarterly payouts with public treasury health report',
+        'Monthly reserve coverage ratio published',
+        'Custodian subject to annual re-ratification with treasury audit',
+      ],
+    },
+  },
+];
+
+/** Build a list of proposal templates filtered by optional criteria. */
+export function buildProposalTemplates(
+  filterRoleId?: string,
+  filterCategory?: AllocationCategory,
+): TreasuryFundingProposalTemplate[] {
+  return TREASURY_FUNDING_PROPOSAL_TEMPLATES.filter((t) => {
+    if (filterRoleId && t.roleId !== filterRoleId) return false;
+    if (filterCategory && t.allocationCategory !== filterCategory) return false;
+    return true;
+  });
+}
+
+/** Get a single proposal template by ID. */
+export function getProposalTemplate(templateId: string): TreasuryFundingProposalTemplate | undefined {
+  return TREASURY_FUNDING_PROPOSAL_TEMPLATES.find((t) => t.id === templateId);
+}
+
+/** Get the funded role definition that a template applies to. */
+export function getTemplateRoleDefinition(
+  template: TreasuryFundingProposalTemplate,
+): FundedRoleDefinition | undefined {
+  return FUNDED_ROLE_DEFINITIONS.find((d) => d.id === template.roleId);
 }

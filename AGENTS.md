@@ -206,7 +206,157 @@ This file is a **living knowledge base** that grows with every agent session. Ea
 
 ---
 
+
+## Repository Knowledge Graph (Full Synthesis — July 2026)
+
+This section is the canonical cross-reference of every system, type, API, document, and relationship in the repository. Generated from exhaustive deep-reads of all 150+ documentation files, 63 source files, 22 scripts, 19 CI workflows, and 7 specs.
+
+### Complete Type System Map
+
+**Governance Types:** Vote, Delegation, PolicyActivity, StewardProfile (6 roles), GovernanceBadge (10 badges, 4 categories, 4 tiers), ParticipationStreak, RecentVotingActivity, GovernanceParticipation
+
+**Treasury Types:** FundingTier (3), AllocationCategory (4), OperationalUnit (4), FundedRoleDefinition (8 roles), FundedRoleAssignment, TreasuryFundedRoleProfile, PayoutRecord, ActivityRecord (7 activity types), FundedRoleHistory
+
+**SIDL Types:** FarcasterFrameActionPayload, YieldSnapshot, VoteChoice/Receipt/Tally, SidlProposal, VoteEvent, CartItem/Mandate, X402PaymentRequired, CheckoutEvent/LifecycleState, ErpDashboardData, CrossChainEvent, EventBusState, OperatorEntry/Registry
+
+**Steward Types:** PointsData, ReputationData, StakingData, StewardDashboard
+
+**Launch Types:** MintedTokenEntry, ContributorProfile, ContributionData, CommunityStats, 6 ContributorLevels
+
+### Complete API Surface (26 admin routes + 2 public frames)
+
+All admin routes gated by validateAdminAuth(). Public: /frames/vote, /frames/sbtc (Farcaster).
+Key routes: /api/v1/governance/funded-roles, /api/v1/governance/funded-roles/history, /api/v1/rewards/sources, /api/v1/steward/dashboard, /api/multidimensional/metrics, /api/v1/settlement-engine
+
+### 8 Funded Roles (1M-25M sats/month range)
+
+Protocol Operator (5M active), Frontend Operator (3M), Governance Delegate (4M), Policy Steward (4M), Community Steward (4M), Council Member (12M), Security Guardian (6M), Treasury Custodian (8M)
+
+### 10 Governance Badges
+
+first-vote, consistent-voter, vote-streak-10, vote-streak-25, delegate, policy-author, guardian, council, policy-shaper, community-pillar
+
+### 6 Contributor Levels
+
+Newcomer(0)→Contributor(1)→Regular(2)→Core(3)→Champion(4)→Steward(5)
+
+### 19 CI Workflows
+
+5 reusable: ci, dependency-review, hygiene, rust-ci, secret-scan. 14 entrypoint: ci, hygiene, hygiene-drift-guard, secret-scan, dependency-review, lifecycle-control-gates, bos-production-guard, cross-repo-integration-mvp, multi-env-test, synergy-test, release, stale-branch-review, action-version-audit
+
+### Documentation Hierarchy (4 tiers)
+
+Tier 0 Canonical (specs, schemas, GOVERNANCE) → Tier 1 Architectural (docs/architecture, AGENTS) → Tier 2 Operational (runbooks, GAPS, SCORING_MATRIX) → Tier 3 Historical (archived-*)
+
+### Key Cross-References
+
+- Funded Roles ↔ Rewards: allocation categories match (community/governance/operational/treasury-reserve)
+- Funded Roles ↔ Steward: eligibility uses StewardProfile + badges + contributor level + votes
+- Multidimensional ↔ Treasury: metrics API returns treasury dimension; history API adds TreasuryDataLink
+- SIDL ↔ Governance: vote recording flows through stateStore → API routes → observability wrapper
+- Bitcoin Stack: bip322, nwc, ark, bitvm/bitvm3/bitvmx, zkcp, dns-payments, solver — all in lib/support/
+
+### 7 Reusable Patterns
+
+1. Gateway-first with fallback 2. observeSidl wrapper 3. File-based state persistence 4. Weighted scoring 5. validateAdminAuth guard 6. Inline <a> tag navigation 7. Dual-module pattern (src/governance/ + lib/governance/)
+
+### Critical Gaps
+
+NixOS transition (in progress), Local-first UI Wasm (in progress), MFE Federation (scaffolded), Contributor Claim Ledger (spec-only), Proof-carrying treasury analytics (spec-only), SFO yield harvesting (Math.random() stubs)
+
+### Cross-Repo Dependencies (Conxian Org — 14 repos total)
+
+| Repo | Language | Role | Status |
+|------|----------|------|--------|
+| `conxian-gateway` | Rust | Gateway backend (CORE_API_URL target) — bitcoin, ISO 20022, rusqlite | Active |
+| `Conxian` | Clarity | Smart contracts: DEX, vault, dimensional-core, oracle, circuit-breaker | Active |
+| `conxian_ui` | TypeScript | dApp UI: Next.js + @stacks/auth, liquidity pools, swaps | Active |
+| `conxian-nexus` | Rust | Glass Node: chain observation, sync, verification proofs | Active |
+| `lib-conxian-core` | Rust | Shared protocol primitives (consumed by gateway + nexus) | Active |
+| `conxius-enclave-sdk` | Rust | Hardware enclave SDK: musig2, bdk_wallet, bitcoin 0.33-beta | Active |
+| `conxius-orbit` | Python | GUI/CLI deployment toolkit for Stacks contracts | Active |
+| `conxius-wallet` | TypeScript | Android-first sovereign wallet (offline-first, Wormhole/NTT) | Active |
+| `conxian-labs-site` | HTML | Marketing site at www.conxian-labs.com | Active |
+| `conxian-business` | TypeScript | Private strategy/legal/ops vault | Private |
+| `.github` | Python | Public defaults and documentation guidance | Active |
+| `.github-private` | — | Internal engineering map/guide | Private |
+| `demo-repository` | HTML | Investor demo | Private |
+
+Note: conxian-labs is NOT a GitHub org — it only exists as conxian-labs.com. conxian.org is unreachable.
+
+### Test Coverage: 22 test files, ~161 tests
+
+Governance: 4 files/~40 tests. SIDL: 3/~25. Support: 5/~30. Bitcoin stack: 5/~35. Python: 3/22. E2E: 1/1.
+
+### Environment Variables
+
+CORE_API_URL / CONXIAN_GATEWAY_URL / GATEWAY_PORT (same Gateway, 3 names). ADMIN_DASHBOARD_API_KEY for auth. GATEWAY_JWT_SECRET + GATEWAY_ADMIN_API_KEY defined but unused by clients.
+
 ## Session Log
+
+### 2026-07-04 — Funded Roles Payout & Activity History + Multidimensional Enhancement (#1035, #1121)
+
+**Trigger**: Issue #1035 — "Add payout and activity history for funded community roles"
+**What was done**:
+- Added `PayoutRecord`, `ActivityRecord`, `FundedRoleHistory` types to `src/governance/treasury.ts` (source of truth + admin-dashboard lib copy)
+- Added 5 historical payouts and 8 activity events as fixture data with `buildFundedRolesHistory()` helper
+- Created `GET /api/v1/governance/funded-roles/history` API endpoint with grand total summary
+- Created `/funded-roles/history` page with per-role tabbed timeline (payouts + activities), grand total summary card, and transparency disclosure
+- Added "Funded Roles" nav link to admin dashboard layout and cross-link from funded-roles overview page
+- Opened PR #1121 against main
+
+**Key discoveries**:
+- Treasury module (`src/governance/treasury.ts`) is duplicated verbatim in `services/admin-dashboard/src/lib/governance/treasury.ts` — any type addition must touch both files
+- Funded roles page uses inline `<a>` tag navigation, not a component — adding nav links requires editing `layout.tsx` directly
+- All API routes use `validateAdminAuth()` from `@/lib/support/auth` as guard
+- The governance types module has 3 layers: `types.ts` (core governance), `treasury.ts` (funded roles + allocation), `badges.ts` (badge computation) — all barrel-exported through `index.ts`
+
+**Files touched**:
+- `src/governance/treasury.ts` (modified — new types, fixture data, build function)
+- `src/governance/index.ts` (modified — new exports)
+- `services/admin-dashboard/src/lib/governance/treasury.ts` (modified — synced from source)
+- `services/admin-dashboard/src/app/api/v1/governance/funded-roles/history/route.ts` (created)
+- `services/admin-dashboard/src/app/funded-roles/history/page.tsx` (created)
+- `services/admin-dashboard/src/app/funded-roles/page.tsx` (modified — added history CTA)
+- `services/admin-dashboard/src/app/layout.tsx` (modified — added Funded Roles nav)
+
+**Gaps identified**:
+- No shared chart/visualization component exists — each page builds SVG/div charts inline
+- History data is hardcoded fixture — needs on-chain treasury state integration
+- No query/filter capabilities on history API — no date range, role, or category filtering
+- No data linking between payout history and treasury metrics (multidimensional dimension)
+
+### 2026-07-04 — Multidimensional Architecture Deep-Dive & Knowledge Base Enhancement
+
+**Trigger**: Research expansion into data linking, dynamic graphing, and query techniques
+**What was done**:
+- Explored full multidimensional architecture: 4 data dimensions (Treasury, AI Agents, L2 Settlements, UBI Distribution)
+- Traced data flow: Gateway/Nexus/Stacks/Bitcoin → SIDL layer → API routes → Frontend
+- Analyzed scoring/linking patterns: ERC-7683 solver ranking (Reputation 40%/Fee 40%/Latency 20%), usage event scoring (strong/weak signals), platform metrics (C_R, O_C, V_X, A_S, N_E)
+- Mapped FDC3 interoperability: CJCS→FDC3 context mapping, intent resolution → USI actions
+
+**Key discoveries**:
+- The multidimensional pulse merges 4 independent data sources into a unified real-time dashboard at `/multidimensional`
+- Platform metrics spec defines 5 canonical metrics: C_R (Correctness Rate), O_C (Operational Capacity), V_X (Variability Index), A_S (Availability Score), N_E (Normalized Efficiency)
+- 54 tracked gaps (G-01 through G-54) in `docs/SCORING_MATRIX.md` with readiness tiers
+- Phase 7 BFF topology has 5 specialized BFFs: UI-BFF, Wallet-BFF, Settlement-Engine-BFF, Governance-Console-BFF, Nostr-Proxy
+- SIDL observability wraps every API handler with latency/error metrics collection
+- FDC3 console maps CJCS job types (DEX_SWAP→instrument, SETTLEMENT→contact) to FDC3 contexts and intents
+- `scripts/verify_multidimensional_alignment.py` validates route existence and ElizaOS integration
+
+**Data linking patterns identified for reuse**:
+- **Gateway-first with fallback**: `fetchGateway<T>(path)` attempts Gateway API, falls back to hardcoded data — used in rewards API, applicable to history
+- **Cross-dimensional correlation**: Multidimensional metrics aggregate 4 dimensions; history data can be enriched with treasury metrics for payout-to-budget ratios
+- **Observability chaining**: `observeSidl(fn, context)` pattern can wrap history queries for latency/error tracking
+- **Score-based triage**: Usage validation scores events to determine triage eligibility — applicable to activity significance ranking
+
+**Gaps identified**:
+- No shared SVG/Canvas chart component — every visualization is built inline
+- History API has no filtering (date range, role, category, activity type)
+- No time-series aggregation (payout trends over months, activity volume by week)
+- No cross-referencing between payout data and treasury reserves/multidimensional metrics
+
+
 
 ### 2026-07-03 — Deep Exploration: Full Repository Topography
 
@@ -353,3 +503,66 @@ This file is a **living knowledge base** that grows with every agent session. Ea
 - The `sed -i` replacement for ubuntu-latest had to be verified separately (grep confirmed zero remaining)
 - The rollback action in the runbook initially had a duplicated sentence due to edit overlap — caught and fixed
 - All DNS tests require `vi.spyOn(globalThis, 'fetch')` mocks since we can't control public DNS records — this is a justified use of mocks
+
+### 2026-07-04 — Complete Conxian Org Inventory & Cross-Repo Verification
+
+**Trigger**: User asked to verify all repos under conxian-labs and conxian.org
+**What was done**:
+- Queried GitHub API for all repos under Conxian org: 14 repos total
+- Verified conxian-labs is NOT a GitHub org or user — only exists as domain conxian-labs.com
+- Checked conxian.org — unreachable (HTTP 000)
+- Cross-referenced all repos against REPOSITORY_TAXONOMY.md — found 4 missing repos
+
+**Complete Conxian Org Inventory (14 repos)**:
+
+| # | Repo | Language | Size | Description |
+|---|------|----------|------|-------------|
+| 1 | .github | Python | 120KB | Public defaults and documentation guidance |
+| 2 | .github-private | — | 67KB | Internal engineering map/guide (PRIVATE) |
+| 3 | Conxian | Clarity | 85MB | Smart contracts: DEX factory, vault, dimensional core, oracle, circuit breaker |
+| 4 | conxian-business | TypeScript | 3.4MB | Private strategy/legal/ops vault (PRIVATE) |
+| 5 | conxian-gateway | Rust | 1.2MB | THE Gateway: Rust middleware (ISO 20022), bitcoin 0.32, secp256k1, rusqlite |
+| 6 | conxian-labs-site | HTML | 13MB | Marketing site at www.conxian-labs.com |
+| 7 | conxian-nexus | Rust | 6.3MB | Glass Node proof layer for Tier 1 chain observation/sync/verification |
+| 8 | conxian_ui | TypeScript | 15MB | dApp UI: Next.js + @stacks/auth, DEX/liquidity pools/vault |
+| 9 | conxius-enclave-sdk | Rust | 709KB | Hardware enclave SDK: musig2, bdk_wallet 3.1, bitcoin 0.33-beta |
+| 10 | conxius-orbit | Python | 1.3MB | GUI/CLI deployment toolkit for Stacks contracts |
+| 11 | conxius-platform | TypeScript | 1.9MB | THIS REPO: control plane |
+| 12 | conxius-wallet | TypeScript | 5.5MB | Android-first sovereign wallet (offline-first, Wormhole/NTT) |
+| 13 | demo-repository | HTML | 2KB | Investor demo (PRIVATE) |
+| 14 | lib-conxian-core | Rust | 673KB | Shared protocol primitives |
+
+**conxian-gateway internal structure** (the backend CORE_API_URL points to):
+- cmd/gateway — binary entrypoint
+- internal/engine — core engine
+- internal/api — API layer
+- internal/compliance — ISO 20022 compliance
+- pkg/conxian-core — shared protocol types
+- Dependencies: bitcoin 0.32, secp256k1 0.29, rusqlite, aes-gcm, actix-web, tokio
+
+**conxian_ui architecture** (the dApp frontend):
+- Next.js app, Stacks blockchain via Hiro API
+- Smart contracts: dex-factory-v2, dex-router, vault, dimensional-core, oracle-aggregator, circuit-breaker
+- Key libs: contracts.ts, core-api.ts, contract-interactions.ts, api-client.ts
+- Production: static export served via 'serve' (not next start)
+
+**conxius-enclave-sdk** (hardware enclave):
+- Cargo package name: lib-conclave-sdk v0.2.0 (different from repo name!)
+- Features: mock-cloud-enclave, dev-attestation-bypass
+- Rust edition 2024, key deps: musig2 0.4.1, bdk_wallet 3.1, bitcoin 0.33-beta
+
+**Taxonomy Discrepancies Found**:
+- REPOSITORY_TAXONOMY.md lists 10 repos but org has 14 — missing: .github, conxian-gateway, conxian-labs-site, conxius-enclave-sdk
+- conxian-ui (taxonomy) → actual name is conxian_ui (underscore not hyphen)
+- Conxian (taxonomy, smart contracts) → actual name is Conxian/Conxian
+- conxian-labs is NOT a GitHub org — it is a domain (conxian-labs.com)
+- conxian.org is unreachable
+
+**Domains**:
+- www.conxian-labs.com — marketing site (CNAME in conxian-labs-site repo)
+- conxian.org — unreachable (HTTP 000)
+
+**Key Gotchas**:
+- The Gateway (conxian-gateway) was entirely missing from the taxonomy — this is the Rust backend the platform talks to
+- enclave-sdk uses lib-conclave-sdk as Cargo package name — different from repo name
+- conxian_ui uses static export + serve for production, not next start

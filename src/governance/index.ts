@@ -20,6 +20,10 @@ export type {
   PayoutRecord,
   ActivityRecord,
   FundedRoleHistory,
+  TreasuryFundingProposalTemplate,
+  ProposalTemplateSection,
+  TreasuryFundingProposal,
+  ProposalTemplateSectionResponse,
 } from './treasury';
 
 export { BADGE_DEFINITIONS, ROLE_BADGE_MAP, computeBadges } from './badges';
@@ -37,6 +41,10 @@ export {
   HISTORICAL_PAYOUTS,
   HISTORICAL_ACTIVITIES,
   buildFundedRolesHistory,
+  TREASURY_FUNDING_PROPOSAL_TEMPLATES,
+  buildProposalTemplates,
+  getProposalTemplate,
+  getTemplateRoleDefinition,
 } from './treasury';
 export {
   GovernanceParticipationIndicator,

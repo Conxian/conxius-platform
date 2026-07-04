@@ -38,6 +38,7 @@ export default function RootLayout({
              <a href="/launch" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Launch</a>
              <a href="/steward" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Steward</a>
              <a href="/funded-roles" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Funded Roles</a>
+             <a href="/proposal-templates" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Proposals</a>
              <a href="/rewards" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Rewards</a>
              <a href="/operators" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Operators</a>
              <a href="/tiers" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Tiers</a>

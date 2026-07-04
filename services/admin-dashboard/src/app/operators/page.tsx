@@ -273,6 +273,42 @@ export default function OperatorRegistryPage() {
         </div>
       </section>
 
+      {/* Cross-link to frontend registry */}
+      <section
+        style={{
+          marginTop: "2rem",
+          padding: "1.25rem",
+          backgroundColor: "rgba(46, 64, 59, 0.04)",
+          borderRadius: "12px",
+          border: "1px solid rgba(46, 64, 59, 0.12)",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <div>
+          <strong style={{ color: "#2E403B", fontSize: "0.9rem" }}>Frontend Registry</strong>
+          <p style={{ margin: "0.25rem 0 0", color: "#64748B", fontSize: "0.8rem" }}>
+            View canonical and community-hosted frontend surfaces with recognition status.
+          </p>
+        </div>
+        <a
+          href="/frontends"
+          style={{
+            padding: "0.5rem 1rem",
+            backgroundColor: "#2E403B",
+            color: "#FFFFFF",
+            borderRadius: "6px",
+            textDecoration: "none",
+            fontSize: "0.8rem",
+            fontWeight: 600,
+            whiteSpace: "nowrap",
+          }}
+        >
+          View Registry →
+        </a>
+      </section>
+
       <footer style={{ marginTop: "4rem", textAlign: "center", color: "#94A3B8", fontSize: "0.875rem" }}>
         Conxian Operator Registry &middot; Governance-Recognized &middot; {new Date().getFullYear()}
       </footer>

@@ -5,8 +5,8 @@ import {
   FUNDED_ROLE_DEFINITIONS,
   type TreasuryFundedRoleProfile,
   type FundedRoleDefinition,
-} from "../../../../../../../src/governance/treasury";
-import type { StewardProfile } from "../../../../../../../src/governance/types";
+  type StewardProfile,
+} from "@/lib/governance/treasury";
 import { getContributorLevel } from "@/lib/launch";
 
 interface FundedRolesResponse {

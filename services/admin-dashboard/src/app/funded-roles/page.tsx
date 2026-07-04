@@ -5,7 +5,7 @@ import type {
   FundedRoleAssignment,
   FundedRoleDefinition,
   TreasuryFundedRoleProfile,
-} from "../../../../../src/governance/treasury";
+} from "@/lib/governance/treasury";
 
 interface FundedRolesResponse {
   profile: TreasuryFundedRoleProfile | null;

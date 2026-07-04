@@ -7,8 +7,8 @@ import type {
   PayoutRecord,
   ActivityRecord,
 } from "@/lib/governance/treasury";
-import { SparklineChart, BarChart, DonutChart } from "@/lib/charts/SparklineChart";
-import type { SparklineDatum, BarChartDatum, DonutSegment } from "@/lib/charts/SparklineChart";
+import { SparklineChart, BarChart } from "@/lib/charts/SparklineChart";
+import type { SparklineDatum, BarChartDatum } from "@/lib/charts/SparklineChart";
 
 interface MonthlyPayoutPoint {
   month: string;
@@ -476,13 +476,6 @@ export default function FundedRolesHistoryPage() {
       label: a.categoryLabel,
       value: a.totalSats,
       color: CATEGORY_COLORS[a.category] ?? "#6B7280",
-    })) ?? [];
-
-  const activityDonut: DonutSegment[] =
-    tdl?.activityTypeBreakdown.map((a) => ({
-      label: ACTIVITY_TYPE_LABELS[a.activityType] ?? a.activityType,
-      value: a.count,
-      color: CATEGORY_COLORS["governance-rewards"],
     })) ?? [];
 
   return (

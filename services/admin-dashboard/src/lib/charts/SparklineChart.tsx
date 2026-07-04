@@ -250,7 +250,6 @@ export function DonutChart({
   const total = segments.reduce((s, seg) => s + seg.value, 0) || 1;
   const center = size / 2;
   const radius = center - thickness / 2;
-  const circumference = 2 * Math.PI * radius;
 
   let cumulativeAngle = -Math.PI / 2;
 

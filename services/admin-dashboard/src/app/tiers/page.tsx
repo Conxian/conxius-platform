@@ -429,9 +429,9 @@ export default function TiersPage() {
       if (!res.ok) throw new Error(`Failed to fetch contributor profile: ${res.status}`);
       const d: ContributorProfile = await res.json();
       setProfile(d);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message);
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }

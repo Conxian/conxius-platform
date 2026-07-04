@@ -1,3 +1,4 @@
+import { createLogger } from "./logger";
 /**
  * ZKCP (Zero-Knowledge Contingent Payments) Bridge (G-50)
  *

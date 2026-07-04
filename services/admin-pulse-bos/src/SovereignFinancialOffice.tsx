@@ -24,8 +24,8 @@ export default function SovereignFinancialOffice() {
   }, [selectedUnit]);
 
   const simulateFiscalPulse = () => {
-    const mockReserve = Math.floor(Math.random() * 1000000);
-    const mockYield = Math.floor(Math.random() * 50000);
+    const mockReserve = 420000;
+    const mockYield = 27300;
     const mockYieldIndex = (mockYield / (mockReserve + mockYield)) * 10000;
     
     setFiscalData({
@@ -38,7 +38,7 @@ export default function SovereignFinancialOffice() {
   };
 
   const harvestYield = () => {
-    console.log(`[SFO] Initiating harvest for ${selectedUnit}...`);
+    // SFO harvest tick Initiating harvest for ${selectedUnit}...`);
     simulateFiscalPulse();
   };
 

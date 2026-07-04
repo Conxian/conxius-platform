@@ -108,9 +108,9 @@ export default function LaunchPage() {
       const [profileData, communityData] = await Promise.all([profileRes.json(), communityRes.json()]);
       setProfile(profileData);
       setCommunityStats(communityData);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message);
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }

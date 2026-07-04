@@ -28,8 +28,8 @@ export default function SupportPage() {
         const err = await res.json();
         setStatus(`Sync failed: ${err.error}`);
       }
-    } catch (err: any) {
-      setStatus(`Error: ${err.message}`);
+    } catch (err: unknown) {
+      setStatus(`Error: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setLoading(false);
     }

@@ -1,3 +1,4 @@
+import { createLogger } from "./logger";
 /**
  * G-12: ERC-7683 Solver Selection Algorithm (CON-1307)
  *
@@ -46,7 +47,7 @@ export class SolverSelectionEngine {
 
         return { ...solver, score };
       })
-      .sort((a: any, b: any) => b.score - a.score);
+      .sort((a: Record<string, number>, b: Record<string, number>) => b.score - a.score);
   }
 
   /**

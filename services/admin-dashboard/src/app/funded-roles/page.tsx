@@ -184,9 +184,9 @@ export default function FundedRolesPage() {
       if (!res.ok) throw new Error(`Failed to fetch funded roles: ${res.status}`);
       const d = await res.json();
       setData(d);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message);
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }

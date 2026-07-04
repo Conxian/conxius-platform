@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     const worker = new ImapWorker();
     await worker.poll();
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Support Sync] Error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

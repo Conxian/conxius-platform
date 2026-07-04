@@ -36,7 +36,7 @@ type TelemetryService = {
   health: string;
 };
 
-async function fetchJsonWithFallback(baseUrl: string, paths: string[]): Promise<any> {
+async function fetchJsonWithFallback(baseUrl: string, paths: string[]): Promise<Record<string, unknown> | null> {
   for (const p of paths) {
     try {
       const r = await fetch(`${baseUrl}${p}`, { cache: 'no-store' });
@@ -48,19 +48,19 @@ async function fetchJsonWithFallback(baseUrl: string, paths: string[]): Promise<
   return null;
 }
 
-function getString(obj: any, key: string): string {
+function getString(obj: Record<string, unknown>, key: string): string {
   return typeof obj?.[key] === 'string' ? obj[key] : "";
 }
 
-function getNumber(obj: any, key: string): number {
+function getNumber(obj: Record<string, unknown>, key: string): number {
   return typeof obj?.[key] === 'number' ? obj[key] : 0;
 }
 
-function getBoolean(obj: any, key: string): boolean | null {
+function getBoolean(obj: Record<string, unknown>, key: string): boolean | null {
   return typeof obj?.[key] === 'boolean' ? obj[key] : null;
 }
 
-function normalizeNexusState(nexus: any, status: any): NexusState {
+function normalizeNexusState(nexus: Record<string, unknown>, status: Record<string, unknown>): NexusState {
   return {
     merkleRoot: getString(nexus, "merkle_root") || getString(status, "state_root") || getString(status, "mmr_root") || "N/A",
     syncStatus: getString(nexus, "sync_status") || (getNumber(status, "drift") === 0 ? "synced" : "syncing"),
@@ -70,7 +70,7 @@ function normalizeNexusState(nexus: any, status: any): NexusState {
 
 function BlueprintCard() {
   const [show, setShow] = useState(false);
-  const [blueprint, setBlueprint] = useState<any>(null);
+  const [blueprint, setBlueprint] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -83,8 +83,8 @@ function BlueprintCard() {
       const data = await res.json();
       setBlueprint(data);
       setShow(true);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
@@ -121,8 +121,8 @@ export default function AdminPage() {
   const [nexus, setNexus] = useState<NexusState | null>(null);
   const [erpData, setErpData] = useState<ErpDashboardData | null>(null);
   const [telemetry, setTelemetry] = useState<TelemetryService[]>([]);
-  const [rewardsData, setRewardsData] = useState<any>(null);
-  const [frontendsData, setFrontendsData] = useState<any>(null);
+  const [rewardsData, setRewardsData] = useState<Record<string, unknown> | null>(null);
+  const [frontendsData, setFrontendsData] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -278,7 +278,7 @@ export default function AdminPage() {
             <a href="/rewards" style={{ fontSize: "0.75rem", color: "#D4A017", textDecoration: "none" }}>View breakdown →</a>
           </h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem", marginTop: "1rem" }}>
-            {rewardsData.allocation.map((a: any) => (
+            {rewardsData.allocation.map((a: Record<string, unknown>) => (
               <div key={a.category} style={{
                 backgroundColor: "white",
                 padding: "1rem",
@@ -299,7 +299,7 @@ export default function AdminPage() {
             ))}
           </div>
           <div style={{ marginTop: "0.75rem", display: "flex", borderRadius: "6px", overflow: "hidden", height: "8px" }}>
-            {rewardsData.allocation.map((a: any) => (
+            {rewardsData.allocation.map((a: Record<string, unknown>) => (
               <div key={a.category} style={{
                 flex: a.amount_sats,
                 backgroundColor: a.category === "Community Rewards" ? "#059669" : a.category === "Governance Rewards" ? "#7C3AED" : a.category === "Operational Rewards" ? "#2563EB" : "#D4A017",
@@ -333,7 +333,7 @@ export default function AdminPage() {
             </div>
           </div>
           <p style={{ fontSize: "0.75rem", color: "#94A3B8", marginTop: "0.5rem" }}>
-            {frontendsData.frontends.filter((f: any) => f.status === "pending-governance-review").length} pending governance review
+            {frontendsData.frontends.filter((f: Record<string, unknown>) => f.status === "pending-governance-review").length} pending governance review
           </p>
         </section>
       )}

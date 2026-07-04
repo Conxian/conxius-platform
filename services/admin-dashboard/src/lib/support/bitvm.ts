@@ -1,3 +1,4 @@
+import { createLogger } from "./logger";
 /**
  * G-01: BitVM2 Verification Floor
  * G-11: BitVM2 Multi-Party Aggregation (CON-1306)

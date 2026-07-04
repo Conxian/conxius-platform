@@ -1,3 +1,4 @@
+import { createLogger } from "./logger";
 /**
  * G-20: BitVM3 Adaptive Proof Verification
  *

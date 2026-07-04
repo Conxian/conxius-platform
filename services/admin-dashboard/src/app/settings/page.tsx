@@ -71,9 +71,9 @@ export default function SettingsPage() {
         const err = await res.json();
         setMessage({ text: `Failed to save settings: ${err.error}`, type: 'error' });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setMessage({ text: `Error: ${err.message}`, type: 'error' });
+      setMessage({ text: `Error: ${err instanceof Error ? err.message : String(err)}`, type: 'error' });
     } finally {
       setLoading(false);
     }

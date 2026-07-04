@@ -1,3 +1,5 @@
+import { createLogger } from "./logger";
+const log = createLogger("EventBus");
 
 import { randomUUID } from "crypto";
 import type { CrossChainEvent, EventBusState, EventDeliveryStatus, EventDeliveryRecord } from "../sidl/types";
@@ -56,24 +58,24 @@ export class EventDeliveryRuntime {
     };
 
     try {
-      console.log(`[EventBus] Delivering event ${event.id} (type: ${event.event_type})`);
+      log.info(` Delivering event ${event.id} (type: ${event.event_type})`);
 
       // Simulate delivery to downstream transport adapters (e.g. Webhook, Nostr, Websocket)
       await this.simulateAdapterDelivery(event);
 
       record.status = "delivered";
       record.last_attempt_at_iso = new Date().toISOString();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
       record.retry_count += 1;
-      record.error = error.message;
+      record.error = msg;
 
       if (record.retry_count <= MAX_RETRIES) {
         record.status = "retrying";
-        console.warn(`[EventBus] Delivery failed for ${event.id}, retrying (${record.retry_count}/${MAX_RETRIES})`);
-        // In a real system, we'd schedule a background job here
+        log.warn(` Delivery failed for ${event.id}, retrying (${record.retry_count}/${MAX_RETRIES})`);
       } else {
         record.status = "failed";
-        console.error(`[EventBus] Delivery permanently failed for ${event.id}: ${error.message}`);
+        log.error(` Delivery permanently failed for ${event.id}: ${msg}`);
       }
     }
 

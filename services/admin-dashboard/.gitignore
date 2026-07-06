@@ -3,11 +3,9 @@ node_modules
 out
 build
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.env.admin
+.env.*
+!.env.example
+!.env.admin.example
 .sidl-state.json
 .DS_Store
 *.log

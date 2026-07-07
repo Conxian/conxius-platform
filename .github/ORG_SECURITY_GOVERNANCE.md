@@ -251,7 +251,26 @@ Per [conxius-platform#854](https://github.com/Conxian/conxius-platform/issues/85
 - **Weekly**: Secret scanning and push protection review
 - **On-demand**: After any org or repo configuration change
 
-### 8.2 Verification Evidence
+### 8.2 Automated Verification
+
+Automated verification is available via:
+
+| Tool | Description | Usage |
+|------|-------------|-------|
+| `.github/workflows/org-security-verify.yml` | GitHub Actions workflow for periodic verification | Run manually or on schedule |
+| `scripts/verify_org_security.py` | Python script for detailed verification | `python scripts/verify_org_security.py --org Conxian --token $GITHUB_TOKEN` |
+
+**Running Verification:**
+
+```bash
+# Using the script (requires GitHub token)
+python scripts/verify_org_security.py --org Conxian --token $GITHUB_TOKEN --output markdown
+
+# Using the workflow (GitHub Actions)
+# Navigate to: Actions > Org Security Verification > Run workflow
+```
+
+### 8.3 Verification Evidence
 
 Verification evidence must include:
 
@@ -260,7 +279,7 @@ Verification evidence must include:
 - Verifier identity
 - Any discrepancies found
 
-### 8.3 Verification Repository Checklist
+### 8.4 Verification Repository Checklist
 
 Priority repositories for live verification:
 
@@ -297,5 +316,7 @@ Unacceptable verification evidence:
 
 - [`.github/BRANCH_PROTECTION_RULESETS.md`](./BRANCH_PROTECTION_RULESETS.md) — Repo-level ruleset definitions
 - [`.github/CONXIUS_CICD_BASELINE.md`](./CONXIUS_CICD_BASELINE.md) — CI/CD baseline standards
+- [`.github/workflows/org-security-verify.yml`](../.github/workflows/org-security-verify.yml) — Automated verification workflow
+- [`scripts/verify_org_security.py`](../scripts/verify_org_security.py) — Verification script
 - [`RELEASE_POLICY.md`](../RELEASE_POLICY.md) — Release promotion cycle and branch strategy
 - [`docs/BRANCH-MAINTENANCE.md`](../docs/BRANCH-MAINTENANCE.md) — Branch lifecycle management

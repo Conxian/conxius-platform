@@ -6,6 +6,8 @@ This repository is governed by Conxian Labs and uses a pull-request-first workfl
 
 This repository operates three distinct governance lanes that must not be collapsed into one another. The lane model is a practical bridge between the governance rules below and the four-tier [Information Hierarchy](./docs/INFORMATION_HIERARCHY.md) (canonical → operational → evidence → historical).
 
+> **Org-Level Security**: See [`.github/ORG_SECURITY_GOVERNANCE.md`](.github/ORG_SECURITY_GOVERNANCE.md) for org-wide GitHub rulesets, push protection requirements, and security posture controls.
+
 ### 1. Governance Baseline Lane (*how and why we govern*)
 
 The governance baseline is the set of policies, contracts, and control rules that define how this repository is managed. It lives in:
@@ -20,6 +22,8 @@ The governance baseline is the set of policies, contracts, and control rules tha
 - [`RELEASE_CONTROL.md`](./RELEASE_CONTROL.md) — portfolio release control path, repo classification, and minimum release controls per risk class
 - [`docs/REPO_BOUNDARY_CONTRACT_V1.md`](./docs/REPO_BOUNDARY_CONTRACT_V1.md) — cross-repository ownership boundaries
 - [`docs/PRODUCTION_BOUNDARY.md`](./docs/PRODUCTION_BOUNDARY.md) — production boundary and operator-safety constraints
+- [`.github/ORG_SECURITY_GOVERNANCE.md`](.github/ORG_SECURITY_GOVERNANCE.md) — org-wide GitHub rulesets and push protection
+- [`.github/ORG_EXCEPTIONS.md`](.github/ORG_EXCEPTIONS.md) — approved exceptions to org security requirements
 
 Changes to governance baseline documents must follow the OpenSpec-first model and are reviewed by the owners mapped in `CODEOWNERS`. These documents are the *source of truth* for how the repository is operated; they are never overridden by live execution artifacts or historical context.
 

@@ -3,8 +3,8 @@ name: Action Version Audit
 on:
   pull_request:
     branches: [main, dev, 'release/**']
-    paths:
-      - '.github/workflows/**'
+    # Removed paths restriction to run on all PR events
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main, dev, 'release/**']
     paths:

@@ -20,6 +20,7 @@ function buildContributorProfile(address: string): ContributorProfile {
     proposals_passed,
   });
 
+  // NOTE: Simulated/Mock Data for Phase 7 Transition
   const minted_token_history: MintedTokenEntry[] = [
     {
       token_id: "CXD-2026-Q1",

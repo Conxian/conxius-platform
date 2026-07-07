@@ -30,5 +30,6 @@ We will acknowledge receipt and coordinate remediation privately.
 ## Security expectations
 
 - do not commit secrets, credentials, or production-sensitive configuration
-- prefer templates and examples for environment setup
+- **Defense in Depth**: We maintain multi-layered `.gitignore` rules at both root and service levels to prevent accidental exposure of sensitive files (e.g., `.env`, `.DS_Store`).
+- **Environment Hygiene**: Prefer templates and examples (e.g., `.env.example`, `.env.admin.example`) for local environment setup.
 - rotate any exposed credentials immediately

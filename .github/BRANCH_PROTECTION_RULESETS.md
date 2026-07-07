@@ -4,9 +4,14 @@ This document defines the GitHub rulesets that must be configured on
 `Conxian/conxius-platform` to enforce the branch promotion cycle
 defined in [`RELEASE_POLICY.md`](../RELEASE_POLICY.md).
 
+> **Note**: For org-wide rulesets and push protection requirements,
+> see [`ORG_SECURITY_GOVERNANCE.md`](./ORG_SECURITY_GOVERNANCE.md).
+> This document focuses on repository-level branch protection rules.
+
 Traceability:
 
 - Implements [conxius-platform#917](https://github.com/Conxian/conxius-platform/issues/917)
+- Supports [conxius-platform#854](https://github.com/Conxian/conxius-platform/issues/854) (Org-wide rulesets)
 - Supports [conxius-platform#1103](https://github.com/Conxian/conxius-platform/issues/1103) (CI/CD strict enforcement EPIC)
 - Aligned with branch strategy: `feature/*` → `dev` → `release/x.y` → `main`
 
@@ -130,3 +135,5 @@ If GitHub rulesets do not match the policy defined here:
 - [`docs/BRANCH-MAINTENANCE.md`](../docs/BRANCH-MAINTENANCE.md) — Branch lifecycle and cleanup
 - [`.github/CONXIUS_CICD_BASELINE.md`](./CONXIUS_CICD_BASELINE.md) — CI/CD baseline standards
 - [`.github/RELEASE_HYGIENE.md`](./RELEASE_HYGIENE.md) — Release hygiene and checks
+- [`.github/ORG_SECURITY_GOVERNANCE.md`](./ORG_SECURITY_GOVERNANCE.md) — Org-wide rulesets and push protection
+- [`.github/ORG_EXCEPTIONS.md`](./ORG_EXCEPTIONS.md) — Approved exceptions to org security requirements

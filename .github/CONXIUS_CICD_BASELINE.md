@@ -212,4 +212,4 @@ These schemas are consumed by Platform, Gateway, Nexus, and release workflows.
 ---
 
 *Maintained per Issue #968 - Org-wide CI/CD Governance Baseline*
-*Last updated: June 2026 (v2 — control-plane boundary and promotion model per #975)*
+*Last updated: July 2026 (org security governance per #854)*

@@ -36,6 +36,7 @@ export class ImapWorker {
       logger: false,
     });
     this.linearApiKey = process.env.SUPPORT_LINEAR_API_KEY || '';
+    // NOTE: Simulated/Mock Data for Phase 7 Transition
     this.teamId = process.env.SUPPORT_LINEAR_TEAM_ID || 'f14418e4-03cd-4fb4-8259-e5a9af8cb296';
 
     this.transporter = nodemailer.createTransport({

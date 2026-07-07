@@ -31,7 +31,7 @@ pnpm install
 make init
 ```
 
-Use development credentials only. Never commit real secrets.
+Use development credentials only. Never commit real secrets. Follow strict environment hygiene: do not commit `.env` files, `.DS_Store`, or generated artifacts. Use provided templates like `.env.example` or service-specific templates (e.g., `services/admin-dashboard/.env.admin.example`) for local configuration.
 
 ## Change workflow
 
@@ -55,4 +55,5 @@ You can run targeted checks for a specific package with `pnpm --filter <package>
 
 - Follow `SECURITY.md` for vulnerability reporting.
 - Keep environment templates in `.env.example` and schema files; do not commit secrets.
+- **Environment Isolation**: Service-specific secrets (e.g., for the Admin Dashboard) must be kept in their respective service directories using the `.env.admin` pattern, which is globally ignored.
 - Respect repository ownership and review expectations in `CODEOWNERS`.

@@ -782,3 +782,22 @@ scope in #1074 depends on whether additional template categories are needed.
 docs/CI_CD_BASELINE_GAP_ANALYSIS.md (new), .github/RELEASE_HYGIENE.md (modified),
 AGENTS.md (this update)
 
+
+### 2026-07-09 — Strategic Plan & Architecture for `market` Repo Integration
+**Trigger**: Strategic query on adding a potential `market` repository under the Conxian organization and assessing its impact on the platform's vision.
+**What was done**:
+- Conducted an end-to-end architectural, commercial, and control-plane impact review of a potential `conxian-market` repository.
+- Authored a canonical integration specification file at `docs/architecture/PHASE_7_MARKET_INTEGRATION.md` detailing security constraints (zero-custody, PSBT/Stacks transaction preparation, client-side Wasm logic) and platform OIDC gating.
+- Extended the platform's central capability registry (`schemas/capabilities.json`) to register two new market nodes: `market-quote` (non-custodial swap quotes) and `market-swap` (PSBT/Stacks transaction preparation).
+- Logged strategy briefs and limit notices inside active control issues (CON-1247).
+**Key discoveries**:
+- The Central Capability Registry matches inputs and outputs directly with standard schema boundaries. Adding `market-quote` and `market-swap` enables the platform to govern the API definitions of the proposed market layer before initialization.
+- The Linear workspace has reached its limit of free issues. New feature requirements must be documented in declarative platform files and `AGENTS.md` before workspace plan changes are active.
+**Files touched**:
+- `docs/architecture/PHASE_7_MARKET_INTEGRATION.md` (created)
+- `schemas/capabilities.json` (modified)
+- `AGENTS.md` (modified)
+**Gaps identified**:
+- The future `conxian-market` repository needs initial scaffolding configured in phase 1 (core hygiene, CODEOWNERS, root `pnpm-workspace.yaml`).
+**Gotchas**:
+- Linear returns `invalid_request` status 400 when attempting to create issues if the free quota is exceeded. Document strategy internally rather than using external links.

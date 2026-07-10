@@ -118,27 +118,76 @@ class OrgSecurityVerifier:
                 return result
             elif response.status_code == 404:
                 return {
-                    'status': 'unavailable',
-                    'error': 'Rulesets API requires GitHub Enterprise',
-                    'note': 'Verify rulesets manually in organization settings'
+                    'status': 'requires_enterprise',
+                    'error': 'Rulesets API requires GitHub Enterprise Cloud',
+                    'note': 'Manual verification required in organization settings',
+                    'manual_checklist': [
+                        'Go to https://github.com/organizations/{}/settings/rules'.format(self.org),
+                        'Verify org-default-branch-protection ruleset exists and is active',
+                        'Verify org-secret-scanning-enforcement ruleset exists and is active',
+                        'Verify org-dependency-review ruleset exists and is active',
+                        'Verify org-push-protection ruleset exists and is active'
+                    ]
+                }
+            elif response.status_code == 403:
+                return {
+                    'status': 'requires_permissions',
+                    'error': 'Admin permissions required for rulesets API',
+                    'note': 'Token needs admin:org scope or org owner role',
+                    'manual_checklist': [
+                        'Request org admin to verify rulesets configuration',
+                        'Or use an admin token with org ruleset read permissions',
+                        'Manual check: https://github.com/organizations/{}/settings/rules'.format(self.org)
+                    ]
                 }
             else:
                 return {
                     'status': 'error',
-                    'error': f'HTTP {response.status_code}'
+                    'error': f'HTTP {response.status_code}: {response.text}'
                 }
         except Exception as e:
             return {'status': 'error', 'error': str(e)}
 
     def check_branch_protection(self, repo: str, branch: str = 'main') -> dict[str, Any]:
         """Check branch protection for a repository."""
-        url = f'https://api.github.com/repos/{self.org}/{repo}/branches/{branch}/protection'
+        # First, get the default branch if not specified
+        default_url = f'https://api.github.com/repos/{self.org}/{repo}'
+        try:
+            resp = requests.get(default_url, headers=self.headers)
+            if resp.status_code == 200:
+                repo_info = resp.json()
+                default_branch = repo_info.get('default_branch', branch)
+            elif resp.status_code == 404:
+                return {
+                    'status': 'not_found',
+                    'error': f'Repository {repo} not found',
+                    'note': 'Check if repository name is correct'
+                }
+            elif resp.status_code == 403:
+                return {
+                    'status': 'requires_permissions',
+                    'error': 'Admin permissions required for branch protection API',
+                    'note': 'Token needs admin:repo_hook scope or repository admin role',
+                    'manual_checklist': [
+                        f'Go to https://github.com/{self.org}/{repo}/settings/branches',
+                        'Verify branch protection rules are configured',
+                        'Document: PR reviews required, linear history, force push blocked'
+                    ]
+                }
+            else:
+                return {'status': 'error', 'error': f'HTTP {resp.status_code}'}
+        except Exception as e:
+            return {'status': 'error', 'error': str(e)}
+
+        # Now check branch protection for the default branch
+        url = f'https://api.github.com/repos/{self.org}/{repo}/branches/{default_branch}/protection'
         try:
             response = requests.get(url, headers=self.headers)
             if response.status_code == 200:
                 protection = response.json()
                 return {
                     'status': 'protected',
+                    'default_branch': default_branch,
                     'require_pr_reviews': protection.get('required_pull_request_reviews', {}).get('required', False),
                     'required_approving_review_count': protection.get('required_pull_request_reviews', {}).get('required_approving_review_count'),
                     'dismiss_stale_reviews': protection.get('dismiss_stale_reviews', False),
@@ -148,17 +197,23 @@ class OrgSecurityVerifier:
                     'required_status_checks': protection.get('required_status_checks', []),
                 }
             elif response.status_code == 404:
-                # Try default branch
-                default_url = f'https://api.github.com/repos/{self.org}/{repo}'
-                resp = requests.get(default_url, headers=self.headers)
-                if resp.status_code == 200:
-                    default_branch = resp.json().get('default_branch', 'unknown')
-                    return {
-                        'status': 'no_protection',
-                        'default_branch': default_branch,
-                        'note': f'No protection configured for {default_branch}'
-                    }
-                return {'status': 'error', 'error': f'HTTP {resp.status_code}'}
+                return {
+                    'status': 'no_protection',
+                    'default_branch': default_branch,
+                    'note': f'No protection configured for {default_branch}'
+                }
+            elif response.status_code == 403:
+                return {
+                    'status': 'requires_permissions',
+                    'default_branch': default_branch,
+                    'error': 'Admin permissions required for branch protection API',
+                    'note': 'Token needs admin:repo_hook scope or repository admin role',
+                    'manual_checklist': [
+                        f'Go to https://github.com/{self.org}/{repo}/settings/branches',
+                        'Verify branch protection rules are configured',
+                        'Document: PR reviews required, linear history, force push blocked'
+                    ]
+                }
             else:
                 return {'status': 'error', 'error': f'HTTP {response.status_code}'}
         except Exception as e:
@@ -167,16 +222,35 @@ class OrgSecurityVerifier:
     def check_all_priority_repos(self) -> dict[str, Any]:
         """Check branch protection on all priority repositories."""
         results = {}
+        protected_count = 0
+        requires_manual_count = 0
+        not_protected_count = 0
+        
         for repo in self.PRIORITY_REPOS:
             print(f"Checking {repo}...")
             result = self.check_branch_protection(repo)
             results[repo] = result
+            
             if result['status'] == 'protected':
-                print(f"  ✓ Protected")
+                print(f"  ✓ Protected ({result.get('default_branch', 'unknown')})")
+                protected_count += 1
             elif result['status'] == 'no_protection':
                 print(f"  ✗ Not protected ({result.get('default_branch', 'unknown')})")
+                not_protected_count += 1
+            elif result['status'] == 'requires_permissions':
+                print(f"  ⚠ Requires admin permissions")
+                requires_manual_count += 1
+            elif result['status'] == 'not_found':
+                print(f"  ✗ Repository not found")
             else:
                 print(f"  ? {result.get('error', 'Unknown error')}")
+        
+        results['_summary'] = {
+            'protected': protected_count,
+            'not_protected': not_protected_count,
+            'requires_manual': requires_manual_count,
+            'total': len(self.PRIORITY_REPOS)
+        }
         return results
 
     def check_secret_scanning(self, repo: str) -> dict[str, Any]:
@@ -237,9 +311,16 @@ class OrgSecurityVerifier:
             print(f"   ✓ Found {rulesets.get('ruleset_count', 0)} rulesets")
             for req in rulesets.get('required_found', []):
                 print(f"     - {req}")
-        elif rulesets.get('status') == 'unavailable':
-            print(f"   ⚠ Rulesets API unavailable (requires GitHub Enterprise)")
-            print(f"     Manual verification required in organization settings")
+        elif rulesets.get('status') == 'requires_enterprise':
+            print(f"   ⚠ Rulesets API requires GitHub Enterprise Cloud")
+            print(f"   Manual verification required:")
+            for step in rulesets.get('manual_checklist', []):
+                print(f"     - {step}")
+        elif rulesets.get('status') == 'requires_permissions':
+            print(f"   ⚠ Admin permissions required for rulesets API")
+            print(f"   Manual verification required:")
+            for step in rulesets.get('manual_checklist', []):
+                print(f"     - {step}")
         else:
             print(f"   ✗ {rulesets.get('error', 'Unknown error')}")
 
@@ -248,16 +329,23 @@ class OrgSecurityVerifier:
         branch_protection = self.check_all_priority_repos()
         self.results['checks']['branch_protection'] = branch_protection
 
-        protected_count = len([r for r in branch_protection.values() if r.get('status') == 'protected'])
-        print(f"\n   Summary: {protected_count}/{len(self.PRIORITY_REPOS)} repositories protected")
+        summary = branch_protection.get('_summary', {})
+        protected_count = summary.get('protected', 0)
+        requires_manual = summary.get('requires_manual', 0)
+        total = summary.get('total', len(self.PRIORITY_REPOS))
+        
+        print(f"\n   Summary: {protected_count}/{total} repositories protected")
+        if requires_manual > 0:
+            print(f"   ⚠ {requires_manual} repositories require manual verification (admin permissions needed)")
 
         # Summary
         self.results['summary'] = {
             'org_verified': org_settings.get('status') == 'success',
             'rulesets_available': rulesets.get('status') == 'success',
-            'rulesets_require_manual': rulesets.get('status') == 'unavailable',
+            'rulesets_requires_manual': rulesets.get('status') in ['requires_enterprise', 'requires_permissions'],
             'branch_protection_protected': protected_count,
-            'branch_protection_total': len(self.PRIORITY_REPOS),
+            'branch_protection_requires_manual': requires_manual,
+            'branch_protection_total': total,
             'verification_complete': True
         }
 
@@ -277,6 +365,10 @@ class OrgSecurityVerifier:
         r = self.results
         checks = r.get('checks', {})
         
+        # Calculate summary status
+        rulesets_status = checks.get('rulesets', {}).get('status', 'unknown')
+        bp_summary = checks.get('branch_protection', {}).get('_summary', {})
+        
         md = f"""# Org Security Verification Report
 
 **Date**: {r['verification_date']}  
@@ -290,8 +382,8 @@ class OrgSecurityVerifier:
 | Check | Status |
 |-------|--------|
 | Organization Settings | {'✓' if checks.get('org_settings', {}).get('status') == 'success' else '✗'} |
-| Rulesets (Automated) | {'✓' if checks.get('rulesets', {}).get('status') == 'success' else '⚠' if checks.get('rulesets', {}).get('status') == 'unavailable' else '✗'} |
-| Branch Protection | {checks.get('branch_protection', {}).get('protected_count', 0)}/{checks.get('branch_protection', {}).get('total_count', len(self.PRIORITY_REPOS))} |
+| Rulesets (Automated) | {'✓' if rulesets_status == 'success' else '⚠ Manual Required' if rulesets_status in ['requires_enterprise', 'requires_permissions'] else '✗'} |
+| Branch Protection | {bp_summary.get('protected', 0)}/{bp_summary.get('total', len(self.PRIORITY_REPOS))} protected{' (⚠ ' + str(bp_summary.get('requires_manual', 0)) + ' require manual)' if bp_summary.get('requires_manual', 0) > 0 else ''} |
 
 ---
 
@@ -322,21 +414,56 @@ class OrgSecurityVerifier:
             md += f"\n**Required rulesets found:**\n"
             for req in rulesets.get('required_found', []):
                 md += f"- ✓ {req}\n"
-        elif rulesets.get('status') == 'unavailable':
-            md += """⚠ **Rulesets API requires GitHub Enterprise**
+        elif rulesets.get('status') == 'requires_enterprise':
+            md += """⚠ **Rulesets API requires GitHub Enterprise Cloud**
 
-Manual verification required. To verify rulesets manually:
+Automated verification is not available. Manual verification required.
+
+**Manual Verification Steps:**
 
 1. Go to your organization settings
 2. Navigate to **Rules → Rulesets**
 3. Verify the following rulesets are configured and active:
-   - `org-default-branch-protection`
-   - `org-secret-scanning-enforcement`
-   - `org-dependency-review`
-   - `org-push-protection`
+
+| Ruleset Name | Expected Enforcement |
+|--------------|---------------------|
+| `org-default-branch-protection` | Active |
+| `org-secret-scanning-enforcement` | Active |
+| `org-dependency-review` | Active |
+| `org-push-protection` | Active |
+
+**Required Ruleset Settings (per ORG_SECURITY_GOVERNANCE.md):**
+
+- ✓ Require pull request reviews (1 approval minimum)
+- ✓ Dismiss stale reviews enabled
+- ✓ Require linear history enabled
+- ✓ Block force pushes enabled
+- ✓ Block deletions enabled
+- ✓ Secret scanning enabled (all repositories)
+- ✓ Push protection enabled (public repositories)
+- ✓ Dependency review enabled
 
 See: [.github/ORG_SECURITY_GOVERNANCE.md](.github/ORG_SECURITY_GOVERNANCE.md)
 """
+        elif rulesets.get('status') == 'requires_permissions':
+            md += """⚠ **Admin permissions required for rulesets API**
+
+Your token does not have sufficient permissions to access the rulesets API.
+
+**Options:**
+
+1. **Request org admin assistance**: Ask an org admin to verify and document the ruleset configuration
+2. **Use an admin token**: Generate a token with `admin:org` scope
+3. **Manual verification**: Check the rulesets manually in org settings
+
+**Manual Verification Steps:**
+
+1. Go to https://github.com/organizations/{}/settings/rules
+2. Document the current ruleset configuration
+3. Verify all required rulesets are active per ORG_SECURITY_GOVERNANCE.md
+
+See: [.github/ORG_SECURITY_GOVERNANCE.md](.github/ORG_SECURITY_GOVERNANCE.md)
+""".format(self.org)
         else:
             md += f"- **Error**: {rulesets.get('error', 'Unknown')}\n"
 
@@ -351,15 +478,21 @@ See: [.github/ORG_SECURITY_GOVERNANCE.md](.github/ORG_SECURITY_GOVERNANCE.md)
         md += "|------------|--------|--------|\n"
         
         for repo, protection in bp.items():
+            if repo == '_summary':
+                continue
             status = protection.get('status', 'unknown')
             if status == 'protected':
-                details = f"PR: {protection.get('require_pr_reviews', False)}, Linear: {protection.get('require_linear_history', False)}"
+                details = f"PR: {protection.get('require_pr_reviews', False)}, Linear: {protection.get('require_linear_history', False)}, ForcePush: {protection.get('block_force_pushes', False)}"
             elif status == 'no_protection':
                 details = f"No protection on {protection.get('default_branch', 'branch')}"
+            elif status == 'requires_permissions':
+                details = "Admin permissions required - manual check needed"
+            elif status == 'not_found':
+                details = protection.get('error', 'Unknown')
             else:
                 details = protection.get('error', 'Unknown')
             
-            icon = '✓' if status == 'protected' else '✗' if status == 'no_protection' else '?'
+            icon = '✓' if status == 'protected' else '✗' if status in ['no_protection', 'not_found'] else '⚠'
             md += f"| {repo} | {icon} | {details} |\n"
 
         md += """

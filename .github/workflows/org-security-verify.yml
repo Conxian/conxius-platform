@@ -95,14 +95,34 @@ jobs:
                   f.write(f"ruleset_count={len(rulesets)}\n")
                   f.write(f"active_rulesets={len(active_rulesets)}\n")
                   f.write(f"status=pass\n")
-          elif response.status_code == 404:
-              print("Rulesets API not available (requires GitHub Enterprise)")
+          elif response.status_code == 403:
+              print("⚠ Admin permissions required for rulesets API")
+              print("The GITHUB_TOKEN does not have sufficient permissions to access rulesets.")
+              print("Manual verification required in org settings.")
+              print("")
+              print("To verify manually:")
+              print(f"  1. Go to https://github.com/organizations/{org}/settings/rules")
+              print("  2. Document the ruleset configuration")
+              print("  3. Verify required rulesets per .github/ORG_SECURITY_GOVERNANCE.md")
               with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
                   f.write("ruleset_count=0\n")
                   f.write("active_rulesets=0\n")
-                  f.write("status=manual_required\n")
+                  f.write("status=requires_permissions\n")
+          elif response.status_code == 404:
+              print("⚠ Rulesets API not available (requires GitHub Enterprise)")
+              print("Manual verification required in org settings.")
+              print("")
+              print("To verify manually:")
+              print(f"  1. Go to https://github.com/organizations/{org}/settings/rules")
+              print("  2. Document the ruleset configuration")
+              print("  3. Verify required rulesets per .github/ORG_SECURITY_GOVERNANCE.md")
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                  f.write("ruleset_count=0\n")
+                  f.write("active_rulesets=0\n")
+                  f.write("status=requires_enterprise\n")
           else:
               print(f"Error checking rulesets: {response.status_code}")
+              print(f"Response: {response.text}")
               with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
                   f.write("status=fail\n")
           EOF
@@ -160,7 +180,7 @@ jobs:
           import os
           import requests
           
-          repo = 'Conxian/conxius-platform'
+          org = os.environ.get('INPUT_ORG_NAME', 'Conxian')
           token = os.environ.get('GITHUB_TOKEN')
           
           headers = {
@@ -169,15 +189,35 @@ jobs:
               'X-GitHub-Api-Version': '2022-11-28'
           }
           
-          # Check if secret scanning is enabled on this repo
+          # Check secret scanning settings for a sample repo
+          repo = f'{org}/conxius-platform'
           url = f'https://api.github.com/repos/{repo}/code-scanning'
           response = requests.get(url, headers=headers)
-          print(f"Code scanning status: {response.status_code}")
           
-          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-              f.write("status=manual_required\n")
-              f.write("note=Push protection requires manual verification in org settings\n")
+          if response.status_code == 200:
+              print(f"Code scanning API accessible (found configurations)")
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                  f.write("status=accessible\n")
+                  f.write("note=Code scanning API accessible\n")
+          elif response.status_code == 403:
+              print("⚠ Admin permissions required for code scanning API")
+              print("Manual verification of push protection required in org settings.")
+              print("")
+              print("To verify manually:")
+              print(f"  1. Go to https://github.com/organizations/{org}/settings/security_setup")
+              print("  2. Verify 'Secret scanning' is enabled")
+              print("  3. Verify 'Push protection' is enabled for public repos")
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                  f.write("status=requires_permissions\n")
+                  f.write("note=Manual verification required for push protection\n")
+          else:
+              print(f"Code scanning status: {response.status_code}")
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                  f.write("status=manual_required\n")
+                  f.write("note=Push protection requires manual verification in org settings\n")
           EOF
+        env:
+          INPUT_ORG_NAME: ${{ inputs.org_name || 'Conxian' }}
 
       - name: Verify dependency review status
         id: check_dependency_review
@@ -211,17 +251,19 @@ jobs:
           import os
           import requests
           
+          org = os.environ.get('INPUT_ORG_NAME', 'Conxian')
+          
           repos_to_verify = [
-              'Conxian/conxius-platform',
-              'Conxian/.github',
-              'Conxian/Conxian',
-              'Conxian/conxius-wallet',
-              'Conxian/conxian-gateway',
-              'Conxian/conxian-nexus',
-              'Conxian/lib-conxian-core',
-              'Conxian/conxius-enclave-sdk',
-              'Conxian/conxian_ui',
-              'Conxian/conxian-labs-site'
+              f'{org}/conxius-platform',
+              f'{org}/.github',
+              f'{org}/Conxian',
+              f'{org}/conxius-wallet',
+              f'{org}/conxian-gateway',
+              f'{org}/conxian-nexus',
+              f'{org}/lib-conxian-core',
+              f'{org}/conxius-enclave-sdk',
+              f'{org}/conxian_ui',
+              f'{org}/conxian-labs-site'
           ]
           
           token = os.environ.get('GITHUB_TOKEN')
@@ -232,10 +274,45 @@ jobs:
           }
           
           results = []
+          requires_manual = 0
+          protected = 0
+          
           for repo in repos_to_verify:
               try:
-                  # Check branch protection for main branch
-                  url = f'https://api.github.com/repos/{repo}/branches/main/protection'
+                  # First, get the default branch
+                  repo_url = f'https://api.github.com/repos/{repo}'
+                  repo_resp = requests.get(repo_url, headers=headers)
+                  
+                  if repo_resp.status_code == 403:
+                      print(f"⚠ {repo}: Admin permissions required")
+                      results.append({
+                          'repo': repo,
+                          'status': 'requires_permissions',
+                          'note': 'Admin permissions required - manual check needed'
+                      })
+                      requires_manual += 1
+                      continue
+                  elif repo_resp.status_code == 404:
+                      print(f"✗ {repo}: Repository not found")
+                      results.append({
+                          'repo': repo,
+                          'status': 'not_found',
+                          'note': 'Repository not found'
+                      })
+                      continue
+                  elif repo_resp.status_code != 200:
+                      print(f"? {repo}: Error {repo_resp.status_code}")
+                      results.append({
+                          'repo': repo,
+                          'status': 'error',
+                          'note': f'Status {repo_resp.status_code}'
+                      })
+                      continue
+                  
+                  default_branch = repo_resp.json().get('default_branch', 'main')
+                  
+                  # Check branch protection for default branch
+                  url = f'https://api.github.com/repos/{repo}/branches/{default_branch}/protection'
                   response = requests.get(url, headers=headers)
                   
                   if response.status_code == 200:
@@ -243,27 +320,28 @@ jobs:
                       results.append({
                           'repo': repo,
                           'status': 'protected',
+                          'default_branch': default_branch,
                           'require_pr': protection.get('required_pull_request_reviews', {}).get('required', False),
                           'require_linear': protection.get('require_linear_history', False),
                           'block_force_push': protection.get('block_force_pushes', False)
                       })
+                      protected += 1
+                  elif response.status_code == 403:
+                      print(f"⚠ {repo}: Admin permissions required")
+                      results.append({
+                          'repo': repo,
+                          'status': 'requires_permissions',
+                          'default_branch': default_branch,
+                          'note': 'Admin permissions required - manual check needed'
+                      })
+                      requires_manual += 1
                   elif response.status_code == 404:
-                      # Try default branch
-                      url = f'https://api.github.com/repos/{repo}'
-                      resp = requests.get(url, headers=headers)
-                      if resp.status_code == 200:
-                          default_branch = resp.json().get('default_branch', 'unknown')
-                          results.append({
-                              'repo': repo,
-                              'status': 'no_protection',
-                              'note': f'No protection on {default_branch}'
-                          })
-                      else:
-                          results.append({
-                              'repo': repo,
-                              'status': 'error',
-                              'note': f'Status {resp.status_code}'
-                          })
+                      results.append({
+                          'repo': repo,
+                          'status': 'no_protection',
+                          'default_branch': default_branch,
+                          'note': f'No protection on {default_branch}'
+                      })
                   else:
                       results.append({
                           'repo': repo,
@@ -277,7 +355,7 @@ jobs:
                       'note': str(e)
                   })
           
-          print("Branch Protection Verification Results:")
+          print("\nBranch Protection Verification Results:")
           print("=" * 60)
           for r in results:
               print(f"\n{r['repo']}:")
@@ -290,14 +368,20 @@ jobs:
                   print(f"  Note: {r['note']}")
           
           # Generate summary
-          protected = len([r for r in results if r['status'] == 'protected'])
           print(f"\n\nSummary: {protected}/{len(results)} repositories have branch protection")
+          if requires_manual > 0:
+              print(f"⚠ {requires_manual} repositories require manual verification (admin permissions needed)")
+          
+          status = 'pass' if protected == len(results) else 'needs_review' if requires_manual > 0 else 'fail'
           
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(f"protected_count={protected}\n")
+              f.write(f"requires_manual_count={requires_manual}\n")
               f.write(f"total_count={len(results)}\n")
-              f.write(f"status={'pass' if protected == len(results) else 'needs_review'}\n")
+              f.write(f"status={status}\n")
           EOF
+        env:
+          INPUT_ORG_NAME: ${{ inputs.org_name || 'Conxian' }}
 
   generate-verification-report:
     name: Generate Verification Report
@@ -316,9 +400,11 @@ jobs:
           import json
           from datetime import datetime
           
+          org = os.environ.get('INPUT_ORG_NAME', 'Conxian')
+          
           report = {
               'verification_date': datetime.now().isoformat(),
-              'organization': os.environ.get('INPUT_ORG_NAME', 'Conxian'),
+              'organization': org,
               'verification_type': 'org-security-rulesets',
               'reference': 'https://github.com/Conxian/conxius-platform/issues/854',
               'documentation': '.github/ORG_SECURITY_GOVERNANCE.md',
@@ -348,12 +434,39 @@ jobs:
               f.write("- ✅ Dependency review workflow exists\n")
               f.write("- ✅ Secret scanning workflow exists\n")
               f.write("- ✅ Repository hygiene workflows configured\n\n")
-              f.write("### Manual Verification Required\n\n")
-              f.write("- ⬜ Organization-level rulesets (requires GitHub Enterprise)\n")
-              f.write("- ⬜ Push protection for all public repositories\n")
-              f.write("- ⬜ Secret scanning enabled org-wide\n")
-              f.write("- ⬜ Branch protection on priority repositories\n")
-              f.write("- ⬜ Required status checks configured\n\n")
+              f.write("### Manual Verification Checklist\n\n")
+              f.write("If automated verification requires permissions, complete the following manual checks:\n\n")
+              f.write("#### 1. Organization Rulesets\n")
+              f.write(f"1. Go to: https://github.com/organizations/{org}/settings/rules\n")
+              f.write("2. Verify these rulesets exist and are **Active**:\n")
+              f.write("   - `org-default-branch-protection`\n")
+              f.write("   - `org-secret-scanning-enforcement`\n")
+              f.write("   - `org-dependency-review`\n")
+              f.write("   - `org-push-protection`\n\n")
+              f.write("#### 2. Push Protection & Secret Scanning\n")
+              f.write(f"1. Go to: https://github.com/organizations/{org}/settings/security_setup\n")
+              f.write("2. Verify:\n")
+              f.write("   - ✅ Secret scanning is **Enabled**\n")
+              f.write("   - ✅ Push protection is **Enabled** for public repositories\n")
+              f.write("   - ✅ Dependency review is **Enabled**\n\n")
+              f.write("#### 3. Priority Repository Branch Protection\n")
+              f.write("Verify these repositories have branch protection configured:\n\n")
+              f.write("| Repository | Default Branch | Check |\n")
+              f.write("|-----------|----------------|-------|\n")
+              repos = ['conxius-platform', '.github', 'Conxian', 'conxius-wallet', 
+                       'conxian-gateway', 'conxian-nexus', 'lib-conxian-core',
+                       'conxius-enclave-sdk', 'conxian_ui', 'conxian-labs-site']
+              for repo in repos:
+                  f.write(f"| `{repo}` | main | ⬜ |\n")
+              f.write("\n")
+              f.write("For each repository:\n")
+              f.write("1. Go to: Settings → Branches → Branch protection rules\n")
+              f.write("2. Verify:\n")
+              f.write("   - ✅ Require pull request reviews before merging\n")
+              f.write("   - ✅ Dismiss stale reviews enabled\n")
+              f.write("   - ✅ Require linear history enabled\n")
+              f.write("   - ✅ Block force pushes enabled\n")
+              f.write("   - ✅ Block deletion enabled\n\n")
               f.write("---\n\n")
               f.write("## Live-Only Verification Rule\n\n")
               f.write("Per issue #854, this verification **must** include settings-level evidence:\n\n")

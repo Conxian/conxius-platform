@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/Conxian/conxius-platform/schemas/capabilities.json",
-  "title": "Platform–Orbit Capability Registry",
+  "title": "Platform\u2013Orbit Capability Registry",
   "description": "First-wave capability registry defining the boundary between conxius-platform (control plane) and conxius-orbit (execution surface). Each capability record includes ownership, schema references, side-effect classification, authentication expectations, and retryability semantics.",
   "contractVersion": "1.0.0",
   "published": "2026-07-03",
@@ -20,7 +20,9 @@
     "devnet",
     "verify-chain",
     "config",
-    "wallet"
+    "wallet",
+    "market-quote",
+    "market-swap"
   ],
   "capabilities": [
     {
@@ -38,13 +40,13 @@
       },
       "sideEffectClass": "write",
       "authentication": "GitHub Actions OIDC or platform service account",
-      "retryability": "idempotent — retry with same manifest produces same target state"
+      "retryability": "idempotent \u2014 retry with same manifest produces same target state"
     },
     {
       "id": "promote-environment",
       "name": "Environment Promotion",
       "owner": "platform",
-      "description": "Gates and executes environment promotion (e.g. staging → production) based on verification results and lifecycle control checks.",
+      "description": "Gates and executes environment promotion (e.g. staging \u2192 production) based on verification results and lifecycle control checks.",
       "inputSchema": {
         "ref": "schemas/verification-result.schema.json",
         "description": "Verification result that gates promotion eligibility."
@@ -55,7 +57,7 @@
       },
       "sideEffectClass": "write",
       "authentication": "GitHub Actions OIDC with promotion gate approval",
-      "retryability": "idempotent — promotion to same target with same evidence is safe to retry"
+      "retryability": "idempotent \u2014 promotion to same target with same evidence is safe to retry"
     },
     {
       "id": "verify-deployment",
@@ -72,7 +74,7 @@
       },
       "sideEffectClass": "read",
       "authentication": "Platform CI/CD service account",
-      "retryability": "safe to retry — verification is a pure read-side check"
+      "retryability": "safe to retry \u2014 verification is a pure read-side check"
     },
     {
       "id": "lifecycle-gate",
@@ -89,7 +91,7 @@
       },
       "sideEffectClass": "read",
       "authentication": "GitHub Actions with repo-scoped token",
-      "retryability": "safe to retry — gate evaluation is deterministic"
+      "retryability": "safe to retry \u2014 gate evaluation is deterministic"
     },
     {
       "id": "monitor-control",
@@ -106,7 +108,7 @@
       },
       "sideEffectClass": "read",
       "authentication": "Prometheus service account with read-scoped tokens",
-      "retryability": "safe to retry — metric collection is lossy-tolerant"
+      "retryability": "safe to retry \u2014 metric collection is lossy-tolerant"
     },
     {
       "id": "deploy-chain",
@@ -123,7 +125,7 @@
       },
       "sideEffectClass": "write",
       "authentication": "Chain-specific deployer key (non-custodial, no protocol-signing custody)",
-      "retryability": "conditional — retry safe if previous attempt failed before on-chain confirmation; requires idempotency check"
+      "retryability": "conditional \u2014 retry safe if previous attempt failed before on-chain confirmation; requires idempotency check"
     },
     {
       "id": "monitor-chain",
@@ -140,7 +142,7 @@
       },
       "sideEffectClass": "read",
       "authentication": "Read-only chain RPC access (no signing keys)",
-      "retryability": "safe to retry — monitoring is continuous and lossy-tolerant"
+      "retryability": "safe to retry \u2014 monitoring is continuous and lossy-tolerant"
     },
     {
       "id": "diagnose",
@@ -157,7 +159,7 @@
       },
       "sideEffectClass": "read",
       "authentication": "Read-only chain RPC access",
-      "retryability": "safe to retry — diagnostics are pure read-side operations"
+      "retryability": "safe to retry \u2014 diagnostics are pure read-side operations"
     },
     {
       "id": "detect",
@@ -174,7 +176,7 @@
       },
       "sideEffectClass": "read",
       "authentication": "Read-only chain RPC and event stream access",
-      "retryability": "safe to retry — detection is event-driven and replayable"
+      "retryability": "safe to retry \u2014 detection is event-driven and replayable"
     },
     {
       "id": "template",
@@ -191,7 +193,7 @@
       },
       "sideEffectClass": "write",
       "authentication": "Local filesystem access (no remote auth required)",
-      "retryability": "safe to retry — template generation is deterministic for same inputs"
+      "retryability": "safe to retry \u2014 template generation is deterministic for same inputs"
     },
     {
       "id": "devnet",
@@ -208,7 +210,7 @@
       },
       "sideEffectClass": "write",
       "authentication": "Local or container-scoped (no production credentials)",
-      "retryability": "destructive — retry tears down and recreates the devnet from scratch"
+      "retryability": "destructive \u2014 retry tears down and recreates the devnet from scratch"
     },
     {
       "id": "verify-chain",
@@ -225,7 +227,7 @@
       },
       "sideEffectClass": "read",
       "authentication": "Read-only chain RPC access",
-      "retryability": "safe to retry — verification is deterministic against on-chain state"
+      "retryability": "safe to retry \u2014 verification is deterministic against on-chain state"
     },
     {
       "id": "config",
@@ -242,7 +244,7 @@
       },
       "sideEffectClass": "write",
       "authentication": "Local filesystem access (no remote auth required)",
-      "retryability": "safe to retry — config init/validate is deterministic"
+      "retryability": "safe to retry \u2014 config init/validate is deterministic"
     },
     {
       "id": "wallet",
@@ -259,7 +261,41 @@
       },
       "sideEffectClass": "write",
       "authentication": "Local entropy and filesystem (no remote transmission of private keys)",
-      "retryability": "not retryable — key generation produces new material each invocation; lost keys cannot be recovered"
+      "retryability": "not retryable \u2014 key generation produces new material each invocation; lost keys cannot be recovered"
+    },
+    {
+      "id": "market-quote",
+      "name": "Market Liquidity Quote",
+      "owner": "market",
+      "description": "Requests an on-chain/off-chain non-custodial liquidity quote for asset swaps.",
+      "inputSchema": {
+        "ref": "schemas/market-quote-request.schema.json",
+        "description": "Details including target tokens, amounts, and max allowed slippage."
+      },
+      "outputSchema": {
+        "ref": "schemas/market-quote-response.schema.json",
+        "description": "Constructed swap route payload and expected outputs."
+      },
+      "sideEffectClass": "read",
+      "authentication": "chain-read-only",
+      "retryability": "safe-to-retry"
+    },
+    {
+      "id": "market-swap",
+      "name": "Market Swap Preparation",
+      "owner": "market",
+      "description": "Prepares and structures a non-custodial Partially Signed Bitcoin Transaction (PSBT) or Stacks swap transaction payload for client-side signing.",
+      "inputSchema": {
+        "ref": "schemas/market-swap-request.schema.json",
+        "description": "Confirmed route payload and slippage details."
+      },
+      "outputSchema": {
+        "ref": "schemas/deployment-manifest.schema.json",
+        "description": "Unsigned PSBT or Stacks transaction payload ready for user signing."
+      },
+      "sideEffectClass": "read",
+      "authentication": "chain-deployer-key",
+      "retryability": "safe-to-retry"
     }
   ],
   "sideEffectClasses": {

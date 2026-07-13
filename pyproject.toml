@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "conxian-nexus"
-version = "0.1.0"
-description = "Conxian Nexus — T1 Rollup Adapter Platform for Bitcoin ZK-rollups"
+name = "conxius-platform"
+version = "0.2.5"
+description = "Conxius Platform — Control-plane scaffolding for the Conxian stack"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}

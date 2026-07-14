@@ -313,6 +313,7 @@ See `docs/SELF_EVOLVING_KB.md` for full architecture.
 | M2M Authentication | **Implemented (keys/scopes)** | #1160, #1161 |
 | Agent Onboarding | **Implemented (docs/skills)** | #1162 |
 | Swarm Coordination | **Patterns documented** | #1163 |
+| **Self-Evolving KB** | **Implemented (scaffolded)** | #1165 |
 | Proof-carrying treasury analytics | Spec-only | — |
 | SFO yield harvesting | Math.random() stubs | — |
 | revenue-automation.clar | Not implemented | #1164 |

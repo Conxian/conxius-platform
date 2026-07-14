@@ -116,6 +116,7 @@ This section maps the agent's available skills and tools to this repository's sp
 | `github` | Any GitHub API operation (issues, PRs, workflows, repo metadata) | `GITHUB_TOKEN` is always available |
 | `github-actions` | Debugging CI failures, creating/modifying workflows in `.github/workflows/` | 17 custom workflow files; CI is heavy |
 | `agent-memory` | Persisting or retrieving knowledge from AGENTS.md | This file — append to `## Session Log` after every session |
+| `agent-onboarding` | New agent induction, session continuity, swarm coordination | `.agents/skills/agent-onboarding/SKILL.md` — run at session start |
 
 ### Development & Quality Skills
 
@@ -134,7 +135,7 @@ This section maps the agent's available skills and tools to this repository's sp
 |---|---|---|
 | `release-notes` | Generating changelog entries from git history | `CHANGELOG.md` follows Keep a Changelog; `RELEASING.md` defines process |
 | `github-pr-review` | Posting inline review comments with suggestions on PRs | When conducting code reviews on PRs |
-| `iterate` | Driving a PR through CI → review → QA loop until merge-ready | 18 CI workflows; PRs must pass hygiene, secret-scan, dependency-review, tests |
+| `iterate` | Driving a PR through CI → review → QA loop until merge-ready | 17 custom CI workflows; PRs must pass hygiene, secret-scan, dependency-review, tests |
 
 ### Infrastructure & Deploy Skills
 
@@ -277,13 +278,24 @@ Tier 0 Canonical (specs, schemas, GOVERNANCE) → Tier 1 Architectural (docs/arc
 - SIDL ↔ Governance: vote recording flows through stateStore → API routes → observability wrapper
 - Bitcoin Stack: bip322, nwc, ark, bitvm/bitvm3/bitvmx, zkcp, dns-payments, solver — all in lib/support/
 
-### 7 Reusable Patterns
+### 8 Reusable Patterns
 
-1. Gateway-first with fallback 2. observeSidl wrapper 3. File-based state persistence 4. Weighted scoring 5. validateAdminAuth guard 6. Inline <a> tag navigation 7. Dual-module pattern (src/governance/ + lib/governance/)
+1. Gateway-first with fallback 2. observeSidl wrapper 3. File-based state persistence 4. Weighted scoring 5. validateAdminAuth guard 6. Inline <a> tag navigation 7. Dual-module pattern (src/governance/ + lib/governance/) 8. M2M auth headers on service requests
 
 ### Critical Gaps
 
-NixOS transition (in progress), Local-first UI Wasm (in progress), MFE Federation (scaffolded), Contributor Claim Ledger (spec-only), Proof-carrying treasury analytics (spec-only), SFO yield harvesting (Math.random() stubs)
+| Gap | Status | Issue |
+|-----|--------|-------|
+| NixOS transition | In progress | — |
+| Local-first UI Wasm | In progress | — |
+| MFE Federation | Scaffolded | — |
+| Contributor Claim Ledger | **Implemented** | #1159 |
+| M2M Authentication | **Implemented (keys/scopes)** | #1160, #1161 |
+| Agent Onboarding | **Implemented (docs/skills)** | #1162 |
+| Swarm Coordination | **Patterns documented** | #1163 |
+| Proof-carrying treasury analytics | Spec-only | — |
+| SFO yield harvesting | Math.random() stubs | — |
+| revenue-automation.clar | Not implemented | #1164 |
 
 ### Cross-Repo Dependencies (Conxian Org — 14 repos total)
 
@@ -311,7 +323,15 @@ Governance: 4 files/~40 tests. SIDL: 3/~25. Support: 5/~30. Bitcoin stack: 5/~35
 
 ### Environment Variables
 
-CORE_API_URL / CONXIAN_GATEWAY_URL / GATEWAY_PORT (same Gateway, 3 names). ADMIN_DASHBOARD_API_KEY for auth. GATEWAY_JWT_SECRET + GATEWAY_ADMIN_API_KEY defined but unused by clients.
+| Variable | Purpose |
+|----------|---------|
+| `CORE_API_URL` / `CONXIAN_GATEWAY_URL` / `GATEWAY_PORT` | Same Gateway (port 8080), 3 naming conventions |
+| `ADMIN_DASHBOARD_API_KEY` | Primary admin API authentication |
+| `SERVICE_KEY_*` | M2M service keys for internal auth (SERVICE_KEY_GATEWAY, SERVICE_KEY_ELIZAOS, etc.) |
+| `EXTERNAL_API_KEYS` | JSON map of external API keys to scopes |
+| `GATEWAY_JWT_SECRET` | For future JWT-based M2M auth |
+
+See `docs/M2M_AUTHENTICATION.md` for full M2M auth configuration.
 
 ## Session Log
 
@@ -968,3 +988,26 @@ AGENTS.md (this update)
 **Gotchas**:
 - Use `X-Service-Key: <service-id>:<key>` format for service auth
 - External keys must be JSON-encoded in EXTERNAL_API_KEYS env var
+
+### 2026-07-14 — GitHub Issues Update & Milestone Creation
+**Trigger**: User requested update of GitHub issues for end-to-end tracking.
+**What was done**:
+- Updated all 5 new issues with status checkboxes (#1160-#1164)
+- Created milestone "Platform v0.3.0 - M2M, Agent Onboarding & Automation" (due: 2026-08-01)
+- Added all 5 issues to milestone
+- Updated Critical Gaps table with linked issues
+- Updated AGENTS.md with comprehensive fixes:
+  - Added agent-onboarding skill to Skills Reference
+  - Updated Environment Variables section with M2M vars
+  - Updated 7 Reusable Patterns → 8 patterns
+  - Updated iterate skill to say 17 workflows
+**Key discoveries**:
+- All issues linked to milestone for tracking
+- Critical Gaps table format allows linking to issues
+**Files touched**:
+- `AGENTS.md` (updated Critical Gaps, Skills, Environment Vars, Patterns)
+**Gaps identified**:
+- None - all gaps now have issues
+**Gotchas**:
+- Use GitHub API for programmatic issue updates
+- Milestone created with number 1

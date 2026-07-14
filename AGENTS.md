@@ -282,6 +282,26 @@ Tier 0 Canonical (specs, schemas, GOVERNANCE) → Tier 1 Architectural (docs/arc
 
 1. Gateway-first with fallback 2. observeSidl wrapper 3. File-based state persistence 4. Weighted scoring 5. validateAdminAuth guard 6. Inline <a> tag navigation 7. Dual-module pattern (src/governance/ + lib/governance/) 8. M2M auth headers on service requests
 
+### Self-Evolving Knowledge Base
+
+The knowledge base auto-evolves using `.github/workflows/kb-evolution.yml`:
+- **Internal Ingestion**: GitHub API, CI/CD, code metrics
+- **External Research**: Tavily API for protocol/security updates
+- **Pattern Detection**: Code patterns, test coverage, API conventions
+- **Gap Analysis**: Identifies undocumented features, security gaps
+- **Auto-PR**: Weekly synthesis generates update PRs
+
+**Run KB commands**:
+```bash
+npm run kb:ingest    # Ingest GitHub activity
+npm run kb:patterns  # Detect code patterns
+npm run kb:research  # External research
+npm run kb:update    # Generate AGENTS.md updates
+npm run kb:status    # Show KB stats
+```
+
+See `docs/SELF_EVOLVING_KB.md` for full architecture.
+
 ### Critical Gaps
 
 | Gap | Status | Issue |

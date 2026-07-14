@@ -94,7 +94,7 @@ This section maps the agent's available skills and tools to this repository's sp
 | Skill | When to Use | Repo Trigger |
 |---|---|---|
 | `github` | Any GitHub API operation (issues, PRs, workflows, repo metadata) | `GITHUB_TOKEN` is always available |
-| `github-actions` | Debugging CI failures, creating/modifying workflows in `.github/workflows/` | 18 workflow files present; CI is heavy |
+| `github-actions` | Debugging CI failures, creating/modifying workflows in `.github/workflows/` | 17 custom workflow files; CI is heavy |
 | `agent-memory` | Persisting or retrieving knowledge from AGENTS.md | This file — append to `## Session Log` after every session |
 
 ### Development & Quality Skills
@@ -223,7 +223,7 @@ This section is the canonical cross-reference of every system, type, API, docume
 
 **Launch Types:** MintedTokenEntry, ContributorProfile, ContributionData, CommunityStats, 6 ContributorLevels
 
-### Complete API Surface (26 admin routes + 2 public frames)
+### Complete API Surface (33 admin routes + 2 public frames)
 
 All admin routes gated by validateAdminAuth(). Public: /frames/vote, /frames/sbtc (Farcaster).
 Key routes: /api/v1/governance/funded-roles, /api/v1/governance/funded-roles/history, /api/v1/rewards/sources, /api/v1/steward/dashboard, /api/multidimensional/metrics, /api/v1/settlement-engine
@@ -240,9 +240,10 @@ first-vote, consistent-voter, vote-streak-10, vote-streak-25, delegate, policy-a
 
 Newcomer(0)→Contributor(1)→Regular(2)→Core(3)→Champion(4)→Steward(5)
 
-### 19 CI Workflows
+### 17 Custom CI Workflows + 3 GitHub-native (CodeQL, Dependabot, Dependency Graph)
 
-5 reusable: ci, dependency-review, hygiene, rust-ci, secret-scan. 14 entrypoint: ci, hygiene, hygiene-drift-guard, secret-scan, dependency-review, lifecycle-control-gates, bos-production-guard, cross-repo-integration-mvp, multi-env-test, synergy-test, release, stale-branch-review, action-version-audit
+5 reusable: ci, dependency-review, hygiene, rust-ci, secret-scan. 12 entrypoint: ci, hygiene, hygiene-drift-guard, secret-scan, dependency-review, lifecycle-control-gates, bos-production-guard, cross-repo-integration-mvp, multi-env-test, synergy-test, release, stale-branch-review, action-version-audit, release-prep.
+Note: CodeQL is GitHub-native (enabled by default, custom workflow removed to avoid conflict). Dependabot and Dependency Graph are also GitHub-native features.
 
 ### Documentation Hierarchy (4 tiers)
 
@@ -284,7 +285,7 @@ NixOS transition (in progress), Local-first UI Wasm (in progress), MFE Federatio
 
 Note: conxian-labs is NOT a GitHub org — it only exists as conxian-labs.com. conxian.org is unreachable.
 
-### Test Coverage: 22 test files, ~161 tests
+### Test Coverage: 20 test files, 182 test cases
 
 Governance: 4 files/~40 tests. SIDL: 3/~25. Support: 5/~30. Bitcoin stack: 5/~35. Python: 3/22. E2E: 1/1.
 
@@ -861,3 +862,32 @@ AGENTS.md (this update)
 - The indexer state can be extended to dynamically emit and anchor claim snapshot coordinates directly onto the Stacks/Bitcoin blockchain.
 **Gotchas**:
 - Playwright CSS selectors require specific tag/attribute targeting rather than custom pseudo-selectors like `:submit`.
+
+### 2026-07-14 — Repository Sync, Cleanup & KB Alignment
+**Trigger**: User requested full repo sync and verification against current state.
+**What was done**:
+- Pulled latest code, confirmed already up to date.
+- Verified no git submodules exist in repository.
+- Analyzed 9 stale branches (all behind main by 18-534 commits).
+- Deleted 9 branches that would cause regressions if merged: cicd-fix-regressions, docs/skills-reference-and-kb-enhancement, feat/funded-roles-payout-activity-history, feature/tier-progression-ui, fix/1023-contributor-level-resolution, fix/1029-reward-source-breakdown, pr-1139, fix/1138-nexus-proof-surface, release-control-path-1076.
+- Verified full repository state: clean working tree, main branch, v0.2.5 tag.
+- Ran comprehensive verification against GitHub API and local filesystem.
+- Fixed AGENTS.md KB discrepancies:
+  - API routes: 26 → 33
+  - CI workflows: 19 → 17 custom + 3 GitHub-native
+  - Test files: 22 → 20, test cases: ~161 → 182
+  - Skills trigger: 18 → 17 workflow files
+**Key discoveries**:
+- CodeQL workflow was removed (commit 7b17e86) - GitHub-native CodeQL is enabled by default.
+- Custom codeql.yml conflicted with GitHub default setup.
+- All 9 stale branches had diverged from main and would delete files now in main.
+- GitHub API shows 20 workflows (17 custom + 3 GitHub-native features).
+- Local filesystem shows 17 custom workflow files + dependabot.yml.
+**Files touched**:
+- `AGENTS.md` (modified - corrected KB metrics)
+**Gaps identified**:
+- AGENTS.md was out of sync with actual repo state
+- Stale branches needed cleanup
+**Gotchas**:
+- `git diff origin/main..origin/branch` shows files deleted in branch vs main
+- Branches far behind main (534 commits) are dangerous to merge

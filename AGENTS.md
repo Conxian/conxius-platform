@@ -29,6 +29,11 @@ All documentation in this repository follows a four-tier hierarchy defined in [`
 
 Every decision area has exactly **one active reading chain** rooted in this file. Follow the chain; never short-circuit to historical or evidence layers for decision-making.
 
+**Agent Onboarding**: For AI agent onboarding, session continuity, and swarm coordination, see:
+- [`docs/AGENT_ONBOARDING.md`](./docs/AGENT_ONBOARDING.md) - Comprehensive onboarding guide
+- [`docs/SESSION_CONTINUITY.md`](./docs/SESSION_CONTINUITY.md) - Session handover patterns
+- [`.agents/skills/agent-onboarding/SKILL.md`](.agents/skills/agent-onboarding/SKILL.md) - Invokable skill
+
 **Governance Lane Awareness**: The repository operates three governance lanes defined in [`GOVERNANCE.md`](./GOVERNANCE.md): governance baseline (policy rules), live issue-execution (active work), and historical context (read-only archive). When routing work or resolving conflicts:
 - Governance baseline documents (GOVERNANCE.md, CODEOWNERS, SECURITY.md, etc.) are the final authority for policy and process questions.
 - Live execution artifacts (issues, PRs, runbooks) are where you work; they derive authority from the baseline.
@@ -891,3 +896,26 @@ AGENTS.md (this update)
 **Gotchas**:
 - `git diff origin/main..origin/branch` shows files deleted in branch vs main
 - Branches far behind main (534 commits) are dangerous to merge
+
+### 2026-07-14 — Agent Onboarding System Design
+**Trigger**: User requested design for agent/swarm onboarding to use KB, GitHub, issues, self-enhancements.
+**What was done**:
+- Created `docs/AGENT_ONBOARDING.md` - Comprehensive onboarding guide covering entry point discovery, session protocol, GitHub integration, self-enhancement patterns, swarm coordination, and agent modes.
+- Created `docs/SESSION_CONTINUITY.md` - Session handover patterns, incomplete work tracking, and context preservation.
+- Created `.agents/skills/agent-onboarding/SKILL.md` - Invokable skill file for agent self-induction.
+- Updated AGENTS.md to reference new onboarding documents in Information Hierarchy section.
+**Key discoveries**:
+- Agent onboarding requires: discovery (AGENTS.md), continuity (session logs), coordination (handover), self-enhancement (KB updates).
+- GitHub email privacy requires using `openhands@users.noreply.github.com` for commits.
+- Session log entries are critical for multi-agent coordination.
+**Files touched**:
+- `docs/AGENT_ONBOARDING.md` (created)
+- `docs/SESSION_CONTINUITY.md` (created)
+- `.agents/skills/agent-onboarding/SKILL.md` (created)
+- `AGENTS.md` (modified - added onboarding references)
+**Gaps identified**:
+- No automatic agent discovery mechanism yet
+- Swarm coordination patterns need implementation
+**Gotchas**:
+- Use `filter-branch` to fix author/committer emails when push is rejected
+- AGENTS.md session log is the primary continuity mechanism

@@ -82,11 +82,16 @@ All services use multi-layered M2M auth per `docs/M2M_AUTHENTICATION.md`:
 - **Gateway clients**: `services/admin-dashboard/src/lib/sidl/gateway.ts`, `services/elizaos-plugin-conxian/src/conxianClient.ts` now include M2M auth headers
 
 ### Key Gaps Still Open
-- **`revenue-automation.clar`** — referenced in `docs/runbooks/MAINTAINER_BOUNTY_RUNBOOK.md` but does not exist in the repo
-- **Contributor Claim Ledger** — full CU scoring, activation gates, and snapshot conversion are spec-only; no TypeScript implementation
+- **`revenue-automation.clar`** — referenced in `docs/runbooks/MAINTAINER_BOUNTY_RUNBOOK.md` but does not exist in the repo (#1164)
+- **JWT-based M2M token auth** — M2M module supports keys/scopes, but JWT tokens not implemented (#1160)
+- **Key rotation mechanism** — M2M keys are static, no rotation API (#1161)
+- **Agent discovery mechanism** — No automatic agent context discovery (#1162)
+- **Swarm coordination** — Multi-agent patterns not implemented (#1163)
 - **"Harvest Sovereign Yield"** — both SFO implementations use `Math.random()` stubs
 - **Yield sources** defined in scoring matrix (Babylon Staking G-43, ctUSD G-22, Lightning Async Payments G-53) have no UI integration
 - **Proof-carrying treasury analytics** (`openspec/changes/2026-05-12-proof-carrying-analytics-treasury-oracle/`) — defined but not implemented
+
+> **Note**: Contributor Claim Ledger was implemented in #1159. Key Gaps list updated 2026-07-14.
 
 ### Reward Source Breakdown (Merged in #1115)
 - API: `GET /api/v1/rewards/sources` → 4 revenue sources (Protocol Fees 38%, Staking Yield 28%, Treasury Yield 20%, Service Revenue 14%) mapped to 4 allocation categories (Community 40%, Governance 25%, Operations 20%, Reserve 15%), each tagged with SFO operational units

@@ -1,6 +1,6 @@
 {
   "name": "admin-pulse-bos",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "private": true,
   "description": "Admin Pulse (BOS) components for Conxian ecosystem",
   "scripts": {

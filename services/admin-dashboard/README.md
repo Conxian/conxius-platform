@@ -4,11 +4,11 @@ This service is the internal backend/frontend orchestration layer for the Conxia
 
 ## Status
 
-**Active development.** Deployed to Render as an internal control-plane surface. Versioning follows the platform root `0.2.4` standard.
+**Active development.** Deployed to Render as an internal control-plane surface. Versioning follows the platform root `0.2.5` standard.
 
 ## Positioning
 
-This service provides non-custodial administrative interfaces and orchestration logic; it does not take possession of customer funds.
+Institutional dashboard users and frontend engineers. Provides non-custodial administrative interfaces and orchestration logic; it does not take possession of customer funds.
 
 ## Purpose
 
@@ -47,6 +47,26 @@ To maintain the security of this platform:
 - **Framework**: Next.js 16
 - **Language**: TypeScript
 - **UI Components**: Earthy Corporate Design System (Forest Green #2E403B, Nakamoto Gold #D4A017)
+
+## Development
+
+```bash
+# Install dependencies
+pnpm install
+
+# Run development server (on port 3001)
+pnpm dev
+```
+
+## Testing
+
+```bash
+# Run unit tests
+pnpm test
+
+# Run Phase 7 alignment tests
+pnpm test:phase7
+```
 
 ## ⚖️ Governance
 

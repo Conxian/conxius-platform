@@ -15,3 +15,8 @@
 # Financial and strategic registries
 /REVIEWS.md @botshelomokoka @admin-conxian-labs
 /CONTRIBUTING.md @botshelomokoka @admin-conxian-labs
+
+# Service-level ownership
+/services/admin-dashboard/ @conxian/admin-devs
+/services/admin-pulse-bos/ @botshelomokoka @admin-conxian-labs
+/services/elizaos-plugin-conxian/ @botshelomokoka @admin-conxian-labs

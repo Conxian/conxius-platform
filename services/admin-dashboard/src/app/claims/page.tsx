@@ -40,7 +40,7 @@ export default function ClaimsPage() {
   const [gates, setGates] = useState<ActivationGates | null>(null);
   const [allGatesPassed, setAllGatesPassed] = useState(false);
   const [adminApiKey, setAdminApiKey] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // New Claim Form State

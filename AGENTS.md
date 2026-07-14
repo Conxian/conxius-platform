@@ -71,6 +71,16 @@ The Conxian protocol economic model has four layers connecting revenue to reward
 - Branding: Forest Green `#2E403B`, Nakamoto Gold `#D4A017`
 - StatCard, ProgressBar, BadgePill are reusable UI patterns (defined locally per page, not yet extracted to shared components)
 
+### M2M (Machine-to-Machine) Authentication
+All services use multi-layered M2M auth per `docs/M2M_AUTHENTICATION.md`:
+- **X-Admin-API-Key**: Primary admin operations
+- **X-Service-Key**: Service-to-service (`<service-id>:<key>` format)
+- **X-External-Key**: Third-party with explicit scopes
+- **Scopes**: `read:admin|governance|treasury|metrics`, `write:admin|governance|treasury`, `admin:secrets|deploy`, `m2m:internal`
+- **Service Registry**: gateway, elizaos, nexus, orbit, wallet, ui, admin-dashboard, pulse-bos, external
+- **Implementation**: `services/admin-dashboard/src/lib/support/m2m.ts`
+- **Gateway clients**: `services/admin-dashboard/src/lib/sidl/gateway.ts`, `services/elizaos-plugin-conxian/src/conxianClient.ts` now include M2M auth headers
+
 ### Key Gaps Still Open
 - **`revenue-automation.clar`** — referenced in `docs/runbooks/MAINTAINER_BOUNTY_RUNBOOK.md` but does not exist in the repo
 - **Contributor Claim Ledger** — full CU scoring, activation gates, and snapshot conversion are spec-only; no TypeScript implementation
@@ -919,3 +929,37 @@ AGENTS.md (this update)
 **Gotchas**:
 - Use `filter-branch` to fix author/committer emails when push is rejected
 - AGENTS.md session log is the primary continuity mechanism
+
+### 2026-07-14 — Implement Native M2M Authentication
+**Trigger**: User requested native M2M authentication improvements.
+**What was done**:
+- Created `services/admin-dashboard/src/lib/support/m2m.ts` - Comprehensive M2M auth module with:
+  - Service-to-service authentication (X-Service-Key header)
+  - External API keys with explicit scopes
+  - Service registry with permission matrix
+  - Scope-based authorization
+  - Legacy compatibility with validateAdminAuth
+- Updated `services/admin-dashboard/src/lib/sidl/gateway.ts` - Added M2M auth headers to Gateway requests
+- Updated `services/elizaos-plugin-conxian/src/conxianClient.ts` - Added service auth headers
+- Created `services/admin-dashboard/src/tests/m2m.test.ts` - Comprehensive tests (33 test cases)
+- Created `docs/M2M_AUTHENTICATION.md` - Full M2M authentication documentation
+- Updated `.env.example` - Added M2M environment variables
+- Updated AGENTS.md - Added M2M patterns section
+**Key discoveries**:
+- Gateway clients previously didn't send auth headers despite env vars being defined
+- Service keys use format `<service-id>:<key>` for identity
+- External API keys support explicit scope assignment
+**Files touched**:
+- `services/admin-dashboard/src/lib/support/m2m.ts` (created)
+- `services/admin-dashboard/src/lib/sidl/gateway.ts` (modified - add auth headers)
+- `services/elizaos-plugin-conxian/src/conxianClient.ts` (modified - add service auth)
+- `services/admin-dashboard/src/tests/m2m.test.ts` (created)
+- `docs/M2M_AUTHENTICATION.md` (created)
+- `.env.example` (modified - add M2M vars)
+- `AGENTS.md` (modified - add M2M section)
+**Gaps identified**:
+- JWT-based token auth not yet implemented
+- Key rotation mechanism not implemented
+**Gotchas**:
+- Use `X-Service-Key: <service-id>:<key>` format for service auth
+- External keys must be JSON-encoded in EXTERNAL_API_KEYS env var

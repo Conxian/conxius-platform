@@ -37,6 +37,7 @@ export default function RootLayout({
              <a href="/multidimensional" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Pulse</a>
              <a href="/launch" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Launch</a>
              <a href="/steward" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Steward</a>
+             <a href="/claims" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Claims</a>
              <a href="/funded-roles" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Funded Roles</a>
              <a href="/proposal-templates" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Proposals</a>
              <a href="/rewards" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Rewards</a>
@@ -44,6 +45,7 @@ export default function RootLayout({
              <a href="/frontends" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Frontends</a>
              <a href="/tiers" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Tiers</a>
              <a href="/support" style={{ color: 'inherit', textDecoration: 'none', marginRight: '1rem' }}>Support</a>
+             <a style={{ display: 'none' }} href="/settings" />
              <a href="/settings" style={{ color: 'inherit', textDecoration: 'none' }}>Settings</a>
           </nav>
         </header>

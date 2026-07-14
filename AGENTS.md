@@ -801,3 +801,63 @@ AGENTS.md (this update)
 - The future `conxian-market` repository needs initial scaffolding configured in phase 1 (core hygiene, CODEOWNERS, root `pnpm-workspace.yaml`).
 **Gotchas**:
 - Linear returns `invalid_request` status 400 when attempting to create issues if the free quota is exceeded. Document strategy internally rather than using external links.
+
+### 2026-07-14 — Implement Contributor Claim Ledger and Activation Policy (CON-483)
+**Trigger**: Complete implementation, test, verify, update issues, and submit PR for CON-483.
+**What was done**:
+- Implemented core claim ledger, taxonomy, precision computations in hundredths, monthly caps, anti-double-counting, disputes/revocations, fail-closed activation gates, and snapshot conversion logic in  and .
+- Integrated claims module exports into .
+- Created four REST API endpoints in Next.js (, , , and ).
+- Developed a high-fidelity, responsive, and interactive claims registry dashboard UI under  in  styled in Sovereign Earthy theme.
+- Added  navigation link to the layout header.
+- Wrote 14 exhaustive unit tests under  covering all ACs, with all 85 tests passing successfully.
+**Key discoveries**:
+- Keeping all precision calculations in integer hundredths prevents floating-point drift during large-scale snapshot conversions.
+- Fail-closed activation gates ensure pre-activation claim units (CU) remain non-binding, non-monetary recognition counters until explicitly ratified.
+- Dev overrides on the dashboard UI provide a seamless local-first way for developers and stakeholders to simulate pool-math and snapshot freezes.
+**Files touched**:
+-  (created)
+-  (created)
+-  (modified)
+-  (created)
+-  (created)
+-  (created)
+-  (created)
+-  (created)
+-  (modified)
+-  (created)
+-  (modified)
+**Gaps identified**:
+- The indexer state can be extended to dynamically emit and anchor claim snapshot coordinates directly onto the Stacks/Bitcoin blockchain.
+**Gotchas**:
+- Playwright CSS selectors require specific tag/attribute targeting rather than custom pseudo-selectors like .
+
+### 2026-07-14 — Implement Contributor Claim Ledger and Activation Policy (CON-483)
+**Trigger**: Complete implementation, test, verify, update issues, and submit PR for CON-483.
+**What was done**:
+- Implemented core claim ledger, taxonomy, precision computations in hundredths, monthly caps, anti-double-counting, disputes/revocations, fail-closed activation gates, and snapshot conversion logic in `services/admin-dashboard/src/lib/governance/claims.ts` and `src/governance/claims.ts`.
+- Integrated claims module exports into `src/governance/index.ts`.
+- Created four REST API endpoints in Next.js (`GET/POST /api/v1/governance/claims`, `/transition`, `/activation-status`, and `/convert`).
+- Developed a high-fidelity, responsive, and interactive claims registry dashboard UI under `/claims` in `services/admin-dashboard/src/app/claims/page.tsx` styled in Sovereign Earthy theme.
+- Added `/claims` navigation link to the layout header.
+- Wrote 14 exhaustive unit tests under `services/admin-dashboard/src/tests/claims.test.ts` covering all ACs, with all 85 tests passing successfully.
+**Key discoveries**:
+- Keeping all precision calculations in integer hundredths prevents floating-point drift during large-scale snapshot conversions.
+- Fail-closed activation gates ensure pre-activation claim units (CU) remain non-binding, non-monetary recognition counters until explicitly ratified.
+- Dev overrides on the dashboard UI provide a seamless local-first way for developers and stakeholders to simulate pool-math and snapshot freezes.
+**Files touched**:
+- `services/admin-dashboard/src/lib/governance/claims.ts` (created)
+- `src/governance/claims.ts` (created)
+- `src/governance/index.ts` (modified)
+- `services/admin-dashboard/src/app/api/v1/governance/claims/route.ts` (created)
+- `services/admin-dashboard/src/app/api/v1/governance/claims/transition/route.ts` (created)
+- `services/admin-dashboard/src/app/api/v1/governance/claims/activation-status/route.ts` (created)
+- `services/admin-dashboard/src/app/api/v1/governance/claims/convert/route.ts` (created)
+- `services/admin-dashboard/src/app/claims/page.tsx` (created)
+- `services/admin-dashboard/src/app/layout.tsx` (modified)
+- `services/admin-dashboard/src/tests/claims.test.ts` (created)
+- `AGENTS.md` (modified)
+**Gaps identified**:
+- The indexer state can be extended to dynamically emit and anchor claim snapshot coordinates directly onto the Stacks/Bitcoin blockchain.
+**Gotchas**:
+- Playwright CSS selectors require specific tag/attribute targeting rather than custom pseudo-selectors like `:submit`.

@@ -51,7 +51,7 @@ export default function ClaimsPage() {
   const [artifactSystem] = useState("GitHub");
   const [artifactId, setArtifactId] = useState("");
   const [artifactUrl, setArtifactUrl] = useState("");
-  const [evidenceType, setEvidenceType] = useState<any>("pull_request");
+  const [evidenceType] = useState<any>("pull_request");
   const [evidenceUri, setEvidenceUrl] = useState("");
   const [notes, setNotes] = useState("");
   const [showProposeModal, setShowProposeModal] = useState(false);

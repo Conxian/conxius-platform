@@ -17,7 +17,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
-    "vite": "8.1.3"
+    "vite": "8.1.4"
   },
   "pnpm": {
     "overrides": {
@@ -26,7 +26,7 @@
       "postcss": ">=8.5.10",
       "langsmith": ">=0.5.19",
       "uuid": ">=13.0.1",
-      "vite": "8.1.3"
+      "vite": "8.1.4"
     }
   }
 }

@@ -26,6 +26,20 @@ export type {
   ProposalTemplateSectionResponse,
 } from './treasury';
 
+export type {
+  ContributionCategory,
+  ImpactMultiplierBps,
+  QualityMultiplierBps,
+  ClaimStatus,
+  RevocationReason,
+  ArtifactRef,
+  ClaimEvidence,
+  ClaimLedgerEntry,
+  ClaimLedgerEvent,
+  ActivationGates,
+  ClaimsState,
+} from './claims';
+
 export { BADGE_DEFINITIONS, ROLE_BADGE_MAP, computeBadges } from './badges';
 export {
   computeParticipationStreak,
@@ -46,6 +60,20 @@ export {
   getProposalTemplate,
   getTemplateRoleDefinition,
 } from './treasury';
+export {
+  CATEGORY_BASE_CU,
+  IMPACT_MULTIPLIERS,
+  QUALITY_MULTIPLIERS,
+  validateClaimRequirements,
+  getMonthToDateRecognizedHundredths,
+  proposeClaim,
+  transitionClaimStatus,
+  disputeClaim,
+  evaluateActivationGates,
+  performGlobalSnapshotConversion,
+  loadClaimsState,
+  persistClaimsState,
+} from './claims';
 export {
   GovernanceParticipationIndicator,
   StreakDisplay,

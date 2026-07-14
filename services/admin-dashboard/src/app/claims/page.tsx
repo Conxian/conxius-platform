@@ -48,7 +48,7 @@ export default function ClaimsPage() {
   const [category, setCategory] = useState<ContributionCategory>("CORE_PROTOCOL_CODE");
   const [impactMultiplier, setImpactMultiplier] = useState<number>(100);
   const [qualityMultiplier, setQualityMultiplier] = useState<number>(100);
-  const [artifactSystem, setArtifactSystem] = useState("GitHub");
+  const [artifactSystem] = useState("GitHub");
   const [artifactId, setArtifactId] = useState("");
   const [artifactUrl, setArtifactUrl] = useState("");
   const [evidenceType, setEvidenceType] = useState<any>("pull_request");

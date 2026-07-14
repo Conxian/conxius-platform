@@ -10,8 +10,6 @@ import {
   evaluateActivationGates,
   performGlobalSnapshotConversion,
   loadClaimsState,
-  persistClaimsState,
-  ClaimsState,
 } from "../lib/governance/claims";
 import fs from "node:fs";
 

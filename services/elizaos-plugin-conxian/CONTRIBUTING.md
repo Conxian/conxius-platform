@@ -1,49 +1,21 @@
 # Contributing to Conxian
 
-Welcome! We appreciate your interest in contributing to the Conxian monorepo.
+This service is part of the Conxian monorepo.
 
-## Monorepo Overview
+To contribute, please follow the global [CONTRIBUTING.md](../../CONTRIBUTING.md) at the root of this repository.
 
-This repository is organized as a monorepo containing multiple services:
-
-- `services/admin-dashboard`: Administrative monitoring and management tool (Next.js 16).
-- `services/admin-pulse-bos`: Administrative components for fiscal orchestration (SFO).
-- `services/elizaos-plugin-conxian`: ElizaOS plugin for Conxian Gateway and multidimensional metrics.
-
-## Development Guidelines
-
-- **OpenSpec First**: Before making significant architectural changes, propose them in the `openspec/` directory. All changes must be preceded by an OpenSpec proposal or follow existing change artifacts in `openspec/changes/`.
-- **Earthy Corporate Finance Theme**: Adhere to the defined color palette (Forest Green #2E403B, Gold #D4A017) and institutional design patterns.
-- **Type Safety**: No `any` types. Use explicit TypeScript interfaces for all frontend data.
-- **Testing**: Run relevant tests before submitting a PR.
-- **Security**: Never commit real secrets or credentials. Use `.env.example` for configuration templates.
-
-## Node/TypeScript services
-
-The Node/TypeScript services under `services/` (as configured in `pnpm-workspace.yaml`) are managed as a `pnpm` workspace with a single root `pnpm-lock.yaml`.
-
-### Prerequisites
-
-- Node.js >= 20.19.0 (see `package.json#engines`)
-- pnpm (managed via Corepack; version pinned in `package.json#packageManager`)
+## Service-specific setup
 
 ```bash
-corepack enable
+# Navigate to this directory
+cd services/elizaos-plugin-conxian
 
+# Install dependencies (if not done at root)
 pnpm install
 
-pnpm --filter ./services/admin-dashboard test
-pnpm --filter ./services/elizaos-plugin-conxian test
+# Build
+pnpm build
+
+# Testing
+pnpm test
 ```
-
-## Pull Request Process
-
-1. Create a descriptive branch for your changes.
-2. Ensure all tests pass.
-3. Update relevant documentation (README, specifications, etc.).
-4. Submit your PR for review.
-5. Once approved, changes will be merged into the main branch.
-
-## Contact
-
-For questions or feedback, use GitHub Issues or contact [support@conxian-labs.com](mailto:support@conxian-labs.com).

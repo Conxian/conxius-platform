@@ -4,11 +4,11 @@ The `admin-pulse-bos` service provides administrative components for the Conxian
 
 ## Status
 
-**Active development.** Designated as a dev-only/supporting service for platform operations.
+**Active development.** Designated as a dev-only/supporting service for platform operations. Versioning follows the platform root `0.2.5` standard.
 
 ## Positioning
 
-This service provides non-custodial administrative components for fiscal coordination; it does not take possession of customer funds.
+Internal dev-only exception. This service provides non-custodial administrative components for fiscal coordination; it does not take possession of customer funds.
 
 ## Purpose
 
@@ -21,21 +21,21 @@ The core component, `SovereignFinancialOffice.tsx`, is a command pulse for:
 - **SBC (Sovereign Business Cells)**: Managing individual business unit statuses (e.g., Conxian-Core, Nexus-Labs).
 - **SYI (Sovereign Yield Index)**: Tracking and harvesting yields across the ecosystem.
 
-## 🚀 Usage
-
-This service is intended to be integrated into the Conxian administrative portal.
-
-### Development
+## Development
 
 ```bash
-# Navigate to the service directory
-cd services/admin-pulse-bos
-
 # Install dependencies
 pnpm install
 
-# Run component-specific tests or linting (if configured)
-pnpm lint
+# Run typecheck
+pnpm typecheck
+```
+
+## Testing
+
+```bash
+# Run tests (when configured)
+pnpm test
 ```
 
 ## 🎨 Theme & Governance

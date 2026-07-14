@@ -6,9 +6,13 @@ Thanks for contributing to `conxius-platform`.
 
 This repository contains platform and environment tooling for the Conxian ecosystem. Keep contributions focused on infrastructure, orchestration, and developer tooling.
 
+This repository is organized as a pnpm monorepo containing multiple platform services under `services/`.
+
 For service-specific conventions, see:
 
 - `services/admin-dashboard/CONTRIBUTING.md`
+- `services/admin-pulse-bos/CONTRIBUTING.md`
+- `services/elizaos-plugin-conxian/CONTRIBUTING.md`
 
 ## Issue routing
 

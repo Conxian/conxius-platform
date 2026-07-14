@@ -4,11 +4,11 @@ ElizaOS plugin that exposes Conxian Gateway + SIDL social interfaces as typed ac
 
 ## Status
 
-**Active development.** Integrated with the Conxian Multidimensional Pulse and Gateway Engine.
+**Active development.** Integrated with the Conxian Multidimensional Pulse and Gateway Engine. Versioning follows the platform root `0.2.5` standard.
 
 ## Positioning
 
-This plugin enables non-custodial interaction with Conxian protocol states and governance; it does not take possession of customer funds.
+AI agent developers and integrators. This plugin enables non-custodial interaction with Conxian protocol states and governance; it does not take possession of customer funds.
 
 ## Purpose
 
@@ -29,3 +29,23 @@ Environment variables (or plugin `config` keys):
 - `CONXIAN_X402_CHECKOUT_CART`
 - `CONXIAN_SUBMIT_VOTE`
 - `CONXIAN_MULTIDIMENSIONAL_METRICS`
+
+## Development
+
+```bash
+# Install dependencies
+pnpm install
+
+# Build plugin
+pnpm build
+
+# Typecheck
+pnpm typecheck
+```
+
+## Testing
+
+```bash
+# Run tests
+pnpm test
+```

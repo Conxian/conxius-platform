@@ -91,7 +91,7 @@ All services use multi-layered M2M auth per `docs/M2M_AUTHENTICATION.md`:
 - **Yield sources** defined in scoring matrix (Babylon Staking G-43, ctUSD G-22, Lightning Async Payments G-53) have no UI integration
 - **Proof-carrying treasury analytics** (`openspec/changes/2026-05-12-proof-carrying-analytics-treasury-oracle/`) — defined but not implemented
 
-> **Note**: Contributor Claim Ledger was implemented in #1159. Self-evolving KB system scaffolded (issue #1165). Key Gaps list updated 2026-07-15.
+> **Note**: Contributor Claim Ledger implemented (#1159). Self-evolving KB scaffolded, TAVILY secret set (#1165). Key Gaps list updated 2026-07-15.
 
 ### Reward Source Breakdown (Merged in #1115)
 - API: `GET /api/v1/rewards/sources` → 4 revenue sources (Protocol Fees 38%, Staking Yield 28%, Treasury Yield 20%, Service Revenue 14%) mapped to 4 allocation categories (Community 40%, Governance 25%, Operations 20%, Reserve 15%), each tagged with SFO operational units
@@ -1060,7 +1060,9 @@ AGENTS.md (this update)
 - `AGENTS.md` (fixed 6 discrepancies, added session log entry)
 **Gaps identified**:
 - Claims ledger is NO LONGER a gap - it was implemented in #1159
-- Self-evolving KB system scaffolded but needs TAVILY_API_KEY secret and initial population
+- Self-evolving KB system fully scaffolded with TAVILY_API_KEY set (2026-07-15)
+- Remaining: Initial knowledge population (operational trigger - run workflow_dispatch)
 **Gotchas**:
 - Always verify KB claims against actual filesystem (git, find, grep)
 - GitHub API confirms issue #1159 is closed with claims implementation
+- Issue #1165: 9/10 items done - only "Initial knowledge population" remains (trigger action)

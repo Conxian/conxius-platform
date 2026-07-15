@@ -199,7 +199,7 @@ export class M2MAuthenticator {
 
     const [serviceId, key] = parts;
     
-    if (!Object.values(['gateway', 'elizaos', 'nexus', 'orbit', 'wallet', 'ui', 'admin-dashboard', 'pulse-bos'] as const).includes(serviceId as ServiceId)) {
+    if (!Object.values(['gateway', 'elizaos', 'nexus', 'orbit', 'wallet', 'ui', 'admin-dashboard', 'pulse-bos', 'external'] as const).includes(serviceId as ServiceId)) {
       return { valid: false, error: 'Unknown service ID' };
     }
 

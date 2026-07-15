@@ -1197,4 +1197,12 @@ AGENTS.md (this update)
 - #1167 (NEW): Cross-repo alignment issue - protocol handoff & routing layer
 - #1168 (NEW): Founder Rights & Revenue Routing research
 - conxian-gateway #245 (BIP-110): Linked to platform issues, added org repo status
-- All issues now linked with routing-layer, protocol-handoff, org-wide labels
+- All issues now linked with routing-layer, protocol-handoff, org-wide, legal labels
+
+**Founder Rights Research Complete** (#1168):
+- Current model: 10% of Treasury = 4.5% of total fees (from FUNDING_AND_ECONOMICS.md)
+- Industry finding: NO protocol uses 1%→0.75% decay model (searched Uniswap, Curve, Balancer, Babylon, Lido, Ether.fi)
+- Recommended: 1% total fees (more conservative, legally defensible)
+- Routing: 50% to ops wallet, 50% to open-source funding multi-sig
+- Decay option: 1% → 0.75% over 10 years after 3-year stabilization
+- Unique advantage: Already built everything (218 contracts, all SDKs, mainnet deployed)

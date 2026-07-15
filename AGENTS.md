@@ -10,6 +10,7 @@ Welcome, Agent. You are tasked with maintaining and extending the Conxian platfo
 4. **Sovereign Design Alignment**: Adhere strictly to the **Sovereign Earthy** branding (Forest Green `#2E403B`, Nakamoto Gold `#D4A017`). Follow the **Stitch Pattern** for UI/UX reviews as codified in `DESIGN.md`. All frontend changes must be "vibe-verified" for high-fidelity consistency within the Earthy Corporate identity.
 5.  **Sentinel Security**: Follow zero-trust patterns. Never hardcode secrets. Use `provision-secrets.sh`.
 6.  **Routing Only**: Conxian is a **routing/infrastructure layer** — we never touch user data or funds directly. We route payments, settlements, and messages between protocols. We do not hold custody, manage wallets, or execute trades.
+7.  **Protocol Handoff**: The Conxian protocol/DeFi system creates regulatory risks for Conxian-Labs. **Community should own the protocol** — conxius-platform manages infrastructure, not the DeFi protocol itself.
 
 ## Implementation Patterns
 
@@ -63,36 +64,43 @@ The Conxian protocol economic model has four layers connecting revenue to reward
 4. **Governance** — Three-lane model in `GOVERNANCE.md`: Baseline (authoritative policies) → Live Execution (issues/PRs) → Historical (read-only archive). Governance ratifies reward activation, sets the conversion pool, and controls all treasury policy.
 
 ### Bitcoin L2 Research (July 2026)
-Based on comprehensive external research from official documentation, academic papers, and ecosystem reports:
+Based on comprehensive external research + org repo analysis (repos are **far ahead** of public docs).
 
-#### Stacks Nakamoto + sBTC (Production-Ready)
-- **Nakamoto Upgrade (Q4 2024)**: Decoupled Stacks block production from Bitcoin timing; ~5 second blocks with Bitcoin-anchored finality. Clarity 4 + Fast Blocks for smart contract expressiveness [1][2]
-- **sBTC Peg Mechanics**: Single Bitcoin UTXO holds all pegged BTC; 14-15 elected signer federation with threshold signature wallet. Peg-outs require 70% signing threshold. Signers lock STX and earn BTC rewards [2][3]
-- **sBTC Adoption**: Peaked $545M TVL, ~$437M by Q1-2026. Zest, Granite, StackingDAO deployed. Fireblocks & Copper institutional integrations [3][16]
-- **Phase Rollout**: Deposit-only Phase 1 (Dec 2024), withdrawals 2025, caps removed mid-2025 [3][4]
+#### 🔴 ORG REPOS ARE PRODUCTION-READY
+**Critical**: Org repos already implement most research items. Read before implementing.
 
-#### BitVM Family (Research-Heavy, Maturing)
-- **BitVM Core**: Optimistic/fraud-proof verification anchored to Bitcoin without consensus changes. Reduces signer trust to existential honest challenger [5][6]
-- **BitVM2**: Permissionless verification, reduced dispute costs (USENIX Security 2026) [7]
-- **BitVM3**: Garbled circuits for efficient Bitcoin bridges [6]
-- **BitLayer Bridge**: Engineering implementation with operator fronting model [8]
-- **Trade-offs**: Heavy off-chain precomputation, liquidity demands, potential long dispute timeframes [6][24]
+| Repo | Language | Version | Status |
+|------|----------|---------|--------|
+| `conxius-enclave-sdk` | Rust | v2.0.12 | ✅ **Production Ready** |
+| `lib-conxian-core` | Rust | v0.2.12 | ✅ Stable |
+| `conxian-gateway` | Rust | Active | ✅ Active |
+| `conxian-nexus` | Rust | Active | ✅ Active |
 
-#### Babylon (Dominant BTCFi Staking)
-- **TVL**: Peaked >$5.6B late 2024, fluctuating through 2025-2026 [32]
-- **Positioning**: Native on-Bitcoin staking avoiding bridge-wrapping risks
-- **Gap**: Precise staking mechanics, slashing rules, governance details not publicly documented in primary sources
+**conxius-enclave-sdk (v2.0.12)** already implements:
+- ✅ FROST DKG — distributed key generation
+- ✅ Fedimint — federation adapter with blinding
+- ✅ Ark — vTXO tree construction
+- ✅ **BitVM2** — optimistic challenge-response
+- ✅ MuSig2 — multi-signature aggregation
+- ✅ 30+ chains support
+- ✅ Hardware attestation (TEE, StrongBox, Secure Enclave)
+- ✅ WASM bindings
 
-#### Comparative Trade-offs
-| Aspect | Stacks/sBTC | BitVM | Babylon | Conxian Relevance |
-|--------|-------------|-------|---------|-------------------|
-| Trust Model | 70% signer threshold | Existential honest challenger | Native staking | Informs routing trust |
-| Finality | Fast L2 + Bitcoin-anchored | Bitcoin-native via proofs | Bitcoin-anchored | Settlement confirmation |
-| Composability | Full DeFi (Clarity 4) | Research-heavy | Staking focus | **Routing target** |
-| Complexity | Moderate | High | Low | Integration effort |
-| Production Ready | ✅ Yes | ⚠️ Maturing | ✅ Yes | ✅ All viable |
+**lib-conxian-core (v0.2.12)** already implements:
+- Chain adapters: Bitcoin, Stacks, Lightning, RGB, **Babylon**, **Fedimint**
+- BIP-110 alignment (just added)
+- Trust tier taxonomy (CON-791)
+- Control models for routing
 
-> **Note**: Conxian is a **routing layer** — we integrate with these protocols to route payments/settlements. We do not build DeFi products, hold custody, or manage user funds.
+#### Stacks Nakamoto + sBTC (External Research)
+- **Nakamoto Upgrade (Q4 2024)**: ~5 second blocks with Bitcoin-anchored finality [1][2]
+- **sBTC Peg Mechanics**: 70% signing threshold, signers lock STX [2][3]
+- **sBTC Adoption**: $437M TVL by Q1-2026 [3][4]
+
+#### BitVM Family (External Research)
+- **BitVM2**: USENIX Security 2026 validated [7]
+- **BitVM3**: Garbled circuits for efficient bridges [6]
+- **Note**: `conxius-enclave-sdk` already has BitVM2 implementation
 
 #### Primary Sources (Verified)
 - [1] https://docs.stacks.co/learn/block-production/what-was-the-nakamoto-upgrade
@@ -101,19 +109,17 @@ Based on comprehensive external research from official documentation, academic p
 - [4] https://messari.io/report/stacks-q4-2024-brief
 - [6] https://bitvm.org/bitvm3.pdf
 - [7] https://www.usenix.org/system/files/conference/usenixsecurity26/sec26_prepub_woll.pdf
-- [8] https://blog.bitlayer.org/introducing_bitvm_bridge
 - [32] https://spark.money/research/bitcoin-second-layer-scaling-landscape
 
-#### Phase 7 Strategic Alignment (Routing Layer Focus)
-- **Stacks/sBTC**: ✅ **Aligned** — sBTC for BTC routing/settlement; clarity smart contracts for payment logic
-- **BitVM/BitVMX**: 🔬 **Research** — Monitor for future bridge routing integrations; not immediate priority
-- **Babylon**: ⚠️ **UI Gap** — Babylon staking yields could be shown as routing yield sources (G-43)
-- **FROST/OP_CAT**: ✅ **Research Priority** — Threshold signatures for multi-party routing
-
-#### Evidence Gaps Identified
-- Fedimint: No 2024-2026 primary evidence found
-- Babylon staking internals: TVL data only, no slashing/governance docs
-- sBTC detailed audit reports: Limited incident postmortems
+#### Strategic Alignment
+| Area | Org Repo Status | Action |
+|------|----------------|--------|
+| FROST DKG | ✅ conxius-enclave-sdk | No action needed |
+| BitVM2 | ✅ conxius-enclave-sdk | No action needed |
+| Fedimint | ✅ conxius-enclave-sdk + lib-conxian-core | No action needed |
+| Babylon | ✅ lib-conxian-core adapter | UI integration only |
+| sBTC | 🔄 conxian-gateway | Verify routing integration |
+| OP_CAT | ❓ Unknown | Research needed |
 
 ### UI Pattern Reference
 - **Admin dashboard** (`services/admin-dashboard/`): Next.js 16 + React 19, pnpm workspace, typecheck with `npx tsc --noEmit`, port 3001
@@ -1134,8 +1140,11 @@ AGENTS.md (this update)
   - 8 verified primary sources with citations
   - Phase 7 strategic alignment assessment (routing layer focus)
   - Evidence gaps identified (Fedimint, Babylon internals)
-- **Critical clarification**: User confirmed Conxian is "routing only" — we do NOT touch user data or funds
-- Updated Core Directives: Added directive #6 "Routing Only"
+- **Critical clarifications**:
+  - Conxian is "routing only" — we do NOT touch user data or funds
+  - Protocol/DeFi system creates regulatory risks for Conxian-Labs
+  - **Community should own the protocol** — conxius-platform manages infrastructure
+- Updated Core Directives: #6 "Routing Only", #7 "Protocol Handoff"
 - Updated header: "Conxian platform" (not "DeFi ecosystem")
 - Updated research table: Added "Conxian Relevance" column, added routing note
 - Updated Phase 7 alignment: Reframed from integration to routing layer focus
@@ -1150,3 +1159,6 @@ AGENTS.md (this update)
 - Conxian routes through sBTC/STX for BTC settlement — not a DeFi participant
 - Babylon staking yields are routing revenue sources, not user deposits
 - BitVM bridges are future routing infrastructure, not immediate priority
+- Protocol handoff to community reduces Conxian-Labs regulatory exposure
+- **Critical**: Org repos are FAR AHEAD — conxius-enclave-sdk v2.0.12 has FROST, BitVM2, Fedimint, Ark all production-ready
+- conxius-platform (this repo) is the control plane only — other repos handle protocol

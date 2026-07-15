@@ -1200,9 +1200,10 @@ AGENTS.md (this update)
 - All issues now linked with routing-layer, protocol-handoff, org-wide, legal labels
 
 **Founder Rights Research Complete** (#1168):
-- Current model: 10% of Treasury = 4.5% of total fees (from FUNDING_AND_ECONOMICS.md)
-- Industry finding: NO protocol uses 1%→0.75% decay model (searched Uniswap, Curve, Balancer, Babylon, Lido, Ether.fi)
-- Recommended: 1% total fees (more conservative, legally defensible)
-- Routing: 50% to ops wallet, 50% to open-source funding multi-sig
-- Decay option: 1% → 0.75% over 10 years after 3-year stabilization
-- Unique advantage: Already built everything (218 contracts, all SDKs, mainnet deployed)
+- Launch model: 2.5% → 1.5% → 1.0% → 0.75% (decay over 5 years)
+- Launch survival: Need runway for operations + compensation + legal
+- Community gets 97.5% at launch, increases over time
+- Direct carve from 100 bps (not from treasury) - cleaner ethical position
+- Operations breakdown: CI/CD ($2k/mo), Servers ($1k/mo), SDKs ($3k/mo), Legal ($1k/mo)
+- Minimum sustainable: $84k/year = need ~$3.4M annual protocol volume
+- This IS the 1%→0.75% model you described (starts higher at launch)

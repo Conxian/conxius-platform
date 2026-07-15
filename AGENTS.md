@@ -57,7 +57,7 @@ The Conxian protocol economic model has four layers connecting revenue to reward
 
 2. **Revenue/Payment Rails** — Institutional-grade AP/AR execution per `openspec/specs/fail-closed-bos-payments-apar.spec.md`. Supports ON_CHAIN, ISO_20022, and PAPSS rails with deterministic T+0 settlement. Each `RailPlan` carries `planned_fees`, and liquidity reservations cover `amount + fees + policy_buffer`.
 
-3. **Contributor Rewards (Claim Ledger)** — Defined in `openspec/specs/contributor-claim-ledger-policy.spec.md`: 5 contribution categories with base CU (8/12/6/4/3), formula `(baseCu × impactBps × qualityBps) / 100`, 40 CU/month cap, 4 activation gates (60d mainnet stability + payout routing active + 6mo treasury runway + governance ratification), snapshot-based monetary conversion. **No TypeScript implementation exists yet** — only OpenSpec specification.
+3. **Contributor Rewards (Claim Ledger)** — Defined in `openspec/specs/contributor-claim-ledger-policy.spec.md`: 5 contribution categories with base CU (8/12/6/4/3), formula `(baseCu × impactBps × qualityBps) / 100`, 40 CU/month cap, 4 activation gates (60d mainnet stability + payout routing active + 6mo treasury runway + governance ratification), snapshot-based monetary conversion. **TypeScript implementation exists** — see `src/governance/claims.ts` and `services/admin-dashboard/src/lib/governance/claims.ts`. Implemented in PR #1159.
 
 4. **Governance** — Three-lane model in `GOVERNANCE.md`: Baseline (authoritative policies) → Live Execution (issues/PRs) → Historical (read-only archive). Governance ratifies reward activation, sets the conversion pool, and controls all treasury policy.
 
@@ -91,7 +91,7 @@ All services use multi-layered M2M auth per `docs/M2M_AUTHENTICATION.md`:
 - **Yield sources** defined in scoring matrix (Babylon Staking G-43, ctUSD G-22, Lightning Async Payments G-53) have no UI integration
 - **Proof-carrying treasury analytics** (`openspec/changes/2026-05-12-proof-carrying-analytics-treasury-oracle/`) — defined but not implemented
 
-> **Note**: Contributor Claim Ledger was implemented in #1159. Key Gaps list updated 2026-07-14.
+> **Note**: Contributor Claim Ledger was implemented in #1159. Self-evolving KB system scaffolded (issue #1165). Key Gaps list updated 2026-07-15.
 
 ### Reward Source Breakdown (Merged in #1115)
 - API: `GET /api/v1/rewards/sources` → 4 revenue sources (Protocol Fees 38%, Staking Yield 28%, Treasury Yield 20%, Service Revenue 14%) mapped to 4 allocation categories (Community 40%, Governance 25%, Operations 20%, Reserve 15%), each tagged with SFO operational units
@@ -114,7 +114,7 @@ This section maps the agent's available skills and tools to this repository's sp
 | Skill | When to Use | Repo Trigger |
 |---|---|---|
 | `github` | Any GitHub API operation (issues, PRs, workflows, repo metadata) | `GITHUB_TOKEN` is always available |
-| `github-actions` | Debugging CI failures, creating/modifying workflows in `.github/workflows/` | 17 custom workflow files; CI is heavy |
+| `github-actions` | Debugging CI failures, creating/modifying workflows in `.github/workflows/` | 18 custom workflow files; CI is heavy |
 | `agent-memory` | Persisting or retrieving knowledge from AGENTS.md | This file — append to `## Session Log` after every session |
 | `agent-onboarding` | New agent induction, session continuity, swarm coordination | `.agents/skills/agent-onboarding/SKILL.md` — run at session start |
 
@@ -135,7 +135,7 @@ This section maps the agent's available skills and tools to this repository's sp
 |---|---|---|
 | `release-notes` | Generating changelog entries from git history | `CHANGELOG.md` follows Keep a Changelog; `RELEASING.md` defines process |
 | `github-pr-review` | Posting inline review comments with suggestions on PRs | When conducting code reviews on PRs |
-| `iterate` | Driving a PR through CI → review → QA loop until merge-ready | 17 custom CI workflows; PRs must pass hygiene, secret-scan, dependency-review, tests |
+| `iterate` | Driving a PR through CI → review → QA loop until merge-ready | 18 custom CI workflows; PRs must pass hygiene, secret-scan, dependency-review, tests |
 
 ### Infrastructure & Deploy Skills
 
@@ -230,7 +230,7 @@ This file is a **living knowledge base** that grows with every agent session. Ea
 
 ## Repository Knowledge Graph (Full Synthesis — July 2026)
 
-This section is the canonical cross-reference of every system, type, API, document, and relationship in the repository. Generated from exhaustive deep-reads of all 150+ documentation files, 63 source files, 22 scripts, 19 CI workflows, and 7 specs.
+This section is the canonical cross-reference of every system, type, API, document, and relationship in the repository. Generated from exhaustive deep-reads of all 150+ documentation files, 63 source files, 22 scripts, 18 custom CI workflows + 3 GitHub-native (CodeQL, Dependabot, Dependency Graph), and 7 specs.
 
 ### Complete Type System Map
 
@@ -934,10 +934,10 @@ AGENTS.md (this update)
 - Verified full repository state: clean working tree, main branch, v0.2.5 tag.
 - Ran comprehensive verification against GitHub API and local filesystem.
 - Fixed AGENTS.md KB discrepancies:
-  - API routes: 26 → 33
-  - CI workflows: 19 → 17 custom + 3 GitHub-native
-  - Test files: 22 → 20, test cases: ~161 → 182
-  - Skills trigger: 18 → 17 workflow files
+  - API routes: 26 → 34
+  - CI workflows: 19 → 18 custom + 3 GitHub-native
+  - Test files: 22 → 26
+  - Skills trigger: 18 → 18 workflow files
 **Key discoveries**:
 - CodeQL workflow was removed (commit 7b17e86) - GitHub-native CodeQL is enabled by default.
 - Custom codeql.yml conflicted with GitHub default setup.
@@ -1032,3 +1032,35 @@ AGENTS.md (this update)
 **Gotchas**:
 - Use GitHub API for programmatic issue updates
 - Milestone created with number 1
+
+### 2026-07-15 — KB Verification & Discrepancy Fixes
+**Trigger**: User requested full KB verification with "don't trust" principle.
+**What was done**:
+- Pulled latest code (commit a2ddc1b: Node.js 22→24 in kb-evolution.yml)
+- Verified all KB claims against actual repository state
+- Fixed critical contradiction: Line 60 said "No TypeScript implementation exists yet" for claims ledger, but line 94 said it was implemented in #1159
+- Updated GitHub issue #1165 (self-evolving KB) with completed items
+- Fixed AGENTS.md metrics:
+  - API routes: 33 → 34
+  - CI workflows: 17 → 18 custom + 3 GitHub-native
+  - Test files: 20 → 26
+  - Updated skills table and iterate skill to reflect 18 workflows
+  - Updated Repository Knowledge Graph section
+**Discrepancies found**:
+| Item | KB Claims | Actual | Delta |
+|------|-----------|--------|-------|
+| API Routes | 33 | 34 | +1 |
+| Test Files | 20 | 26 | +6 |
+| CI Workflows | 17 | 18 | +1 |
+**Key discoveries**:
+- AGENTS.md had internal contradiction (lines 60 vs 94) about claims ledger implementation
+- Previous session log entries had incorrect metrics from before latest updates
+- kb-evolution.yml just updated to Node.js 24 (PR #1166)
+**Files touched**:
+- `AGENTS.md` (fixed 6 discrepancies, added session log entry)
+**Gaps identified**:
+- Claims ledger is NO LONGER a gap - it was implemented in #1159
+- Self-evolving KB system scaffolded but needs TAVILY_API_KEY secret and initial population
+**Gotchas**:
+- Always verify KB claims against actual filesystem (git, find, grep)
+- GitHub API confirms issue #1159 is closed with claims implementation

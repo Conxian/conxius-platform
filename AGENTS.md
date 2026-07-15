@@ -61,6 +61,57 @@ The Conxian protocol economic model has four layers connecting revenue to reward
 
 4. **Governance** — Three-lane model in `GOVERNANCE.md`: Baseline (authoritative policies) → Live Execution (issues/PRs) → Historical (read-only archive). Governance ratifies reward activation, sets the conversion pool, and controls all treasury policy.
 
+### Bitcoin L2 Research (July 2026)
+Based on comprehensive external research from official documentation, academic papers, and ecosystem reports:
+
+#### Stacks Nakamoto + sBTC (Production-Ready)
+- **Nakamoto Upgrade (Q4 2024)**: Decoupled Stacks block production from Bitcoin timing; ~5 second blocks with Bitcoin-anchored finality. Clarity 4 + Fast Blocks for smart contract expressiveness [1][2]
+- **sBTC Peg Mechanics**: Single Bitcoin UTXO holds all pegged BTC; 14-15 elected signer federation with threshold signature wallet. Peg-outs require 70% signing threshold. Signers lock STX and earn BTC rewards [2][3]
+- **sBTC Adoption**: Peaked $545M TVL, ~$437M by Q1-2026. Zest, Granite, StackingDAO deployed. Fireblocks & Copper institutional integrations [3][16]
+- **Phase Rollout**: Deposit-only Phase 1 (Dec 2024), withdrawals 2025, caps removed mid-2025 [3][4]
+
+#### BitVM Family (Research-Heavy, Maturing)
+- **BitVM Core**: Optimistic/fraud-proof verification anchored to Bitcoin without consensus changes. Reduces signer trust to existential honest challenger [5][6]
+- **BitVM2**: Permissionless verification, reduced dispute costs (USENIX Security 2026) [7]
+- **BitVM3**: Garbled circuits for efficient Bitcoin bridges [6]
+- **BitLayer Bridge**: Engineering implementation with operator fronting model [8]
+- **Trade-offs**: Heavy off-chain precomputation, liquidity demands, potential long dispute timeframes [6][24]
+
+#### Babylon (Dominant BTCFi Staking)
+- **TVL**: Peaked >$5.6B late 2024, fluctuating through 2025-2026 [32]
+- **Positioning**: Native on-Bitcoin staking avoiding bridge-wrapping risks
+- **Gap**: Precise staking mechanics, slashing rules, governance details not publicly documented in primary sources
+
+#### Comparative Trade-offs
+| Aspect | Stacks/sBTC | BitVM | Babylon |
+|--------|-------------|-------|---------|
+| Trust Model | 70% signer threshold | Existential honest challenger | Native staking |
+| Finality | Fast L2 + Bitcoin-anchored | Bitcoin-native via proofs | Bitcoin-anchored |
+| Composability | Full DeFi (Clarity 4) | Research-heavy | Staking focus |
+| Complexity | Moderate | High | Low |
+| Production Ready | ✅ Yes | ⚠️ Maturing | ✅ Yes |
+
+#### Primary Sources (Verified)
+- [1] https://docs.stacks.co/learn/block-production/what-was-the-nakamoto-upgrade
+- [2] https://docs.stacks.co/learn/sbtc/security-model-of-sbtc
+- [3] https://nansen.ai/post/stacks-2025-ecosystem-report
+- [4] https://messari.io/report/stacks-q4-2024-brief
+- [6] https://bitvm.org/bitvm3.pdf
+- [7] https://www.usenix.org/system/files/conference/usenixsecurity26/sec26_prepub_woll.pdf
+- [8] https://blog.bitlayer.org/introducing_bitvm_bridge
+- [32] https://spark.money/research/bitcoin-second-layer-scaling-landscape
+
+#### Phase 7 Strategic Alignment
+- **Stacks/sBTC**: ✅ **Aligned** — Conxian Gateway uses sBTC/STX L2 instruments per Agent Learnings
+- **BitVM/BitVMX**: ⚠️ **Research Gaps** — No active implementation; BitVM3 paper flagged for future integration (#1164 related)
+- **Babylon**: ⚠️ **UI Gap** — Yield sources G-43 defined but no UI integration per Key Gaps
+- **FROST/OP_CAT**: ✅ **Research Priority** — Previously identified in Phase 7 research
+
+#### Evidence Gaps Identified
+- Fedimint: No 2024-2026 primary evidence found
+- Babylon staking internals: TVL data only, no slashing/governance docs
+- sBTC detailed audit reports: Limited incident postmortems
+
 ### UI Pattern Reference
 - **Admin dashboard** (`services/admin-dashboard/`): Next.js 16 + React 19, pnpm workspace, typecheck with `npx tsc --noEmit`, port 3001
 - **Admin pulse BOS** (`services/admin-pulse-bos/`): Separate service for SFO rendering
@@ -1066,3 +1117,28 @@ AGENTS.md (this update)
 - Always verify KB claims against actual filesystem (git, find, grep)
 - GitHub API confirms issue #1159 is closed with claims implementation
 - Issue #1165: 9/10 items done - only "Initial knowledge population" remains (trigger action)
+
+### 2026-07-15 — Bitcoin L2 Research & KB Enhancement
+**Trigger**: User requested expanded research into official and research papers for production alignment.
+**What was done**:
+- Conducted comprehensive Tavily research on Bitcoin L2 landscape (2024-2026)
+- Synthesized findings from: Stacks docs, sBTC security model, Nansen ecosystem report, Messari Q4 brief, BitVM papers, USENIX Security 2026, Babylon/BTCFi landscape
+- Added new "Bitcoin L2 Research" section to Agent Learnings with:
+  - Stacks Nakamoto + sBTC status (production-ready, $437M TVL)
+  - BitVM family analysis (BitVM2/BitVM3 - maturing, USENIX validated)
+  - Babylon positioning (> $5.6B TVL peaked)
+  - Comparative trade-offs table
+  - 8 verified primary sources with citations
+  - Phase 7 strategic alignment assessment
+  - Evidence gaps identified (Fedimint, Babylon internals)
+**Research findings**:
+- Conxian Gateway alignment: Stacks/sBTC ✅ matches existing architecture
+- BitVM/BitVMX: Research gap - flagged for #1164 (revenue-automation.clar related)
+- Babylon: UI integration gap - G-43 yield source defined but not connected
+- Key evidence gaps: Fedimint no 2024-2026 data, Babylon slashing rules undocumented
+**Files touched**:
+- `AGENTS.md` (added comprehensive Bitcoin L2 research section)
+**Strategic implications**:
+- Protocol should prioritize sBTC integration for BTC yield (matches current architecture)
+- Babylon UI integration is low-hanging fruit for yield dashboard
+- BitVM research should inform future bridge strategy but not immediate priority

@@ -49,8 +49,8 @@ const SERVICE_PERMISSIONS: Record<ServiceId, Scope[]> = {
   'external': [], // External services need explicit scopes
 };
 
-// Configuration interface
-interface M2MConfig {
+// Configuration options interface
+export interface M2MConfigOptions {
   // API Key for service authentication
   apiKey?: string;
   // JWT secret for token validation
@@ -65,7 +65,7 @@ interface M2MConfig {
  * M2M Authentication Configuration
  */
 export class M2MConfig {
-  private config: M2MConfig;
+  private config: M2MConfigOptions;
   private static instance: M2MConfig | null = null;
 
   private constructor() {
@@ -82,6 +82,13 @@ export class M2MConfig {
       M2MConfig.instance = new M2MConfig();
     }
     return M2MConfig.instance;
+  }
+
+  /**
+   * Reset the singleton instance - useful for testing
+   */
+  static resetInstance(): void {
+    M2MConfig.instance = null;
   }
 
   private loadServiceKeys(): Record<ServiceId, string> {

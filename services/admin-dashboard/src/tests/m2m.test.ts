@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { M2MAuthenticator, validateM2MAuth, validateM2MAuthWithScope, validateAdminAuth } from '../lib/support/m2m';
+import { M2MAuthenticator, M2MConfig, validateM2MAuth, validateM2MAuthWithScope, validateAdminAuth } from '../lib/support/m2m';
 
 // Mock the environment
 vi.mock('process', () => ({
@@ -21,6 +21,8 @@ describe('M2M Authentication', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Reset singleton before each test to pick up mocked environment
+    M2MConfig.resetInstance();
     authenticator = new M2MAuthenticator();
   });
 

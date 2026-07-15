@@ -44,6 +44,31 @@ The following rulesets must be configured at the organization level (`Conxian`):
 | Dependency review | Enabled (all repositories) |
 | GitHub Advanced Security | Enabled where available |
 
+### 1.3 Enforcement Levels
+
+> **Critical**: Per Issue #854, rulesets must be set to `active` (enforcing) mode.
+> Rulesets in `evaluate` (advisory) mode do NOT block violations.
+
+| Enforcement | Behavior | Blocking |
+|-------------|----------|----------|
+| `active` | Rules are enforced immediately | ✅ **YES** - Blocks violations |
+| `evaluate` | Rules are evaluated but not enforced | ❌ **NO** - Shows warnings only |
+
+**Current Gap**: Some repositories have rulesets in `evaluate` mode. These must be upgraded to `active` mode to enforce blocking.
+
+**How to Upgrade**:
+1. **Via GitHub UI**: Repository/Organization Settings → Rules → Rulesets → Select ruleset → Edit → Change "Enforcement" to `active`
+2. **Via API**:
+   ```bash
+   # Organization-level ruleset
+   PATCH https://api.github.com/orgs/{org}/rulesets/{ruleset_id}
+   {"enforcement": "active"}
+   
+   # Repository-level ruleset
+   PATCH https://api.github.com/repos/{org}/{repo}/rulesets/{ruleset_id}
+   {"enforcement": "active"}
+   ```
+
 ## 2. Push Protection & Secret-Sanning Posture
 
 ### 2.1 Push Protection Requirements

@@ -111,9 +111,36 @@ export function parseConxianEnv(config: Record<string, string | undefined>): Con
   return envSchema.parse(input);
 }
 
+/**
+ * Build M2M auth headers for service-to-service requests
+ */
+function getServiceAuthHeaders(): HeadersInit {
+  const headers: HeadersInit = {};
+  
+  // Add admin API key if configured
+  const adminKey = process.env.CONXIAN_ADMIN_API_KEY;
+  if (adminKey) {
+    headers['X-Admin-API-Key'] = adminKey;
+  }
+  
+  // Add service key for internal services (elizaos plugin)
+  const serviceKey = process.env.SERVICE_KEY_ELIZAOS;
+  if (serviceKey) {
+    headers['X-Service-Key'] = `elizaos:${serviceKey}`;
+  }
+  
+  return headers;
+}
+
 async function fetchJson(url: string, init?: RequestInit): Promise<unknown> {
   const headers = new Headers(init?.headers);
   if (!headers.has("Accept")) headers.set("Accept", "application/json");
+  
+  // Add M2M auth headers
+  const authHeaders = getServiceAuthHeaders();
+  Object.entries(authHeaders).forEach(([key, value]) => {
+    if (!headers.has(key)) headers.set(key, value);
+  });
 
   const r = await fetch(url, {
     ...init,

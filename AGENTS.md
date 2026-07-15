@@ -1162,3 +1162,9 @@ AGENTS.md (this update)
 - Protocol handoff to community reduces Conxian-Labs regulatory exposure
 - **Critical**: Org repos are FAR AHEAD — conxius-enclave-sdk v2.0.12 has FROST, BitVM2, Fedimint, Ark all production-ready
 - conxius-platform (this repo) is the control plane only — other repos handle protocol
+
+**GitHub Issues Updated**:
+- #1164 (revenue-automation): Updated with strategic clarification - spec only, community implementation
+- #1167 (NEW): Cross-repo alignment issue - protocol handoff & routing layer
+- conxian-gateway #245 (BIP-110): Linked to platform issues, added org repo status
+- All issues now linked with routing-layer, protocol-handoff, org-wide labels

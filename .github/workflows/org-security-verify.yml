@@ -89,12 +89,23 @@ jobs:
               
               # Check if rulesets are active
               active_rulesets = [r for r in rulesets if r.get('enforcement') == 'active']
+              evaluate_rulesets = [r for r in rulesets if r.get('enforcement') == 'evaluate']
               print(f"Active rulesets: {len(active_rulesets)}")
+              print(f"Evaluate (advisory) rulesets: {len(evaluate_rulesets)}")
+              
+              # Flag evaluate-mode gaps
+              if evaluate_rulesets:
+                  print("\n⚠ Evaluate-Mode Gaps Detected:")
+                  for rs in evaluate_rulesets:
+                      print(f"  - {rs.get('name')} (ID: {rs.get('id')}) is in 'evaluate' mode (not blocking)")
+                  print("\n  Action Required: Change enforcement from 'evaluate' to 'active'")
               
               with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
                   f.write(f"ruleset_count={len(rulesets)}\n")
                   f.write(f"active_rulesets={len(active_rulesets)}\n")
+                  f.write(f"evaluate_rulesets={len(evaluate_rulesets)}\n")
                   f.write(f"status=pass\n")
+                  f.write(f"enforcement_status={'partial' if evaluate_rulesets else 'full'}\n")
           elif response.status_code == 403:
               print("⚠ Admin permissions required for rulesets API")
               print("The GITHUB_TOKEN does not have sufficient permissions to access rulesets.")
@@ -383,10 +394,123 @@ jobs:
         env:
           INPUT_ORG_NAME: ${{ inputs.org_name || 'Conxian' }}
 
+  verify-repo-rulesets:
+    name: Verify Repository Rulesets
+    runs-on: ubuntu-24.04
+    needs: verify-org-rulesets
+    outputs:
+      repo_rulesets_status: ${{ steps.check_repo_rulesets.outputs.status }}
+      repo_gaps_count: ${{ steps.check_repo_rulesets.outputs.gaps_count }}
+    
+    steps:
+      - name: Check repository-level rulesets
+        id: check_repo_rulesets
+        run: |
+          python3 << 'EOF'
+          import os
+          import requests
+          import json
+          
+          org = os.environ.get('INPUT_ORG_NAME', 'Conxian')
+          token = os.environ.get('GITHUB_TOKEN')
+          
+          headers = {
+              'Authorization': f'Bearer {token}',
+              'Accept': 'application/vnd.github+json',
+              'X-GitHub-Api-Version': '2022-11-28'
+          }
+          
+          priority_repos = [
+              '.github', 'Conxian', 'conxius-wallet', 'conxian-gateway',
+              'conxian-nexus', 'lib-conxian-core', 'conxius-platform',
+              'conxius-enclave-sdk', 'conxian_ui', 'conxian-labs-site'
+          ]
+          
+          results = []
+          gaps = []
+          
+          for repo in priority_repos:
+              url = f'https://api.github.com/repos/{org}/{repo}/rulesets'
+              try:
+                  response = requests.get(url, headers=headers)
+                  if response.status_code == 200:
+                      rulesets = response.json()
+                      active = [r for r in rulesets if r.get('enforcement') == 'active']
+                      evaluate = [r for r in rulesets if r.get('enforcement') == 'evaluate']
+                      
+                      has_gap = len(evaluate) > 0 and len(active) == 0
+                      results.append({
+                          'repo': repo,
+                          'status': 'found',
+                          'total': len(rulesets),
+                          'active': len(active),
+                          'evaluate': len(evaluate),
+                          'has_gap': has_gap
+                      })
+                      
+                      if has_gap:
+                          gaps.append({
+                              'repo': repo,
+                              'rulesets': evaluate,
+                              'issue': 'Repository has rulesets but none are in active (enforcing) mode'
+                          })
+                          print(f"⚠ {repo}: {len(evaluate)} evaluate-mode rulesets (no active)")
+                          for rs in evaluate:
+                              print(f"    - {rs.get('name')} (ID: {rs.get('id')})")
+                      else:
+                          print(f"✓ {repo}: {len(active)} active rulesets")
+                  elif response.status_code == 403:
+                      results.append({
+                          'repo': repo,
+                          'status': 'requires_permissions',
+                          'note': 'Admin permissions required'
+                      })
+                      print(f"⚠ {repo}: Requires permissions")
+                  elif response.status_code == 404:
+                      results.append({
+                          'repo': repo,
+                          'status': 'not_found',
+                          'note': 'No rulesets configured'
+                      })
+                      print(f"✗ {repo}: No rulesets configured")
+                  else:
+                      results.append({
+                          'repo': repo,
+                          'status': 'error',
+                          'note': f'Status {response.status_code}'
+                      })
+                      print(f"? {repo}: Error {response.status_code}")
+              except Exception as e:
+                  results.append({
+                      'repo': repo,
+                      'status': 'error',
+                      'note': str(e)
+                  })
+                  print(f"? {repo}: Error {e}")
+          
+          # Summary
+          repos_with_active = sum(1 for r in results if r.get('active', 0) > 0)
+          total_gaps = len(gaps)
+          
+          print(f"\nRepository Rulesets Summary:")
+          print(f"  - Repos with active rulesets: {repos_with_active}/{len(priority_repos)}")
+          print(f"  - Repos with evaluate-mode gaps: {total_gaps}")
+          
+          if total_gaps > 0:
+              print(f"\n⚠ Action Required: Upgrade {total_gaps} repositories from evaluate to active mode")
+              print("   Per Issue #854: Rulesets in evaluate mode do not enforce blocks")
+          
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f"status={'gaps_found' if total_gaps > 0 else 'pass'}\n")
+              f.write(f"gaps_count={total_gaps}\n")
+              f.write(f"repos_with_active={repos_with_active}\n")
+              f.write(f"total_repos={len(priority_repos)}\n")
+          EOF
+
   generate-verification-report:
     name: Generate Verification Report
     runs-on: ubuntu-24.04
-    needs: [verify-org-rulesets, verify-branch-protection]
+    needs: [verify-org-rulesets, verify-branch-protection, verify-repo-rulesets]
     if: always()
     
     steps:
@@ -496,7 +620,7 @@ jobs:
   post-verification-summary:
     name: Verification Summary
     runs-on: ubuntu-24.04
-    needs: [verify-org-rulesets, verify-branch-protection, generate-verification-report]
+    needs: [verify-org-rulesets, verify-branch-protection, verify-repo-rulesets, generate-verification-report]
     if: always()
     
     steps:
@@ -511,11 +635,38 @@ jobs:
           echo ""
           echo "Documentation: .github/ORG_SECURITY_GOVERNANCE.md"
           echo ""
+          
+          # Get outputs from jobs
+          ORG_STATUS="${{ needs.verify-org-rulesets.outputs.status }}"
+          EVALUATE_COUNT="${{ needs.verify-org-rulesets.outputs.evaluate_rulesets }}"
+          REPO_GAPS="${{ needs.verify-repo-rulesets.outputs.repo_gaps_count }}"
+          
+          echo "Org Ruleset Status: $ORG_STATUS"
+          if [ "$EVALUATE_COUNT" != "" ] && [ "$EVALUATE_COUNT" != "0" ]; then
+            echo "⚠ $EVALUATE_COUNT org-level rulesets in evaluate (advisory) mode"
+          fi
+          
+          if [ "$REPO_GAPS" != "" ] && [ "$REPO_GAPS" != "0" ]; then
+            echo "⚠ $REPO_GAPS repositories have evaluate-mode-only rulesets"
+          fi
+          
+          echo ""
           echo "IMPORTANT: This is an automated check only. Full verification requires:"
           echo "  1. Manual review of GitHub organization settings"
           echo "  2. Verification of ruleset configurations in GitHub Enterprise"
           echo "  3. Screenshot evidence of settings with timestamps"
           echo ""
+          
+          # Check for gaps
+          if [ "$EVALUATE_COUNT" != "" ] || [ "$REPO_GAPS" != "" ]; then
+            echo "ACTION REQUIRED:"
+            echo "  ⚠ Rulesets found in evaluate (advisory) mode"
+            echo "  - Per Issue #854: Evaluate mode does NOT enforce blocks"
+            echo "  - Change enforcement from 'evaluate' to 'active' for blocking enforcement"
+            echo "  - Use API: PATCH /repos/{org}/{repo}/rulesets/{id} with {\"enforcement\": \"active\"}"
+            echo ""
+          fi
+          
           echo "To manually verify:"
           echo "  1. Go to https://github.com/organizations/Conxian/settings"
           echo "  2. Review 'Rulesets' and 'Ruleset rules' sections"

@@ -1,27 +1,40 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { M2MAuthenticator, validateM2MAuth, validateM2MAuthWithScope, validateAdminAuth } from '../lib/support/m2m';
+import { M2MAuthenticator, M2MConfig, validateM2MAuth, validateM2MAuthWithScope, validateAdminAuth } from '../lib/support/m2m';
 
-// Mock the environment
-vi.mock('process', () => ({
-  env: {
-    ADMIN_DASHBOARD_API_KEY: 'test-admin-key',
-    SERVICE_KEY_GATEWAY: 'test-gateway-key',
-    SERVICE_KEY_ELIZAOS: 'test-elizaos-key',
-    SERVICE_KEY_NEXUS: 'test-nexus-key',
-    GATEWAY_JWT_SECRET: 'test-jwt-secret',
-    EXTERNAL_API_KEYS: JSON.stringify({
-      'external-key-1': ['read:admin', 'read:metrics'],
-      'external-key-2': ['read:treasury'],
-    }),
-  },
-}));
+// Mock environment factory - called each time the mock is accessed
+const mockEnv = {
+  ADMIN_DASHBOARD_API_KEY: 'test-admin-key',
+  SERVICE_KEY_GATEWAY: 'test-gateway-key',
+  SERVICE_KEY_ELIZAOS: 'test-elizaos-key',
+  SERVICE_KEY_NEXUS: 'test-nexus-key',
+  GATEWAY_JWT_SECRET: 'test-jwt-secret',
+  EXTERNAL_API_KEYS: JSON.stringify({
+    'external-key-1': ['read:admin', 'read:metrics'],
+    'external-key-2': ['read:treasury'],
+  }),
+};
 
 describe('M2M Authentication', () => {
   let authenticator: M2MAuthenticator;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Mock process.env before each test
+    vi.stubGlobal('process', {
+      ...process,
+      env: {
+        ...process.env,
+        ...mockEnv,
+      },
+    });
+    // Reset singleton before each test to pick up mocked environment
+    M2MConfig.resetInstance();
     authenticator = new M2MAuthenticator();
+  });
+
+  afterEach(() => {
+    // Restore process.env after each test
+    vi.unstubAllGlobals();
   });
 
   describe('API Key Validation', () => {

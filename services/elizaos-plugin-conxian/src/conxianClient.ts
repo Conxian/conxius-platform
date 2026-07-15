@@ -138,7 +138,7 @@ async function fetchJson(url: string, init?: RequestInit): Promise<unknown> {
   
   // Add M2M auth headers
   const authHeaders = getServiceAuthHeaders();
-  authHeaders.forEach((value, key) => {
+  Object.entries(authHeaders).forEach(([key, value]) => {
     if (!headers.has(key)) headers.set(key, value);
   });
 

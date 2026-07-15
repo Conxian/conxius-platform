@@ -539,7 +539,6 @@ class OrgSecurityVerifier:
 
 """
         rulesets = checks.get('rulesets', {})
-        enforcement_status = rulesets.get('enforcement_status', 'unknown')
         if rulesets.get('status') == 'success':
             md += f"**Found {rulesets.get('ruleset_count', 0)} rulesets:**\n\n"
             for rs in rulesets.get('rulesets', []):

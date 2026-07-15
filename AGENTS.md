@@ -71,10 +71,37 @@ Based on comprehensive external research + org repo analysis (repos are **far ah
 
 | Repo | Language | Version | Status |
 |------|----------|---------|--------|
+| `Conxian` | Clarity | v0.6.1 | ✅ **Mainnet Deployed** |
 | `conxius-enclave-sdk` | Rust | v2.0.12 | ✅ **Production Ready** |
 | `lib-conxian-core` | Rust | v0.2.12 | ✅ Stable |
 | `conxian-gateway` | Rust | Active | ✅ Active |
 | `conxian-nexus` | Rust | Active | ✅ Active |
+
+#### Conxian Protocol (THE PROTOCOL - DAO-facing)
+**Repo**: `Conxian/Conxian` — 218 Clarity contracts, 76+ test files, mainnet deployed
+
+**Key Revenue System (CXIP-013)**:
+- **100 bps (1%)** mandatory protocol fee via `revenue-automation.clar`
+- **6-Way Fiscal Dam Split** (cxd-treasury.clar):
+  - Treasury (SAB Operations): 45%
+  - Bounties (Community): 30%
+  - LP Incentives: 15%
+  - Grants & Ecosystem: 5%
+  - Buyback & Burn (CXD): 5%
+  - Insurance Fund: 0% (dynamic)
+- **Founder's Cut**: 10% carve-out from Treasury = **4.5% of total fees**
+- Bootstrap wallet via `founder-cut-beneficiary` in `operational-treasury.clar`
+
+**Key Contracts**:
+- `revenue-automation.clar` — enforces 100 bps fee
+- `revenue-distributor.clar` — token buy-backs and burns
+- `founder-vault.clar` — founder allocations and vesting
+- `dimensional-core.clar` — multidimensional DeFi engine
+- `governance.clar` — dual-council DAO
+
+**Identity Split**:
+- **Conxian (protocol)**: DAO-facing, public economic logic
+- **Conxian-Labs (builder)**: Engineering execution, infrastructure
 
 **conxius-enclave-sdk (v2.0.12)** already implements:
 - ✅ FROST DKG — distributed key generation
@@ -114,12 +141,14 @@ Based on comprehensive external research + org repo analysis (repos are **far ah
 #### Strategic Alignment
 | Area | Org Repo Status | Action |
 |------|----------------|--------|
+| **Protocol** | ✅ Conxian/Conxian | Revenue system live (CXIP-013) |
 | FROST DKG | ✅ conxius-enclave-sdk | No action needed |
 | BitVM2 | ✅ conxius-enclave-sdk | No action needed |
 | Fedimint | ✅ conxius-enclave-sdk + lib-conxian-core | No action needed |
 | Babylon | ✅ lib-conxian-core adapter | UI integration only |
 | sBTC | 🔄 conxian-gateway | Verify routing integration |
 | OP_CAT | ❓ Unknown | Research needed |
+| Founder Rights | 🔍 Research | Issue #1168 created |
 
 ### UI Pattern Reference
 - **Admin dashboard** (`services/admin-dashboard/`): Next.js 16 + React 19, pnpm workspace, typecheck with `npx tsc --noEmit`, port 3001
@@ -1166,5 +1195,6 @@ AGENTS.md (this update)
 **GitHub Issues Updated**:
 - #1164 (revenue-automation): Updated with strategic clarification - spec only, community implementation
 - #1167 (NEW): Cross-repo alignment issue - protocol handoff & routing layer
+- #1168 (NEW): Founder Rights & Revenue Routing research
 - conxian-gateway #245 (BIP-110): Linked to platform issues, added org repo status
 - All issues now linked with routing-layer, protocol-handoff, org-wide labels

@@ -7,12 +7,46 @@ function gatewayBaseUrl(): string | null {
   return raw.replace(/\/$/, "");
 }
 
+/**
+ * Build M2M auth headers for Gateway requests
+ * Uses service key authentication for internal service-to-service communication
+ */
+function getGatewayAuthHeaders(): HeadersInit {
+  const headers: HeadersInit = {};
+  
+  // Add admin API key if configured
+  const adminKey = process.env.ADMIN_DASHBOARD_API_KEY;
+  if (adminKey) {
+    headers['X-Admin-API-Key'] = adminKey;
+  }
+  
+  // Add service key for internal services
+  const serviceKey = process.env.SERVICE_KEY_ADMIN_DASHBOARD;
+  if (serviceKey) {
+    headers['X-Service-Key'] = `admin-dashboard:${serviceKey}`;
+  }
+  
+  // Add JWT token if configured (for Gateway JWT validation)
+  const jwtSecret = process.env.GATEWAY_JWT_SECRET;
+  // Note: Actual JWT signing would require a library like jose
+  // This is a placeholder for when JWT-based M2M auth is implemented
+  
+  return headers;
+}
+
 async function fetchGateway<T>(path: string): Promise<T | null> {
   const baseUrl = gatewayBaseUrl();
   if (!baseUrl) return null;
 
   try {
-    const r = await fetch(`${baseUrl}${path}`, { cache: "no-store" });
+    const headers = getGatewayAuthHeaders();
+    const r = await fetch(`${baseUrl}${path}`, { 
+      cache: "no-store",
+      headers: {
+        ...headers,
+        'Accept': 'application/json',
+      },
+    });
     if (!r.ok) return null;
     return (await r.json()) as T;
   } catch {
@@ -29,7 +63,14 @@ export async function getSbtcYieldSnapshot(): Promise<YieldSnapshot> {
   }
 
   try {
-    const r = await fetch(`${baseUrl}/api/v1/lorenzo/stats`, { cache: "no-store" });
+    const headers = getGatewayAuthHeaders();
+    const r = await fetch(`${baseUrl}/api/v1/lorenzo/stats`, { 
+      cache: "no-store",
+      headers: {
+        ...headers,
+        'Accept': 'application/json',
+      },
+    });
     if (!r.ok) return { token: "sBTC", apy: null, updatedAtIso };
 
     const j = (await r.json().catch(() => null)) as unknown;

@@ -2,6 +2,13 @@
   "name": "conxius-platform",
   "version": "0.2.5",
   "private": true,
+  "scripts": {
+    "kb:ingest": "npx ts-node scripts/kb/ingest-github.ts",
+    "kb:patterns": "npx ts-node scripts/kb/detect-patterns.ts",
+    "kb:research": "npx ts-node scripts/kb/external-research.ts",
+    "kb:update": "npx ts-node scripts/kb/generate-updates.ts",
+    "kb:status": "npx ts-node -e \"import {knowledgeStore} from './scripts/kb/knowledge-store'; console.log(JSON.stringify(knowledgeStore.getStats(), null, 2))\""
+  },
   "packageManager": "pnpm@9.15.5",
   "engines": {
     "node": ">=20.19.0"

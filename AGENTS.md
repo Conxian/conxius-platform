@@ -1,6 +1,6 @@
 # Conxian Labs: Agent Instructions (v2.0 - OpenSpec Aligned)
 
-Welcome, Agent. You are tasked with maintaining and extending the Conxian DeFi ecosystem.
+Welcome, Agent. You are tasked with maintaining and extending the Conxian platform.
 
 ## Core Directives
 
@@ -9,6 +9,7 @@ Welcome, Agent. You are tasked with maintaining and extending the Conxian DeFi e
 3.  **Bitcoin Native**: Always prioritize Bitcoin-anchored height (`burn-block-height`) and Nakamoto (Stacks 3.0/3.1) readiness.
 4. **Sovereign Design Alignment**: Adhere strictly to the **Sovereign Earthy** branding (Forest Green `#2E403B`, Nakamoto Gold `#D4A017`). Follow the **Stitch Pattern** for UI/UX reviews as codified in `DESIGN.md`. All frontend changes must be "vibe-verified" for high-fidelity consistency within the Earthy Corporate identity.
 5.  **Sentinel Security**: Follow zero-trust patterns. Never hardcode secrets. Use `provision-secrets.sh`.
+6.  **Routing Only**: Conxian is a **routing/infrastructure layer** — we never touch user data or funds directly. We route payments, settlements, and messages between protocols. We do not hold custody, manage wallets, or execute trades.
 
 ## Implementation Patterns
 
@@ -83,13 +84,15 @@ Based on comprehensive external research from official documentation, academic p
 - **Gap**: Precise staking mechanics, slashing rules, governance details not publicly documented in primary sources
 
 #### Comparative Trade-offs
-| Aspect | Stacks/sBTC | BitVM | Babylon |
-|--------|-------------|-------|---------|
-| Trust Model | 70% signer threshold | Existential honest challenger | Native staking |
-| Finality | Fast L2 + Bitcoin-anchored | Bitcoin-native via proofs | Bitcoin-anchored |
-| Composability | Full DeFi (Clarity 4) | Research-heavy | Staking focus |
-| Complexity | Moderate | High | Low |
-| Production Ready | ✅ Yes | ⚠️ Maturing | ✅ Yes |
+| Aspect | Stacks/sBTC | BitVM | Babylon | Conxian Relevance |
+|--------|-------------|-------|---------|-------------------|
+| Trust Model | 70% signer threshold | Existential honest challenger | Native staking | Informs routing trust |
+| Finality | Fast L2 + Bitcoin-anchored | Bitcoin-native via proofs | Bitcoin-anchored | Settlement confirmation |
+| Composability | Full DeFi (Clarity 4) | Research-heavy | Staking focus | **Routing target** |
+| Complexity | Moderate | High | Low | Integration effort |
+| Production Ready | ✅ Yes | ⚠️ Maturing | ✅ Yes | ✅ All viable |
+
+> **Note**: Conxian is a **routing layer** — we integrate with these protocols to route payments/settlements. We do not build DeFi products, hold custody, or manage user funds.
 
 #### Primary Sources (Verified)
 - [1] https://docs.stacks.co/learn/block-production/what-was-the-nakamoto-upgrade
@@ -101,11 +104,11 @@ Based on comprehensive external research from official documentation, academic p
 - [8] https://blog.bitlayer.org/introducing_bitvm_bridge
 - [32] https://spark.money/research/bitcoin-second-layer-scaling-landscape
 
-#### Phase 7 Strategic Alignment
-- **Stacks/sBTC**: ✅ **Aligned** — Conxian Gateway uses sBTC/STX L2 instruments per Agent Learnings
-- **BitVM/BitVMX**: ⚠️ **Research Gaps** — No active implementation; BitVM3 paper flagged for future integration (#1164 related)
-- **Babylon**: ⚠️ **UI Gap** — Yield sources G-43 defined but no UI integration per Key Gaps
-- **FROST/OP_CAT**: ✅ **Research Priority** — Previously identified in Phase 7 research
+#### Phase 7 Strategic Alignment (Routing Layer Focus)
+- **Stacks/sBTC**: ✅ **Aligned** — sBTC for BTC routing/settlement; clarity smart contracts for payment logic
+- **BitVM/BitVMX**: 🔬 **Research** — Monitor for future bridge routing integrations; not immediate priority
+- **Babylon**: ⚠️ **UI Gap** — Babylon staking yields could be shown as routing yield sources (G-43)
+- **FROST/OP_CAT**: ✅ **Research Priority** — Threshold signatures for multi-party routing
 
 #### Evidence Gaps Identified
 - Fedimint: No 2024-2026 primary evidence found
@@ -1127,18 +1130,23 @@ AGENTS.md (this update)
   - Stacks Nakamoto + sBTC status (production-ready, $437M TVL)
   - BitVM family analysis (BitVM2/BitVM3 - maturing, USENIX validated)
   - Babylon positioning (> $5.6B TVL peaked)
-  - Comparative trade-offs table
+  - Comparative trade-offs table with Conxian relevance
   - 8 verified primary sources with citations
-  - Phase 7 strategic alignment assessment
+  - Phase 7 strategic alignment assessment (routing layer focus)
   - Evidence gaps identified (Fedimint, Babylon internals)
+- **Critical clarification**: User confirmed Conxian is "routing only" — we do NOT touch user data or funds
+- Updated Core Directives: Added directive #6 "Routing Only"
+- Updated header: "Conxian platform" (not "DeFi ecosystem")
+- Updated research table: Added "Conxian Relevance" column, added routing note
+- Updated Phase 7 alignment: Reframed from integration to routing layer focus
 **Research findings**:
-- Conxian Gateway alignment: Stacks/sBTC ✅ matches existing architecture
-- BitVM/BitVMX: Research gap - flagged for #1164 (revenue-automation.clar related)
-- Babylon: UI integration gap - G-43 yield source defined but not connected
+- Conxian routing alignment: Stacks/sBTC ✅ matches routing architecture
+- BitVM/BitVMX: Research for future bridge routing
+- Babylon: Routing yield sources (G-43) need UI integration
 - Key evidence gaps: Fedimint no 2024-2026 data, Babylon slashing rules undocumented
 **Files touched**:
-- `AGENTS.md` (added comprehensive Bitcoin L2 research section)
+- `AGENTS.md` (added comprehensive Bitcoin L2 research section, routing-only clarifications)
 **Strategic implications**:
-- Protocol should prioritize sBTC integration for BTC yield (matches current architecture)
-- Babylon UI integration is low-hanging fruit for yield dashboard
-- BitVM research should inform future bridge strategy but not immediate priority
+- Conxian routes through sBTC/STX for BTC settlement — not a DeFi participant
+- Babylon staking yields are routing revenue sources, not user deposits
+- BitVM bridges are future routing infrastructure, not immediate priority

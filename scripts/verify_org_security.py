@@ -102,19 +102,48 @@ class OrgSecurityVerifier:
                     'status': 'success',
                     'ruleset_count': len(rulesets),
                     'rulesets': [],
-                    'required_found': []
+                    'required_found': [],
+                    'evaluate_mode_gaps': []  # Track rulesets in evaluate (advisory) mode
                 }
                 for ruleset in rulesets:
-                    result['rulesets'].append({
+                    enforcement = ruleset.get('enforcement', 'disabled')
+                    ruleset_info = {
                         'name': ruleset.get('name'),
-                        'enforcement': ruleset.get('enforcement'),
-                        'target': ruleset.get('target', 'branch')
-                    })
+                        'enforcement': enforcement,
+                        'target': ruleset.get('target', 'branch'),
+                        'id': ruleset.get('id')
+                    }
+                    result['rulesets'].append(ruleset_info)
+                    
                     # Check if this matches required rulesets
                     name_lower = ruleset.get('name', '').lower()
                     for required in self.REQUIRED_RULESETS:
                         if required.lower() in name_lower:
                             result['required_found'].append(required)
+                    
+                    # Flag evaluate-mode rulesets as a security gap
+                    # Per Issue #854: evaluate mode is advisory, not blocking
+                    if enforcement == 'evaluate':
+                        result['evaluate_mode_gaps'].append({
+                            'name': ruleset.get('name'),
+                            'id': ruleset.get('id'),
+                            'issue': 'Ruleset is in evaluate (advisory) mode - not enforcing blocks'
+                        })
+                
+                # Determine overall enforcement status
+                active_count = sum(1 for r in rulesets if r.get('enforcement') == 'active')
+                evaluate_count = sum(1 for r in rulesets if r.get('enforcement') == 'evaluate')
+                
+                if evaluate_count > 0:
+                    result['enforcement_status'] = 'partial'
+                    result['gap_summary'] = f'{active_count} active, {evaluate_count} in evaluate (advisory) mode'
+                elif active_count > 0:
+                    result['enforcement_status'] = 'full'
+                    result['gap_summary'] = f'{active_count} active rulesets'
+                else:
+                    result['enforcement_status'] = 'none'
+                    result['gap_summary'] = 'No active rulesets found'
+                
                 return result
             elif response.status_code == 404:
                 return {
@@ -286,6 +315,84 @@ class OrgSecurityVerifier:
         except Exception:
             return False
 
+    def check_repo_rulesets(self, repo: str) -> dict[str, Any]:
+        """Check repository-level rulesets (not org-level)."""
+        url = f'https://api.github.com/repos/{self.org}/{repo}/rulesets'
+        try:
+            response = requests.get(url, headers=self.headers)
+            if response.status_code == 200:
+                rulesets = response.json()
+                active_rulesets = []
+                evaluate_rulesets = []
+                for ruleset in rulesets:
+                    enforcement = ruleset.get('enforcement', 'disabled')
+                    ruleset_info = {
+                        'name': ruleset.get('name'),
+                        'enforcement': enforcement,
+                        'id': ruleset.get('id')
+                    }
+                    if enforcement == 'active':
+                        active_rulesets.append(ruleset_info)
+                    elif enforcement == 'evaluate':
+                        evaluate_rulesets.append(ruleset_info)
+                
+                return {
+                    'status': 'found',
+                    'repo': repo,
+                    'total': len(rulesets),
+                    'active_count': len(active_rulesets),
+                    'evaluate_count': len(evaluate_rulesets),
+                    'active_rulesets': active_rulesets,
+                    'evaluate_rulesets': evaluate_rulesets,
+                    'has_enforcement_gap': len(evaluate_rulesets) > 0 and len(active_rulesets) == 0
+                }
+            elif response.status_code == 403:
+                return {
+                    'status': 'requires_permissions',
+                    'repo': repo,
+                    'error': 'Admin permissions required for repository rulesets API'
+                }
+            elif response.status_code == 404:
+                return {
+                    'status': 'not_found',
+                    'repo': repo,
+                    'note': 'No rulesets configured or repository does not exist'
+                }
+            else:
+                return {
+                    'status': 'error',
+                    'repo': repo,
+                    'error': f'HTTP {response.status_code}'
+                }
+        except Exception as e:
+            return {'status': 'error', 'repo': repo, 'error': str(e)}
+
+    def check_all_repo_rulesets(self) -> dict[str, Any]:
+        """Check repository-level rulesets for all priority repos."""
+        results = {}
+        gaps = []
+        
+        for repo in self.PRIORITY_REPOS:
+            print(f"   Checking {repo}...")
+            result = self.check_repo_rulesets(repo)
+            results[repo] = result
+            
+            if result.get('has_enforcement_gap'):
+                gaps.append({
+                    'repo': repo,
+                    'rulesets': result.get('evaluate_rulesets', []),
+                    'issue': 'Repository has rulesets but none are in active (enforcing) mode'
+                })
+        
+        results['_gaps'] = gaps
+        results['_summary'] = {
+            'repos_checked': len(self.PRIORITY_REPOS),
+            'with_rulesets': sum(1 for r in results.values() if r.get('status') == 'found'),
+            'with_active': sum(1 for r in results.values() if r.get('active_count', 0) > 0),
+            'with_gaps': len(gaps)
+        }
+        return results
+
     def run_verification(self) -> dict[str, Any]:
         """Run full verification."""
         print(f"\n{'='*60}")
@@ -309,6 +416,14 @@ class OrgSecurityVerifier:
         self.results['checks']['rulesets'] = rulesets
         if rulesets.get('status') == 'success':
             print(f"   ✓ Found {rulesets.get('ruleset_count', 0)} rulesets")
+            enforcement_status = rulesets.get('enforcement_status', 'unknown')
+            gap_summary = rulesets.get('gap_summary', '')
+            if enforcement_status == 'full':
+                print(f"   ✓ {gap_summary}")
+            elif enforcement_status == 'partial':
+                print(f"   ⚠ {gap_summary}")
+                for gap in rulesets.get('evaluate_mode_gaps', []):
+                    print(f"     - GAP: {gap['name']} is in evaluate mode (ID: {gap['id']})")
             for req in rulesets.get('required_found', []):
                 print(f"     - {req}")
         elif rulesets.get('status') == 'requires_enterprise':
@@ -324,8 +439,19 @@ class OrgSecurityVerifier:
         else:
             print(f"   ✗ {rulesets.get('error', 'Unknown error')}")
 
+        # Check repository-level rulesets
+        print("\n3. Checking repository-level rulesets...")
+        repo_rulesets = self.check_all_repo_rulesets()
+        self.results['checks']['repo_rulesets'] = repo_rulesets
+        rs_summary = repo_rulesets.get('_summary', {})
+        print(f"\n   Summary: {rs_summary.get('with_active', 0)}/{rs_summary.get('repos_checked', 0)} repos with active rulesets")
+        if rs_summary.get('with_gaps', 0) > 0:
+            print(f"   ⚠ {rs_summary.get('with_gaps')} repos have evaluate-mode-only rulesets (GAP)")
+            for gap in repo_rulesets.get('_gaps', []):
+                print(f"     - GAP: {gap['repo']} - {gap['issue']}")
+
         # Check priority repos
-        print("\n3. Checking priority repository branch protection...")
+        print("\n4. Checking priority repository branch protection...")
         branch_protection = self.check_all_priority_repos()
         self.results['checks']['branch_protection'] = branch_protection
 
@@ -342,6 +468,9 @@ class OrgSecurityVerifier:
         self.results['summary'] = {
             'org_verified': org_settings.get('status') == 'success',
             'rulesets_available': rulesets.get('status') == 'success',
+            'rulesets_enforcement_status': rulesets.get('enforcement_status', 'unknown'),
+            'rulesets_evaluate_gaps': len(rulesets.get('evaluate_mode_gaps', [])),
+            'repo_rulesets_gaps': rs_summary.get('with_gaps', 0),
             'rulesets_requires_manual': rulesets.get('status') in ['requires_enterprise', 'requires_permissions'],
             'branch_protection_protected': protected_count,
             'branch_protection_requires_manual': requires_manual,
@@ -368,6 +497,7 @@ class OrgSecurityVerifier:
         # Calculate summary status
         rulesets_status = checks.get('rulesets', {}).get('status', 'unknown')
         bp_summary = checks.get('branch_protection', {}).get('_summary', {})
+        repo_summary = checks.get('repo_rulesets', {}).get('_summary', {})
         
         md = f"""# Org Security Verification Report
 
@@ -381,9 +511,11 @@ class OrgSecurityVerifier:
 
 | Check | Status |
 |-------|--------|
-| Organization Settings | {'✓' if checks.get('org_settings', {}).get('status') == 'success' else '✗'} |
-| Rulesets (Automated) | {'✓' if rulesets_status == 'success' else '⚠ Manual Required' if rulesets_status in ['requires_enterprise', 'requires_permissions'] else '✗'} |
-| Branch Protection | {bp_summary.get('protected', 0)}/{bp_summary.get('total', len(self.PRIORITY_REPOS))} protected{' (⚠ ' + str(bp_summary.get('requires_manual', 0)) + ' require manual)' if bp_summary.get('requires_manual', 0) > 0 else ''} |
+| Organization Settings | {"✓" if checks.get('org_settings', {{}}).get('status') == 'success' else "✗"} |
+| Org Rulesets (Automated) | {"✓" if rulesets_status == 'success' else "⚠ Manual Required" if rulesets_status in ['requires_enterprise', 'requires_permissions'] else "✗"} |
+| Org Ruleset Enforcement | {"✓" if checks.get('rulesets', {{}}).get('enforcement_status') == 'full' else "⚠ " + checks.get('rulesets', {{}}).get('gap_summary', 'review needed') if checks.get('rulesets', {{}}).get('status') == 'success' else "-"} |
+| Repo Rulesets | {repo_summary.get('with_active', 0)}/{repo_summary.get('repos_checked', 0)} with active{" (⚠ " + str(repo_summary.get('with_gaps', 0)) + " gaps)" if repo_summary.get('with_gaps', 0) > 0 else ""} |
+| Branch Protection | {bp_summary.get('protected', 0)}/{bp_summary.get('total', len(self.PRIORITY_REPOS))} protected{" (⚠ " + str(bp_summary.get('requires_manual', 0)) + " require manual)" if bp_summary.get('requires_manual', 0) > 0 else ""} |
 
 ---
 
@@ -407,10 +539,31 @@ class OrgSecurityVerifier:
 
 """
         rulesets = checks.get('rulesets', {})
+        enforcement_status = rulesets.get('enforcement_status', 'unknown')
         if rulesets.get('status') == 'success':
             md += f"**Found {rulesets.get('ruleset_count', 0)} rulesets:**\n\n"
             for rs in rulesets.get('rulesets', []):
-                md += f"- **{rs.get('name')}** - Enforcement: {rs.get('enforcement')}\n"
+                enforcement = rs.get('enforcement', 'disabled')
+                icon = '✓' if enforcement == 'active' else '⚠' if enforcement == 'evaluate' else '✗'
+                md += f"- {icon} **{rs.get('name')}** - Enforcement: `{enforcement}`"
+                if enforcement == 'evaluate':
+                    md += f" *(ID: {rs.get('id')})*"
+                md += "\n"
+            
+            md += f"\n**Enforcement Status:** {rulesets.get('gap_summary', 'Unknown')}\n"
+            
+            # Report evaluate-mode gaps
+            evaluate_gaps = rulesets.get('evaluate_mode_gaps', [])
+            if evaluate_gaps:
+                md += f"\n### ⚠ Evaluate-Mode Gaps (Advisory Only)\n\n"
+                md += "The following rulesets are in `evaluate` (advisory) mode and do **not enforce blocks**:\n\n"
+                for gap in evaluate_gaps:
+                    md += f"- **{gap['name']}** (ID: {gap['id']})\n"
+                    md += f"  - Issue: {gap['issue']}\n"
+                    md += f"  - **Action Required**: Change enforcement from `evaluate` to `active`\n"
+                    md += f"  - API: `PATCH /orgs/{self.org}/rulesets/{gap['id']}` with `{{\"enforcement\": \"active\"}}`\n"
+                md += "\n**Impact**: Rules in `evaluate` mode show warnings but do not block violations.\n"
+            
             md += f"\n**Required rulesets found:**\n"
             for req in rulesets.get('required_found', []):
                 md += f"- ✓ {req}\n"
@@ -467,10 +620,56 @@ See: [.github/ORG_SECURITY_GOVERNANCE.md](.github/ORG_SECURITY_GOVERNANCE.md)
         else:
             md += f"- **Error**: {rulesets.get('error', 'Unknown')}\n"
 
+        # Repository-level rulesets section
+        repo_rulesets = checks.get('repo_rulesets', {})
+        repo_summary = repo_rulesets.get('_summary', {})
+        
         md += """
 ---
 
-## 3. Priority Repository Branch Protection
+## 3. Repository-Level Rulesets
+
+"""
+        if repo_summary.get('repos_checked', 0) > 0:
+            md += f"**Summary:** {repo_summary.get('with_active', 0)}/{repo_summary.get('repos_checked', 0)} repositories with active rulesets\n\n"
+            
+            md += "| Repository | Rulesets | Active | Evaluate | Gap |\n"
+            md += "|-----------|----------|--------|----------|-----|\n"
+            
+            for repo_name, repo_rs in repo_rulesets.items():
+                if repo_name in ['_summary', '_gaps']:
+                    continue
+                status = repo_rs.get('status', 'unknown')
+                if status == 'found':
+                    total = repo_rs.get('total', 0)
+                    active = repo_rs.get('active_count', 0)
+                    evaluate = repo_rs.get('evaluate_count', 0)
+                    has_gap = repo_rs.get('has_enforcement_gap', False)
+                    gap_icon = '⚠' if has_gap else '✓' if active > 0 else '✗'
+                    md += f"| {repo_name} | {total} | {active} | {evaluate} | {gap_icon} |\n"
+                elif status == 'requires_permissions':
+                    md += f"| {repo_name} | ⚠ Manual | - | - | ⚠ |\n"
+                elif status == 'not_found':
+                    md += f"| {repo_name} | ✗ None | 0 | 0 | ✗ |\n"
+                else:
+                    md += f"| {repo_name} | ? | - | - | ? |\n"
+            
+            # Report repository-level gaps
+            repo_gaps = repo_rulesets.get('_gaps', [])
+            if repo_gaps:
+                md += f"\n### ⚠ Repository-Level Enforcement Gaps\n\n"
+                md += "The following repositories have rulesets but none are in active (enforcing) mode:\n\n"
+                for gap in repo_gaps:
+                    md += f"- **{gap['repo']}**\n"
+                    for rs in gap.get('rulesets', []):
+                        md += f"  - {rs['name']} (ID: {rs['id']}) - `{rs['enforcement']}`\n"
+                    md += f"  - **Action Required**: Change to `active` mode via:\n"
+                    md += f"    `PATCH /repos/{self.org}/{gap['repo']}/rulesets/{gap.get('rulesets', [{}])[0].get('id', '{id}')}` with `{{\"enforcement\": \"active\"}}`\n"
+        
+        md += """
+---
+
+## 4. Priority Repository Branch Protection
 
 """
         bp = checks.get('branch_protection', {})
@@ -498,7 +697,7 @@ See: [.github/ORG_SECURITY_GOVERNANCE.md](.github/ORG_SECURITY_GOVERNANCE.md)
         md += """
 ---
 
-## 4. Live-Only Verification Rule
+## 5. Live-Only Verification Rule
 
 > **Critical**: Per issue #854, verification **must** include settings-level evidence.
 > Documentation and workflow presence alone do not satisfy the verification requirement.
@@ -518,13 +717,36 @@ See: [.github/ORG_SECURITY_GOVERNANCE.md](.github/ORG_SECURITY_GOVERNANCE.md)
 
 ---
 
-## 5. Next Steps
+## 6. Next Steps
 
-1. **If rulesets API unavailable**: Verify rulesets manually in GitHub organization settings
-2. **If branch protection missing**: Enable branch protection on unprotected repositories
-3. **Document findings**: Attach verification evidence to issue #854
-4. **Close issue**: Only close after live verification is complete with acceptable evidence
-
+"""
+        # Determine next steps based on findings
+        next_steps = []
+        
+        # Check for evaluate-mode gaps
+        org_evaluate_gaps = len(rulesets.get('evaluate_mode_gaps', []))
+        repo_evaluate_gaps = repo_summary.get('with_gaps', 0)
+        
+        if org_evaluate_gaps > 0 or repo_evaluate_gaps > 0:
+            next_steps.append(f"**⚠ Upgrade {org_evaluate_gaps + repo_evaluate_gaps} rulesets from `evaluate` to `active` mode**")
+            next_steps.append("  - Per Issue #854: Rulesets in evaluate mode do not enforce blocks")
+            next_steps.append("  - Use GitHub API: `PATCH /repos/{org}/{repo}/rulesets/{id}` with `{\"enforcement\": \"active\"}`")
+            next_steps.append("  - Or manually update in repository/organization Settings → Rules → Rulesets")
+        
+        if rulesets.get('status') in ['requires_enterprise', 'requires_permissions']:
+            next_steps.append("**Verify rulesets manually** in GitHub organization settings")
+            next_steps.append(f"  - Org rulesets: https://github.com/organizations/{self.org}/settings/rules")
+        
+        if bp_summary.get('protected', 0) < bp_summary.get('total', 0):
+            next_steps.append("**Enable branch protection** on unprotected repositories")
+        
+        next_steps.append("**Document findings**: Attach verification evidence to issue #854")
+        next_steps.append("**Close issue**: Only close after all gaps are resolved with acceptable evidence")
+        
+        for step in next_steps:
+            md += f"{step}\n"
+        
+        md += """
 ---
 
 *Generated by `scripts/verify_org_security.py`*

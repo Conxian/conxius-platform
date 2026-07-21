@@ -56,6 +56,8 @@ jobs:
         with:
           name: knowledge-store
           path: .knowledge-store.json
+          include-hidden-files: true
+          if-no-files-found: error
           retention-days: 7
 
   research:

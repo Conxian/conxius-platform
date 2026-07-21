@@ -12,6 +12,7 @@ updates:
           - "vite"
           - "typescript"
           - "@types/*"
+        update-types: ["minor", "patch"]
       production-dependencies:
         patterns:
           - "*"
@@ -21,30 +22,7 @@ updates:
           - "vite"
           - "typescript"
           - "@types/*"
-  - package-ecosystem: "npm"
-    directory: "/services/admin-dashboard"
-    schedule:
-      interval: "weekly"
-    groups:
-      dashboard-dependencies:
-        patterns:
-          - "*"
-  - package-ecosystem: "npm"
-    directory: "/services/conxian-ui"
-    schedule:
-      interval: "weekly"
-    groups:
-      ui-dependencies:
-        patterns:
-          - "*"
-  - package-ecosystem: "npm"
-    directory: "/services/elizaos-plugin-conxian"
-    schedule:
-      interval: "weekly"
-    groups:
-      elizaos-dependencies:
-        patterns:
-          - "*"
+        update-types: ["minor", "patch"]
   - package-ecosystem: "cargo"
     directory: "/services/lib-conxian-core"
     schedule:

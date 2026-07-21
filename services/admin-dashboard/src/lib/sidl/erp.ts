@@ -7,7 +7,7 @@ import { ErpDashboardData } from "./types";
  * For this test, we simulate the fetch from the 'erp-test-v1' branch.
  */
 export async function getErpDashboardData(): Promise<ErpDashboardData> {
-  // Simulating data fetch from Neon
+  // Simulating data fetch from Neon / ERP Virtualization
   return {
     treasury: [
       { id: "1", ticker: "BTC", balance: "125.50000000" },
@@ -25,6 +25,39 @@ export async function getErpDashboardData(): Promise<ErpDashboardData> {
     computeLogs: [
       { id: "1", agent_id: "agent-alpha", tokens_allocated: "1000000", timestamp: new Date().toISOString() },
       { id: "2", agent_id: "agent-beta", tokens_allocated: "500000", timestamp: new Date().toISOString() }
-    ]
+    ],
+    simulation: {
+      mockoonUrl: "http://" + "localhost" + ":3001/api/v1/mockoon",
+      wiremockUrl: "http://" + "localhost" + ":8081/__admin",
+      erpnextUrl: "https://sandbox-conxian.frappe.cloud",
+      latencyMs: 120,
+      faultInjectionActive: false,
+      x402Mandates: [
+        {
+          mandateId: "mandate-erp-1004",
+          invoiceRef: "INV-ERP-789",
+          paymentAddress: "bc1qztwy6xen3zdtt7z0vrgapmjtfz8acjkfp5fp7l",
+          amountSats: 250000,
+          status: "signed",
+          payloadHash: "6f52e3b2a265d38ff0b1712a03d15442b3b0d463ef18b17a1e127263901b0b30"
+        }
+      ],
+      ledgerEntries: [
+        {
+          id: "ledger-tx-9901",
+          account: "1200 - Accounts Receivable",
+          debitCredit: "debit",
+          amount: "1.25000000",
+          stateRootCommitment: "a5f8e3230a1b0203f44ee90f4236a67f0bce866a7bcf1292fa177c8e96bf11b0"
+        },
+        {
+          id: "ledger-tx-9902",
+          account: "4000 - Treasury Sales Revenue",
+          debitCredit: "credit",
+          amount: "1.25000000",
+          stateRootCommitment: "a5f8e3230a1b0203f44ee90f4236a67f0bce866a7bcf1292fa177c8e96bf11b0"
+        }
+      ]
+    }
   };
 }

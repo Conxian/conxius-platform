@@ -72,7 +72,10 @@ def _check_ref(action_ref: str) -> tuple[bool, str]:
     if not re.match(r"^v\d+$", ref) and not re.match(r"^[0-9a-f]{40}$", ref):
         return True, f"skipped (non-version ref: {ref})"
 
-    url = f"https://api.github.com/repos/{repo_path}/git/ref/tags/{ref}"
+    if re.match(r"^[0-9a-f]{40}$", ref):
+        url = f"https://api.github.com/repos/{repo_path}/git/commits/{ref}"
+    else:
+        url = f"https://api.github.com/repos/{repo_path}/git/ref/tags/{ref}"
     headers = {"Accept": "application/vnd.github.v3+json"}
     if GITHUB_TOKEN:
         headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"

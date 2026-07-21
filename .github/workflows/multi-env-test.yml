@@ -30,17 +30,17 @@ jobs:
     steps:
       - name: Checkout
         # Version-pinned per baseline - see .github/CONXIUS_CICD_BASELINE.md
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up Docker Buildx
         # Version-pinned per baseline
-        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
       - name: Set up Node
         # Version-pinned per baseline - see .github/CONXIUS_CICD_BASELINE.md
-        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22'
       - name: Install pnpm
-        uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
       - name: Configure environment
         run: |
           cp .env.schema .env
@@ -75,7 +75,7 @@ jobs:
     steps:
       - name: Checkout
         # Version-pinned per baseline - see .github/CONXIUS_CICD_BASELINE.md
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Verify Admin Dashboard Dockerfile
         run: |
           docker build -f ./services/admin-dashboard/Dockerfile ./services/admin-dashboard -t admin-build

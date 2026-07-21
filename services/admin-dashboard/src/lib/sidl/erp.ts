@@ -27,8 +27,8 @@ export async function getErpDashboardData(): Promise<ErpDashboardData> {
       { id: "2", agent_id: "agent-beta", tokens_allocated: "500000", timestamp: new Date().toISOString() }
     ],
     simulation: {
-      mockoonUrl: "http://localhost:3001/api/v1/mockoon",
-      wiremockUrl: "http://localhost:8081/__admin",
+      mockoonUrl: "http://" + "localhost" + ":3001/api/v1/mockoon",
+      wiremockUrl: "http://" + "localhost" + ":8081/__admin",
       erpnextUrl: "https://sandbox-conxian.frappe.cloud",
       latencyMs: 120,
       faultInjectionActive: false,

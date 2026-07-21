@@ -133,11 +133,35 @@ export type ErpAiComputeLog = {
   timestamp: string;
 };
 
+export type ErpSimulationState = {
+  mockoonUrl: string;
+  wiremockUrl: string;
+  erpnextUrl: string;
+  latencyMs: number;
+  faultInjectionActive: boolean;
+  x402Mandates: {
+    mandateId: string;
+    invoiceRef: string;
+    paymentAddress: string;
+    amountSats: number;
+    status: string;
+    payloadHash: string;
+  }[];
+  ledgerEntries: {
+    id: string;
+    account: string;
+    debitCredit: "debit" | "credit";
+    amount: string;
+    stateRootCommitment: string;
+  }[];
+};
+
 export type ErpDashboardData = {
   treasury: ErpTreasuryAsset[];
   employees: ErpEmployee[];
   invoices: ErpInvoice[];
   computeLogs: ErpAiComputeLog[];
+  simulation?: ErpSimulationState;
 };
 
 export type CrossChainEvent = {

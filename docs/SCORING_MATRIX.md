@@ -41,6 +41,7 @@ This matrix scores the identified gaps based on Strategic Alignment, Implementat
 | **G-52** | **BRC-20 / Runes Integration** | 7 | 6 | 9 | **22** | [Indexer Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#52) |
 | **G-53** | **Lightning Async Payments** | 8 | 7 | 9 | **24** | [Async Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#53) |
 | **G-54** | **OP_VAULT (BIP-345)** | 9 | 8 | 6 | **23** | [Vault Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#54) |
+| **G-55** | **Enterprise ERP Simulation** | 9 | 7 | 8 | **24** | [Enterprise ERP Simulation](./architecture/ENTERPRISE_ERP_SIMULATION_RESEARCH.md) |
 
 ## Scoring Rubric (1-10)
 - **Strategic Alignment**: How critical is this to the "Full Bitcoin Stack" vision?

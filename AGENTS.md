@@ -1207,3 +1207,24 @@ AGENTS.md (this update)
 - Operations breakdown: CI/CD ($2k/mo), Servers ($1k/mo), SDKs ($3k/mo), Legal ($1k/mo)
 - Minimum sustainable: $84k/year = need ~$3.4M annual protocol volume
 - This IS the 1%→0.75% model you described (starts higher at launch)
+
+### 2026-07-21 — PR #1170 CI Dependency and KB Reliability Evidence
+**Trigger**: PR #1170 — CI dependency and Knowledge-Base reliability implementation evidence.
+**What was done**:
+- Recorded the implementation evidence for dependency alignment, the root-context/frozen-install Docker contract, Dependabot policy, root script repair, and the locked KB runner in `openspec/changes/2026-07-21-ci-dependency-and-kb-reliability/tasks.md`.
+- Verified local validation and the 18 successful hosted check runs at implementation head `5d422cb02de1685f5eb23a4bdb3e7fb421f2206a`; preserved the pending hosted KB follow-up and provider/admin classification.
+- Appended this continuity entry without changing code, configuration, lockfiles, PR metadata, or prior session history.
+**Key discoveries**:
+- The implementation is distributed across commits `60482a9396709a7d7c57f2a3b89ee82cadbe9bc0`, `145440755f9952a790dfa4396eb55a7351c4d4a1`, `2515622dcb68723f0d7b4f1317c43529348007e6`, and `5d422cb02de1685f5eb23a4bdb3e7fb421f2206a`.
+- Hosted Synergy, Server, and Cloud validation passed with the repository-root Docker contract; local Docker execution was unavailable and is not represented as completed.
+- Eight external provider suites remain queued with zero check runs; they are provider/admin follow-up, not repository-code failures.
+**Files touched**:
+- `openspec/changes/2026-07-21-ci-dependency-and-kb-reliability/tasks.md` (updated implementation checkboxes and evidence)
+- `AGENTS.md` (appended this session entry)
+**Gaps identified**:
+- Hosted KB Evolution validation after a push or manual dispatch remains pending because the workflow has no PR trigger.
+- Local pytest collection remains environment-blocked by missing declared Python packages; Docker-local validation remains unavailable until a Docker daemon is present.
+**Gotchas**:
+- Do not mark the hosted KB acceptance item complete from local command results alone.
+- Do not claim Docker-local execution; only the hosted Synergy/Server/Cloud evidence is available.
+- Keep the documentation follow-up limited to the two requested files and preserve the existing OpenSpec proposal/design scope.

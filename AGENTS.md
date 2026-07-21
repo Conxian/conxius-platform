@@ -1207,3 +1207,25 @@ AGENTS.md (this update)
 - Operations breakdown: CI/CD ($2k/mo), Servers ($1k/mo), SDKs ($3k/mo), Legal ($1k/mo)
 - Minimum sustainable: $84k/year = need ~$3.4M annual protocol volume
 - This IS the 1%→0.75% model you described (starts higher at launch)
+
+### 2026-07-21 — PR #1171 TypeScript/Next.js Compatibility Repair
+**Trigger**: PR #1171 CI failures in the admin-dashboard Docker build.
+**What was done**:
+- Added the minimal OpenSpec change artifact at `openspec/changes/2026-07-21-typescript-next-compatibility/`.
+- Restored TypeScript `^6.0.3` in all three workspace manifests changed by the grouped dependency update.
+- Regenerated `pnpm-lock.yaml` with pnpm `9.15.5`, retaining Vite `8.1.5` and `@types/node` `26.1.1`.
+- Validated frozen installation, workspace typecheck/tests, local Next build equivalents, dependency versions, and diff hygiene.
+**Key discoveries**:
+- The observed failure is a Next.js build-time compiler discovery incompatibility with TypeScript `7.0.2`; it is not an application type error.
+- The exact Docker and Compose checks could not run because Docker and `docker-compose` are unavailable in the execution environment.
+**Files touched**:
+- `services/admin-dashboard/package.json`
+- `services/admin-pulse-bos/package.json`
+- `services/elizaos-plugin-conxian/package.json`
+- `pnpm-lock.yaml`
+- `openspec/changes/2026-07-21-typescript-next-compatibility/`
+- `AGENTS.md`
+**Gaps identified**:
+- Re-run the exact Docker and Compose build checks in CI or a Docker-enabled environment.
+**Gotchas**:
+- PR #1171's head branch is a Dependabot branch with merge commits; repair was applied directly without rebasing or rewriting history.

@@ -33,14 +33,14 @@ jobs:
     steps:
       - name: Checkout repository
         # Version-pinned per baseline - see .github/CONXIUS_CICD_BASELINE.md
-        uses: actions/checkout@v7
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Set up Node.js
         # Version-pinned per baseline - see .github/CONXIUS_CICD_BASELINE.md
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
         with:
           node-version: "22"
       - name: Install pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@7088e561eb65bb68695d245aa206f005ef30921d # v4.1.0
       - name: Install workspace dependencies
         run: |
           pnpm install --no-frozen-lockfile
@@ -58,7 +58,7 @@ jobs:
           docker compose logs redis > test-results/cross-repo-harness-mvp/docker-redis.log || true
       - name: Upload harness artifacts
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
         with:
           name: cross-repo-integration-harness-mvp-artifacts
           path: test-results/cross-repo-harness-mvp

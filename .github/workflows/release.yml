@@ -31,7 +31,7 @@ jobs:
           fi
 
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
@@ -60,19 +60,19 @@ jobs:
           fi
 
       - name: Generate CycloneDX SBOM
-        uses: anchore/sbom-action@v0.24.0
+        uses: anchore/sbom-action@f325610c9f50a54015d37c8d16cb3b0e2c8f4de0 # v0.18.0
         with:
           path: ./
           format: cyclonedx-json
           output-file: "sbom-${{ github.ref_name }}.cdx.json"
 
       - name: Generate SLSA provenance attestation
-        uses: actions/attest-build-provenance@v4
+        uses: actions/attest-build-provenance@520d128f165991a6c774bcb264f323e3d70747f4 # v2.2.0
         with:
           subject-path: "sbom-${{ github.ref_name }}.cdx.json"
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda # v2.2.1
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}

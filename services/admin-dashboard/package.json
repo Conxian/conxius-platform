@@ -17,7 +17,7 @@
     "mailparser": "^3.9.14",
     "next": "16.2.10",
     "nodemailer": "^9.0.3",
-    "nostr-tools": "^2.23.12",
+    "nostr-tools": "^2.24.0",
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "server-only": "^0.0.1"

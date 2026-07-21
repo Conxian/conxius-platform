@@ -1212,19 +1212,22 @@ AGENTS.md (this update)
 **Trigger**: PR #1170 — CI dependency and Knowledge-Base reliability implementation evidence.
 **What was done**:
 - Recorded the implementation evidence for dependency alignment, the root-context/frozen-install Docker contract, Dependabot policy, root script repair, and the locked KB runner in `openspec/changes/2026-07-21-ci-dependency-and-kb-reliability/tasks.md`.
-- Verified local validation and the 18 successful hosted check runs at implementation head `5d422cb02de1685f5eb23a4bdb3e7fb421f2206a`; preserved the pending hosted KB follow-up and provider/admin classification.
-- Appended this continuity entry without changing code, configuration, lockfiles, PR metadata, or prior session history.
+- Verified local validation and the 18 successful hosted check runs at implementation head `da186a78c32ca79e2099461401bbf27952d930b0`; preserved the provider/admin classification.
+- Recorded that the first hosted manual KB dispatch [run `29829364746`](https://github.com/Conxian/conxius-platform/actions/runs/29829364746) failed Research/Health because hidden `.knowledge-store.json` was excluded by `upload-artifact`, producing zero artifact output, while Ingest's frozen install and `tsx` commands passed.
+- Recorded the repair in [commit `da186a78c32ca79e2099461401bbf27952d930b0`](https://github.com/Conxian/conxius-platform/commit/da186a78c32ca79e2099461401bbf27952d930b0), which adds `include-hidden-files: true` and `if-no-files-found: error` to the existing upload step without changing its action pin, retention, or conditions; the successful manual dispatch [run `29829870126`](https://github.com/Conxian/conxius-platform/actions/runs/29829870126) passed Ingest, Research, and Health and produced the seven-day `knowledge-store` artifact [ID `8494802707`](https://github.com/Conxian/conxius-platform/actions/runs/29829870126/artifacts/8494802707). Synthesize was intentionally skipped because it is schedule-only, and no branch, commit, or PR was created by the hosted dispatch.
+- Updated this continuity entry without changing code, configuration, lockfiles, PR metadata, or prior session history.
 **Key discoveries**:
-- The implementation is distributed across commits `60482a9396709a7d7c57f2a3b89ee82cadbe9bc0`, `145440755f9952a790dfa4396eb55a7351c4d4a1`, `2515622dcb68723f0d7b4f1317c43529348007e6`, and `5d422cb02de1685f5eb23a4bdb3e7fb421f2206a`.
+- The implementation is distributed across commits `60482a9396709a7d7c57f2a3b89ee82cadbe9bc0`, `145440755f9952a790dfa4396eb55a7351c4d4a1`, `2515622dcb68723f0d7b4f1317c43529348007e6`, `5d422cb02de1685f5eb23a4bdb3e7fb421f2206a`, and `da186a78c32ca79e2099461401bbf27952d930b0`.
 - Hosted Synergy, Server, and Cloud validation passed with the repository-root Docker contract; local Docker execution was unavailable and is not represented as completed.
 - Eight external provider suites remain queued with zero check runs; they are provider/admin follow-up, not repository-code failures.
+- The successful manual KB dispatch validated the executable jobs and artifact repair, but did not exercise `Synthesize`; it remains schedule-only, so scheduled synthesis coverage is still unvalidated.
 **Files touched**:
 - `openspec/changes/2026-07-21-ci-dependency-and-kb-reliability/tasks.md` (updated implementation checkboxes and evidence)
-- `AGENTS.md` (appended this session entry)
+- `AGENTS.md` (updated the existing 2026-07-21 session entry)
 **Gaps identified**:
-- Hosted KB Evolution validation after a push or manual dispatch remains pending because the workflow has no PR trigger.
+- Scheduled KB Evolution synthesis remains unvalidated because `Synthesize` is schedule-only and was intentionally skipped by the successful manual dispatch.
 - Local pytest collection remains environment-blocked by missing declared Python packages; Docker-local validation remains unavailable until a Docker daemon is present.
 **Gotchas**:
-- Do not mark the hosted KB acceptance item complete from local command results alone.
+- Do not infer scheduled `Synthesize` coverage from the successful manual dispatch; it validated Ingest, Research, Health, and the artifact repair only.
 - Do not claim Docker-local execution; only the hosted Synergy/Server/Cloud evidence is available.
 - Keep the documentation follow-up limited to the two requested files and preserve the existing OpenSpec proposal/design scope.

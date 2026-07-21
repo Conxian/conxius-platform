@@ -1,7 +1,11 @@
 version: 2
 updates:
   - package-ecosystem: "npm"
-    directory: "/"
+    directories:
+      - "/"
+      - "/services/admin-dashboard"
+      - "/services/admin-pulse-bos"
+      - "/services/elizaos-plugin-conxian"
     schedule:
       interval: "weekly"
     groups:

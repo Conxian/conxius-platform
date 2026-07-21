@@ -52,7 +52,7 @@ jobs:
         run: npx ts-node scripts/kb/detect-patterns.ts
 
       - name: Upload Knowledge Store
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: knowledge-store
           path: .knowledge-store.json
@@ -75,7 +75,7 @@ jobs:
           node-version: '24'
 
       - name: Download Knowledge Store
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: knowledge-store
           path: .
@@ -103,7 +103,7 @@ jobs:
           node-version: '24'
 
       - name: Download Knowledge Store
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: knowledge-store
           path: .
@@ -156,7 +156,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Download Knowledge Store
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: knowledge-store
           path: .

@@ -41,15 +41,15 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --ignore-scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Ingest GitHub Data
-        run: npx ts-node scripts/kb/ingest-github.ts
+        run: pnpm kb:ingest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run Pattern Detection
-        run: npx ts-node scripts/kb/detect-patterns.ts
+        run: pnpm kb:patterns
 
       - name: Upload Knowledge Store
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -80,8 +80,11 @@ jobs:
           name: knowledge-store
           path: .
 
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
       - name: Run External Research
-        run: npx ts-node scripts/kb/external-research.ts
+        run: pnpm kb:research
         env:
           TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
 
@@ -108,8 +111,11 @@ jobs:
           name: knowledge-store
           path: .
 
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
       - name: Generate KB Updates
-        run: npx ts-node scripts/kb/generate-updates.ts
+        run: pnpm kb:update
 
       - name: Create Update PR
         if: github.event_name == 'schedule'

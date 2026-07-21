@@ -3,27 +3,26 @@
   "version": "0.2.5",
   "private": true,
   "scripts": {
-    "kb:ingest": "npx ts-node scripts/kb/ingest-github.ts",
-    "kb:patterns": "npx ts-node scripts/kb/detect-patterns.ts",
-    "kb:research": "npx ts-node scripts/kb/external-research.ts",
-    "kb:update": "npx ts-node scripts/kb/generate-updates.ts",
-    "kb:status": "npx ts-node -e \"import {knowledgeStore} from './scripts/kb/knowledge-store'; console.log(JSON.stringify(knowledgeStore.getStats(), null, 2))\""
-  },
-  "packageManager": "pnpm@9.15.5",
-  "engines": {
-    "node": ">=20.19.0"
-  },
-  "scripts": {
     "lint": "pnpm -r --if-present run lint",
     "test": "pnpm -r --if-present run test",
     "build": "pnpm -r --if-present run build",
     "typecheck": "pnpm -r --if-present run typecheck",
     "check:lifecycle-control": "bash scripts/ci/run-lifecycle-control-gates.sh",
     "check:phase6:sequence1": "bash scripts/ci/run-cross-repo-harness-mvp.sh",
-    "prepublishOnly": "node -e \"console.error('pnpm publish is disabled for now in this repository; use Git tags and GitHub Releases.'); process.exit(1)\""
+    "prepublishOnly": "node -e \"console.error('pnpm publish is disabled for now in this repository; use Git tags and GitHub Releases.'); process.exit(1)\"",
+    "kb:ingest": "tsx scripts/kb/ingest-github.ts",
+    "kb:patterns": "tsx scripts/kb/detect-patterns.ts",
+    "kb:research": "tsx scripts/kb/external-research.ts",
+    "kb:update": "tsx scripts/kb/generate-updates.ts",
+    "kb:status": "tsx -e \"import {knowledgeStore} from './scripts/kb/knowledge-store'; console.log(JSON.stringify(knowledgeStore.getStats(), null, 2))\""
+  },
+  "packageManager": "pnpm@9.15.5",
+  "engines": {
+    "node": ">=20.19.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
+    "tsx": "4.23.1",
     "vite": "8.1.3"
   },
   "pnpm": {

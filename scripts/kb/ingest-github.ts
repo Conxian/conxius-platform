@@ -1,4 +1,4 @@
-#!/usr/bin/env npx ts-node
+#!/usr/bin/env -S pnpm exec tsx
 /**
  * GitHub Activity Ingestion
  * 

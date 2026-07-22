@@ -1511,3 +1511,20 @@ AGENTS.md (this update)
 - The 21 pre-existing active OpenSpec changes without current `specs/<capability>/spec.md` deltas remain outside this focused remediation.
 **Gotchas**:
 - The deprecated `openspec change show` command is not the preferred inspection path; after aligning proposal headings to `Why` and `What Changes`, the current `openspec show ... --json --deltas-only` command reports the five deltas cleanly.
+
+### 2026-07-22 — PR #1195 Formal Review Correctness Remediation
+**Trigger**: Formal review `4756630826` on PR #1195.
+**What was done**:
+- Normalized envelope authentication assertions before integrity digest construction, preserving RFC 3339 offset normalization and the strict 0–3 fractional-second profile.
+- Enforced canonical per-entry context byte/depth limits in authoritative snapshot validation and added forged-snapshot regressions across direct, merge, handover, and envelope paths, including exact-boundary acceptance.
+**Key discoveries**:
+- `createEnvelope()` already normalized the envelope core before hashing; authentication was the only digest-bearing subobject still hashed in caller form.
+- `normalizeContextEntry()` recomputes canonical byte/depth accounting, so authoritative validation can safely apply the declared snapshot limits to the normalized value without trusting self-reported metrics.
+**Files touched**:
+- `scripts/agent-coordination.ts`
+- `scripts/agent-coordination.test.ts`
+- `AGENTS.md`
+**Gaps identified**:
+- No canonical OpenSpec or JSON Schema correction was needed; both already state authentication normalization and per-entry byte/depth bounds.
+**Gotchas**:
+- A self-consistent forged snapshot must recompute both its context integrity digest and declared limits to exercise the authoritative-boundary bypass; changing only the limits is sufficient because entry provenance remains valid.

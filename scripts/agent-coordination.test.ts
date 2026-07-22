@@ -140,6 +140,12 @@ function emptyContext() {
   return packageContext([], { allowlist: emptyAllowlist, discovery: DISCOVERY, trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR, limits: emptyLimits, captured_at: NOW, now: NOW });
 }
 
+function rebuildContextSnapshot(snapshot: ContextSnapshot, limits: ContextLimits): ContextSnapshot {
+  const record: Record<string, unknown> = { ...snapshot, limits };
+  delete record.integrity;
+  return { ...record, integrity: { digest: digestFor('conxian.swarm.context.v1', record) } } as unknown as ContextSnapshot;
+}
+
 test('schema is strict, versioned, and defines all protocol object families', () => {
   const schema = JSON.parse(readFileSync('schemas/agent-swarm.schema.json', 'utf8')) as {
     $id: string;
@@ -303,6 +309,40 @@ test('envelope construction validates message linkage, expiry, authentication, a
   expectCode(() => createEnvelope({ ...first, message_id: 'message-4', causation_id: 'message-4', integrity: undefined }), 'INVALID_ID');
   expectCode(() => validateEnvelope(first, { now: FUTURE }), 'EXPIRED');
   expectCode(() => validateEnvelope(first, { require_authentication: true }), 'AUTHENTICATION_REQUIRED');
+
+  const authenticated = createEnvelope({
+    ...first,
+    message_id: 'message-authenticated',
+    idempotency_key: 'authenticated-key',
+    integrity: { authentication: { scheme: 'signature', verified: true, subject: 'agent-a', expires_at: '2026-07-23T08:00:00-04:00' } },
+  });
+  assert.equal(authenticated.integrity.authentication?.expires_at, FUTURE);
+  assert.equal(validateEnvelope(authenticated, { require_authentication: true }).integrity.authentication?.expires_at, FUTURE);
+  const normalizedAuthentication = authenticated.integrity.authentication;
+  assert.ok(normalizedAuthentication);
+  const rawOffsetValidation = validateEnvelope({
+    ...authenticated,
+    integrity: { ...authenticated.integrity, authentication: { ...normalizedAuthentication, expires_at: '2026-07-23T08:00:00-04:00' } },
+  }, { require_authentication: true });
+  assert.equal(rawOffsetValidation.integrity.authentication?.expires_at, FUTURE);
+
+  const fractional = createEnvelope({
+    ...first,
+    message_id: 'message-fractional',
+    idempotency_key: 'fractional-key',
+    integrity: { authentication: { scheme: 'signature', verified: true, subject: 'agent-a', expires_at: '2026-07-23T12:00:00.1Z' } },
+  });
+  assert.equal(fractional.integrity.authentication?.expires_at, '2026-07-23T12:00:00.100Z');
+  expectCode(() => createEnvelope({
+    ...first,
+    message_id: 'message-invalid-fractional',
+    idempotency_key: 'invalid-fractional-key',
+    integrity: { authentication: { scheme: 'signature', verified: true, subject: 'agent-a', expires_at: '2026-07-23T12:00:00.1234Z' } },
+  }), 'INVALID_TIMESTAMP');
+  expectCode(() => validateEnvelope({
+    ...authenticated,
+    integrity: { ...authenticated.integrity, authentication: { ...normalizedAuthentication, expires_at: '2026-07-23T12:00:00.001Z' } },
+  }), 'INVALID_DIGEST');
 });
 
 test('lifecycle transition validation is monotonic and terminal states cannot reopen', () => {
@@ -387,6 +427,49 @@ test('context bounds reject oversized values and support explicit deterministic 
   assert.equal((truncated.entries[0]?.byte_length ?? 999) <= tiny.max_entry_bytes, true);
   assert.equal(validateContextSnapshot(truncated, provenance(allowlist)).entries[0]?.original_digest?.startsWith('sha256:'), true);
   expectCode(() => packageContext([contextInput({ value: { nested: { deeper: { value: true } } } })], { allowlist, discovery: DISCOVERY, trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR, limits: { ...tiny, max_entry_bytes: 1024, max_total_bytes: 1024, max_depth: 2 }, captured_at: NOW, now: NOW }), 'CONTEXT_LIMIT');
+});
+
+test('authoritative context validation enforces per-entry byte/depth limits across boundaries', () => {
+  const allowlist = makeAllowlist({ task_input_keys: ['instructions'], required_task_input_keys: ['instructions'] });
+  const generous: ContextLimits = { max_items: 4, max_total_bytes: 1024, max_entry_bytes: 512, max_depth: 8 };
+
+  const oversized = packageContext([contextInput({ context_id: 'oversized', value: 'x'.repeat(80) })], { ...provenance(allowlist), limits: generous, captured_at: NOW, now: NOW });
+  const oversizedEntry = oversized.entries[0];
+  assert.ok(oversizedEntry);
+  const oversizedSnapshot = rebuildContextSnapshot(oversized, { ...oversized.limits, max_entry_bytes: oversizedEntry.byte_length - 1 });
+  expectCode(() => validateContextSnapshot(oversizedSnapshot, provenance(allowlist)), 'CONTEXT_LIMIT');
+  expectCode(() => mergeContextSnapshots([oversizedSnapshot], { ...provenance(allowlist), now: NOW }), 'CONTEXT_LIMIT');
+
+  const deep = packageContext([contextInput({ context_id: 'deep', value: { level1: { level2: { level3: true } } } })], { ...provenance(allowlist), limits: generous, captured_at: NOW, now: NOW });
+  const deepEntry = deep.entries[0];
+  assert.ok(deepEntry);
+  const deepSnapshot = rebuildContextSnapshot(deep, { ...deep.limits, max_depth: deepEntry.depth - 1 });
+  expectCode(() => validateContextSnapshot(deepSnapshot, provenance(allowlist)), 'CONTEXT_LIMIT');
+
+  const graph = graphFixture();
+  expectCode(() => createHandover({
+    handover_id: 'per-entry-limit-handover', correlation_id: 'correlation-1', graph_id: 'graph-1', captured_at: NOW, expires_at: FUTURE, lifecycle_state: 'STARTED',
+    completed_tasks: [], active_tasks: [], blocked_tasks: [], pending_tasks: [], decisions: [], artifacts: [], unresolved_conflicts: [], risks_and_blockers: [], resume_instructions: [],
+    context_snapshot: deepSnapshot, links: [],
+  }, graph, provenance(allowlist)), 'CONTEXT_LIMIT');
+
+  const validContext = packageContext([contextInput({ context_id: 'valid', value: 'valid' })], { ...provenance(allowlist), limits: generous, captured_at: NOW, now: NOW });
+  const validHandover = createHandover({
+    handover_id: 'per-entry-limit-envelope-base', correlation_id: 'correlation-1', graph_id: 'graph-1', captured_at: NOW, expires_at: FUTURE, lifecycle_state: 'STARTED',
+    completed_tasks: [], active_tasks: [], blocked_tasks: [], pending_tasks: [], decisions: [], artifacts: [], unresolved_conflicts: [], risks_and_blockers: [], resume_instructions: [],
+    context_snapshot: validContext, links: [],
+  }, graph, provenance(allowlist));
+  expectCode(() => createEnvelope({
+    message_id: 'per-entry-limit-envelope', message_type: 'handover', sender: { agent_id: 'agent-a' }, recipient: { agent_id: 'agent-b' }, correlation_id: 'correlation-1',
+    idempotency_scope: 'workflow-1', idempotency_key: 'per-entry-limit-envelope', lifecycle: { state: 'STARTED', sequence: 2, expires_at: FUTURE },
+    payload: { kind: 'handover', handover: { ...validHandover, context_snapshot: deepSnapshot }, links: [] }, links: [],
+  }, { graph, ...provenance(allowlist) }), 'CONTEXT_LIMIT');
+
+  const boundary = packageContext([contextInput({ context_id: 'boundary', value: { nested: true } })], { ...provenance(allowlist), limits: generous, captured_at: NOW, now: NOW });
+  const boundaryEntry = boundary.entries[0];
+  assert.ok(boundaryEntry);
+  const exactBoundary = rebuildContextSnapshot(boundary, { ...boundary.limits, max_entry_bytes: boundaryEntry.byte_length, max_depth: boundaryEntry.depth });
+  assert.doesNotThrow(() => validateContextSnapshot(exactBoundary, provenance(allowlist)));
 });
 
 test('context merge applies precedence and retains deterministic conflict evidence', () => {

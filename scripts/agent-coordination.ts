@@ -1199,8 +1199,11 @@ function normalizeEnvelopeCore(value: unknown, options: EnvelopeValidationOption
 /** Builds an envelope and calculates its integrity digest. */
 export function createEnvelope(input: CreateEnvelopeInput, options: CreateEnvelopeOptions = {}): Envelope {
   const core = normalizeEnvelopeCore({ ...input, protocol: SWARM_PROTOCOL, schema: SWARM_SCHEMAS.envelope }, options);
-  const digest = digestFor('conxian.swarm.envelope.v1', envelopeDigestInput(core, input.integrity?.authentication));
-  return validateEnvelope({ ...core, integrity: { digest, ...(input.integrity?.authentication === undefined ? {} : { authentication: input.integrity.authentication }) } }, options);
+  const authentication = input.integrity?.authentication === undefined
+    ? undefined
+    : normalizeAuthentication(input.integrity.authentication, 'envelope.integrity.authentication');
+  const digest = digestFor('conxian.swarm.envelope.v1', envelopeDigestInput(core, authentication));
+  return validateEnvelope({ ...core, integrity: { digest, ...(authentication === undefined ? {} : { authentication }) } }, options);
 }
 /** Validates envelope identity, linkage, expiry, authentication, payload, and digest. */
 export function validateEnvelope(value: unknown, options: EnvelopeValidationOptions = {}): Envelope {
@@ -1832,6 +1835,13 @@ function valueDepth(value: JsonValue): number {
   return 1 + (children.length === 0 ? 0 : Math.max(...children.map(valueDepth)));
 }
 function byteLength(value: JsonValue): number { return Buffer.byteLength(canonicalJson(value), 'utf8'); }
+interface ContextEntryMetrics { byte_length: number; depth: number; }
+function measureContextEntry(value: JsonValue): ContextEntryMetrics { return { byte_length: byteLength(value), depth: valueDepth(value) }; }
+function enforceContextEntryLimits(value: JsonValue, limits: ContextLimits, path: string): ContextEntryMetrics {
+  const metrics = measureContextEntry(value);
+  if (metrics.byte_length > limits.max_entry_bytes || metrics.depth > limits.max_depth) fail('CONTEXT_LIMIT', 'entry exceeds byte or depth bound', path);
+  return metrics;
+}
 
 function truncateJsonValue(value: JsonValue, maxBytes: number, maxDepth: number): JsonValue {
   if (byteLength(value) <= maxBytes && valueDepth(value) <= maxDepth) return value;
@@ -1929,9 +1939,7 @@ function normalizeContextInput(value: unknown, options: ContextPackageOptions, p
     safeValue = truncateJsonValue(safeValue, options.limits.max_entry_bytes, options.limits.max_depth);
     truncated = true;
   }
-  const entryBytes = byteLength(safeValue);
-  const entryDepth = valueDepth(safeValue);
-  if (entryBytes > options.limits.max_entry_bytes || entryDepth > options.limits.max_depth) fail('CONTEXT_LIMIT', 'entry exceeds byte or depth bound', path);
+  const { byte_length: entryBytes, depth: entryDepth } = enforceContextEntryLimits(safeValue, options.limits, path);
   const evaluationNow = normalizeTimestamp(options.now ?? options.captured_at, `${path}.evaluation_now`);
   const stale = staleAfter !== undefined && compareTimestamp(staleAfter, evaluationNow) <= 0;
   const expired = expiresAt !== undefined && compareTimestamp(expiresAt, evaluationNow) <= 0;
@@ -2046,7 +2054,8 @@ function normalizeContextEntry(value: unknown, path: string, evaluatedAt: string
     fail('INVALID_CONTEXT', 'sensitive context must contain only its typed redaction marker', `${path}`);
   }
   if (entry.truncated !== (entry.original_digest !== undefined)) fail('CONTEXT_LIMIT', 'truncated and original_digest must be provided together', path);
-  if (entry.byte_length !== byteLength(entry.value) || entry.depth !== valueDepth(entry.value)) fail('CONTEXT_LIMIT', 'byte/depth accounting does not match value', path);
+  const metrics = measureContextEntry(entry.value);
+  if (entry.byte_length !== metrics.byte_length || entry.depth !== metrics.depth) fail('CONTEXT_LIMIT', 'byte/depth accounting does not match value', path);
   if (entry.stale_after !== undefined && compareTimestamp(entry.stale_after, entry.captured_at) <= 0) fail('INVALID_CONTEXT', 'stale_after must be after captured_at', `${path}.stale_after`);
   if (entry.expires_at !== undefined && compareTimestamp(entry.expires_at, entry.captured_at) <= 0) fail('INVALID_CONTEXT', 'expires_at must be after captured_at', `${path}.expires_at`);
   const expectedStale = entry.stale_after !== undefined && compareTimestamp(entry.stale_after, evaluatedAt) <= 0;
@@ -2092,6 +2101,7 @@ function normalizeContextSnapshotStructure(
   const allowlist = options.allowlist;
   const allowlistedHiddenPaths = allowlist?.repository_paths.map((entry) => entry.path) ?? [];
   const entries = requireArray(record.entries, 'context.entries').map((entry, index) => normalizeContextEntry(entry, `context.entries[${index}]`, evaluatedAt, allowlistedHiddenPaths));
+  entries.forEach((entry, index) => enforceContextEntryLimits(entry.value, declaredLimits, `context.entries[${index}]`));
   if (allowlist !== undefined) {
     entries.forEach((entry, index) => {
       if (!sourceAllowed(entry.source, allowlist)) fail('CONTEXT_NOT_ALLOWED', 'source is not declared by the validated #1162 allowlist', `context.entries[${index}].source`);

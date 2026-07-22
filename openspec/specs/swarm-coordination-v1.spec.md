@@ -229,13 +229,14 @@ they MUST reject the payload when that graph input is absent or does not match.
 
 Handover creation, validation, resumability assessment, and envelope validation
 or replay/deduplication of a handover MUST also receive the validated derived
-`ContextAllowlist` and the successful #1162 `DiscoveryResult` that produced its
-manifest/registry provenance. Each boundary MUST revalidate the allowlist's
-internal path digest, `discovery_digest`, manifest/registry identity and
-versions, and every embedded context source against that allowlist. A locally
-recomputed context-entry, snapshot, handover, or envelope digest MUST NOT make
-an unallowlisted source authoritative. This provenance check is distinct from
-transport authentication, which remains envelope-only.
+`ContextAllowlist`, the successful #1162 `DiscoveryResult`, and the same
+trusted discovery anchor that authorized that result. Each boundary MUST
+revalidate the allowlist's internal path digest, anchor identity,
+`discovery_digest`, manifest/registry identity and versions, and every embedded
+context source against that allowlist. A locally recomputed context-entry,
+snapshot, handover, or envelope digest MUST NOT make an unallowlisted source
+authoritative. This provenance check is distinct from transport
+authentication, which remains envelope-only.
 
 Every handover conflict MUST contain at least two distinct `payload_digests`.
 The JSON Schema and runtime validator MUST enforce this minimum.
@@ -258,25 +259,47 @@ linked by correlation and causation identifiers.
 ### 9.1 Allowlist contract
 
 Repository context MUST be derived from a validated successful #1162
-`DiscoveryResult`; a free-form caller allowlist MUST NOT be authoritative. The
-v1 allowlist contract is versioned as
+`DiscoveryResult`; a free-form caller allowlist MUST NOT be authoritative.
+The discovery result carries a content-addressed
+`conxian-agent-discovery.attestation` version `1.0.0`. The trusted adapter or
+deployment boundary MUST additionally supply a content-addressed
+`conxian-agent-discovery.trust-anchor` version `1.0.0`, derived from the
+validated checked-in manifest/registry content and the declared context/skill
+content identities. The trust anchor is an out-of-band input and MUST NOT be
+accepted from an untrusted swarm message. The pure coordination library
+verifies the anchor and attestation digests and their binding, but it MUST NOT
+claim to authenticate the adapter, repository checkout, or deployment that
+decided to trust the anchor.
+
+The v1 allowlist contract is versioned as
 `conxian.swarm.context-allowlist` version `1.0.0` and MUST include:
 
 - the #1162 discovery protocol identifier;
+- the trusted discovery anchor protocol, version, and digest;
 - canonical `.agents/manifest.json` and `.agents/skills/registry.json` paths
   with manifest/registry versions;
 - the selected repository path permissions;
 - `repository_paths_digest`; and
 - `discovery_digest` derived from the validated discovery result.
 
-`packageContext()` and any later boundary that validates an embedded snapshot
-MUST validate both the allowlist's internal digest and its provenance against
-the supplied #1162 discovery result before admitting any context. Task-input
-keys, artifact IDs, and assumption keys MAY be explicitly provided by a caller,
-but repository paths MUST be traceable to sources declared by #1162 with
-matching tier metadata. The structural schema carries `allowlist_digest`; the
-runtime API carries the allowlist and discovery result as mandatory validation
-inputs for handovers and handover envelopes.
+The anchor scope MUST bind manifest/registry content digests, required context
+entries exactly, and optional context plus selected skill entries by path,
+tier, metadata/content digest, and declared identity. A supplied discovery
+result MUST match the anchor's manifest/registry and required entries exactly;
+optional context and selected skills MAY be a subset of the anchor, but an
+injected, removed-required, re-tiered, or changed path/content entry MUST be
+rejected. `packageContext()` and every public `validateContextSnapshot()` call
+MUST receive and verify `{ allowlist, discovery, trusted_discovery_anchor }`.
+The public validator MUST NOT expose structural-only validation as
+authoritative; any internal structural normalizer is private and
+non-authoritative. `mergeContextSnapshots()` MUST receive the same provenance
+triple for every input, reject mixed provenance, preserve the standard
+`conxian.swarm.context-allowlist.v1` digest, and return a snapshot accepted by
+authoritative validation and handover paths. Task-input keys, artifact IDs,
+and assumption keys MAY be explicitly provided by a caller, but repository
+paths MUST be traceable to sources declared by #1162 with matching tier
+metadata. The structural schema carries `allowlist_digest`; provenance remains
+an explicit runtime validation input.
 
 The coordination validator does not read the filesystem, environment, or
 network and does not resolve symlinks. An adapter that loads content remains

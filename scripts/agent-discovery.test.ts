@@ -21,10 +21,13 @@ import { tmpdir } from 'node:os';
 
 import {
   AgentManifest,
+  DISCOVERY_ATTESTATION_PROTOCOL,
+  DISCOVERY_TRUST_ANCHOR_PROTOCOL,
   DISCOVERY_PROTOCOL,
   DiscoveryError,
   SkillRegistry,
   REQUIRED_CONTEXT_PATHS,
+  buildDiscoveryTrustAnchor,
   discoverRepository,
   executeCli,
 } from './agent-discovery';
@@ -146,6 +149,11 @@ test('parses the checked-in manifest and schemas and discovers the real skill', 
   assert.equal(result.skills.selected.length, 1);
   assert.equal(result.skills.selected[0]?.metadata.id, 'agent-onboarding');
   assert.match(result.skills.selected[0]?.content ?? '', /# Agent Onboarding Skill/);
+  assert.equal(result.attestation.protocol, DISCOVERY_ATTESTATION_PROTOCOL);
+  assert.match(result.attestation.digest, /^sha256:[a-f0-9]{64}$/);
+  const anchor = buildDiscoveryTrustAnchor(result);
+  assert.equal(anchor.protocol, DISCOVERY_TRUST_ANCHOR_PROTOCOL);
+  assert.match(anchor.digest, /^sha256:[a-f0-9]{64}$/);
 });
 
 test('reads required context in ascending priority order and optional context only when requested', () => {

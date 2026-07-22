@@ -31,7 +31,7 @@ Without these contracts, two agents can report superficially compatible data whi
 
 ## 3. Dependency and sequencing
 
-Issue #1162 is a strict prerequisite for repository-local context discovery. The swarm protocol MAY consume the outputs of `.agents/manifest.json`, `.agents/skills/registry.json`, and the discovery CLI defined by #1162, including its safe relative-path and optional-context semantics. It MUST NOT change those contracts, execute discovered skills, or infer trust from discovery alone.
+Issue #1162 is a strict prerequisite for repository-local context discovery. The swarm protocol MAY consume the outputs of `.agents/manifest.json`, `.agents/skills/registry.json`, and the discovery CLI defined by #1162, including its safe relative-path and optional-context semantics. It MUST NOT change those contracts, execute discovered skills, or infer trust from discovery alone. The #1163 boundary consumes a versioned, content-addressed #1162 attestation plus a separate trusted discovery anchor supplied by an adapter/deployment boundary; the pure library verifies their content binding but cannot authenticate the origin of the anchor.
 
 The dependency boundary is:
 
@@ -79,7 +79,7 @@ The following paths are the implemented contract surface:
 | Canonical specification | `openspec/specs/swarm-coordination-v1.spec.md` | Normative protocol, schemas, state transitions, failure semantics, and compatibility rules |
 | Protocol, validation, graph, aggregation, handover, and context logic | `scripts/agent-coordination.ts` | Strict types, pure validators, deterministic ordering, digests, evidence, provenance, and bounded context |
 | Contract tests | `scripts/agent-coordination.test.ts` | Focused vectors, semantic conflicts, provenance/tamper checks, graph linkage, and JSON Schema fixtures |
-| Machine-readable schema | `schemas/agent-swarm.schema.json` | Strict v1 interchange and allowlist definitions |
+| Machine-readable schema | `schemas/agent-swarm.schema.json`, `schemas/agent-discovery-trust.schema.json` | Strict v1 interchange, allowlist, attestation, and trust-anchor definitions |
 | CI | `.github/workflows/reusable-ci.yml` and root `package.json` | Run focused swarm validation and typechecking in the existing reusable CI baseline |
 | Documentation | `docs/AGENT_ONBOARDING.md`, `docs/SESSION_CONTINUITY.md` | Link the normative protocol and explain how it composes with #1162 |
 

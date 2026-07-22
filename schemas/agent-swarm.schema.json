@@ -135,11 +135,14 @@
     "contextAllowlistProvenance": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["protocol", "version", "discovery_protocol", "manifest_path", "manifest_version", "registry_path", "registry_version", "repository_paths", "repository_paths_digest", "discovery_digest"],
+      "required": ["protocol", "version", "discovery_protocol", "trusted_discovery_anchor_protocol", "trusted_discovery_anchor_version", "trusted_discovery_anchor_digest", "manifest_path", "manifest_version", "registry_path", "registry_version", "repository_paths", "repository_paths_digest", "discovery_digest"],
       "properties": {
         "protocol": { "const": "conxian.swarm.context-allowlist" },
         "version": { "const": "1.0.0" },
         "discovery_protocol": { "const": "conxian-agent-discovery" },
+        "trusted_discovery_anchor_protocol": { "const": "conxian-agent-discovery.trust-anchor" },
+        "trusted_discovery_anchor_version": { "const": "1.0.0" },
+        "trusted_discovery_anchor_digest": { "$ref": "#/$defs/digest" },
         "manifest_path": { "const": ".agents/manifest.json" },
         "manifest_version": { "type": "string", "pattern": "^1\\.\\d+\\.\\d+$" },
         "registry_path": { "const": ".agents/skills/registry.json" },
@@ -339,7 +342,7 @@
       "properties": { "max_items": { "type": "integer", "minimum": 1 }, "max_total_bytes": { "type": "integer", "minimum": 1 }, "max_entry_bytes": { "type": "integer", "minimum": 1 }, "max_depth": { "type": "integer", "minimum": 1 } }
     },
     "contextSnapshot": {
-      "$comment": "At handover and embedded-envelope validation boundaries, the runtime validator must receive and verify the derived #1162 ContextAllowlist and DiscoveryResult; allowlist_digest alone is not authoritative.",
+      "$comment": "At every public validation, handover, embedded-envelope, resumability, and merge boundary, the runtime validator must receive and verify the derived #1162 ContextAllowlist, DiscoveryResult, and versioned content-addressed trusted discovery anchor; allowlist_digest alone is not authoritative. The anchor is out-of-band adapter/deployment input and is not authenticated by this pure library.",
       "type": "object", "additionalProperties": false,
       "required": ["schema", "captured_at", "evaluated_at", "entries", "required_keys", "missing_required", "stale_required", "expired_required", "conflicts", "warnings", "limits", "allowlist_digest", "integrity"],
       "properties": {
@@ -389,7 +392,7 @@
       "properties": { "conflict_id": { "$ref": "#/$defs/identifier" }, "object_id": { "$ref": "#/$defs/identifier" }, "payload_digests": { "type": "array", "minItems": 2, "uniqueItems": true, "items": { "$ref": "#/$defs/digest" } }, "resolution_required": { "type": "boolean" }, "links": { "type": "array", "items": { "$ref": "#/$defs/link" } } }
     },
     "handover": {
-      "$comment": "Runtime create/validate/resumability and handover-envelope replay validation require the referenced TaskGraph plus the derived #1162 ContextAllowlist and DiscoveryResult as out-of-band validation inputs.",
+      "$comment": "Runtime create/validate/resumability, merge, and handover-envelope replay validation require the referenced TaskGraph plus the derived #1162 ContextAllowlist, DiscoveryResult, and trusted discovery anchor as out-of-band validation inputs.",
       "type": "object", "additionalProperties": false,
       "required": ["schema", "handover_id", "correlation_id", "graph_id", "graph_digest", "captured_at", "expires_at", "lifecycle_state", "completed_tasks", "active_tasks", "blocked_tasks", "pending_tasks", "decisions", "artifacts", "unresolved_conflicts", "risks_and_blockers", "resume_instructions", "context_snapshot", "links", "integrity"],
       "properties": {

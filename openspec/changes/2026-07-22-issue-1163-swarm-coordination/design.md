@@ -19,7 +19,7 @@ producer / transport adapter / local file
        bounded context resolver
 ```
 
-Issue #1162 supplies the repository-local discovery boundary. The #1163 layer consumes only its declared, repository-relative allowlist and inert discovery output; it does not alter the manifest, registry, skill format, or discovery algorithm.
+Issue #1162 supplies the repository-local discovery boundary. The #1163 layer consumes only its declared, repository-relative allowlist and inert discovery output; it does not alter the manifest, registry, skill format, or discovery algorithm. A validated discovery result carries a versioned content-addressed attestation, while the trusted adapter/deployment boundary supplies a separate versioned content-addressed trust anchor derived from checked-in manifest/registry and declared context/skill identities. The pure coordination library verifies those bindings but cannot authenticate the adapter, checkout, or deployment that chose to trust the anchor.
 
 ## 2. Protocol objects
 
@@ -151,7 +151,7 @@ integrity
 
 Task arrays are sorted by graph order and then `task_id`; decisions, risks, and resume instructions have stable keys and explicit sequence numbers. Artifact locators are opaque references and do not grant access. A handover may identify a target agent, but it must remain valid when no target is known.
 
-The handover is a snapshot, not mutable shared memory. A resumed agent emits a new envelope and links it to the handover through `causation_id` and `correlation_id`. Missing required state, an invalid graph reference, stale mandatory context, failed digest check, or missing/mismatched #1162 allowlist/discovery provenance makes the handover invalid rather than partially executable. `createHandover()`, `validateHandover()`, `assessHandoverResumability()`, and handover-envelope validation/deduplication receive the derived `ContextAllowlist` and its source `DiscoveryResult` as explicit validation inputs; the snapshot's `allowlist_digest` is evidence, not a substitute for those inputs.
+The handover is a snapshot, not mutable shared memory. A resumed agent emits a new envelope and links it to the handover through `causation_id` and `correlation_id`. Missing required state, an invalid graph reference, stale mandatory context, failed digest check, or missing/mismatched #1162 allowlist/discovery/anchor provenance makes the handover invalid rather than partially executable. `createHandover()`, `validateHandover()`, `assessHandoverResumability()`, and handover-envelope validation/deduplication receive `{ allowlist, discovery, trusted_discovery_anchor }` as explicit validation inputs; the snapshot's `allowlist_digest` is evidence, not a substitute for those inputs.
 
 ## 6. Bounded session context
 
@@ -166,6 +166,8 @@ Context entries are admitted only when their provenance is one of:
 5. an explicitly marked agent assumption.
 
 Repository paths MUST be relative, in-root, and declared by #1162 when they come from the repository. Selected skill content remains inert. Environment variables, credentials, arbitrary hidden files, unlisted paths, and provider transcripts are not implicit context sources.
+
+The public `validateContextSnapshot()` API requires the same authoritative provenance triple. Structural normalization is private and non-authoritative. `mergeContextSnapshots()` requires that triple once for all inputs, validates every snapshot against it, rejects mixed allowlist/discovery/anchor provenance, preserves the standard derived allowlist digest, and returns a snapshot accepted by handover validation. Optional context and selected skills may be a subset of the trusted anchor; required context and manifest/registry identity must match exactly. The anchor must never be taken from an untrusted swarm message.
 
 ### 6.2 Context entry contract
 

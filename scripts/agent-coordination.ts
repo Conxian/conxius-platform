@@ -2,6 +2,18 @@
 
 import { createHash } from 'node:crypto';
 import type { DiscoveryResult } from './agent-discovery';
+import {
+  DISCOVERY_ATTESTATION_PROTOCOL,
+  DISCOVERY_ATTESTATION_VERSION,
+  DISCOVERY_TRUST_ANCHOR_PROTOCOL,
+  DISCOVERY_TRUST_ANCHOR_VERSION,
+  discoveryDigestFor,
+  type DiscoveryAttestation,
+  type DiscoveryTrustAnchor,
+  type DiscoveryTrustContextEntry,
+  type DiscoveryTrustSkillEntry,
+  type DiscoveryTrustScope,
+} from './agent-discovery-contract';
 
 /**
 * Transport-neutral coordination contracts for Conxian swarm agents.
@@ -21,6 +33,7 @@ export const SWARM_SCHEMAS = {
 } as const;
 export const CONTEXT_ALLOWLIST_PROTOCOL = 'conxian.swarm.context-allowlist' as const;
 export const CONTEXT_ALLOWLIST_VERSION = '1.0.0' as const;
+export type TrustedDiscoveryAnchor = DiscoveryTrustAnchor;
 
 export const MESSAGE_TYPES = ['task', 'ack', 'progress', 'result', 'handover', 'error', 'cancel'] as const;
 export type MessageType = (typeof MESSAGE_TYPES)[number];
@@ -45,7 +58,8 @@ export type CoordinationErrorCode =
   | 'INVALID_CONTRACT' | 'UNSUPPORTED_VERSION' | 'UNKNOWN_FIELD' | 'INVALID_ID' | 'INVALID_LINK'
   | 'INVALID_TIMESTAMP' | 'EXPIRED' | 'INVALID_TRANSITION' | 'REPLAY_CONFLICT' | 'INVALID_DIGEST'
   | 'INVALID_GRAPH' | 'CAPABILITY_MISMATCH' | 'INVALID_RESULT' | 'INVALID_HANDOVER' | 'INVALID_CONTEXT'
-  | 'CONTEXT_NOT_ALLOWED' | 'CONTEXT_LIMIT' | 'MISSING_CONTEXT' | 'STALE_CONTEXT' | 'AUTHENTICATION_REQUIRED';
+  | 'CONTEXT_NOT_ALLOWED' | 'CONTEXT_LIMIT' | 'MISSING_CONTEXT' | 'STALE_CONTEXT' | 'AUTHENTICATION_REQUIRED'
+  | 'INVALID_TRUST_ANCHOR' | 'MIXED_CONTEXT_PROVENANCE';
 
 export class CoordinationError extends Error {
   public readonly code: CoordinationErrorCode;
@@ -152,6 +166,9 @@ export interface ContextAllowlistProvenance {
   protocol: typeof CONTEXT_ALLOWLIST_PROTOCOL;
   version: typeof CONTEXT_ALLOWLIST_VERSION;
   discovery_protocol: 'conxian-agent-discovery';
+  trusted_discovery_anchor_protocol: typeof DISCOVERY_TRUST_ANCHOR_PROTOCOL;
+  trusted_discovery_anchor_version: typeof DISCOVERY_TRUST_ANCHOR_VERSION;
+  trusted_discovery_anchor_digest: Digest;
   manifest_path: string;
   manifest_version: string;
   registry_path: string;
@@ -172,6 +189,7 @@ export interface ContextAllowlist {
 export interface ContextProvenanceOptions {
   allowlist: ContextAllowlist;
   discovery: DiscoveryResult;
+  trusted_discovery_anchor: TrustedDiscoveryAnchor;
 }
 export interface ContextLimits { max_items: number; max_total_bytes: number; max_entry_bytes: number; max_depth: number; }
 export interface ContextInput {
@@ -232,9 +250,7 @@ export interface ContextSnapshot {
   allowlist_digest: Digest;
   integrity: DigestIntegrityMetadata;
 }
-export interface ContextPackageOptions {
-  allowlist: ContextAllowlist;
-  discovery: DiscoveryResult;
+export interface ContextPackageOptions extends ContextProvenanceOptions {
   limits: ContextLimits;
   captured_at: string;
   now?: string;
@@ -315,19 +331,18 @@ export interface EnvelopeValidationOptions {
   graph?: TaskGraph;
   allowlist?: ContextAllowlist;
   discovery?: DiscoveryResult;
+  trusted_discovery_anchor?: TrustedDiscoveryAnchor;
 }
-export interface ContextValidationOptions {
+export interface ContextValidationOptions extends ContextProvenanceOptions {
   now?: string;
   reject_stale_required?: boolean;
   graph?: TaskGraph;
-  allowlist?: ContextAllowlist;
-  discovery?: DiscoveryResult;
-  require_provenance?: boolean;
 }
 export interface CreateEnvelopeOptions {
   graph?: TaskGraph;
   allowlist?: ContextAllowlist;
   discovery?: DiscoveryResult;
+  trusted_discovery_anchor?: TrustedDiscoveryAnchor;
 }
 export interface DuplicateEnvelopeEvidence { replay_key: string; payload_digest: Digest; message_ids: string[]; delivery_count: number; }
 export interface EnvelopeReplayConflict { replay_key: string; message_ids: string[]; payload_digests: Digest[]; }
@@ -1174,7 +1189,7 @@ function normalizeEnvelopeCore(value: unknown, options: EnvelopeValidationOption
     else {
       const provenance = normalizeContextProvenance(options, 'envelope.context', true);
       if (provenance === undefined) fail('CONTEXT_NOT_ALLOWED', 'embedded envelope context requires #1162 context provenance', 'envelope.context');
-      core.context = validateContextSnapshot(record.context, { reject_stale_required: false, graph: options.graph, ...provenance, require_provenance: true });
+      core.context = validateContextSnapshot(record.context, { reject_stale_required: false, graph: options.graph, ...provenance });
     }
   }
   if (core.payload.kind !== core.message_type) fail('INVALID_CONTRACT', 'message_type must match payload.kind', 'envelope.message_type');
@@ -1351,10 +1366,13 @@ function normalizeContextSource(value: unknown, path: string, allowlistedHiddenP
 interface DiscoveryProjection {
   manifest_path: string;
   manifest_version: string;
+  manifest_content_digest: Digest;
   registry_path: string;
   registry_version: string;
+  registry_content_digest: Digest;
   repository_paths: ContextAllowlistRepositoryPath[];
   discovery_digest: Digest;
+  attestation: DiscoveryAttestation;
 }
 export interface ContextAllowlistOverrides {
   repository_paths?: readonly ContextAllowlistRepositoryPath[];
@@ -1382,7 +1400,7 @@ function normalizeDiscoveryContextEntry(value: unknown, path: string): { path: s
     path: validateRelativePath(record.path, `${path}.path`),
     priority: requireInteger(record.priority, `${path}.priority`, 1),
     description: requireString(record.description, `${path}.description`),
-    content_digest: digestFor('conxian.swarm.discovery-context-content.v1', requireTextContent(record.content, `${path}.content`)),
+    content_digest: digestFor('conxian-agent-discovery.context-content.v1', requireTextContent(record.content, `${path}.content`)),
   };
 }
 function normalizeDiscoverySkill(value: unknown, path: string): { metadata: JsonValue; path: string; content_digest: Digest } {
@@ -1408,12 +1426,120 @@ function normalizeDiscoverySkill(value: unknown, path: string): { metadata: Json
   requireString(metadata.contentFormat, `${path}.metadata.contentFormat`);
   requireString(metadataVersion.owner, `${path}.metadata.metadata.owner`);
   const content = requireTextContent(record.content, `${path}.content`);
-  return { metadata: toJsonValue(metadata), path: skillPath, content_digest: digestFor('conxian.swarm.discovery-skill-content.v1', content) };
+  const normalizedMetadata = toJsonValue(metadata);
+  return {
+    metadata: normalizedMetadata,
+    path: skillPath,
+    content_digest: digestFor('conxian-agent-discovery.skill-content.v1', content),
+  };
+}
+function normalizeDiscoveryTrustContextEntry(value: unknown, path: string): DiscoveryTrustContextEntry {
+  const record = requireRecord(value, path);
+  assertKeys(record, ['path', 'tier', 'required', 'priority', 'description', 'content_digest'], path);
+  requireKeys(record, ['path', 'tier', 'required', 'priority', 'description', 'content_digest'], path);
+  return {
+    path: validateRelativePath(record.path, `${path}.path`),
+    tier: normalizeContextTier(record.tier, `${path}.tier`),
+    required: requireBoolean(record.required, `${path}.required`),
+    priority: requireInteger(record.priority, `${path}.priority`, 1),
+    description: requireString(record.description, `${path}.description`),
+    content_digest: normalizeDigest(record.content_digest, `${path}.content_digest`),
+  };
+}
+function normalizeDiscoveryTrustSkillEntry(value: unknown, path: string): DiscoveryTrustSkillEntry {
+  const record = requireRecord(value, path);
+  assertKeys(record, ['id', 'path', 'metadata_digest', 'content_digest'], path);
+  requireKeys(record, ['id', 'path', 'metadata_digest', 'content_digest'], path);
+  const id = normalizeIdentifier(record.id, `${path}.id`);
+  const skillPath = validateRelativePath(record.path, `${path}.path`);
+  if (skillPath !== `.agents/skills/${id}/SKILL.md`) fail('CONTEXT_NOT_ALLOWED', 'trust-anchor skill path must match its declared id', `${path}.path`);
+  return {
+    id,
+    path: skillPath,
+    metadata_digest: normalizeDigest(record.metadata_digest, `${path}.metadata_digest`),
+    content_digest: normalizeDigest(record.content_digest, `${path}.content_digest`),
+  };
+}
+function normalizeDiscoveryScope(value: unknown, path: string): DiscoveryTrustScope {
+  const record = requireRecord(value, path);
+  assertKeys(record, ['repository', 'manifest', 'registry', 'context', 'skills'], path);
+  requireKeys(record, ['repository', 'manifest', 'registry', 'context', 'skills'], path);
+  const repository = requireRecord(record.repository, `${path}.repository`);
+  assertKeys(repository, ['root'], `${path}.repository`); requireKeys(repository, ['root'], `${path}.repository`);
+  if (repository.root !== '.') fail('CONTEXT_NOT_ALLOWED', 'discovery repository root must be repository-relative', `${path}.repository.root`);
+  const manifest = requireRecord(record.manifest, `${path}.manifest`);
+  assertKeys(manifest, ['path', 'version', 'content_digest'], `${path}.manifest`); requireKeys(manifest, ['path', 'version', 'content_digest'], `${path}.manifest`);
+  const manifestPath = validateRelativePath(manifest.path, `${path}.manifest.path`);
+  if (manifestPath !== '.agents/manifest.json') fail('CONTEXT_NOT_ALLOWED', 'discovery manifest path is not canonical', `${path}.manifest.path`);
+  const registry = requireRecord(record.registry, `${path}.registry`);
+  assertKeys(registry, ['path', 'version', 'content_digest'], `${path}.registry`); requireKeys(registry, ['path', 'version', 'content_digest'], `${path}.registry`);
+  const registryPath = validateRelativePath(registry.path, `${path}.registry.path`);
+  if (registryPath !== '.agents/skills/registry.json') fail('CONTEXT_NOT_ALLOWED', 'discovery registry path is not canonical', `${path}.registry.path`);
+  const context = requireRecord(record.context, `${path}.context`);
+  assertKeys(context, ['required', 'optional'], `${path}.context`); requireKeys(context, ['required', 'optional'], `${path}.context`);
+  const required = requireArray(context.required, `${path}.context.required`).map((entry, index) => normalizeDiscoveryTrustContextEntry(entry, `${path}.context.required[${index}]`));
+  const optional = requireArray(context.optional, `${path}.context.optional`).map((entry, index) => normalizeDiscoveryTrustContextEntry(entry, `${path}.context.optional[${index}]`));
+  assertUnique(required.map((entry) => entry.path), `${path}.context.required`);
+  assertUnique(optional.map((entry) => entry.path), `${path}.context.optional`);
+  if (new Set([...required, ...optional].map((entry) => entry.path)).size !== required.length + optional.length) fail('CONTEXT_NOT_ALLOWED', 'discovery context path appears in both required and optional sets', `${path}.context`);
+  const skills = requireRecord(record.skills, `${path}.skills`);
+  assertKeys(skills, ['selected'], `${path}.skills`); requireKeys(skills, ['selected'], `${path}.skills`);
+  const selected = requireArray(skills.selected, `${path}.skills.selected`).map((entry, index) => normalizeDiscoveryTrustSkillEntry(entry, `${path}.skills.selected[${index}]`));
+  assertUnique(selected.map((entry) => entry.path), `${path}.skills.selected`);
+  return {
+    repository: { root: '.' },
+    manifest: { path: manifestPath, version: normalizeDiscoveryVersion(manifest.version, `${path}.manifest.version`), content_digest: normalizeDigest(manifest.content_digest, `${path}.manifest.content_digest`) },
+    registry: { path: registryPath, version: normalizeDiscoveryVersion(registry.version, `${path}.registry.version`), content_digest: normalizeDigest(registry.content_digest, `${path}.registry.content_digest`) },
+    context: {
+      required: required.sort((left, right) => compareStrings(left.path, right.path)),
+      optional: optional.sort((left, right) => compareStrings(left.path, right.path)),
+    },
+    skills: { selected: selected.sort((left, right) => compareStrings(left.path, right.path)) },
+  };
+}
+function normalizeDiscoveryAttestation(value: unknown, path: string): DiscoveryAttestation {
+  const record = requireRecord(value, path);
+  assertKeys(record, ['protocol', 'version', 'repository', 'manifest', 'registry', 'context', 'skills', 'digest'], path);
+  requireKeys(record, ['protocol', 'version', 'repository', 'manifest', 'registry', 'context', 'skills', 'digest'], path);
+  if (record.protocol !== DISCOVERY_ATTESTATION_PROTOCOL || record.version !== DISCOVERY_ATTESTATION_VERSION) fail('INVALID_TRUST_ANCHOR', 'discovery attestation protocol/version is unsupported', path);
+  const { protocol: _protocol, version: _version, digest: _digest, ...scopeRecord } = record;
+  const scope = normalizeDiscoveryScope(scopeRecord, path);
+  const digest = normalizeDigest(record.digest, `${path}.digest`);
+  if (discoveryDigestFor('conxian-agent-discovery.attestation.v1', scope) !== digest) fail('INVALID_DIGEST', 'discovery attestation digest does not match its content', `${path}.digest`);
+  return { protocol: DISCOVERY_ATTESTATION_PROTOCOL, version: DISCOVERY_ATTESTATION_VERSION, ...scope, digest };
+}
+function normalizeTrustedDiscoveryAnchor(value: unknown, path: string): TrustedDiscoveryAnchor {
+  const record = requireRecord(value, path);
+  assertKeys(record, ['protocol', 'version', 'repository', 'manifest', 'registry', 'context', 'skills', 'digest'], path);
+  requireKeys(record, ['protocol', 'version', 'repository', 'manifest', 'registry', 'context', 'skills', 'digest'], path);
+  if (record.protocol !== DISCOVERY_TRUST_ANCHOR_PROTOCOL || record.version !== DISCOVERY_TRUST_ANCHOR_VERSION) fail('INVALID_TRUST_ANCHOR', 'trusted discovery anchor protocol/version is unsupported', path);
+  const { protocol: _protocol, version: _version, digest: _digest, ...scopeRecord } = record;
+  const scope = normalizeDiscoveryScope(scopeRecord, path);
+  const digest = normalizeDigest(record.digest, `${path}.digest`);
+  if (discoveryDigestFor('conxian-agent-discovery.trust-anchor.v1', scope) !== digest) fail('INVALID_TRUST_ANCHOR', 'trusted discovery anchor digest does not match its content', `${path}.digest`);
+  return { protocol: DISCOVERY_TRUST_ANCHOR_PROTOCOL, version: DISCOVERY_TRUST_ANCHOR_VERSION, ...scope, digest };
+}
+function compareDiscoveryScopes(left: unknown, right: unknown, path: string): void {
+  if (canonicalJson(left) !== canonicalJson(right)) fail('CONTEXT_NOT_ALLOWED', 'discovery result does not match the trusted #1162 discovery anchor', path);
+}
+function assertDiscoverySubset(actual: readonly DiscoveryTrustContextEntry[] | readonly DiscoveryTrustSkillEntry[], allowed: readonly DiscoveryTrustContextEntry[] | readonly DiscoveryTrustSkillEntry[], path: string): void {
+  for (const entry of actual) {
+    const expected = allowed.find((candidate) => 'id' in entry && 'id' in candidate ? candidate.id === entry.id : candidate.path === entry.path);
+    if (expected === undefined) fail('CONTEXT_NOT_ALLOWED', 'discovery result contains a path or skill not declared by the trusted #1162 anchor', path);
+    compareDiscoveryScopes(entry, expected, path);
+  }
+}
+function verifyDiscoveryAgainstTrustedAnchor(projection: DiscoveryProjection, anchor: TrustedDiscoveryAnchor): void {
+  compareDiscoveryScopes(projection.attestation.manifest, anchor.manifest, 'discovery.manifest');
+  compareDiscoveryScopes(projection.attestation.registry, anchor.registry, 'discovery.registry');
+  compareDiscoveryScopes(projection.attestation.context.required, anchor.context.required, 'discovery.context.required');
+  assertDiscoverySubset(projection.attestation.context.optional, anchor.context.optional, 'discovery.context.optional');
+  assertDiscoverySubset(projection.attestation.skills.selected, anchor.skills.selected, 'discovery.skills.selected');
 }
 function normalizeDiscoveryResult(value: DiscoveryResult): DiscoveryProjection {
   const record = requireRecord(value as unknown, 'discovery');
-  assertKeys(record, ['ok', 'protocol', 'repository', 'manifest', 'context', 'skills', 'warnings'], 'discovery');
-  requireKeys(record, ['ok', 'protocol', 'repository', 'manifest', 'context', 'skills', 'warnings'], 'discovery');
+  assertKeys(record, ['ok', 'protocol', 'repository', 'manifest', 'context', 'skills', 'attestation', 'warnings'], 'discovery');
+  requireKeys(record, ['ok', 'protocol', 'repository', 'manifest', 'context', 'skills', 'attestation', 'warnings'], 'discovery');
   if (record.ok !== true || record.protocol !== 'conxian-agent-discovery') fail('CONTEXT_NOT_ALLOWED', 'allowlist provenance must come from a successful #1162 discovery result', 'discovery');
   const repository = requireRecord(record.repository, 'discovery.repository');
   assertKeys(repository, ['root'], 'discovery.repository'); requireKeys(repository, ['root'], 'discovery.repository');
@@ -1437,6 +1563,25 @@ function normalizeDiscoveryResult(value: DiscoveryResult): DiscoveryProjection {
   const selected = requireArray(skills.selected, 'discovery.skills.selected').map((entry, index) => normalizeDiscoverySkill(entry, `discovery.skills.selected[${index}]`));
   assertUnique(selected.map((entry) => entry.path), 'discovery.skills.selected');
   const warnings = requireArray(record.warnings, 'discovery.warnings').map((entry, index) => requireString(entry, `discovery.warnings[${index}]`));
+  const attestation = normalizeDiscoveryAttestation(record.attestation, 'discovery.attestation');
+  const expectedAttestationContext = {
+    required: required.map((entry) => ({ path: entry.path, tier: discoveryTierForPath(entry.path), required: true, priority: entry.priority, description: entry.description, content_digest: entry.content_digest })).sort((left, right) => compareStrings(left.path, right.path)),
+    optional: optional.map((entry) => ({ path: entry.path, tier: discoveryTierForPath(entry.path), required: false, priority: entry.priority, description: entry.description, content_digest: entry.content_digest })).sort((left, right) => compareStrings(left.path, right.path)),
+  };
+  const expectedAttestationSkills = selected.map((entry) => {
+    const metadata = requireRecord(entry.metadata, 'discovery.skills.selected.metadata');
+    return {
+      id: normalizeIdentifier(metadata.id, 'discovery.skills.selected.metadata.id'),
+      path: entry.path,
+      metadata_digest: digestFor('conxian-agent-discovery.skill-metadata.v1', entry.metadata),
+      content_digest: entry.content_digest,
+    };
+  }).sort((left, right) => compareStrings(left.path, right.path));
+  compareDiscoveryScopes(attestation.manifest, { path: manifestPath, version: manifestVersion, content_digest: attestation.manifest.content_digest }, 'discovery.attestation.manifest');
+  compareDiscoveryScopes(attestation.registry, { path: registryPath, version: registryVersion, content_digest: attestation.registry.content_digest }, 'discovery.attestation.registry');
+  compareDiscoveryScopes(attestation.context.required, expectedAttestationContext.required, 'discovery.attestation.context.required');
+  compareDiscoveryScopes(attestation.context.optional, expectedAttestationContext.optional, 'discovery.attestation.context.optional');
+  compareDiscoveryScopes(attestation.skills.selected, expectedAttestationSkills, 'discovery.attestation.skills.selected');
   const paths = new Map<string, ContextAllowlistRepositoryPath>();
   const addPath = (path: string, tier: Exclude<ContextTier, 'TASK' | 'ASSUMPTION'>, requiredPath: boolean): void => {
     const existing = paths.get(path);
@@ -1445,25 +1590,19 @@ function normalizeDiscoveryResult(value: DiscoveryResult): DiscoveryProjection {
   };
   addPath(manifestPath, 'CANONICAL', true);
   addPath(registryPath, 'CANONICAL', true);
-  for (const entry of required) addPath(entry.path, discoveryTierForPath(entry.path), true);
-  for (const entry of optional) addPath(entry.path, discoveryTierForPath(entry.path), false);
-  for (const skill of selected) addPath(skill.path, 'ARCHITECTURAL', true);
+  for (const entry of [...attestation.context.required, ...attestation.context.optional]) addPath(entry.path, entry.tier, entry.required);
+  for (const skill of attestation.skills.selected) addPath(skill.path, 'ARCHITECTURAL', true);
   const repositoryPaths = [...paths.values()].sort((left, right) => compareStrings(left.path, right.path));
-  const identity = {
-    protocol: 'conxian-agent-discovery',
-    repository: { root: '.' },
-    manifest: { path: manifestPath, version: manifestVersion },
-    context: { required, optional },
-    skills: { registry: { path: registryPath, version: registryVersion }, selected },
-    warnings: sortedStrings(warnings),
-  };
   return {
     manifest_path: manifestPath,
     manifest_version: manifestVersion,
+    manifest_content_digest: attestation.manifest.content_digest,
     registry_path: registryPath,
     registry_version: registryVersion,
+    registry_content_digest: attestation.registry.content_digest,
     repository_paths: repositoryPaths,
-    discovery_digest: digestFor('conxian.swarm.discovery-result.v1', identity),
+    discovery_digest: attestation.digest,
+    attestation,
   };
 }
 function normalizeRepositoryPathEntries(value: unknown, path: string): ContextAllowlistRepositoryPath[] {
@@ -1491,9 +1630,10 @@ function normalizeAllowlist(value: unknown): ContextAllowlist {
   for (const key of requiredTaskInputKeys) if (!taskInputKeys.includes(key)) fail('CONTEXT_NOT_ALLOWED', 'required task input must be allowlisted', 'allowlist.required_task_input_keys');
   for (const artifactId of requiredArtifactIds) if (!artifactIds.includes(artifactId)) fail('CONTEXT_NOT_ALLOWED', 'required artifact must be allowlisted', 'allowlist.required_artifact_ids');
   const provenanceRecord = requireRecord(record.provenance, 'allowlist.provenance');
-  assertKeys(provenanceRecord, ['protocol', 'version', 'discovery_protocol', 'manifest_path', 'manifest_version', 'registry_path', 'registry_version', 'repository_paths', 'repository_paths_digest', 'discovery_digest'], 'allowlist.provenance');
-  requireKeys(provenanceRecord, ['protocol', 'version', 'discovery_protocol', 'manifest_path', 'manifest_version', 'registry_path', 'registry_version', 'repository_paths', 'repository_paths_digest', 'discovery_digest'], 'allowlist.provenance');
+  assertKeys(provenanceRecord, ['protocol', 'version', 'discovery_protocol', 'trusted_discovery_anchor_protocol', 'trusted_discovery_anchor_version', 'trusted_discovery_anchor_digest', 'manifest_path', 'manifest_version', 'registry_path', 'registry_version', 'repository_paths', 'repository_paths_digest', 'discovery_digest'], 'allowlist.provenance');
+  requireKeys(provenanceRecord, ['protocol', 'version', 'discovery_protocol', 'trusted_discovery_anchor_protocol', 'trusted_discovery_anchor_version', 'trusted_discovery_anchor_digest', 'manifest_path', 'manifest_version', 'registry_path', 'registry_version', 'repository_paths', 'repository_paths_digest', 'discovery_digest'], 'allowlist.provenance');
   if (provenanceRecord.protocol !== CONTEXT_ALLOWLIST_PROTOCOL || provenanceRecord.version !== CONTEXT_ALLOWLIST_VERSION || provenanceRecord.discovery_protocol !== 'conxian-agent-discovery') fail('CONTEXT_NOT_ALLOWED', 'allowlist provenance protocol/version is invalid', 'allowlist.provenance');
+  if (provenanceRecord.trusted_discovery_anchor_protocol !== DISCOVERY_TRUST_ANCHOR_PROTOCOL || provenanceRecord.trusted_discovery_anchor_version !== DISCOVERY_TRUST_ANCHOR_VERSION) fail('INVALID_TRUST_ANCHOR', 'allowlist provenance trust-anchor protocol/version is invalid', 'allowlist.provenance');
   const manifestPath = validateRelativePath(provenanceRecord.manifest_path, 'allowlist.provenance.manifest_path');
   const registryPath = validateRelativePath(provenanceRecord.registry_path, 'allowlist.provenance.registry_path');
   if (manifestPath !== '.agents/manifest.json') fail('CONTEXT_NOT_ALLOWED', 'allowlist provenance must identify .agents/manifest.json', 'allowlist.provenance.manifest_path');
@@ -1507,6 +1647,9 @@ function normalizeAllowlist(value: unknown): ContextAllowlist {
     protocol: CONTEXT_ALLOWLIST_PROTOCOL,
     version: CONTEXT_ALLOWLIST_VERSION,
     discovery_protocol: 'conxian-agent-discovery',
+    trusted_discovery_anchor_protocol: DISCOVERY_TRUST_ANCHOR_PROTOCOL,
+    trusted_discovery_anchor_version: DISCOVERY_TRUST_ANCHOR_VERSION,
+    trusted_discovery_anchor_digest: normalizeDigest(provenanceRecord.trusted_discovery_anchor_digest, 'allowlist.provenance.trusted_discovery_anchor_digest'),
     manifest_path: manifestPath,
     manifest_version: normalizeDiscoveryVersion(provenanceRecord.manifest_version, 'allowlist.provenance.manifest_version'),
     registry_path: registryPath,
@@ -1522,8 +1665,15 @@ function normalizeAllowlist(value: unknown): ContextAllowlist {
     provenance,
   };
 }
-export function deriveContextAllowlist(discovery: DiscoveryResult, overrides: ContextAllowlistOverrides = {}): ContextAllowlist {
+export interface ContextAllowlistDerivationOptions extends ContextAllowlistOverrides {
+  trusted_discovery_anchor: TrustedDiscoveryAnchor;
+}
+
+export function deriveContextAllowlist(discovery: DiscoveryResult, options: ContextAllowlistDerivationOptions): ContextAllowlist {
+  const trustedAnchor = normalizeTrustedDiscoveryAnchor(options.trusted_discovery_anchor, 'options.trusted_discovery_anchor');
   const projection = normalizeDiscoveryResult(discovery);
+  verifyDiscoveryAgainstTrustedAnchor(projection, trustedAnchor);
+  const overrides: ContextAllowlistOverrides = options;
   const projectedByPath = new Map(projection.repository_paths.map((entry) => [entry.path, entry]));
   const requestedRepositoryPaths = overrides.repository_paths === undefined
     ? projection.repository_paths
@@ -1551,6 +1701,9 @@ export function deriveContextAllowlist(discovery: DiscoveryResult, overrides: Co
       protocol: CONTEXT_ALLOWLIST_PROTOCOL,
       version: CONTEXT_ALLOWLIST_VERSION,
       discovery_protocol: 'conxian-agent-discovery',
+      trusted_discovery_anchor_protocol: trustedAnchor.protocol,
+      trusted_discovery_anchor_version: trustedAnchor.version,
+      trusted_discovery_anchor_digest: trustedAnchor.digest,
       manifest_path: projection.manifest_path,
       manifest_version: projection.manifest_version,
       registry_path: projection.registry_path,
@@ -1562,8 +1715,9 @@ export function deriveContextAllowlist(discovery: DiscoveryResult, overrides: Co
   };
   return normalizeAllowlist(allowlist);
 }
-function validateAllowlistAgainstDiscovery(allowlist: ContextAllowlist, discovery: DiscoveryResult): void {
+function validateAllowlistAgainstDiscovery(allowlist: ContextAllowlist, discovery: DiscoveryResult, trustedAnchor: TrustedDiscoveryAnchor): void {
   const expected = deriveContextAllowlist(discovery, {
+    trusted_discovery_anchor: trustedAnchor,
     repository_paths: allowlist.repository_paths,
     task_input_keys: allowlist.task_input_keys,
     required_task_input_keys: allowlist.required_task_input_keys,
@@ -1571,25 +1725,29 @@ function validateAllowlistAgainstDiscovery(allowlist: ContextAllowlist, discover
     required_artifact_ids: allowlist.required_artifact_ids,
     assumption_keys: allowlist.assumption_keys,
   });
-  if (canonicalJson(allowlist.repository_paths) !== canonicalJson(expected.repository_paths) || canonicalJson(allowlist.provenance) !== canonicalJson(expected.provenance)) {
+  if (canonicalJson(allowlist) !== canonicalJson(expected)) {
     fail('CONTEXT_NOT_ALLOWED', 'allowlist repository paths or provenance do not match the validated #1162 discovery result', 'allowlist.provenance');
   }
 }
 function normalizeContextProvenance(
-  options: { allowlist?: ContextAllowlist; discovery?: DiscoveryResult } | undefined,
+  options: { allowlist?: ContextAllowlist; discovery?: DiscoveryResult; trusted_discovery_anchor?: TrustedDiscoveryAnchor } | undefined,
   path: string,
   required: boolean,
 ): ContextProvenanceOptions | undefined {
   const allowlist = options?.allowlist;
   const discovery = options?.discovery;
-  if (allowlist === undefined && discovery === undefined) {
+  const trustedAnchor = options?.trusted_discovery_anchor;
+  if (allowlist === undefined && discovery === undefined && trustedAnchor === undefined) {
     if (required) fail('CONTEXT_NOT_ALLOWED', 'validated #1162 allowlist and discovery provenance are required', path);
     return undefined;
   }
-  if (allowlist === undefined || discovery === undefined) fail('CONTEXT_NOT_ALLOWED', 'allowlist and discovery provenance must be supplied together', path);
+  if (allowlist === undefined || discovery === undefined || trustedAnchor === undefined) {
+    fail('CONTEXT_NOT_ALLOWED', 'trusted #1162 discovery anchor, discovery result, and allowlist must be supplied together', path);
+  }
+  const normalizedAnchor = normalizeTrustedDiscoveryAnchor(trustedAnchor, `${path}.trusted_discovery_anchor`);
   const normalizedAllowlist = normalizeAllowlist(allowlist);
-  validateAllowlistAgainstDiscovery(normalizedAllowlist, discovery);
-  return { allowlist: normalizedAllowlist, discovery };
+  validateAllowlistAgainstDiscovery(normalizedAllowlist, discovery, normalizedAnchor);
+  return { allowlist: normalizedAllowlist, discovery, trusted_discovery_anchor: normalizedAnchor };
 }
 function normalizeLimits(value: unknown, path: string): ContextLimits {
   const record = requireRecord(value, path);
@@ -1911,8 +2069,18 @@ function normalizeContextConflict(value: unknown, path: string): ContextConflict
 }
 function contextSnapshotIntegrity(snapshot: Omit<ContextSnapshot, 'integrity'>): DigestIntegrityMetadata { return { digest: digestFor('conxian.swarm.context.v1', contextSnapshotDigestInput(snapshot)) }; }
 
-/** Validates a bounded context snapshot and nested provenance/digest metadata. */
-export function validateContextSnapshot(value: unknown, options: ContextValidationOptions = {}): ContextSnapshot {
+/**
+* Normalizes structural context data for internal composition only.
+*
+* This helper is intentionally private and non-authoritative: it does not
+* establish #1162 provenance or prove that an allowlist came from a trusted
+* deployment boundary. Handover, envelope, resumability, and public context
+* validation must use validateContextSnapshot instead.
+*/
+function normalizeContextSnapshotStructure(
+  value: unknown,
+  options: { graph?: TaskGraph; allowlist?: ContextAllowlist } = {},
+): ContextSnapshot {
   const record = requireRecord(value, 'context');
   assertKeys(record, ['schema', 'captured_at', 'evaluated_at', 'entries', 'required_keys', 'missing_required', 'stale_required', 'expired_required', 'conflicts', 'warnings', 'limits', 'allowlist_digest', 'integrity'], 'context');
   requireKeys(record, ['schema', 'captured_at', 'evaluated_at', 'entries', 'required_keys', 'missing_required', 'stale_required', 'expired_required', 'conflicts', 'warnings', 'limits', 'allowlist_digest', 'integrity'], 'context');
@@ -1921,8 +2089,7 @@ export function validateContextSnapshot(value: unknown, options: ContextValidati
   const evaluatedAt = normalizeTimestamp(record.evaluated_at, 'context.evaluated_at');
   const declaredLimits = normalizeLimits(record.limits, 'context.limits');
   const effectiveLimits = effectiveContextLimits(declaredLimits, options.graph);
-  const provenance = normalizeContextProvenance(options, 'context.provenance', options.require_provenance === true);
-  const allowlist = provenance?.allowlist;
+  const allowlist = options.allowlist;
   const allowlistedHiddenPaths = allowlist?.repository_paths.map((entry) => entry.path) ?? [];
   const entries = requireArray(record.entries, 'context.entries').map((entry, index) => normalizeContextEntry(entry, `context.entries[${index}]`, evaluatedAt, allowlistedHiddenPaths));
   if (allowlist !== undefined) {
@@ -1965,8 +2132,23 @@ export function validateContextSnapshot(value: unknown, options: ContextValidati
   if (canonicalJson(missingRequired) !== canonicalJson(expectedMissing) || canonicalJson(staleRequired) !== canonicalJson(expectedStale) || canonicalJson(expiredRequired) !== canonicalJson(expectedExpired)) {
     fail('INVALID_CONTEXT', 'required context status lists do not match entries', 'context');
   }
+  return snapshot;
+}
+
+/**
+* Validates a bounded context snapshot against mandatory #1162 provenance.
+* The trusted anchor is supplied by an adapter/deployment boundary; this
+* library verifies its content binding but cannot authenticate that boundary.
+*/
+export function validateContextSnapshot(value: unknown, options: ContextValidationOptions): ContextSnapshot {
+  const provenance = normalizeContextProvenance(options, 'context.provenance', true);
+  if (provenance === undefined) fail('CONTEXT_NOT_ALLOWED', 'authoritative context validation requires #1162 anchor, discovery, and allowlist provenance', 'context.provenance');
+  const snapshot = normalizeContextSnapshotStructure(value, { graph: options.graph, allowlist: provenance.allowlist });
+  if (snapshot.allowlist_digest !== digestFor('conxian.swarm.context-allowlist.v1', provenance.allowlist)) {
+    fail('INVALID_DIGEST', 'context allowlist digest does not match supplied provenance', 'context.allowlist_digest');
+  }
   if (options.now !== undefined || options.reject_stale_required === true) {
-    const resolution = resolveContextSnapshot(snapshot, options.now ?? evaluatedAt, provenance);
+    const resolution = resolveContextSnapshot(snapshot, options.now ?? snapshot.evaluated_at, provenance);
     if (options.reject_stale_required === true && !resolution.valid) {
       if (resolution.missing_required.length > 0) fail('MISSING_CONTEXT', 'required context is missing', 'context');
       fail('STALE_CONTEXT', 'required context is stale or expired', 'context');
@@ -1977,8 +2159,9 @@ export function validateContextSnapshot(value: unknown, options: ContextValidati
 
 /** Packages caller-provided allowlisted context with deterministic redaction and bounds. */
 export function packageContext(values: readonly ContextInput[], options: ContextPackageOptions): ContextSnapshot {
-  const allowlist = normalizeAllowlist(options.allowlist);
-  validateAllowlistAgainstDiscovery(allowlist, options.discovery);
+  const provenance = normalizeContextProvenance(options, 'options.provenance', true);
+  if (provenance === undefined) fail('CONTEXT_NOT_ALLOWED', 'context packaging requires #1162 anchor, discovery, and allowlist provenance', 'options.provenance');
+  const allowlist = provenance.allowlist;
   const limits = effectiveContextLimits(normalizeLimits(options.limits, 'options.limits'), options.graph);
   const capturedAt = normalizeTimestamp(options.captured_at, 'options.captured_at'); const now = normalizeTimestamp(options.now ?? capturedAt, 'options.now');
   const requiredKeys = sortedStrings([...requiredTokensForAllowlist(allowlist), ...(options.required_keys ?? []).map((entry, index) => requireString(entry, `options.required_keys[${index}]`))]);
@@ -2004,7 +2187,10 @@ export function packageContext(values: readonly ContextInput[], options: Context
     missing_required: sortedStrings(missingRequired), stale_required: sortedStrings(staleRequired), expired_required: sortedStrings(expiredRequired),
     conflicts: resolved.conflicts, warnings: sortedStrings(warnings), limits, allowlist_digest: digestFor('conxian.swarm.context-allowlist.v1', allowlist),
   };
-  return { ...withoutIntegrity, integrity: contextSnapshotIntegrity(withoutIntegrity) };
+  return validateContextSnapshot(
+    { ...withoutIntegrity, integrity: contextSnapshotIntegrity(withoutIntegrity) },
+    { ...provenance, graph: options.graph, reject_stale_required: false },
+  );
 }
 
 function reevaluateContextEntry(entry: ContextEntry, evaluatedAt: string): ContextEntry {
@@ -2015,11 +2201,8 @@ function reevaluateContextEntry(entry: ContextEntry, evaluatedAt: string): Conte
 }
 
 /** Re-evaluates freshness at a caller-supplied time without mutating the snapshot. */
-export function resolveContextSnapshot(snapshotValue: ContextSnapshot, nowValue: string, provenance?: ContextProvenanceOptions): ContextResolution {
-  const snapshot = validateContextSnapshot(snapshotValue, {
-    reject_stale_required: false,
-    ...(provenance === undefined ? {} : { allowlist: provenance.allowlist, discovery: provenance.discovery, require_provenance: true }),
-  });
+export function resolveContextSnapshot(snapshotValue: ContextSnapshot, nowValue: string, provenance: ContextProvenanceOptions): ContextResolution {
+  const snapshot = validateContextSnapshot(snapshotValue, { reject_stale_required: false, ...provenance });
   const now = normalizeTimestamp(nowValue, 'now');
   const missing: string[] = []; const stale: string[] = []; const expired: string[] = [];
   for (const token of snapshot.required_keys) {
@@ -2034,11 +2217,23 @@ export function resolveContextSnapshot(snapshotValue: ContextSnapshot, nowValue:
     warnings: sortedStrings([...snapshot.warnings, ...stale.map((token) => `Required context '${token}' is stale.`), ...expired.map((token) => `Required context '${token}' is expired.`), ...missing.map((token) => `Required context '${token}' is missing.`)]),
   };
 }
-/** Merges snapshots by precedence, freshness, capture time, and digest tie-breaking. */
-export function mergeContextSnapshots(values: readonly ContextSnapshot[], options: { now: string; captured_at?: string; limits?: ContextLimits; graph?: TaskGraph }): ContextSnapshot {
+export interface ContextMergeOptions extends ContextProvenanceOptions {
+  now: string;
+  captured_at?: string;
+  limits?: ContextLimits;
+  graph?: TaskGraph;
+}
+
+/** Merges snapshots with one mandatory, shared authoritative provenance. */
+export function mergeContextSnapshots(values: readonly ContextSnapshot[], options: ContextMergeOptions): ContextSnapshot {
   if (values.length === 0) fail('INVALID_CONTEXT', 'at least one context snapshot is required');
   const graph = options.graph === undefined ? undefined : validateTaskGraph(options.graph);
-  const snapshots = values.map((entry) => validateContextSnapshot(entry, { reject_stale_required: false, graph }));
+  const provenance: ContextProvenanceOptions = {
+    allowlist: options.allowlist,
+    discovery: options.discovery,
+    trusted_discovery_anchor: options.trusted_discovery_anchor,
+  };
+  const snapshots = values.map((entry) => validateContextSnapshot(entry, { reject_stale_required: false, graph, ...provenance }));
   const now = normalizeTimestamp(options.now, 'options.now');
   const limits = effectiveContextLimits(normalizeLimits(options.limits ?? snapshots[0]?.limits, 'options.limits'), graph);
   const resolvedEntries = resolveEntries(snapshots.flatMap((snapshot) => snapshot.entries), now);
@@ -2057,9 +2252,12 @@ export function mergeContextSnapshots(values: readonly ContextSnapshot[], option
     schema: SWARM_SCHEMAS.context, captured_at: capturedAt, evaluated_at: now, entries: resolved.entries, required_keys: requiredKeys,
     missing_required: sortedStrings(missingRequired), stale_required: sortedStrings(staleRequired), expired_required: sortedStrings(expiredRequired),
     conflicts: resolved.conflicts, warnings: sortedStrings(snapshots.flatMap((snapshot) => snapshot.warnings)), limits,
-    allowlist_digest: digestFor('conxian.swarm.context-allowlist-merge.v1', snapshots.map((snapshot) => snapshot.allowlist_digest).sort(compareStrings)),
+    allowlist_digest: digestFor('conxian.swarm.context-allowlist.v1', provenance.allowlist),
   };
-  return { ...withoutIntegrity, integrity: contextSnapshotIntegrity(withoutIntegrity) };
+  return validateContextSnapshot(
+    { ...withoutIntegrity, integrity: contextSnapshotIntegrity(withoutIntegrity) },
+    { ...provenance, graph, reject_stale_required: false },
+  );
 }
 
 function normalizeTaskResultForGraph(result: TaskResult, graph: TaskGraph): void {
@@ -2165,7 +2363,7 @@ function normalizeHandoverCore(value: unknown, graph: TaskGraph, provenance: Con
   if (record.schema !== SWARM_SCHEMAS.handover) fail('UNSUPPORTED_VERSION', `schema must be '${SWARM_SCHEMAS.handover}'`, 'handover.schema');
   const core: Omit<HandoverDocument, 'integrity'> = {
     schema: SWARM_SCHEMAS.handover, handover_id: normalizeIdentifier(record.handover_id, 'handover.handover_id'), correlation_id: normalizeIdentifier(record.correlation_id, 'handover.correlation_id'), graph_id: normalizeIdentifier(record.graph_id, 'handover.graph_id'), graph_digest: normalizeDigest(record.graph_digest, 'handover.graph_digest'), captured_at: normalizeTimestamp(record.captured_at, 'handover.captured_at'), expires_at: normalizeTimestamp(record.expires_at, 'handover.expires_at'), lifecycle_state: normalizeStatus(record.lifecycle_state, 'handover.lifecycle_state'),
-    completed_tasks: requireArray(record.completed_tasks, 'handover.completed_tasks').map((entry, index) => normalizeHandoverTaskReference(entry, `handover.completed_tasks[${index}]`)), active_tasks: requireArray(record.active_tasks, 'handover.active_tasks').map((entry, index) => normalizeHandoverTaskReference(entry, `handover.active_tasks[${index}]`)), blocked_tasks: requireArray(record.blocked_tasks, 'handover.blocked_tasks').map((entry, index) => normalizeHandoverTaskReference(entry, `handover.blocked_tasks[${index}]`)), pending_tasks: requireArray(record.pending_tasks, 'handover.pending_tasks').map((entry, index) => normalizeHandoverTaskReference(entry, `handover.pending_tasks[${index}]`)), decisions: requireArray(record.decisions, 'handover.decisions').map((entry, index) => normalizeHandoverDecision(entry, `handover.decisions[${index}]`)), artifacts: requireArray(record.artifacts, 'handover.artifacts').map((entry, index) => normalizeArtifact(entry, `handover.artifacts[${index}]`)), unresolved_conflicts: requireArray(record.unresolved_conflicts, 'handover.unresolved_conflicts').map((entry, index) => normalizeHandoverConflict(entry, `handover.unresolved_conflicts[${index}]`)), risks_and_blockers: requireArray(record.risks_and_blockers, 'handover.risks_and_blockers').map((entry, index) => normalizeHandoverRisk(entry, `handover.risks_and_blockers[${index}]`)), resume_instructions: requireArray(record.resume_instructions, 'handover.resume_instructions').map((entry, index) => normalizeResumeInstruction(entry, `handover.resume_instructions[${index}]`)), context_snapshot: validateContextSnapshot(record.context_snapshot, { reject_stale_required: false, graph, ...provenance, require_provenance: true }), links: normalizeLinks(record.links, 'handover.links'),
+    completed_tasks: requireArray(record.completed_tasks, 'handover.completed_tasks').map((entry, index) => normalizeHandoverTaskReference(entry, `handover.completed_tasks[${index}]`)), active_tasks: requireArray(record.active_tasks, 'handover.active_tasks').map((entry, index) => normalizeHandoverTaskReference(entry, `handover.active_tasks[${index}]`)), blocked_tasks: requireArray(record.blocked_tasks, 'handover.blocked_tasks').map((entry, index) => normalizeHandoverTaskReference(entry, `handover.blocked_tasks[${index}]`)), pending_tasks: requireArray(record.pending_tasks, 'handover.pending_tasks').map((entry, index) => normalizeHandoverTaskReference(entry, `handover.pending_tasks[${index}]`)), decisions: requireArray(record.decisions, 'handover.decisions').map((entry, index) => normalizeHandoverDecision(entry, `handover.decisions[${index}]`)), artifacts: requireArray(record.artifacts, 'handover.artifacts').map((entry, index) => normalizeArtifact(entry, `handover.artifacts[${index}]`)), unresolved_conflicts: requireArray(record.unresolved_conflicts, 'handover.unresolved_conflicts').map((entry, index) => normalizeHandoverConflict(entry, `handover.unresolved_conflicts[${index}]`)), risks_and_blockers: requireArray(record.risks_and_blockers, 'handover.risks_and_blockers').map((entry, index) => normalizeHandoverRisk(entry, `handover.risks_and_blockers[${index}]`)), resume_instructions: requireArray(record.resume_instructions, 'handover.resume_instructions').map((entry, index) => normalizeResumeInstruction(entry, `handover.resume_instructions[${index}]`)), context_snapshot: validateContextSnapshot(record.context_snapshot, { reject_stale_required: false, graph, ...provenance }), links: normalizeLinks(record.links, 'handover.links'),
   };
   if (record.source_agent !== undefined) core.source_agent = normalizeAgentIdentity(record.source_agent, 'handover.source_agent');
   if (record.target_agent !== undefined) core.target_agent = normalizeAgentIdentity(record.target_agent, 'handover.target_agent');

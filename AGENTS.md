@@ -182,10 +182,10 @@ All services use multi-layered M2M auth per `docs/M2M_AUTHENTICATION.md`:
 > **Note**: Contributor Claim Ledger implemented (#1159). Self-evolving KB scaffolded, TAVILY secret set (#1165). Key Gaps list updated 2026-07-15.
 
 ### Swarm Coordination Protocol (#1163)
-- **Canonical contract**: `openspec/specs/swarm-coordination-v1.spec.md` is the normative `conxian.swarm` v1 specification; `schemas/agent-swarm.schema.json` is the structural interchange contract.
-- **Implementation**: `scripts/agent-coordination.ts` provides strict envelope/lifecycle validation, canonical JSON and domain-separated digests, DAG ordering, capability matching, semantic result fingerprints/conflicts, deterministic aggregation, graph-linked handover validation, and bounded context packaging/merging.
+- **Canonical contract**: `openspec/specs/swarm-coordination-v1.spec.md` is the normative `conxian.swarm` v1 specification; `schemas/agent-swarm.schema.json` is the structural interchange contract and `schemas/agent-discovery-trust.schema.json` defines the #1162 attestation/trust-anchor shapes.
+- **Implementation**: `scripts/agent-coordination.ts` provides strict envelope/lifecycle validation, canonical JSON and domain-separated digests, DAG ordering, capability matching, semantic result fingerprints/conflicts, deterministic aggregation, graph-linked handover validation, mandatory authoritative context provenance, and bounded context packaging/merging. `scripts/agent-discovery-contract.ts` defines the pure content-addressed #1162 attestation/anchor contract; `scripts/agent-discovery.ts` packages the adapter-side result and anchor.
 - **Boundary**: The module is zero-network and side-effect free. It does not schedule agents, broker messages, execute skills, select providers, or provide transport delivery/authentication integration; those remain consumer responsibilities. Authentication assertions are validated only at the envelope boundary.
-- **Dependency**: Context packaging consumes only explicit task data, validated artifact references, marked assumptions, or a versioned/digested repository allowlist derived from a validated #1162 discovery result. Explicit `.agents` sources remain limited to #1162-declared manifest, registry, and inert skill paths.
+- **Dependency/trust boundary**: Context packaging consumes only explicit task data, validated artifact references, marked assumptions, or a versioned/digested repository allowlist derived from a validated #1162 discovery result and the same trusted discovery anchor. The anchor is versioned/content-addressed and must be delivered by a trusted adapter/deployment boundary, never an untrusted swarm message; the pure library verifies its binding but does not authenticate its origin. Explicit `.agents` sources remain limited to #1162-declared manifest, registry, and inert skill paths. Public `validateContextSnapshot()` and `mergeContextSnapshots()` require the full `{ trusted_discovery_anchor, discovery, allowlist }` provenance triple.
 
 ### Reward Source Breakdown (Merged in #1115)
 - API: `GET /api/v1/rewards/sources` → 4 revenue sources (Protocol Fees 38%, Staking Yield 28%, Treasury Yield 20%, Service Revenue 14%) mapped to 4 allocation categories (Community 40%, Governance 25%, Operations 20%, Reserve 15%), each tagged with SFO operational units
@@ -1318,30 +1318,57 @@ AGENTS.md (this update)
 - Added the canonical normative contract at `openspec/specs/swarm-coordination-v1.spec.md` and reconciled the proposal, design, spec delta, checklist, schema, runtime, tests, and docs.
 - Hardened capability matching, effective-now freshness, exact semantic result fingerprints, strict RFC 3339 calendar/offset validation, lifecycle sequence bounds, graph context budgets, and graph-linked handover validation.
 - Added versioned/digested #1162 allowlist provenance, explicit `.agents` source handling, tamper tests, prototype-key-safe JSON normalization/redaction, handover conflict cardinality checks, envelope-only authentication semantics, and Ajv 2020 schema fixtures.
-- Closed the second independent review's handover provenance gap: creation, validation, resumability, and handover-envelope replay/deduplication now require and revalidate the derived #1162 `ContextAllowlist` plus source `DiscoveryResult`; a locally re-digested `docs/not-allowlisted.md` snapshot is rejected.
+- Closed the final independent review provenance gap: #1162 now emits a versioned content-addressed attestation, trusted adapters can supply a separate content-addressed `DiscoveryTrustAnchor`, and allowlist derivation verifies manifest/registry identity plus exact required/subset optional/skill scope against that unchanged anchor; injected, removed, re-tiered, changed-content, and anchor-digest tampering fails closed.
+- Public `validateContextSnapshot()` and `mergeContextSnapshots()` now require `{ allowlist, discovery, trusted_discovery_anchor }`; structural normalization is private/non-authoritative, merge preserves the standard allowlist digest, rejects mixed/forged provenance, and its output enters handover validation.
 - Adopted the strict RFC 3339 millisecond profile across runtime, schema, canonical spec, change artifacts, docs, and digest tests; four-to-nine fractional digits are rejected instead of truncated.
 - Restored the root Next override and lockfile importer to `16.2.11`, kept Ajv explicitly pinned, and pinned only the admin dashboard compiler to TypeScript `6.0.3` because Next `16.2.11` requires `typescript/lib/typescript.js`; other workspace TypeScript `7.0.2` declarations remain unchanged.
 - Updated onboarding and session continuity documentation, retained focused CI commands, and recorded the implementation boundary without modifying #1162 artifacts or communicating externally.
 **Key discoveries**:
 - The implementation remains intentionally concentrated in `scripts/agent-coordination.ts` with structural contracts in `schemas/agent-swarm.schema.json`; the canonical normative source is now present at `openspec/specs/swarm-coordination-v1.spec.md`.
 - Root focused commands remain `test:agent-coordination` and `typecheck:agent-coordination`; Ajv 2020 and `ajv-formats` are explicit dev dependencies used by schema tests.
-- `context.allowlist_digest` and local entry/snapshot digests are content-integrity evidence, not transport authentication or authority; handover APIs must receive the authoritative derived allowlist and discovery result out of band.
+- `context.allowlist_digest` and local entry/snapshot digests are content-integrity evidence, not transport authentication or authority; handover APIs must receive the authoritative derived allowlist, discovery result, and trusted anchor out of band. The pure library verifies the anchor's content binding but does not authenticate the adapter/deployment that supplied it.
 - Next `16.2.11` does not recognize TypeScript `7.0.2`'s compiler layout during its build-time dependency probe, so the dashboard uses the narrow `6.0.3` compatibility pin rather than changing the other workspace compilers.
 - The protocol validates and preserves evidence but does not provide transport delivery, provider selection, scheduling, broker behavior, or skill execution; authentication is only an envelope validation concern.
 **Files touched**:
 - `openspec/specs/swarm-coordination-v1.spec.md`
 - `openspec/changes/2026-07-22-issue-1163-swarm-coordination/{proposal.md,design.md,spec-delta.md,tasks.md}`
 - `schemas/agent-swarm.schema.json`
+- `schemas/agent-discovery-trust.schema.json`
 - `scripts/agent-coordination.ts`
 - `scripts/agent-coordination.test.ts`
+- `scripts/agent-discovery-contract.ts`
+- `scripts/agent-discovery.ts` and `scripts/agent-discovery.test.ts`
 - `package.json` and `pnpm-lock.yaml`
 - `services/admin-dashboard/package.json` and `services/admin-dashboard/tsconfig.json`
 - `docs/AGENT_ONBOARDING.md` and `docs/SESSION_CONTINUITY.md`
 - `AGENTS.md`
 **Gaps identified**:
-- Independent external review/approval remains outstanding; no issue or PR state was changed by this remediation.
+- Independent external review/approval remains outstanding and intentionally unchecked; no issue or PR state was changed by this remediation.
 - Provider transports, authentication integration, and runtime scheduling are intentionally out of scope for #1163.
 **Gotchas**:
 - Do not describe `conxian.swarm` as a scheduler, queue, broker, or provider runtime; it is a transport-neutral validation/interchange layer.
 - Do not treat a caller-provided free-form repository allowlist as authoritative; derive and validate it from #1162 discovery provenance.
+- Do not treat a caller-provided discovery result or trust anchor as self-authenticating; the adapter/deployment boundary owns trusted anchor delivery, while the pure library only verifies content binding.
 - Next `16.2.11` normalizes the dashboard `tsconfig.json` JSX mode to `react-jsx`; keep that generated compatibility change in the buildable tree.
+
+### 2026-07-22 — Trusted #1162 Discovery Anchor and Authoritative Context Merge (#1163)
+**Trigger**: Final independent-review remediation for issue #1163, focused on context provenance and merge correctness.
+**What was done**:
+- Added `scripts/agent-discovery-contract.ts` and `schemas/agent-discovery-trust.schema.json` for versioned, domain-separated, content-addressed #1162 attestations and trusted discovery anchors.
+- Required anchor + discovery + derived allowlist provenance for public context validation, packaging, resolution, merge, handover, resumability, and handover-envelope paths; kept structural normalization private and non-authoritative.
+- Made same-provenance context merges deterministic, preserved the standard allowlist digest, and verified merged snapshots through authoritative validation and handover creation.
+- Added tamper coverage for injected/removed/re-tiered/changed discovery paths and skills, anchor digest mutation, mixed-provenance snapshots, forged snapshots, and valid #1162 discovery/anchor use.
+- Reconciled schemas, OpenSpec artifacts, onboarding, session continuity, and the prior #1163 session entry without changing issue/PR state or communicating externally.
+**Key discoveries**:
+- A content digest proves the supplied anchor's bytes, not the identity or policy authority of the adapter/deployment boundary that supplied it; that boundary remains responsible for trusted delivery.
+- Required discovery context remains an exact anchor match, while selected optional context and inert skills are constrained to anchor-declared entries before allowlist derivation.
+**Files touched**:
+- `scripts/agent-discovery-contract.ts`, `scripts/agent-discovery.ts`, `scripts/agent-discovery.test.ts`
+- `scripts/agent-coordination.ts`, `scripts/agent-coordination.test.ts`
+- `schemas/agent-discovery-trust.schema.json`, `schemas/agent-swarm.schema.json`
+- `openspec/specs/swarm-coordination-v1.spec.md`, `openspec/changes/2026-07-22-issue-1163-swarm-coordination/`
+- `docs/AGENT_ONBOARDING.md`, `docs/SESSION_CONTINUITY.md`, `AGENTS.md`
+**Gaps identified**:
+- Independent external review/approval remains unchecked; provider transports, authentication integration, and runtime scheduling remain outside this pure library.
+**Gotchas**:
+- Never accept `trusted_discovery_anchor` from an untrusted swarm payload or describe the pure coordination library as authenticating its origin.

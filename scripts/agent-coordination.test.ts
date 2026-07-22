@@ -5,7 +5,8 @@ import { test } from 'node:test';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 
-import { discoverRepository } from './agent-discovery';
+import { buildDiscoveryTrustAnchor, discoverRepository } from './agent-discovery';
+import { discoveryAttestationScope, discoveryDigestFor } from './agent-discovery-contract';
 
 import {
   AGGREGATE_STATUSES,
@@ -13,6 +14,7 @@ import {
   SWARM_SCHEMAS,
   CoordinationError,
   ContextAllowlist,
+  ContextAllowlistOverrides,
   ContextInput,
   ContextLimits,
   ContextSnapshot,
@@ -50,6 +52,7 @@ const FUTURE = '2026-07-23T12:00:00.000Z';
 const DIGEST = digestFor('test', 'evidence');
 const emptyLimits: ContextLimits = { max_items: 16, max_total_bytes: 4096, max_entry_bytes: 1024, max_depth: 8 };
 const DISCOVERY = discoverRepository(process.cwd(), { includeOptional: true });
+const TRUSTED_DISCOVERY_ANCHOR = buildDiscoveryTrustAnchor(DISCOVERY);
 const DISCOVERY_ANCHORS = [
   { path: '.agents/manifest.json', tier: 'CANONICAL' as const, required: false },
   { path: '.agents/skills/registry.json', tier: 'CANONICAL' as const, required: false },
@@ -106,15 +109,18 @@ function result(taskId: string, payload: unknown, status: TaskResult['status'] =
   };
 }
 
-const emptyAllowlist: ContextAllowlist = deriveContextAllowlist(DISCOVERY, { repository_paths: DISCOVERY_ANCHORS });
+const emptyAllowlist: ContextAllowlist = deriveContextAllowlist(DISCOVERY, {
+  trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR,
+  repository_paths: DISCOVERY_ANCHORS,
+});
 
-function makeAllowlist(overrides: Parameters<typeof deriveContextAllowlist>[1] = {}): ContextAllowlist {
+function makeAllowlist(overrides: ContextAllowlistOverrides = {}): ContextAllowlist {
   const repositoryPaths = overrides.repository_paths === undefined ? DISCOVERY_ANCHORS : [...DISCOVERY_ANCHORS, ...overrides.repository_paths];
-  return deriveContextAllowlist(DISCOVERY, { ...overrides, repository_paths: repositoryPaths });
+  return deriveContextAllowlist(DISCOVERY, { ...overrides, trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR, repository_paths: repositoryPaths });
 }
 
 function provenance(allowlist: ContextAllowlist = emptyAllowlist) {
-  return { allowlist, discovery: DISCOVERY };
+  return { allowlist, discovery: DISCOVERY, trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR };
 }
 
 function contextInput(overrides: Partial<ContextInput> = {}): ContextInput {
@@ -131,7 +137,7 @@ function contextInput(overrides: Partial<ContextInput> = {}): ContextInput {
 }
 
 function emptyContext() {
-  return packageContext([], { allowlist: emptyAllowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW });
+  return packageContext([], { allowlist: emptyAllowlist, discovery: DISCOVERY, trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR, limits: emptyLimits, captured_at: NOW, now: NOW });
 }
 
 test('schema is strict, versioned, and defines all protocol object families', () => {
@@ -141,6 +147,11 @@ test('schema is strict, versioned, and defines all protocol object families', ()
   };
   assert.match(schema.$id, /agent-swarm\.schema\.json$/);
   for (const name of ['envelope', 'taskGraph', 'taskResult', 'handover', 'contextSnapshot']) assert.equal(schema.$defs[name]?.additionalProperties, false, name);
+  const trustSchema = JSON.parse(readFileSync('schemas/agent-discovery-trust.schema.json', 'utf8')) as Record<string, unknown>;
+  const trustAjv = new Ajv2020({ allErrors: true, strict: false });
+  const validateTrust = trustAjv.compile(trustSchema);
+  assert.equal(validateTrust(DISCOVERY.attestation), true, JSON.stringify(validateTrust.errors));
+  assert.equal(validateTrust(TRUSTED_DISCOVERY_ANCHOR), true, JSON.stringify(validateTrust.errors));
   assert.equal(SWARM_PROTOCOL, 'conxian.swarm');
   assert.deepEqual(AGGREGATE_STATUSES, ['COMPLETE', 'PARTIAL', 'FAILED', 'BLOCKED', 'CONFLICT', 'CANCELLED']);
 });
@@ -321,17 +332,17 @@ test('context packaging enforces #1162 allowlists, redacts sensitive fields, and
   const snapshot = packageContext([
     contextInput(),
     { context_id: 'context-agents', key: 'repo.agents', source: { kind: 'DECLARED_REPOSITORY', path: 'AGENTS.md', tier: 'ARCHITECTURAL' }, value: '# context', classification: 'INTERNAL', sensitivity: 'NONE', captured_at: NOW },
-  ], { allowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW });
+  ], { allowlist, discovery: DISCOVERY, trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR, limits: emptyLimits, captured_at: NOW, now: NOW });
   assert.deepEqual(snapshot.required_keys, ['repo:AGENTS.md', 'task:instructions']);
   assert.equal(snapshot.entries.length, 2);
   const instructions = snapshot.entries.find((entry) => entry.key === 'current.instructions');
   assert.equal(instructions?.redaction.redacted, true);
   assert.equal(canonicalJson(instructions?.value).includes('must-not-leak'), false);
   assert.equal(instructions?.provenance_digest.startsWith('sha256:'), true);
-  assert.deepEqual(validateContextSnapshot(snapshot).entries.map((entry) => entry.key), ['current.instructions', 'repo.agents']);
-  expectCode(() => packageContext([contextInput({ source: { kind: 'DECLARED_REPOSITORY', path: '.env.production', tier: 'OPERATIONAL' } })], { allowlist: { ...allowlist, repository_paths: [{ path: '.env.production', tier: 'OPERATIONAL', required: false }] }, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW }), 'CONTEXT_NOT_ALLOWED');
-  expectCode(() => packageContext([contextInput({ source: { kind: 'DECLARED_REPOSITORY', path: 'docs/.secret.md', tier: 'OPERATIONAL' } })], { allowlist: { ...allowlist, repository_paths: [{ path: 'docs/.secret.md', tier: 'OPERATIONAL', required: false }] }, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW }), 'CONTEXT_NOT_ALLOWED');
-  expectCode(() => packageContext([contextInput({ source: { kind: 'TASK_INPUT', key: 'unlisted' } })], { allowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW }), 'CONTEXT_NOT_ALLOWED');
+  assert.deepEqual(validateContextSnapshot(snapshot, provenance(allowlist)).entries.map((entry) => entry.key), ['current.instructions', 'repo.agents']);
+  expectCode(() => packageContext([contextInput({ source: { kind: 'DECLARED_REPOSITORY', path: '.env.production', tier: 'OPERATIONAL' } })], { allowlist: { ...allowlist, repository_paths: [{ path: '.env.production', tier: 'OPERATIONAL', required: false }] }, discovery: DISCOVERY, trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR, limits: emptyLimits, captured_at: NOW, now: NOW }), 'CONTEXT_NOT_ALLOWED');
+  expectCode(() => packageContext([contextInput({ source: { kind: 'DECLARED_REPOSITORY', path: 'docs/.secret.md', tier: 'OPERATIONAL' } })], { allowlist: { ...allowlist, repository_paths: [{ path: 'docs/.secret.md', tier: 'OPERATIONAL', required: false }] }, discovery: DISCOVERY, trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR, limits: emptyLimits, captured_at: NOW, now: NOW }), 'CONTEXT_NOT_ALLOWED');
+  expectCode(() => packageContext([contextInput({ source: { kind: 'TASK_INPUT', key: 'unlisted' } })], { allowlist, discovery: DISCOVERY, trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR, limits: emptyLimits, captured_at: NOW, now: NOW }), 'CONTEXT_NOT_ALLOWED');
 });
 
 test('context packaging rejects missing and stale required sources, while optional stale data is flagged', () => {
@@ -339,30 +350,30 @@ test('context packaging rejects missing and stale required sources, while option
     repository_paths: [{ path: 'AGENTS.md', tier: 'ARCHITECTURAL', required: true }],
     task_input_keys: ['instructions'], required_task_input_keys: ['instructions'], artifact_ids: [], required_artifact_ids: [], assumption_keys: [],
   });
-  expectCode(() => packageContext([contextInput()], { allowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW }), 'MISSING_CONTEXT');
+  expectCode(() => packageContext([contextInput()], { allowlist, discovery: DISCOVERY, trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR, limits: emptyLimits, captured_at: NOW, now: NOW }), 'MISSING_CONTEXT');
   const stale = contextInput({ captured_at: '2026-07-22T10:00:00Z', stale_after: '2026-07-22T11:00:00Z' });
   const agentsContext: ContextInput = {
     ...contextInput({ context_id: 'agents', key: 'agents', source: { kind: 'DECLARED_REPOSITORY', path: 'AGENTS.md', tier: 'ARCHITECTURAL' }, value: 'agents' }),
   };
-  expectCode(() => packageContext([stale, agentsContext], { allowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW }), 'STALE_CONTEXT');
+  expectCode(() => packageContext([stale, agentsContext], { allowlist, discovery: DISCOVERY, trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR, limits: emptyLimits, captured_at: NOW, now: NOW }), 'STALE_CONTEXT');
   const retainedAgents: ContextInput = {
     ...contextInput({ context_id: 'agents-2', key: 'agents', source: { kind: 'DECLARED_REPOSITORY', path: 'AGENTS.md', tier: 'ARCHITECTURAL' }, value: 'agents' }),
   };
-  const retained = packageContext([stale, retainedAgents], { allowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW, allow_stale: true });
-  const resolution = resolveContextSnapshot(retained, LATER);
+  const retained = packageContext([stale, retainedAgents], { allowlist, discovery: DISCOVERY, trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR, limits: emptyLimits, captured_at: NOW, now: NOW, allow_stale: true });
+  const resolution = resolveContextSnapshot(retained, LATER, provenance(allowlist));
   assert.equal(resolution.valid, false);
   assert.deepEqual(resolution.stale_required, ['task:instructions']);
   assert.match(resolution.warnings.join(' '), /stale/);
-  expectCode(() => validateContextSnapshot(retained, { now: LATER, reject_stale_required: true }), 'STALE_CONTEXT');
+  expectCode(() => validateContextSnapshot(retained, { ...provenance(allowlist), now: LATER, reject_stale_required: true }), 'STALE_CONTEXT');
 });
 
 test('context freshness uses effective now at the captured/stale boundary', () => {
   const allowlist = makeAllowlist({ task_input_keys: ['instructions'], required_task_input_keys: ['instructions'] });
   const boundary = contextInput({ captured_at: '2026-07-22T10:00:00Z', stale_after: '2026-07-22T11:00:00Z' });
-  const current = packageContext([boundary], { allowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: '2026-07-22T10:00:00Z', now: '2026-07-22T10:30:00Z' });
+  const current = packageContext([boundary], { allowlist, discovery: DISCOVERY, trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR, limits: emptyLimits, captured_at: '2026-07-22T10:00:00Z', now: '2026-07-22T10:30:00Z' });
   assert.equal(current.entries[0]?.stale, false);
-  expectCode(() => packageContext([boundary], { allowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: '2026-07-22T10:00:00Z', now: '2026-07-22T11:30:00Z' }), 'STALE_CONTEXT');
-  const retained = packageContext([boundary], { allowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: '2026-07-22T10:00:00Z', now: '2026-07-22T11:30:00Z', allow_stale: true });
+  expectCode(() => packageContext([boundary], { allowlist, discovery: DISCOVERY, trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR, limits: emptyLimits, captured_at: '2026-07-22T10:00:00Z', now: '2026-07-22T11:30:00Z' }), 'STALE_CONTEXT');
+  const retained = packageContext([boundary], { allowlist, discovery: DISCOVERY, trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR, limits: emptyLimits, captured_at: '2026-07-22T10:00:00Z', now: '2026-07-22T11:30:00Z', allow_stale: true });
   assert.equal(retained.entries[0]?.stale, true);
   assert.deepEqual(retained.stale_required, ['task:instructions']);
 });
@@ -370,25 +381,32 @@ test('context freshness uses effective now at the captured/stale boundary', () =
 test('context bounds reject oversized values and support explicit deterministic truncation', () => {
   const allowlist = makeAllowlist({ task_input_keys: ['instructions'], required_task_input_keys: ['instructions'] });
   const tiny: ContextLimits = { max_items: 2, max_total_bytes: 128, max_entry_bytes: 64, max_depth: 3 };
-  expectCode(() => packageContext([contextInput({ value: 'a'.repeat(200) })], { allowlist, discovery: DISCOVERY, limits: tiny, captured_at: NOW, now: NOW }), 'CONTEXT_LIMIT');
-  const truncated = packageContext([contextInput({ value: 'a'.repeat(200) })], { allowlist, discovery: DISCOVERY, limits: tiny, captured_at: NOW, now: NOW, allow_truncation: true });
+  expectCode(() => packageContext([contextInput({ value: 'a'.repeat(200) })], { allowlist, discovery: DISCOVERY, trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR, limits: tiny, captured_at: NOW, now: NOW }), 'CONTEXT_LIMIT');
+  const truncated = packageContext([contextInput({ value: 'a'.repeat(200) })], { allowlist, discovery: DISCOVERY, trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR, limits: tiny, captured_at: NOW, now: NOW, allow_truncation: true });
   assert.equal(truncated.entries[0]?.truncated, true);
   assert.equal((truncated.entries[0]?.byte_length ?? 999) <= tiny.max_entry_bytes, true);
-  assert.equal(validateContextSnapshot(truncated).entries[0]?.original_digest?.startsWith('sha256:'), true);
-  expectCode(() => packageContext([contextInput({ value: { nested: { deeper: { value: true } } } })], { allowlist, discovery: DISCOVERY, limits: { ...tiny, max_entry_bytes: 1024, max_total_bytes: 1024, max_depth: 2 }, captured_at: NOW, now: NOW }), 'CONTEXT_LIMIT');
+  assert.equal(validateContextSnapshot(truncated, provenance(allowlist)).entries[0]?.original_digest?.startsWith('sha256:'), true);
+  expectCode(() => packageContext([contextInput({ value: { nested: { deeper: { value: true } } } })], { allowlist, discovery: DISCOVERY, trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR, limits: { ...tiny, max_entry_bytes: 1024, max_total_bytes: 1024, max_depth: 2 }, captured_at: NOW, now: NOW }), 'CONTEXT_LIMIT');
 });
 
 test('context merge applies precedence and retains deterministic conflict evidence', () => {
-  const taskAllowlist = makeAllowlist({ task_input_keys: ['decision'], required_task_input_keys: [] });
-  const operationalAllowlist = makeAllowlist({ repository_paths: [{ path: 'docs/AGENT_ONBOARDING.md', tier: 'ARCHITECTURAL', required: false }] });
-  const taskSnapshot = packageContext([contextInput({ context_id: 'task-decision', key: 'decision', source: { kind: 'TASK_INPUT', key: 'decision' }, value: 'current' })], { allowlist: taskAllowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW });
-  const operationalSnapshot = packageContext([contextInput({ context_id: 'runbook-decision', key: 'decision', source: { kind: 'DECLARED_REPOSITORY', path: 'docs/AGENT_ONBOARDING.md', tier: 'ARCHITECTURAL' }, value: 'old' })], { allowlist: operationalAllowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW });
-  const merged = mergeContextSnapshots([operationalSnapshot, taskSnapshot], { now: NOW });
+  const sharedAllowlist = makeAllowlist({ task_input_keys: ['decision'], required_task_input_keys: [], repository_paths: [{ path: 'docs/AGENT_ONBOARDING.md', tier: 'ARCHITECTURAL', required: false }] });
+  const sharedProvenance = provenance(sharedAllowlist);
+  const taskSnapshot = packageContext([contextInput({ context_id: 'task-decision', key: 'decision', source: { kind: 'TASK_INPUT', key: 'decision' }, value: 'current' })], { ...sharedProvenance, limits: emptyLimits, captured_at: NOW, now: NOW });
+  const operationalSnapshot = packageContext([contextInput({ context_id: 'runbook-decision', key: 'decision', source: { kind: 'DECLARED_REPOSITORY', path: 'docs/AGENT_ONBOARDING.md', tier: 'ARCHITECTURAL' }, value: 'old' })], { ...sharedProvenance, limits: emptyLimits, captured_at: NOW, now: NOW });
+  const merged = mergeContextSnapshots([operationalSnapshot, taskSnapshot], { ...sharedProvenance, now: NOW });
   assert.equal(merged.entries.find((entry) => entry.key === 'decision')?.value, 'current');
   assert.equal(merged.conflicts.length, 1);
   assert.equal(merged.conflicts[0]?.reason, 'lower-precedence');
-  const reverse = mergeContextSnapshots([taskSnapshot, operationalSnapshot], { now: NOW });
+  const reverse = mergeContextSnapshots([taskSnapshot, operationalSnapshot], { ...sharedProvenance, now: NOW });
   assert.equal(canonicalJson(merged), canonicalJson(reverse));
+  assert.equal(merged.allowlist_digest, digestFor('conxian.swarm.context-allowlist.v1', sharedAllowlist));
+  assert.doesNotThrow(() => createHandover({ handover_id: 'merge-handover', correlation_id: 'correlation-1', graph_id: 'graph-1', captured_at: NOW, expires_at: FUTURE, lifecycle_state: 'STARTED', completed_tasks: [], active_tasks: [], blocked_tasks: [], pending_tasks: [], decisions: [], artifacts: [], unresolved_conflicts: [], risks_and_blockers: [], resume_instructions: [], context_snapshot: merged, links: [] }, graphFixture(), sharedProvenance));
+  const otherAllowlist = makeAllowlist({ task_input_keys: ['other'], required_task_input_keys: [] });
+  const otherSnapshot = packageContext([contextInput({ source: { kind: 'TASK_INPUT', key: 'other' }, key: 'other', value: 'other' })], { ...provenance(otherAllowlist), limits: emptyLimits, captured_at: NOW, now: NOW });
+  expectCode(() => mergeContextSnapshots([taskSnapshot, otherSnapshot], { ...sharedProvenance, now: NOW }), 'CONTEXT_NOT_ALLOWED');
+  const forged = { ...taskSnapshot, allowlist_digest: digestFor('conxian.swarm.context-allowlist.v1', otherAllowlist) };
+  expectCode(() => mergeContextSnapshots([forged, taskSnapshot], { ...sharedProvenance, now: NOW }), 'INVALID_DIGEST');
 });
 
 test('aggregation classifies complete, partial, failed, blocked, conflict, and cancellation outcomes', () => {
@@ -458,7 +476,7 @@ test('handover validation rejects missing fields, bad task linkage, stale contex
   expectCode(() => validateHandover({ ...base, integrity: { ...base.integrity, digest: DIGEST } }, { graph, ...provenance() }), 'INVALID_DIGEST');
   expectCode(() => createHandover({ ...base, handover_id: 'handover-3', completed_tasks: [{ task_id: 'missing', state: 'COMPLETED', links: [] }] }, graph, provenance()), 'INVALID_HANDOVER');
   const staleAllowlist = makeAllowlist({ task_input_keys: ['instructions'], required_task_input_keys: ['instructions'] });
-  const staleContext = packageContext([contextInput({ stale_after: '2026-07-22T12:30:00Z' })], { allowlist: staleAllowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW });
+  const staleContext = packageContext([contextInput({ stale_after: '2026-07-22T12:30:00Z' })], { allowlist: staleAllowlist, discovery: DISCOVERY, trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR, limits: emptyLimits, captured_at: NOW, now: NOW });
   const staleHandover = createHandover({ ...base, handover_id: 'handover-stale', context_snapshot: staleContext }, graph, provenance(staleAllowlist));
   const staleAssessment = assessHandoverResumability(staleHandover, { graph, ...provenance(staleAllowlist), now: LATER });
   assert.equal(staleAssessment.resumable, false);
@@ -476,7 +494,7 @@ test('redaction handles nested secrets and never emits the raw sensitive value',
 
 test('sensitive context is serialized as a typed marker and raw values fail validation', () => {
   const allowlist = makeAllowlist({ task_input_keys: ['instructions'], required_task_input_keys: ['instructions'] });
-  const snapshot = packageContext([contextInput({ sensitivity: 'SECRET', value: 'raw-secret' })], { allowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW });
+  const snapshot = packageContext([contextInput({ sensitivity: 'SECRET', value: 'raw-secret' })], { allowlist, discovery: DISCOVERY, trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR, limits: emptyLimits, captured_at: NOW, now: NOW });
   const entry = snapshot.entries[0];
   assert.deepEqual(entry?.value, { redacted: true, reason: 'SECRET' });
   assert.deepEqual(entry?.redaction, { redacted: true, fields: ['$'], reason: 'SECRET' });
@@ -484,25 +502,25 @@ test('sensitive context is serialized as a typed marker and raw values fail vali
     ...snapshot,
     entries: [{ ...entry, value: 'raw-secret', byte_length: Buffer.byteLength(JSON.stringify('raw-secret'), 'utf8'), depth: 1 }],
   };
-  expectCode(() => validateContextSnapshot(forged), 'INVALID_CONTEXT');
+  expectCode(() => validateContextSnapshot(forged, provenance(allowlist)), 'INVALID_CONTEXT');
 });
 
 test('context allowlists require #1162 provenance and permit only declared .agents sources', () => {
   const manifestAllowlist = makeAllowlist({ repository_paths: [{ path: '.agents/manifest.json', tier: 'CANONICAL', required: false }] });
-  const manifestSnapshot = packageContext([contextInput({ context_id: 'manifest', key: 'manifest', source: { kind: 'DECLARED_REPOSITORY', path: '.agents/manifest.json', tier: 'CANONICAL' }, value: { protocol: 'conxian-agent-discovery' } })], { allowlist: manifestAllowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW });
+  const manifestSnapshot = packageContext([contextInput({ context_id: 'manifest', key: 'manifest', source: { kind: 'DECLARED_REPOSITORY', path: '.agents/manifest.json', tier: 'CANONICAL' }, value: { protocol: 'conxian-agent-discovery' } })], { allowlist: manifestAllowlist, discovery: DISCOVERY, trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR, limits: emptyLimits, captured_at: NOW, now: NOW });
   assert.equal(manifestSnapshot.entries[0]?.source.kind, 'DECLARED_REPOSITORY');
 
-  expectCode(() => packageContext([contextInput({ source: { kind: 'DECLARED_REPOSITORY', path: '.agents/not-listed.md', tier: 'ARCHITECTURAL' } })], { allowlist: emptyAllowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW }), 'CONTEXT_NOT_ALLOWED');
-  expectCode(() => packageContext([contextInput({ source: { kind: 'DECLARED_REPOSITORY', path: 'docs/../AGENTS.md', tier: 'ARCHITECTURAL' } })], { allowlist: emptyAllowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW }), 'CONTEXT_NOT_ALLOWED');
-  expectCode(() => packageContext([contextInput({ source: { kind: 'DECLARED_REPOSITORY', path: 'docs//AGENTS.md', tier: 'ARCHITECTURAL' } })], { allowlist: emptyAllowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW }), 'CONTEXT_NOT_ALLOWED');
+  expectCode(() => packageContext([contextInput({ source: { kind: 'DECLARED_REPOSITORY', path: '.agents/not-listed.md', tier: 'ARCHITECTURAL' } })], { allowlist: emptyAllowlist, discovery: DISCOVERY, trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR, limits: emptyLimits, captured_at: NOW, now: NOW }), 'CONTEXT_NOT_ALLOWED');
+  expectCode(() => packageContext([contextInput({ source: { kind: 'DECLARED_REPOSITORY', path: 'docs/../AGENTS.md', tier: 'ARCHITECTURAL' } })], { allowlist: emptyAllowlist, discovery: DISCOVERY, trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR, limits: emptyLimits, captured_at: NOW, now: NOW }), 'CONTEXT_NOT_ALLOWED');
+  expectCode(() => packageContext([contextInput({ source: { kind: 'DECLARED_REPOSITORY', path: 'docs//AGENTS.md', tier: 'ARCHITECTURAL' } })], { allowlist: emptyAllowlist, discovery: DISCOVERY, trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR, limits: emptyLimits, captured_at: NOW, now: NOW }), 'CONTEXT_NOT_ALLOWED');
 
   const tamperedDigest = { ...emptyAllowlist, provenance: { ...emptyAllowlist.provenance, repository_paths_digest: digestFor('tampered-paths', emptyAllowlist.repository_paths) } };
-  expectCode(() => packageContext([], { allowlist: tamperedDigest, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW }), 'INVALID_DIGEST');
+  expectCode(() => packageContext([], { allowlist: tamperedDigest, discovery: DISCOVERY, trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR, limits: emptyLimits, captured_at: NOW, now: NOW }), 'INVALID_DIGEST');
   const tamperedDiscovery = { ...emptyAllowlist, provenance: { ...emptyAllowlist.provenance, discovery_digest: digestFor('tampered-discovery', DISCOVERY) } };
-  expectCode(() => packageContext([], { allowlist: tamperedDiscovery, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW }), 'CONTEXT_NOT_ALLOWED');
+  expectCode(() => packageContext([], { allowlist: tamperedDiscovery, discovery: DISCOVERY, trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR, limits: emptyLimits, captured_at: NOW, now: NOW }), 'CONTEXT_NOT_ALLOWED');
   const freeForm = { ...emptyAllowlist } as Record<string, unknown>;
   delete freeForm.provenance;
-  expectCode(() => packageContext([], { allowlist: freeForm as unknown as ContextAllowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW }), 'INVALID_CONTRACT');
+  expectCode(() => packageContext([], { allowlist: freeForm as unknown as ContextAllowlist, discovery: DISCOVERY, trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR, limits: emptyLimits, captured_at: NOW, now: NOW }), 'INVALID_CONTRACT');
 });
 
 test('prototype-key JSON values round-trip and redact without prototype pollution', () => {
@@ -520,7 +538,7 @@ test('prototype-key JSON values round-trip and redact without prototype pollutio
 
 test('graph context budgets and handover graph/authentication/provenance boundaries are enforced', () => {
   const smallGraph = { ...graphFixture(), limits: { ...graphFixture().limits, max_context_bytes: 32 } };
-  expectCode(() => packageContext([contextInput({ value: 'a'.repeat(128) })], { allowlist: makeAllowlist({ task_input_keys: ['instructions'], required_task_input_keys: ['instructions'] }), discovery: DISCOVERY, graph: smallGraph, limits: emptyLimits, captured_at: NOW, now: NOW }), 'CONTEXT_LIMIT');
+  expectCode(() => packageContext([contextInput({ value: 'a'.repeat(128) })], { allowlist: makeAllowlist({ task_input_keys: ['instructions'], required_task_input_keys: ['instructions'] }), discovery: DISCOVERY, trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR, graph: smallGraph, limits: emptyLimits, captured_at: NOW, now: NOW }), 'CONTEXT_LIMIT');
 
   const graph = graphFixture();
   const handover = createHandover({ handover_id: 'boundary-handover', correlation_id: 'correlation-1', graph_id: 'graph-1', captured_at: NOW, expires_at: FUTURE, lifecycle_state: 'STARTED', completed_tasks: [], active_tasks: [], blocked_tasks: [], pending_tasks: [], decisions: [], artifacts: [], unresolved_conflicts: [], risks_and_blockers: [], resume_instructions: [], context_snapshot: emptyContext(), links: [] }, graph, provenance());
@@ -540,7 +558,7 @@ test('graph context budgets and handover graph/authentication/provenance boundar
 test('handover provenance rejects a self-consistent unallowlisted context after local digest recomputation', () => {
   const graph = graphFixture();
   const allowlist = makeAllowlist({ task_input_keys: ['instructions'], required_task_input_keys: ['instructions'] });
-  const snapshot = packageContext([contextInput()], { allowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW });
+  const snapshot = packageContext([contextInput()], { allowlist, discovery: DISCOVERY, trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR, limits: emptyLimits, captured_at: NOW, now: NOW });
   const originalEntry = snapshot.entries[0];
   assert.ok(originalEntry);
 
@@ -568,11 +586,62 @@ test('handover provenance rejects a self-consistent unallowlisted context after 
     integrity: { digest: digestFor('conxian.swarm.context.v1', forgedSnapshotRecord) },
   } as unknown as ContextSnapshot;
 
-  assert.doesNotThrow(() => validateContextSnapshot(forgedSnapshot));
+  expectCode(() => validateContextSnapshot(forgedSnapshot, provenance(allowlist)), 'CONTEXT_NOT_ALLOWED');
   const validHandover = createHandover({
     handover_id: 'provenance-base', correlation_id: 'correlation-1', graph_id: 'graph-1', captured_at: NOW, expires_at: FUTURE, lifecycle_state: 'STARTED', completed_tasks: [], active_tasks: [], blocked_tasks: [], pending_tasks: [], decisions: [], artifacts: [], unresolved_conflicts: [], risks_and_blockers: [], resume_instructions: [], context_snapshot: snapshot, links: [],
   }, graph, provenance(allowlist));
   expectCode(() => createHandover({ ...validHandover, handover_id: 'provenance-forged', context_snapshot: forgedSnapshot }, graph, provenance(allowlist)), 'CONTEXT_NOT_ALLOWED');
+});
+
+test('trusted #1162 anchor rejects injected, removed, re-tiered, and changed discovery content', () => {
+  const refreshAttestation = (result: typeof DISCOVERY): typeof DISCOVERY => {
+    const attestation = result.attestation;
+    const comparePaths = (left: { path: string }, right: { path: string }): number => left.path < right.path ? -1 : left.path > right.path ? 1 : 0;
+    attestation.context.required.sort(comparePaths);
+    attestation.context.optional.sort(comparePaths);
+    attestation.skills.selected.sort(comparePaths);
+    attestation.digest = discoveryDigestFor('conxian-agent-discovery.attestation.v1', discoveryAttestationScope(attestation));
+    return result;
+  };
+
+  assert.doesNotThrow(() => deriveContextAllowlist(DISCOVERY, { trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR }));
+
+  const injected = structuredClone(DISCOVERY);
+  const injectedContext = { path: 'docs/not-allowlisted.md', priority: 70, description: 'Forged context', content: 'forged-content' };
+  injected.context.optional.push(injectedContext);
+  injected.attestation.context.optional.push({
+    path: injectedContext.path,
+    tier: 'ARCHITECTURAL',
+    required: false,
+    priority: injectedContext.priority,
+    description: injectedContext.description,
+    content_digest: discoveryDigestFor('conxian-agent-discovery.context-content.v1', injectedContext.content),
+  });
+  expectCode(() => deriveContextAllowlist(refreshAttestation(injected), { trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR }), 'CONTEXT_NOT_ALLOWED');
+
+  const removed = structuredClone(DISCOVERY);
+  removed.context.required.pop();
+  removed.attestation.context.required.pop();
+  expectCode(() => deriveContextAllowlist(refreshAttestation(removed), { trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR }), 'CONTEXT_NOT_ALLOWED');
+
+  const changedTier = structuredClone(DISCOVERY);
+  const tierEntry = changedTier.attestation.context.required.find((entry) => entry.path === 'AGENTS.md');
+  assert.ok(tierEntry);
+  tierEntry.tier = 'GOVERNANCE';
+  expectCode(() => deriveContextAllowlist(refreshAttestation(changedTier), { trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR }), 'CONTEXT_NOT_ALLOWED');
+
+  const changedSkill = structuredClone(DISCOVERY);
+  const selectedSkill = changedSkill.skills.selected[0];
+  const attestedSkill = changedSkill.attestation.skills.selected[0];
+  assert.ok(selectedSkill);
+  assert.ok(attestedSkill);
+  selectedSkill.content = `${selectedSkill.content}\nforged`;
+  attestedSkill.content_digest = discoveryDigestFor('conxian-agent-discovery.skill-content.v1', selectedSkill.content);
+  expectCode(() => deriveContextAllowlist(refreshAttestation(changedSkill), { trusted_discovery_anchor: TRUSTED_DISCOVERY_ANCHOR }), 'CONTEXT_NOT_ALLOWED');
+
+  const changedAnchor = structuredClone(TRUSTED_DISCOVERY_ANCHOR);
+  changedAnchor.digest = discoveryDigestFor('conxian-agent-discovery.tampered-anchor.v1', changedAnchor);
+  expectCode(() => deriveContextAllowlist(DISCOVERY, { trusted_discovery_anchor: changedAnchor }), 'INVALID_TRUST_ANCHOR');
 });
 
 test('JSON Schema validation covers valid and invalid protocol fixtures', () => {

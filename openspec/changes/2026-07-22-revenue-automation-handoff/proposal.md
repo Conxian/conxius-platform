@@ -22,14 +22,24 @@ custody, or deploy Clarity contracts. Protocol contract behavior, tests,
 deployment policy, and economic policy belong to the community-owned
 `Conxian/Conxian` repository.
 
+The authority model is layered: `Conxian/Conxian` owns Clarity semantics,
+deployment policy, canonical on-chain contract state, and contract-generated
+outcomes; the Conxian Gateway remains the platform-facing authoritative
+interface/source for observed protocol state and routing/business logic. Gateway
+fee outcomes must be derived and reported from canonical on-chain contract state
+and registered flow metadata, never invented as a conflicting calculation or
+used to claim custody.
+
 ## Goal
 
 Create a durable, testable policy boundary and handoff so that:
 
 1. The protocol repository owns Clarity implementation, tests, deployment
    decisions, and economic-policy changes.
-2. The platform repository owns only operational routing, feature flags,
-   runbooks, and the ability to disable platform payout operations.
+2. The platform repository and Gateway own only the platform-facing routing
+   interface, observed-state reporting, feature flags, runbooks, and the ability
+   to disable platform payout operations; Gateway remains authoritative for
+   observed protocol state and routing/business logic.
 3. Fee-bearing flows are registered with enough information to support
    deterministic, exactly-once, fail-closed execution without inventing new
    concrete protocol flows in the platform repository.

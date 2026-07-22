@@ -6,11 +6,16 @@ runbook and knowledge base with the protocol-owned implementation.
 
 ## Normative additions
 
-1. `Conxian/Conxian` owns Clarity contract code, protocol tests, deployment
-   policy, fee-bearing flow registration, and economic-policy changes.
-2. `conxius-platform` owns only operational routing, feature flags, runbooks,
-   and platform payout-operation disablement. It MUST NOT deploy or modify a
-   Clarity contract, calculate a conflicting canonical fee, or claim custody.
+1. `Conxian/Conxian` owns Clarity contract semantics, protocol tests, deployment
+   policy, fee-bearing flow registration, canonical on-chain contract state,
+   contract-generated outcomes, and economic-policy changes.
+2. The Conxian Gateway remains the platform-facing authoritative interface/source
+   for observed protocol state and routing/business logic. Gateway MUST derive
+   and report fee outcomes from canonical on-chain contract state and registered
+   flow metadata. `conxius-platform` owns operational routing, feature flags,
+   runbooks, and platform payout-operation disablement. Neither platform layer
+   may deploy or modify a Clarity contract, calculate a conflicting canonical
+   fee, or claim custody.
 3. The current observed upstream `100` bps / `1%` implementation baseline MUST
    be documented as an observation rather than an immutable policy. Fee-rate
    changes require protocol governance; the alternative in protocol issue #488

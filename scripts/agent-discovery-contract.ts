@@ -65,7 +65,7 @@ export interface DiscoveryTrustAnchor extends DiscoveryTrustScope {
 type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
   const prototype = Object.getPrototypeOf(value);
   return prototype === Object.prototype || prototype === null;
 }

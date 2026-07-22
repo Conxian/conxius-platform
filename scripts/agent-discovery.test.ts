@@ -33,6 +33,7 @@ import {
   isContainedRelativePath,
   isRelativePathWithinRoot,
 } from './agent-discovery';
+import { discoveryCanonicalJson } from './agent-discovery-contract';
 
 const repositoryRoot = resolve(process.cwd());
 const temporaryRoots: string[] = [];
@@ -137,6 +138,10 @@ function getErrorCode(error: unknown): string | undefined {
   const code = (error as { code?: unknown }).code;
   return typeof code === 'string' ? code : undefined;
 }
+
+test('canonicalizes null directly', () => {
+  assert.equal(discoveryCanonicalJson(null), 'null');
+});
 
 test('parses the checked-in manifest and schemas and discovers the real skill', () => {
   const manifest = JSON.parse(readFileSync(join(repositoryRoot, '.agents', 'manifest.json'), 'utf8')) as Record<string, unknown>;

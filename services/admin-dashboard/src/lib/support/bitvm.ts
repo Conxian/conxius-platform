@@ -14,6 +14,7 @@ import {
   isVerificationFailureCode,
   isUnavailableBackend,
   rejectNonProductionVerification,
+  VERIFIER_RESOURCE_LIMITS,
   type BackendIdentity,
   type Digest,
   type Provenance,
@@ -177,6 +178,16 @@ export async function createSignatureAttestation(input: {
   backend: BackendIdentity;
   provenance: Provenance;
 }): Promise<SignatureAttestation> {
+  if (!isNonEmptyString(input.proofId)
+    || !isNonEmptyString(input.verifierId)
+    || typeof input.signature !== "string"
+    || !isBackendIdentity(input.backend)
+    || !isProvenance(input.provenance)
+    || input.proofId.length > VERIFIER_RESOURCE_LIMITS.maxIdentifierChars
+    || input.verifierId.length > VERIFIER_RESOURCE_LIMITS.maxIdentifierChars
+    || input.signature.length > VERIFIER_RESOURCE_LIMITS.maxSignatureChars) {
+    throw new Error("Verifier resource limit exceeded: signature attestation");
+  }
   const signature_digest = await digestCanonical({ signature: input.signature });
   const attestationWithoutDigest = {
     proof_id: input.proofId,
@@ -215,6 +226,10 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function isOversizedString(value: unknown, maxLength: number): boolean {
+  return typeof value === "string" && value.length > maxLength;
+}
+
 function isSignatureVerification(value: unknown): value is BitVMSignatureVerification {
   if (!isRecord(value)
     || (value.status !== "valid"
@@ -236,19 +251,31 @@ function validateTapProfile(value: unknown): value is BitVMTapProfile {
     || !isNonEmptyString(value.id)
     || typeof value.tap_count !== "number"
     || !Number.isInteger(value.tap_count)
-    || value.tap_count <= 0) {
+    || value.tap_count <= 0
+    || value.tap_count > VERIFIER_RESOURCE_LIMITS.maxTapCount
+    || value.id.length > VERIFIER_RESOURCE_LIMITS.maxIdentifierChars) {
     return false;
   }
 
   const requiredSignatures = value.required_signatures;
+  if (value.authorized_signers !== undefined
+    && (!Array.isArray(value.authorized_signers)
+      || value.authorized_signers.length > VERIFIER_RESOURCE_LIMITS.maxSignerCount
+      || !value.authorized_signers.every((signer) => isNonEmptyString(signer)
+        && signer.length <= VERIFIER_RESOURCE_LIMITS.maxIdentifierChars)
+      || new Set(value.authorized_signers).size !== value.authorized_signers.length)) {
+    return false;
+  }
   if (requiredSignatures === undefined) return true;
   if (typeof requiredSignatures !== "number"
     || !Number.isInteger(requiredSignatures)
     || requiredSignatures <= 0
     || requiredSignatures > value.tap_count
     || !Array.isArray(value.authorized_signers)
+    || value.authorized_signers.length > VERIFIER_RESOURCE_LIMITS.maxSignerCount
     || value.authorized_signers.length < requiredSignatures
-    || !value.authorized_signers.every(isNonEmptyString)
+    || !value.authorized_signers.every((signer) => isNonEmptyString(signer)
+      && signer.length <= VERIFIER_RESOURCE_LIMITS.maxIdentifierChars)
     || new Set(value.authorized_signers).size !== value.authorized_signers.length) {
     return false;
   }
@@ -266,6 +293,35 @@ async function validateFloorRequest(value: unknown): Promise<FloorValidation> {
       tap_count: 0,
       failure_code: "malformed_request",
       error: "BitVM floor request requires a contract version and proof id",
+    };
+  }
+  if (value.proof_id.length > VERIFIER_RESOURCE_LIMITS.maxIdentifierChars) {
+    return {
+      ok: false,
+      proof_id: value.proof_id,
+      tap_count: 0,
+      failure_code: "resource_limit_exceeded",
+      error: "BitVM proof id exceeds the v1 resource limit",
+    };
+  }
+
+  if (value.tap_profile !== undefined
+    && isRecord(value.tap_profile)
+    && (isOversizedString(value.tap_profile.id, VERIFIER_RESOURCE_LIMITS.maxIdentifierChars)
+      || (typeof value.tap_profile.tap_count === "number"
+        && value.tap_profile.tap_count > VERIFIER_RESOURCE_LIMITS.maxTapCount)
+      || (Array.isArray(value.tap_profile.authorized_signers)
+        && (value.tap_profile.authorized_signers.length > VERIFIER_RESOURCE_LIMITS.maxSignerCount
+          || value.tap_profile.authorized_signers.some((signer) => isOversizedString(
+            signer,
+            VERIFIER_RESOURCE_LIMITS.maxIdentifierChars,
+          )))))) {
+    return {
+      ok: false,
+      proof_id: value.proof_id,
+      tap_count: 0,
+      failure_code: "resource_limit_exceeded",
+      error: "BitVM tap profile exceeds the v1 resource limit",
     };
   }
 
@@ -344,11 +400,32 @@ function copyAggregation(aggregation: AggregationState): AggregationState {
 export class BitVMBridge {
   private readonly states = new Map<string, BitVMFlowState>();
   private readonly aggregations = new Map<string, AggregationState>();
+  private readonly aggregationQueues = new Map<string, Promise<void>>();
+  private readonly reservedSigners = new Map<string, Set<string>>();
 
   public constructor(
     private readonly verifier: BitVMVerifier,
     private readonly signatureVerifier: BitVMSignatureVerifier = new UnavailableBitVMSignatureVerifier(),
   ) {}
+
+  private async withAggregationLock<T>(proofId: string, operation: () => Promise<T>): Promise<T> {
+    const previous = this.aggregationQueues.get(proofId) ?? Promise.resolve();
+    let release!: () => void;
+    const current = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const queued = previous.then(() => current);
+    this.aggregationQueues.set(proofId, queued);
+    await previous;
+    try {
+      return await operation();
+    } finally {
+      release();
+      if (this.aggregationQueues.get(proofId) === queued) {
+        this.aggregationQueues.delete(proofId);
+      }
+    }
+  }
 
   /**
    * Verifies a canonical BitVM floor request through the injected backend.
@@ -456,7 +533,25 @@ export class BitVMBridge {
     verifierId: string,
     signature: string,
   ): Promise<AggregationSubmissionResult> {
-    if (!isNonEmptyString(proofId) || !isNonEmptyString(verifierId) || !/^[0-9a-fA-F]{128,}$/.test(signature)) {
+    if (!isNonEmptyString(proofId)
+      || !isNonEmptyString(verifierId)
+      || typeof signature !== "string") {
+      return {
+        accepted: false,
+        failure_code: "invalid_signature",
+        error: "Partial signatures must be non-empty canonical hex values",
+      };
+    }
+    if (proofId.length > VERIFIER_RESOURCE_LIMITS.maxIdentifierChars
+      || verifierId.length > VERIFIER_RESOURCE_LIMITS.maxIdentifierChars
+      || signature.length > VERIFIER_RESOURCE_LIMITS.maxSignatureChars) {
+      return {
+        accepted: false,
+        failure_code: "resource_limit_exceeded",
+        error: "Signature submission exceeds the v1 resource limit",
+      };
+    }
+    if (!/^[0-9a-fA-F]{128,}$/.test(signature)) {
       return {
         accepted: false,
         failure_code: "invalid_signature",
@@ -464,118 +559,154 @@ export class BitVMBridge {
       };
     }
 
-    const aggregation = this.aggregations.get(proofId);
-    if (!aggregation) {
-      return {
-        accepted: false,
-        failure_code: "aggregation_not_found",
-        error: "No configured aggregation exists for this proof",
-      };
-    }
+    return this.withAggregationLock(proofId, async () => {
+      const aggregation = this.aggregations.get(proofId);
+      if (!aggregation) {
+        return {
+          accepted: false,
+          failure_code: "aggregation_not_found",
+          error: "No configured aggregation exists for this proof",
+        };
+      }
 
-    if (!aggregation.authorized_signers.includes(verifierId)) {
-      return {
-        accepted: false,
-        failure_code: "unauthorized_signer",
-        error: "Signer is not authorized for this aggregation",
-      };
-    }
+      if (!aggregation.authorized_signers.includes(verifierId)) {
+        return {
+          accepted: false,
+          failure_code: "unauthorized_signer",
+          error: "Signer is not authorized for this aggregation",
+        };
+      }
 
-    if (aggregation.signatures.some((partial) => partial.verifier_id === verifierId)) {
-      return {
-        accepted: false,
-        failure_code: "duplicate_signer",
-        error: "A signer may contribute only one partial signature",
-      };
-    }
+      if (aggregation.signatures.some((partial) => partial.verifier_id === verifierId)) {
+        return {
+          accepted: false,
+          failure_code: "duplicate_signer",
+          error: "A signer may contribute only one partial signature",
+        };
+      }
 
-    const signatureBackend = this.signatureVerifier.backendIdentity;
-    if (!isBackendIdentity(signatureBackend) || isUnavailableBackend(signatureBackend)) {
-      return {
-        accepted: false,
-        failure_code: "unsupported_backend",
-        error: "Explicit signature verification evidence is unavailable",
-      };
-    }
+      const reservations = this.reservedSigners.get(proofId) ?? new Set<string>();
+      if (reservations.has(verifierId)) {
+        return {
+          accepted: false,
+          failure_code: "duplicate_signer",
+          error: "A signer submission is already being verified",
+        };
+      }
+      reservations.add(verifierId);
+      this.reservedSigners.set(proofId, reservations);
 
-    let signatureVerification: BitVMSignatureVerification;
-    try {
-      signatureVerification = await this.signatureVerifier.verify({
-        proofId,
-        verifierId,
-        signature,
-        aggregation: copyAggregation(aggregation),
-      });
-    } catch (error: unknown) {
-      return {
-        accepted: false,
-        failure_code: "internal_error",
-        error: error instanceof Error ? error.message : "Signature verifier failed",
-      };
-    }
+      try {
+        const signatureBackend = this.signatureVerifier.backendIdentity;
+        if (!isBackendIdentity(signatureBackend) || isUnavailableBackend(signatureBackend)) {
+          return {
+            accepted: false,
+            failure_code: "unsupported_backend",
+            error: "Explicit signature verification evidence is unavailable",
+          };
+        }
 
-    if (!isSignatureVerification(signatureVerification)) {
-      return {
-        accepted: false,
-        failure_code: "attestation_mismatch",
-        error: "Signature verifier returned malformed evidence",
-      };
-    }
+        let signatureVerification: BitVMSignatureVerification;
+        try {
+          signatureVerification = await this.signatureVerifier.verify({
+            proofId,
+            verifierId,
+            signature,
+            aggregation: copyAggregation(aggregation),
+          });
+        } catch (error: unknown) {
+          return {
+            accepted: false,
+            failure_code: "internal_error",
+            error: error instanceof Error ? error.message : "Signature verifier failed",
+          };
+        }
 
-    if (signatureVerification.status !== "valid" || !signatureVerification.verified) {
-      return {
-        accepted: false,
-        failure_code: signatureVerification.failure_code ?? "invalid_signature",
-        error: signatureVerification.error ?? "Signature verifier did not provide valid evidence",
-      };
-    }
+        if (!isSignatureVerification(signatureVerification)) {
+          return {
+            accepted: false,
+            failure_code: "attestation_mismatch",
+            error: "Signature verifier returned malformed evidence",
+          };
+        }
 
-    if (signatureVerification.failure_code !== undefined
-      || !isProvenance(signatureVerification.provenance)
-      || !isBackendIdentity(signatureVerification.backend)
-      || !backendIdentityEquals(signatureVerification.backend, signatureBackend)
-      || !backendIdentityEquals(signatureVerification.backend, aggregation.verifier_backend)
-      || (signatureVerification.provenance !== "test" && signatureVerification.provenance !== "production")
-      || (signatureVerification.provenance === "production" && !isAuthoritativeBackendIdentity(signatureVerification.backend))
-      || !isRecord(signatureVerification.attestation)) {
-      return {
-        accepted: false,
-        failure_code: signatureVerification.provenance === "simulated"
-          ? "simulated_result"
-          : "attestation_mismatch",
-        error: "Signature evidence is not bound to an accepted configured backend",
-      };
-    }
+        if (signatureVerification.status !== "valid" || !signatureVerification.verified) {
+          return {
+            accepted: false,
+            failure_code: signatureVerification.failure_code ?? "invalid_signature",
+            error: signatureVerification.error ?? "Signature verifier did not provide valid evidence",
+          };
+        }
 
-    let attestationMatches = false;
-    try {
-      const expectedAttestation = await createSignatureAttestation({
-        proofId,
-        verifierId,
-        signature,
-        backend: signatureVerification.backend,
-        provenance: signatureVerification.provenance,
-      });
-      attestationMatches = canonicalJson(signatureVerification.attestation) === canonicalJson(expectedAttestation);
-    } catch {
-      attestationMatches = false;
-    }
-    if (!attestationMatches) {
-      return {
-        accepted: false,
-        failure_code: "attestation_mismatch",
-        error: "Signature attestation does not bind the submitted signature",
-      };
-    }
+        if (signatureVerification.failure_code !== undefined
+          || !isProvenance(signatureVerification.provenance)
+          || !isBackendIdentity(signatureVerification.backend)
+          || !backendIdentityEquals(signatureVerification.backend, signatureBackend)
+          || !backendIdentityEquals(signatureVerification.backend, aggregation.verifier_backend)
+          || (signatureVerification.provenance !== "test" && signatureVerification.provenance !== "production")
+          || (signatureVerification.provenance === "production" && !isAuthoritativeBackendIdentity(signatureVerification.backend))
+          || !isRecord(signatureVerification.attestation)) {
+          return {
+            accepted: false,
+            failure_code: signatureVerification.provenance === "simulated"
+              ? "simulated_result"
+              : "attestation_mismatch",
+            error: "Signature evidence is not bound to an accepted configured backend",
+          };
+        }
 
-    aggregation.signatures.push({
-      verifier_id: verifierId,
-      signature,
-      timestamp: new Date().toISOString(),
-      attestation: signatureVerification.attestation,
+        let attestationMatches = false;
+        try {
+          const expectedAttestation = await createSignatureAttestation({
+            proofId,
+            verifierId,
+            signature,
+            backend: signatureVerification.backend,
+            provenance: signatureVerification.provenance,
+          });
+          attestationMatches = canonicalJson(signatureVerification.attestation) === canonicalJson(expectedAttestation);
+        } catch {
+          attestationMatches = false;
+        }
+        if (!attestationMatches) {
+          return {
+            accepted: false,
+            failure_code: "attestation_mismatch",
+            error: "Signature attestation does not bind the submitted signature",
+          };
+        }
+
+        // Re-check uniqueness immediately before the state commit. The lock
+        // and reservation prevent concurrent duplicate submissions; this CAS
+        // check keeps the invariant explicit at the commit boundary.
+        if (aggregation.signatures.some((partial) => partial.verifier_id === verifierId)) {
+          return {
+            accepted: false,
+            failure_code: "duplicate_signer",
+            error: "A signer may contribute only one partial signature",
+          };
+        }
+        if (!reservations.has(verifierId)) {
+          return {
+            accepted: false,
+            failure_code: "internal_error",
+            error: "Signer reservation was lost before commit",
+          };
+        }
+
+        aggregation.signatures.push({
+          verifier_id: verifierId,
+          signature,
+          timestamp: new Date().toISOString(),
+          attestation: signatureVerification.attestation,
+        });
+        aggregation.is_complete = aggregation.signatures.length >= aggregation.required;
+        return { accepted: true, aggregation: copyAggregation(aggregation) };
+      } finally {
+        reservations.delete(verifierId);
+        if (reservations.size === 0) this.reservedSigners.delete(proofId);
+      }
     });
-    aggregation.is_complete = aggregation.signatures.length >= aggregation.required;
-    return { accepted: true, aggregation: copyAggregation(aggregation) };
   }
 
   public async challengeTap(proofId: string, tapIndex: number): Promise<TapChallengeResult> {

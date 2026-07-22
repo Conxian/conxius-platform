@@ -20,6 +20,14 @@ authoritative authority; the unavailable sentinel and non-authoritative
 placeholders MUST NOT satisfy production authority. Settlement amounts and
 confirmation counts MUST be bounded safe integers.
 
+The boundary MUST enforce the versioned `conxian.verifier.limits.v1` resource
+contract before decoding, hashing, or invoking an adapter. It MUST bound the
+request body, encoded proof bytes, public-input count and per/total input bytes,
+identifiers, digests/domains, backend versions, addresses, transaction ids,
+signatures, signer sets, tap counts, confirmation counts, timestamps, actions,
+and error strings. A resource overage MUST return the typed
+`resource_limit_exceeded` failure; the settlement route MUST return HTTP 413.
+
 #### Scenario: Contract mutations fail closed
 
 - **WHEN** a request has malformed encoding, a mismatched curve, circuit, key,
@@ -40,6 +48,15 @@ confirmation counts MUST be bounded safe integers.
   non-authoritative, or does not match the configured adapter identity
 - **THEN** validation returns a typed backend failure and no verified state is
   created
+
+#### Scenario: Oversized input fails before expensive work
+
+- **WHEN** an untrusted request contains an oversized body, proof, public input,
+  identifier, digest/domain string, signature, signer set, or other bounded
+  route field
+- **THEN** the boundary returns `resource_limit_exceeded` (or a typed
+  malformed failure for invalid shape), performs no unbounded decode/hash, and
+  does not invoke a verifier, observer, or settlement backend
 
 ### Requirement: Versioned ZKCP statement and domain binding
 
@@ -117,6 +134,16 @@ state mutation.
   is idempotent, payment state does not regress, and a concurrent release is
   rejected without a second key-release invocation
 
+#### Scenario: Async lifecycle commits cannot regress state
+
+- **WHEN** verification, payment observation, or finalization awaits an
+  adapter while another lifecycle operation or replay is queued for the same
+  intent
+- **THEN** operations execute in deterministic per-intent order and every
+  evidence/terminal commit re-checks operation identity, generation, and
+  expected status so a stale operation cannot overwrite `verified`, `paid`, or
+  `finalized` state
+
 ### Requirement: Attested unique BitVM2 aggregation
 
 BitVM2 aggregation MUST require a profile-scoped authorized signer set, unique
@@ -132,6 +159,14 @@ toward completion. Signature formatting alone MUST NOT complete aggregation.
   contradictory attestation evidence
 - **THEN** the submission is rejected with a typed failure and aggregation
   completeness remains unchanged
+
+#### Scenario: Concurrent signer reservations are atomic
+
+- **WHEN** the same signer submits concurrently, a distinct signer submits
+  concurrently, or signature verification fails/throws after reservation
+- **THEN** the same signer is counted at most once, distinct authorized signers
+  may each commit once, failed reservations are released for retry, and the
+  commit re-checks signer uniqueness
 
 ### Requirement: Threat-class guard and regression coverage
 
@@ -151,3 +186,11 @@ production-pattern scanning without weakening runtime boundaries.
 - **THEN** both supported guard implementations fail with a specific rule,
   while equivalent test-only fixture code is not reported as production
   contamination
+
+#### Scenario: PowerShell and Python canonical cases remain in parity
+
+- **WHEN** the canonical explicit unavailable ZKCP construction, a default
+  alias, or a simulator alias is evaluated against the guard fixtures
+- **THEN** the unavailable construction is allowed and aliases are rejected in
+  both rule definitions; a static parity checker may be used when `pwsh` is
+  unavailable but MUST NOT claim runtime PowerShell execution

@@ -68,6 +68,31 @@ The same contract is used by BitVM2, BitVM3 recursive verification, and ZKCP.
 BitVM-specific fields may carry an explicitly profile-scoped `tap_count`; `364`
 is documentation/profile data only and is never proof of verification.
 
+### 2.2 Versioned resource limits
+
+The boundary publishes `conxian.verifier.limits.v1` through
+`VERIFIER_RESOURCE_LIMITS`. These limits are checked before decoding, digest
+calculation, or adapter dispatch:
+
+| Field | Limit |
+| --- | ---: |
+| Settlement request body | 512 KiB |
+| Encoded proof | 128 KiB decoded bytes |
+| Public inputs | 32 entries; 16 KiB per value; 128 KiB total decoded bytes |
+| Identifiers / circuit and key ids | 128 characters |
+| Backend version | 64 characters |
+| Addresses / transaction ids | 256 characters |
+| Signatures | 1,024 characters |
+| Authorized signers / tap count | 64 signers / 1,024 taps |
+| Confirmation count | 1,000,000 |
+| Decryption-key evidence | 4,096 characters |
+
+Digest fields remain exact `sha256:<64 lowercase hex>` values, while error,
+timestamp, and action strings have explicit length ceilings. Encoded-byte upper
+bounds reject oversized hex/base64/base64url values before decoding or hashing.
+The settlement route maps `resource_limit_exceeded` to HTTP `413`; helper and
+adapter boundaries return the same typed failure without invoking a backend.
+
 ## 3. Adapter and provenance model
 
 `UnavailableVerifier` and `UnavailablePaymentObserver` are production-safe
@@ -96,6 +121,16 @@ signer ids, and an explicitly injected signature verifier that returns a
 backend-bound attestation. Only `test` or authoritative `production`
 attestations are accepted; simulated/unknown provenance, the default verifier,
 and hex formatting alone cannot advance aggregation.
+
+Lifecycle operations are serialized FIFO per ZKCP intent. Each async operation
+captures the intent object and generation, then performs an identity/generation
+compare-and-swap check before every evidence or terminal-state commit. Verify,
+watch, and finalize replays therefore have deterministic ordering: a replay
+after a successful transition is read-only or typed non-success, terminal
+finalization is idempotent, and the existing finalization lock rejects a second
+key-release attempt while release is in flight. BitVM2 signature submissions
+are serialized per proof, reserve a signer before async verification, release
+that reservation on all failure/throw paths, and re-check uniqueness at commit.
 
 The platform deliberately does not export a production simulator or a real
 cryptographic implementation. Future Gateway/Core/Nexus adapters must satisfy
@@ -143,6 +178,11 @@ settlement paths. Test-only fixtures remain outside the production scan.
 Python and PowerShell rule identifiers and scope remain equivalent. The guard
 must avoid broad words such as `simulated` in tests/docs so evaluation fixtures
 remain possible without false positives.
+
+The Python self-test also statically extracts the PowerShell bridge-construction
+patterns and exercises canonical unavailable constructions plus default/
+simulator aliases. This parity check is text/fixture based when `pwsh` is not
+installed; it does not claim runtime PowerShell execution.
 
 ## 6. Compatibility
 

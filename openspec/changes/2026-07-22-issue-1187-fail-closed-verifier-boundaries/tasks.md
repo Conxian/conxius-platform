@@ -58,3 +58,23 @@
   aware, add alias/fixture-import detection, and add Python guard self-tests.
 - [x] Update the change-local design/spec and truthful production-boundary
   documentation without adding or claiming a cryptographic backend.
+
+## Phase 6 — Independent review hardening (PR #1198)
+
+- [x] Serialize ZKCP verify/watch/finalize operations per intent and guard
+  every async evidence or terminal-state commit with operation identity,
+  generation, and expected-state compare-and-swap checks.
+- [x] Atomically reserve BitVM2 signer ids per proof before async verification,
+  release reservations on invalid/throwing/unavailable paths, and re-check
+  uniqueness at the aggregation commit.
+- [x] Add versioned `conxian.verifier.limits.v1` request-body, proof,
+  public-input, identifier, signature, signer-set, tap-count, payment, and
+  result-string limits; reject before decoding/hashing/backend dispatch.
+- [x] Map resource-limit failures to HTTP `413` in the settlement route and
+  add helper, BitVM, ZKCP, and route boundary tests.
+- [x] Align the PowerShell unavailable ZKCP bridge allow-list with canonical
+  construction and add a Python static parity fixture check; do not claim
+  `pwsh` runtime execution when unavailable.
+- [x] Add controlled deferred-promise race coverage for same/distinct BitVM
+  signers, verifier throw/retry, concurrent ZKCP verification, and watch/
+  finalize ordering.

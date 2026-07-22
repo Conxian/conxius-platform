@@ -57,6 +57,35 @@ class AuthoritativeFixtureVerifier implements ZKProofVerifier {
   }
 }
 
+class DeferredZKVerifier extends AuthoritativeFixtureVerifier {
+  public calls = 0;
+  private resolveStarted!: () => void;
+  private resolveGate!: () => void;
+  public readonly started: Promise<void>;
+  private readonly gate: Promise<void>;
+
+  public constructor() {
+    super();
+    this.started = new Promise<void>((resolve) => {
+      this.resolveStarted = resolve;
+    });
+    this.gate = new Promise<void>((resolve) => {
+      this.resolveGate = resolve;
+    });
+  }
+
+  public override async verify(request: VerifierRequest) {
+    this.calls += 1;
+    this.resolveStarted();
+    await this.gate;
+    return super.verify(request);
+  }
+
+  public release(): void {
+    this.resolveGate();
+  }
+}
+
 class AuthoritativeFixtureMonitor implements OnChainMonitor {
   public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
 
@@ -76,6 +105,37 @@ class AuthoritativeFixtureMonitor implements OnChainMonitor {
       provenance: "production",
       observation,
     };
+  }
+}
+
+class DeferredPaymentMonitor extends AuthoritativeFixtureMonitor {
+  public calls = 0;
+  private resolveStarted!: () => void;
+  private resolveGate!: () => void;
+  public readonly started: Promise<void>;
+  private readonly gate: Promise<void>;
+
+  public constructor() {
+    super();
+    this.started = new Promise<void>((resolve) => {
+      this.resolveStarted = resolve;
+    });
+    this.gate = new Promise<void>((resolve) => {
+      this.resolveGate = resolve;
+    });
+  }
+
+  public override async watchForPayment(
+    request: Parameters<OnChainMonitor["watchForPayment"]>[0],
+  ): Promise<PaymentObservationResult> {
+    this.calls += 1;
+    this.resolveStarted();
+    await this.gate;
+    return super.watchForPayment(request);
+  }
+
+  public release(): void {
+    this.resolveGate();
   }
 }
 
@@ -362,6 +422,65 @@ describe("ZKCPBridge fail-closed boundary", () => {
     expect(finalized.finalized).toBe(true);
     expect(finalized.paymentHash).toBe("tx-authoritative-fixture");
     expect(finalized.decryptionKey).toBe("fixture-release-key");
+  });
+
+  it("serializes concurrent verification and prevents a stale terminal overwrite", async () => {
+    const verifier = new DeferredZKVerifier();
+    const bridge = new ZKCPBridge(
+      verifier,
+      new UnavailableOnChainMonitor(),
+      new UnavailableDecryptionKeyReleaser(),
+    );
+    const genericRequest = await makeVerifierRequest({ backend: AUTHORITATIVE_TEST_BACKEND, provenance: "production" });
+    const input = await makeIntentInput(genericRequest, "zkcp-verify-race");
+    const request = await bindZKCPRequestToIntent(genericRequest, input);
+    bridge.initializeIntent(input);
+
+    const first = bridge.verifyProof(input.id, request);
+    await verifier.started;
+    const replay = bridge.verifyProof(input.id, request);
+
+    expect(verifier.calls).toBe(1);
+    verifier.release();
+    const [firstResult, replayResult] = await Promise.all([first, replay]);
+
+    expect(firstResult.status).toBe("valid");
+    expect(replayResult.failure_code).toBe("malformed_request");
+    expect(bridge.getIntent(input.id)?.status).toBe("verified");
+  });
+
+  it("serializes payment watch and finalization without regressing terminal state", async () => {
+    const monitor = new DeferredPaymentMonitor();
+    const keyReleaser = new AuthoritativeFixtureKeyReleaser();
+    const bridge = new ZKCPBridge(
+      new AuthoritativeFixtureVerifier(),
+      monitor,
+      keyReleaser,
+    );
+    const genericRequest = await makeVerifierRequest({ backend: AUTHORITATIVE_TEST_BACKEND, provenance: "production" });
+    const input = await makeIntentInput(genericRequest, "zkcp-watch-finalize-race");
+    const request = await bindZKCPRequestToIntent(genericRequest, input);
+    bridge.initializeIntent(input);
+    expect((await bridge.verifyProof(input.id, request)).status).toBe("valid");
+
+    const firstWatch = bridge.watchForPayment(input.id);
+    await monitor.started;
+    const replayWatch = bridge.watchForPayment(input.id);
+    const finalization = bridge.finalizeSettlement(input.id);
+
+    expect(monitor.calls).toBe(1);
+    monitor.release();
+    const [firstResult, replayResult, finalized] = await Promise.all([
+      firstWatch,
+      replayWatch,
+      finalization,
+    ]);
+
+    expect(firstResult.status).toBe("observed");
+    expect(replayResult.status).toBe("observed");
+    expect(finalized.finalized).toBe(true);
+    expect(keyReleaser.releaseCount).toBe(1);
+    expect(bridge.getIntent(input.id)?.status).toBe("finalized");
   });
 
   it("rejects unavailable sentinel payment and key-release authority", async () => {

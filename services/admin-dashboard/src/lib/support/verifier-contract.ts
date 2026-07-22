@@ -5,6 +5,32 @@
 */
 
 export const VERIFIER_CONTRACT_VERSION = "conxian.verifier.v1" as const;
+export const VERIFIER_RESOURCE_LIMITS_VERSION = "conxian.verifier.limits.v1" as const;
+
+/**
+* Resource limits are part of the boundary contract. Keep these values
+* explicit and versioned so callers and tests do not silently inherit an
+* unbounded decoder/hash surface when a backend is added later.
+*/
+export const VERIFIER_RESOURCE_LIMITS = Object.freeze({
+  maxRequestBodyBytes: 512 * 1024,
+  maxProofBytes: 128 * 1024,
+  maxPublicInputCount: 32,
+  maxPublicInputBytes: 16 * 1024,
+  maxPublicInputsBytes: 128 * 1024,
+  maxIdentifierChars: 128,
+  maxVersionChars: 64,
+  maxAddressChars: 256,
+  maxTxidChars: 256,
+  maxSignatureChars: 1024,
+  maxSignerCount: 64,
+  maxTapCount: 1024,
+  maxConfirmations: 1_000_000,
+  maxErrorChars: 1024,
+  maxTimestampChars: 64,
+  maxActionChars: 64,
+  maxDecryptionKeyChars: 4096,
+} as const);
 
 export type VerifierContractVersion = typeof VERIFIER_CONTRACT_VERSION;
 export type Digest = `sha256:${string}`;
@@ -78,6 +104,7 @@ export type VerificationFailureCode =
   | "backend_unavailable"
   | "unsupported_backend"
   | "malformed_request"
+  | "resource_limit_exceeded"
   | "malformed_encoding"
   | "digest_unavailable"
   | "proof_digest_mismatch"
@@ -230,8 +257,18 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function isBoundedNonEmptyString(value: unknown, maxLength: number): value is string {
+  return isNonEmptyString(value) && value.length <= maxLength;
+}
+
+function isOversizedString(value: unknown, maxLength: number): boolean {
+  return typeof value === "string" && value.length > maxLength;
+}
+
 export function isDigest(value: unknown): value is Digest {
-  return typeof value === "string" && /^sha256:[0-9a-f]{64}$/.test(value);
+  return typeof value === "string"
+    && value.length === "sha256:".length + 64
+    && /^sha256:[0-9a-f]{64}$/.test(value);
 }
 
 function isEncoding(value: unknown): value is Encoding {
@@ -265,6 +302,7 @@ export function isVerificationFailureCode(value: unknown): value is Verification
   return value === "backend_unavailable"
     || value === "unsupported_backend"
     || value === "malformed_request"
+    || value === "resource_limit_exceeded"
     || value === "malformed_encoding"
     || value === "digest_unavailable"
     || value === "proof_digest_mismatch"
@@ -294,8 +332,8 @@ export function isVerificationFailureCode(value: unknown): value is Verification
 
 export function isBackendIdentity(value: unknown): value is BackendIdentity {
   if (!isRecord(value)) return false;
-  return isNonEmptyString(value.id)
-    && isNonEmptyString(value.version)
+  return isBoundedNonEmptyString(value.id, VERIFIER_RESOURCE_LIMITS.maxIdentifierChars)
+    && isBoundedNonEmptyString(value.version, VERIFIER_RESOURCE_LIMITS.maxVersionChars)
     && isDigest(value.artifact_digest)
     && (value.authority === "authoritative" || value.authority === "non_authoritative");
 }
@@ -319,12 +357,12 @@ export function isAuthoritativeBackendIdentity(value: unknown): value is Backend
 
 function isCircuitBinding(value: unknown): value is CircuitBinding {
   if (!isRecord(value)) return false;
-  return isNonEmptyString(value.id) && isDigest(value.digest);
+  return isBoundedNonEmptyString(value.id, VERIFIER_RESOURCE_LIMITS.maxIdentifierChars) && isDigest(value.digest);
 }
 
 function isVerificationKeyBinding(value: unknown): value is VerificationKeyBinding {
   if (!isRecord(value)) return false;
-  return isNonEmptyString(value.id) && isDigest(value.digest);
+  return isBoundedNonEmptyString(value.id, VERIFIER_RESOURCE_LIMITS.maxIdentifierChars) && isDigest(value.digest);
 }
 
 function isFiniteInteger(value: unknown): value is number {
@@ -358,6 +396,26 @@ function decodeEncodedBytes(value: string, encoding: Encoding): Uint8Array | und
   }
 }
 
+export function encodedByteUpperBound(value: string, encoding: Encoding): number {
+  if (encoding === "hex") return Math.ceil(value.length / 2);
+  return Math.ceil((value.length * 3) / 4);
+}
+
+export function maxEncodedLengthForBytes(maxBytes: number, encoding: Encoding): number {
+  if (encoding === "hex") return maxBytes * 2;
+  return Math.ceil((maxBytes * 4) / 3) + 4;
+}
+
+export function isEncodedValueWithinLimit(
+  value: unknown,
+  encoding: Encoding,
+  maxBytes: number,
+): value is string {
+  return typeof value === "string"
+    && value.length <= maxEncodedLengthForBytes(maxBytes, encoding)
+    && encodedByteUpperBound(value, encoding) <= maxBytes;
+}
+
 async function sha256Bytes(bytes: Uint8Array): Promise<Digest> {
   if (!globalThis.crypto?.subtle) {
     throw new Error("Web Crypto API is unavailable");
@@ -367,7 +425,14 @@ async function sha256Bytes(bytes: Uint8Array): Promise<Digest> {
   return `sha256:${hex}` as Digest;
 }
 
-export async function digestEncodedValue(value: string, encoding: Encoding): Promise<Digest> {
+export async function digestEncodedValue(
+  value: string,
+  encoding: Encoding,
+  maxBytes: number = VERIFIER_RESOURCE_LIMITS.maxProofBytes,
+): Promise<Digest> {
+  if (!isEncoding(encoding) || !isEncodedValueWithinLimit(value, encoding, maxBytes)) {
+    throw new Error("Verifier resource limit exceeded before encoded digest");
+  }
   const bytes = decodeEncodedBytes(value, encoding);
   if (!bytes) throw new Error("Malformed encoded value");
   return sha256Bytes(bytes);
@@ -418,18 +483,87 @@ function requestDigestMaterial(request: VerifierRequest): Record<string, unknown
 }
 
 export async function digestVerifierRequest(request: VerifierRequest): Promise<Digest> {
+  assertVerifierRequestResourceLimits(request);
   return digestCanonical(requestDigestMaterial(request));
 }
 
+function assertVerifierRequestResourceLimits(request: VerifierRequest): void {
+  if (!Array.isArray(request.public_inputs)
+    || request.public_inputs.length > VERIFIER_RESOURCE_LIMITS.maxPublicInputCount
+    || !isDigest(request.public_inputs_digest)
+    || !isDigest(request.statement_digest)
+    || !isDigest(request.domain_digest)
+    || !isCircuitBinding(request.circuit)
+    || !isVerificationKeyBinding(request.verification_key)
+    || !isBackendIdentity(request.backend)
+    || !isEncoding(request.proof.encoding)
+    || !isEncodedValueWithinLimit(request.proof.bytes, request.proof.encoding, VERIFIER_RESOURCE_LIMITS.maxProofBytes)) {
+    throw new Error("Verifier resource limit exceeded before request digest");
+  }
+
+  let publicInputBytes = 0;
+  for (const publicInput of request.public_inputs) {
+    if (!isBoundedNonEmptyString(publicInput.name, VERIFIER_RESOURCE_LIMITS.maxIdentifierChars)
+      || !isEncoding(publicInput.encoding)
+      || !isEncodedValueWithinLimit(publicInput.value, publicInput.encoding, VERIFIER_RESOURCE_LIMITS.maxPublicInputBytes)) {
+      throw new Error("Verifier resource limit exceeded before request digest");
+    }
+    publicInputBytes += encodedByteUpperBound(publicInput.value, publicInput.encoding);
+  }
+  if (publicInputBytes > VERIFIER_RESOURCE_LIMITS.maxPublicInputsBytes) {
+    throw new Error("Verifier resource limit exceeded before request digest");
+  }
+}
+
 export async function createVerifierRequest(input: CreateVerifierRequestInput): Promise<VerifierRequest> {
+  if (!isProofSystem(input.proof_system)
+    || !isCurve(input.curve)
+    || !isProvenance(input.provenance)
+    || !isDigest(input.statement_digest)
+    || !isDigest(input.domain_digest)
+    || input.public_inputs.length > VERIFIER_RESOURCE_LIMITS.maxPublicInputCount) {
+    throw new Error("Verifier resource limit exceeded: public input count");
+  }
+  if (!isCircuitBinding(input.circuit) || !isVerificationKeyBinding(input.verification_key)) {
+    throw new Error("Malformed verifier circuit or verification-key binding");
+  }
+  if (!isBackendIdentity(input.backend)) {
+    throw new Error("Malformed verifier backend identity");
+  }
+  if (!isEncoding(input.proof.encoding)
+    || !isNonEmptyString(input.proof.bytes)
+    || !isEncodedValueWithinLimit(input.proof.bytes, input.proof.encoding, VERIFIER_RESOURCE_LIMITS.maxProofBytes)) {
+    throw new Error("Verifier resource limit exceeded: proof bytes");
+  }
+
+  let publicInputBytes = 0;
+  for (const publicInput of input.public_inputs) {
+    if (!isFiniteInteger(publicInput.index)
+      || publicInput.index < 0
+      || !isBoundedNonEmptyString(publicInput.name, VERIFIER_RESOURCE_LIMITS.maxIdentifierChars)
+      || !isEncoding(publicInput.encoding)
+      || !isNonEmptyString(publicInput.value)
+      || !isEncodedValueWithinLimit(publicInput.value, publicInput.encoding, VERIFIER_RESOURCE_LIMITS.maxPublicInputBytes)) {
+      throw new Error("Verifier resource limit exceeded: public input");
+    }
+    publicInputBytes += encodedByteUpperBound(publicInput.value, publicInput.encoding);
+  }
+  if (publicInputBytes > VERIFIER_RESOURCE_LIMITS.maxPublicInputsBytes) {
+    throw new Error("Verifier resource limit exceeded: public input bytes");
+  }
+
   const public_inputs = await Promise.all(input.public_inputs.map(async (publicInput) => ({
     ...publicInput,
-    digest: await digestEncodedValue(publicInput.value, publicInput.encoding),
+    digest: await digestEncodedValue(
+      publicInput.value,
+      publicInput.encoding,
+      VERIFIER_RESOURCE_LIMITS.maxPublicInputBytes,
+    ),
   })));
 
   const proof: ProofBinding = {
     ...input.proof,
-    digest: await digestEncodedValue(input.proof.bytes, input.proof.encoding),
+    digest: await digestEncodedValue(input.proof.bytes, input.proof.encoding, VERIFIER_RESOURCE_LIMITS.maxProofBytes),
   };
 
   const public_inputs_digest = await digestCanonical(public_inputs.map(publicInputDigestMaterial));
@@ -452,7 +586,10 @@ export async function createVerifierRequest(input: CreateVerifierRequestInput): 
 function failureStatus(code: VerificationFailureCode): VerificationStatus {
   if (code === "backend_unavailable" || code === "observer_unavailable") return "unavailable";
   if (code === "unsupported_backend") return "unsupported";
-  if (code === "malformed_request" || code === "malformed_encoding" || code === "digest_unavailable") return "malformed";
+  if (code === "malformed_request"
+    || code === "resource_limit_exceeded"
+    || code === "malformed_encoding"
+    || code === "digest_unavailable") return "malformed";
   return "invalid";
 }
 
@@ -487,19 +624,33 @@ export function createVerificationFailure(
     provenance?: Provenance;
   } = {},
 ): VerificationResult {
+  const boundedError = error.length <= VERIFIER_RESOURCE_LIMITS.maxErrorChars
+    ? error
+    : "Verifier failure message exceeds the v1 resource limit";
   return createVerificationResult({
     status: failureStatus(failure_code),
     backend: options.backend ?? UNAVAILABLE_BACKEND,
     provenance: options.provenance ?? "unknown",
     request_digest: options.request_digest,
     failure_code,
-    error,
+    error: boundedError,
   });
 }
 
 export async function validateVerifierRequest(value: unknown): Promise<VerifierValidation> {
   if (!isRecord(value)) {
     return { ok: false, failure_code: "malformed_request", error: "Verifier request must be an object" };
+  }
+
+  if ((isRecord(value.circuit) && isOversizedString(value.circuit.id, VERIFIER_RESOURCE_LIMITS.maxIdentifierChars))
+    || (isRecord(value.verification_key) && isOversizedString(value.verification_key.id, VERIFIER_RESOURCE_LIMITS.maxIdentifierChars))
+    || (isRecord(value.backend) && (
+      isOversizedString(value.backend.id, VERIFIER_RESOURCE_LIMITS.maxIdentifierChars)
+      || isOversizedString(value.backend.version, VERIFIER_RESOURCE_LIMITS.maxVersionChars)
+    ))
+    || isOversizedString(value.statement_digest, "sha256:".length + 64)
+    || isOversizedString(value.domain_digest, "sha256:".length + 64)) {
+    return { ok: false, failure_code: "resource_limit_exceeded", error: "Verifier identifier or digest exceeds the v1 resource limit" };
   }
 
   if (value.contract_version !== VERIFIER_CONTRACT_VERSION
@@ -520,25 +671,42 @@ export async function validateVerifierRequest(value: unknown): Promise<VerifierV
     || !isDigest(value.proof.digest)) {
     return { ok: false, failure_code: "malformed_encoding", error: "Proof bytes or encoding is malformed" };
   }
+  if (!isEncodedValueWithinLimit(value.proof.bytes, value.proof.encoding, VERIFIER_RESOURCE_LIMITS.maxProofBytes)) {
+    return { ok: false, failure_code: "resource_limit_exceeded", error: "Encoded proof exceeds the v1 resource limit" };
+  }
 
   const rawInputs = value.public_inputs;
   if (!Array.isArray(rawInputs) || !isDigest(value.public_inputs_digest)) {
     return { ok: false, failure_code: "malformed_request", error: "Ordered public inputs are required" };
   }
+  if (rawInputs.length > VERIFIER_RESOURCE_LIMITS.maxPublicInputCount) {
+    return { ok: false, failure_code: "resource_limit_exceeded", error: "Public-input count exceeds the v1 resource limit" };
+  }
 
   const public_inputs: PublicInputBinding[] = [];
   const names = new Set<string>();
+  let publicInputBytes = 0;
   for (let index = 0; index < rawInputs.length; index += 1) {
     const rawInput = rawInputs[index];
+    if (isRecord(rawInput)
+      && (isOversizedString(rawInput.name, VERIFIER_RESOURCE_LIMITS.maxIdentifierChars)
+        || (isEncoding(rawInput.encoding)
+          && !isEncodedValueWithinLimit(rawInput.value, rawInput.encoding, VERIFIER_RESOURCE_LIMITS.maxPublicInputBytes)))) {
+      return { ok: false, failure_code: "resource_limit_exceeded", error: "Public-input value exceeds the v1 resource limit" };
+    }
     if (!isRecord(rawInput)
       || !isFiniteInteger(rawInput.index)
       || rawInput.index !== index
-      || !isNonEmptyString(rawInput.name)
+      || !isBoundedNonEmptyString(rawInput.name, VERIFIER_RESOURCE_LIMITS.maxIdentifierChars)
       || names.has(rawInput.name)
       || !isNonEmptyString(rawInput.value)
       || !isEncoding(rawInput.encoding)
       || !isDigest(rawInput.digest)) {
       return { ok: false, failure_code: "public_input_mismatch", error: "Public inputs must be ordered and uniquely named" };
+    }
+    publicInputBytes += encodedByteUpperBound(rawInput.value, rawInput.encoding);
+    if (publicInputBytes > VERIFIER_RESOURCE_LIMITS.maxPublicInputsBytes) {
+      return { ok: false, failure_code: "resource_limit_exceeded", error: "Total public-input bytes exceed the v1 resource limit" };
     }
     names.add(rawInput.name);
     public_inputs.push({
@@ -551,13 +719,21 @@ export async function validateVerifierRequest(value: unknown): Promise<VerifierV
   }
 
   try {
-    const proofDigest = await digestEncodedValue(value.proof.bytes, value.proof.encoding);
+    const proofDigest = await digestEncodedValue(
+      value.proof.bytes,
+      value.proof.encoding,
+      VERIFIER_RESOURCE_LIMITS.maxProofBytes,
+    );
     if (proofDigest !== value.proof.digest) {
       return { ok: false, failure_code: "proof_digest_mismatch", error: "Proof digest does not match proof bytes" };
     }
 
     for (const input of public_inputs) {
-      const inputDigest = await digestEncodedValue(input.value, input.encoding);
+      const inputDigest = await digestEncodedValue(
+        input.value,
+        input.encoding,
+        VERIFIER_RESOURCE_LIMITS.maxPublicInputBytes,
+      );
       if (inputDigest !== input.digest) {
         return { ok: false, failure_code: "public_input_mismatch", error: `Public input '${input.name}' digest does not match its value` };
       }
@@ -621,8 +797,12 @@ export async function validateVerificationResult(
     || typeof value.verified !== "boolean"
     || !isBackendIdentity(value.backend)
     || !isProvenance(value.provenance)
-    || typeof value.checked_at !== "string") {
+    || !isBoundedNonEmptyString(value.checked_at, VERIFIER_RESOURCE_LIMITS.maxTimestampChars)) {
     return { ok: false, failure_code: "malformed_request", error: "Verifier result is not a canonical v1 result" };
+  }
+
+  if (isOversizedString(value.error, VERIFIER_RESOURCE_LIMITS.maxErrorChars)) {
+    return { ok: false, failure_code: "resource_limit_exceeded", error: "Verifier error exceeds the v1 resource limit" };
   }
 
   if ((value.status === "valid") !== value.verified) {
@@ -725,6 +905,23 @@ export async function createPaymentObservation(input: {
   provenance: Provenance;
   observed_at?: string;
 }): Promise<PaymentObservation> {
+  const observedAt = input.observed_at ?? new Date().toISOString();
+  if (!isBoundedNonEmptyString(input.request.intent_id, VERIFIER_RESOURCE_LIMITS.maxIdentifierChars)
+    || !isBoundedNonEmptyString(input.request.address, VERIFIER_RESOURCE_LIMITS.maxAddressChars)
+    || !isFiniteInteger(input.request.expected_amount)
+    || input.request.expected_amount <= 0
+    || !isPaymentNetwork(input.request.network)
+    || !isBoundedNonEmptyString(input.txid, VERIFIER_RESOURCE_LIMITS.maxTxidChars)
+    || !isBoundedNonEmptyString(observedAt, VERIFIER_RESOURCE_LIMITS.maxTimestampChars)
+    || !isFiniteInteger(input.amount)
+    || input.amount <= 0
+    || !isFiniteInteger(input.confirmations)
+    || input.confirmations < 0
+    || input.confirmations > VERIFIER_RESOURCE_LIMITS.maxConfirmations
+    || !isBackendIdentity(input.observer)
+    || !isProvenance(input.provenance)) {
+    throw new Error("Verifier resource limit exceeded: payment observation");
+  }
   const observationWithoutDigest = {
     contract_version: VERIFIER_CONTRACT_VERSION,
     intent_id: input.request.intent_id,
@@ -736,7 +933,7 @@ export async function createPaymentObservation(input: {
     confirmations: input.confirmations,
     observer: input.observer,
     provenance: input.provenance,
-    observed_at: input.observed_at ?? new Date().toISOString(),
+    observed_at: observedAt,
   };
   return {
     ...observationWithoutDigest,
@@ -748,6 +945,15 @@ export async function validatePaymentObservation(
   value: unknown,
   request: PaymentObservationRequest,
 ): Promise<PaymentObservationValidation> {
+  if ((isOversizedString(request.intent_id, VERIFIER_RESOURCE_LIMITS.maxIdentifierChars)
+      || isOversizedString(request.address, VERIFIER_RESOURCE_LIMITS.maxAddressChars)
+      || isOversizedString(value && isRecord(value) ? value.txid : undefined, VERIFIER_RESOURCE_LIMITS.maxTxidChars)
+      || isOversizedString(value && isRecord(value) ? value.observed_at : undefined, VERIFIER_RESOURCE_LIMITS.maxTimestampChars))
+    || (isRecord(value)
+      && typeof value.confirmations === "number"
+      && value.confirmations > VERIFIER_RESOURCE_LIMITS.maxConfirmations)) {
+    return { ok: false, failure_code: "resource_limit_exceeded", error: "Payment observation exceeds the v1 resource limit" };
+  }
   if (!isRecord(value)
     || value.contract_version !== VERIFIER_CONTRACT_VERSION
     || value.intent_id !== request.intent_id
@@ -762,6 +968,7 @@ export async function validatePaymentObservation(
     || value.amount !== request.expected_amount
     || !isFiniteInteger(value.confirmations)
     || value.confirmations < 0
+    || value.confirmations > VERIFIER_RESOURCE_LIMITS.maxConfirmations
     || !isPaymentNetwork(value.network)
     || !isBackendIdentity(value.observer)
     || !isProvenance(value.provenance)
@@ -816,13 +1023,15 @@ export function createPaymentFailure(
   error: string,
   provenance: Provenance = "unknown",
 ): PaymentObservationResult {
+  const exceedsErrorLimit = error.length > VERIFIER_RESOURCE_LIMITS.maxErrorChars;
+  const effectiveFailureCode = exceedsErrorLimit ? "resource_limit_exceeded" : failure_code;
   return {
     contract_version: VERIFIER_CONTRACT_VERSION,
-    status: paymentStatus(failure_code),
+    status: paymentStatus(effectiveFailureCode),
     detected: false,
     provenance,
-    failure_code,
-    error,
+    failure_code: effectiveFailureCode,
+    error: exceedsErrorLimit ? "Payment observer error exceeds the v1 resource limit" : error,
   };
 }
 

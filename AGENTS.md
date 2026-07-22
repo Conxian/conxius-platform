@@ -1692,3 +1692,28 @@ AGENTS.md (this update)
 **Gotchas**:
 - A valid-looking result with `verified: true` is still rejected when it carries a failure code, non-authoritative backend, unavailable sentinel, or mismatched adapter identity.
 - `git diff --check` and the strict issue #1187 OpenSpec validator must be rerun after session-log edits.
+
+### 2026-07-22 — PR #1198 Independent Review Hardening
+**Trigger**: Second independent review `4758857346` on PR #1198.
+**What was done**:
+- Serialized ZKCP verify/watch/finalize operations per intent with FIFO queues plus generation/object-identity compare-and-swap checks before every asynchronous evidence or terminal-state commit; added deferred verifier/observer race tests covering replay and watch/finalize ordering.
+- Serialized BitVM2 signature submissions per proof, reserved signer ids before async verification, released reservations on verifier failure/throw/unavailable paths, rechecked uniqueness at commit, and added same-signer, distinct-signer, and throw/retry race tests.
+- Added versioned `conxian.verifier.limits.v1` bounds for request bodies, encoded proof/public-input bytes, identifiers/digests/domains, signatures, signer sets, tap counts, payments, errors, and key-release evidence; route overages return HTTP 413 before backend dispatch.
+- Fixed the PowerShell canonical unavailable ZKCP bridge matcher and extended Python self-tests with static alias/default/simulator parity fixtures without claiming PowerShell runtime execution.
+- Updated the issue #1187 OpenSpec design/spec/tasks plus production-boundary and Phase 7 risk documentation to record the new lifecycle and resource guarantees.
+- Added verifier contract and settlement route boundary tests; full admin-dashboard regression tests and dashboard typecheck passed.
+**Key discoveries**:
+- The strict OpenSpec CLI is not installed globally, but `pnpm dlx @fission-ai/openspec@1.6.0 validate ... --strict --no-interactive --json` validates the issue #1187 change successfully.
+- `pwsh` is unavailable in the devbox; static parity checks can exercise canonical matcher cases after normalizing the checked-in PowerShell regex literals, but cannot replace runtime PowerShell validation.
+- The production boundary has no cryptographic verifier, payment observer, or key-release backend; all new synchronization and limits remain fail-closed orchestration controls.
+**Files touched**:
+- `services/admin-dashboard/src/lib/support/{verifier-contract.ts,bitvm.ts,zkcp.ts}` and settlement route
+- `services/admin-dashboard/src/tests/{bitvm.test.ts,zkcp.test.ts,verifierContract.test.ts,routeAuth.test.ts}`
+- `scripts/{verify_contamination_guard.ps1,test_contamination_guard.py}`
+- `openspec/changes/2026-07-22-issue-1187-fail-closed-verifier-boundaries/{design.md,tasks.md,specs/fail-closed-verifier-boundaries/spec.md}`
+- `docs/{PRODUCTION_BOUNDARY.md,PHASE_7_RISK_REGISTER.md}` and `AGENTS.md`
+**Gaps identified**:
+- Hosted PR checks must be rechecked on the pushed commit; no merge or hosted-check wait was performed.
+- PowerShell runtime execution remains unverified until a `pwsh` environment is available.
+**Gotchas**:
+- Run `git diff --check` and strict issue #1187 OpenSpec validation again after this session-log append.

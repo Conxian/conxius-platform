@@ -9,6 +9,7 @@ import {
 import {
   createVerificationResult,
   digestVerifierRequest,
+  VERIFIER_RESOURCE_LIMITS,
   type BackendIdentity,
   type VerifierRequest,
 } from "../lib/support/verifier-contract";
@@ -54,6 +55,59 @@ class ExplicitSignatureVerifier implements BitVMSignatureVerifier {
   public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
 
   public async verify(input: Parameters<BitVMSignatureVerifier["verify"]>[0]) {
+    const attestation = await createSignatureAttestation({
+      proofId: input.proofId,
+      verifierId: input.verifierId,
+      signature: input.signature,
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "test",
+    });
+    return {
+      status: "valid" as const,
+      verified: true,
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "test" as const,
+      attestation,
+    };
+  }
+}
+
+class DeferredSignatureVerifier extends ExplicitSignatureVerifier {
+  public calls = 0;
+  private resolveStarted!: () => void;
+  private resolveGate!: () => void;
+  public readonly started: Promise<void>;
+  private readonly gate: Promise<void>;
+
+  public constructor() {
+    super();
+    this.started = new Promise<void>((resolve) => {
+      this.resolveStarted = resolve;
+    });
+    this.gate = new Promise<void>((resolve) => {
+      this.resolveGate = resolve;
+    });
+  }
+
+  public override async verify(input: Parameters<BitVMSignatureVerifier["verify"]>[0]) {
+    this.calls += 1;
+    this.resolveStarted();
+    await this.gate;
+    return super.verify(input);
+  }
+
+  public release(): void {
+    this.resolveGate();
+  }
+}
+
+class FirstCallThrowingSignatureVerifier implements BitVMSignatureVerifier {
+  public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
+  public calls = 0;
+
+  public async verify(input: Parameters<BitVMSignatureVerifier["verify"]>[0]) {
+    this.calls += 1;
+    if (this.calls === 1) throw new Error("fixture signature verifier failure");
     const attestation = await createSignatureAttestation({
       proofId: input.proofId,
       verifierId: input.verifierId,
@@ -281,6 +335,89 @@ describe("BitVMBridge fail-closed boundary", () => {
     const second = await bridge.submitSignature("fixture-floor-1", "verifier-2", "cd".repeat(64));
     expect(second.accepted).toBe(true);
     expect(second.aggregation?.is_complete).toBe(true);
+  });
+
+  it("serializes concurrent same-signer submissions before async verification", async () => {
+    const signatureVerifier = new DeferredSignatureVerifier();
+    const bridge = await makeAuthoritativeBridge(signatureVerifier);
+
+    const first = bridge.submitSignature("fixture-floor-1", "verifier-1", "ab".repeat(64));
+    await signatureVerifier.started;
+    const duplicate = bridge.submitSignature("fixture-floor-1", "verifier-1", "cd".repeat(64));
+
+    expect(signatureVerifier.calls).toBe(1);
+    signatureVerifier.release();
+    const [firstResult, duplicateResult] = await Promise.all([first, duplicate]);
+
+    expect(firstResult.accepted).toBe(true);
+    expect(duplicateResult.accepted).toBe(false);
+    expect(duplicateResult.failure_code).toBe("duplicate_signer");
+    expect(bridge.getAggregation("fixture-floor-1")?.signatures).toHaveLength(1);
+  });
+
+  it("accepts concurrent distinct signers exactly once each", async () => {
+    const signatureVerifier = new DeferredSignatureVerifier();
+    const bridge = await makeAuthoritativeBridge(signatureVerifier);
+
+    const first = bridge.submitSignature("fixture-floor-1", "verifier-1", "ab".repeat(64));
+    await signatureVerifier.started;
+    const second = bridge.submitSignature("fixture-floor-1", "verifier-2", "cd".repeat(64));
+
+    expect(signatureVerifier.calls).toBe(1);
+    signatureVerifier.release();
+    const [firstResult, secondResult] = await Promise.all([first, second]);
+
+    expect(firstResult.accepted).toBe(true);
+    expect(secondResult.accepted).toBe(true);
+    expect(signatureVerifier.calls).toBe(2);
+    expect(bridge.getAggregation("fixture-floor-1")?.signatures).toHaveLength(2);
+  });
+
+  it("releases a reserved signer after a verifier throw so a retry can succeed", async () => {
+    const signatureVerifier = new FirstCallThrowingSignatureVerifier();
+    const bridge = await makeAuthoritativeBridge(signatureVerifier);
+
+    const [failed, retry] = await Promise.all([
+      bridge.submitSignature("fixture-floor-1", "verifier-1", "ab".repeat(64)),
+      bridge.submitSignature("fixture-floor-1", "verifier-1", "ab".repeat(64)),
+    ]);
+
+    expect(failed.accepted).toBe(false);
+    expect(failed.failure_code).toBe("internal_error");
+    expect(retry.accepted).toBe(true);
+    expect(signatureVerifier.calls).toBe(2);
+    expect(bridge.getAggregation("fixture-floor-1")?.signatures).toHaveLength(1);
+  });
+
+  it("rejects oversized signature identifiers and signer profiles", async () => {
+    const signatureVerifier = new ExplicitSignatureVerifier();
+    const bridge = await makeAuthoritativeBridge(signatureVerifier);
+
+    const oversizedSignature = await bridge.submitSignature(
+      "fixture-floor-1",
+      "verifier-1",
+      "ab".repeat((VERIFIER_RESOURCE_LIMITS.maxSignatureChars / 2) + 1),
+    );
+    expect(oversizedSignature.failure_code).toBe("resource_limit_exceeded");
+
+    const oversizedProfileBridge = new BitVMBridge(new AuthoritativeFixtureVerifier());
+    const request = await makeVerifierRequest({
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production",
+    });
+    const result = await oversizedProfileBridge.verifyFloor({
+      ...makeFloorRequest(request),
+      tap_profile: {
+        id: "profile-bitvm2-test",
+        tap_count: 12,
+        required_signatures: 1,
+        authorized_signers: Array.from(
+          { length: VERIFIER_RESOURCE_LIMITS.maxSignerCount + 1 },
+          (_, index) => `verifier-${index}`,
+        ),
+      },
+    });
+    expect(result.failure_code).toBe("resource_limit_exceeded");
   });
 
   it("fails closed for unavailable and format-only signature verifiers", async () => {

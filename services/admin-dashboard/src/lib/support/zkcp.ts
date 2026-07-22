@@ -17,6 +17,7 @@ import {
   isUnavailableBackend,
   isVerificationFailureCode,
   rejectNonProductionVerification,
+  VERIFIER_RESOURCE_LIMITS,
   type BackendIdentity,
   type Digest,
   type PaymentNetwork,
@@ -190,6 +191,13 @@ interface StoredVerificationEvidence {
 interface StoredPaymentEvidence {
   request: PaymentObservationRequest;
   observation: PaymentObservation;
+}
+
+interface IntentOperation {
+  intentId: string;
+  intent: ZKCPIntent;
+  generation: number;
+  expectedStatuses: readonly ZKCPStatus[];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -395,6 +403,9 @@ async function normalizePaymentResult(
   if (value.failure_code !== undefined && !isVerificationFailureCode(value.failure_code)) {
     return createPaymentFailure("payment_mismatch", "Payment observer returned an unknown failure code");
   }
+  if (typeof value.error === "string" && value.error.length > VERIFIER_RESOURCE_LIMITS.maxErrorChars) {
+    return createPaymentFailure("resource_limit_exceeded", "Payment observer error exceeds the v1 resource limit");
+  }
 
   if (value.status !== "observed") {
     if (value.detected) return createPaymentFailure("payment_mismatch", "A non-observed payment result cannot be detected");
@@ -474,8 +485,12 @@ function isKeyReleaseResult(value: unknown): value is DecryptionKeyReleaseResult
     && isBackendIdentity(value.backend)
     && isProvenance(value.provenance)
     && (value.failure_code === undefined || isVerificationFailureCode(value.failure_code))
-    && (value.decryptionKey === undefined || typeof value.decryptionKey === "string")
-    && (value.error === undefined || typeof value.error === "string");
+    && (value.decryptionKey === undefined
+      || (typeof value.decryptionKey === "string"
+        && value.decryptionKey.length <= VERIFIER_RESOURCE_LIMITS.maxDecryptionKeyChars))
+    && (value.error === undefined
+      || (typeof value.error === "string"
+        && value.error.length <= VERIFIER_RESOURCE_LIMITS.maxErrorChars));
 }
 
 export class ZKCPBridge {
@@ -483,6 +498,8 @@ export class ZKCPBridge {
   private readonly verificationEvidence = new Map<string, StoredVerificationEvidence>();
   private readonly paymentEvidence = new Map<string, StoredPaymentEvidence>();
   private readonly finalizationLocks = new Set<string>();
+  private readonly lifecycleQueues = new Map<string, Promise<void>>();
+  private readonly lifecycleGenerations = new Map<string, number>();
   private readonly eventHandlers: ZKCPEventHandler[] = [];
 
   public constructor(
@@ -490,6 +507,60 @@ export class ZKCPBridge {
     private readonly onChainMonitor: OnChainMonitor,
     private readonly keyReleaser: DecryptionKeyReleaser,
   ) {}
+
+  private async withIntentLock<T>(intentId: string, operation: () => Promise<T>): Promise<T> {
+    const previous = this.lifecycleQueues.get(intentId) ?? Promise.resolve();
+    let release!: () => void;
+    const current = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const queued = previous.then(() => current);
+    this.lifecycleQueues.set(intentId, queued);
+    await previous;
+    try {
+      return await operation();
+    } finally {
+      release();
+      if (this.lifecycleQueues.get(intentId) === queued) {
+        this.lifecycleQueues.delete(intentId);
+      }
+    }
+  }
+
+  private beginOperation(
+    intentId: string,
+    expectedStatuses: readonly ZKCPStatus[],
+  ): IntentOperation | undefined {
+    const intent = this.intents.get(intentId);
+    if (!intent || !expectedStatuses.includes(intent.status)) return undefined;
+    return {
+      intentId,
+      intent,
+      generation: this.lifecycleGenerations.get(intentId) ?? 0,
+      expectedStatuses,
+    };
+  }
+
+  private isCurrentOperation(
+    operation: IntentOperation,
+    statuses: readonly ZKCPStatus[] = operation.expectedStatuses,
+  ): boolean {
+    const current = this.intents.get(operation.intentId);
+    return current === operation.intent
+      && (this.lifecycleGenerations.get(operation.intentId) ?? 0) === operation.generation
+      && statuses.includes(current.status);
+  }
+
+  private commitOperation(
+    operation: IntentOperation,
+    commit: (intent: ZKCPIntent) => void,
+    statuses: readonly ZKCPStatus[] = operation.expectedStatuses,
+  ): boolean {
+    if (!this.isCurrentOperation(operation, statuses)) return false;
+    commit(operation.intent);
+    this.lifecycleGenerations.set(operation.intentId, operation.generation + 1);
+    return true;
+  }
 
   public onEvent(handler: ZKCPEventHandler): void {
     this.eventHandlers.push(handler);
@@ -505,21 +576,28 @@ export class ZKCPBridge {
     }
   }
 
-  private recordFailure(intent: ZKCPIntent, result: VerificationResult): VerificationResult {
-    intent.status = result.status === "unavailable" || result.status === "unsupported" ? "unsupported" : "failed";
-    intent.verification = result;
-    intent.updatedAt = new Date().toISOString();
-    this.verificationEvidence.delete(intent.id);
-    this.emit({ type: "intent_failed", intentId: intent.id, timestamp: intent.updatedAt, data: { failure_code: result.failure_code } });
+  private recordFailure(operation: IntentOperation, result: VerificationResult): VerificationResult {
+    if (!this.commitOperation(operation, (intent) => {
+      intent.status = result.status === "unavailable" || result.status === "unsupported" ? "unsupported" : "failed";
+      intent.verification = immutableCopy(result);
+      intent.updatedAt = new Date().toISOString();
+      this.verificationEvidence.delete(intent.id);
+      this.emit({ type: "intent_failed", intentId: intent.id, timestamp: intent.updatedAt, data: { failure_code: result.failure_code } });
+    })) {
+      return copyVerificationResult(failedVerification(operation.intentId, "internal_error", "ZKCP lifecycle operation became stale before failure commit"));
+    }
     return copyVerificationResult(result);
   }
 
   public initializeIntent(params: ZKCPIntentInput): Readonly<ZKCPIntent> {
     if (!isNonEmptyString(params.id)
+      || params.id.length > VERIFIER_RESOURCE_LIMITS.maxIdentifierChars
       || !Number.isSafeInteger(params.amount)
       || params.amount <= 0
       || !isNonEmptyString(params.sellerAddress)
+      || params.sellerAddress.length > VERIFIER_RESOURCE_LIMITS.maxAddressChars
       || !isNonEmptyString(params.buyerAddress)
+      || params.buyerAddress.length > VERIFIER_RESOURCE_LIMITS.maxAddressChars
       || !isPaymentNetwork(params.network)
       || !/^sha256:[0-9a-f]{64}$/.test(params.encryptedDataHash)
       || !/^sha256:[0-9a-f]{64}$/.test(params.proofHash)) {
@@ -536,97 +614,120 @@ export class ZKCPBridge {
       updatedAt: now,
     };
     this.intents.set(intent.id, intent);
+    this.lifecycleGenerations.set(intent.id, 0);
     this.emit({ type: "intent_created", intentId: intent.id, timestamp: now, data: { amount: intent.amount } });
     logger.info(`Initialized intent ${intent.id}`);
     return immutableCopy(intent);
   }
 
   public async verifyProof(intentId: string, value: unknown): Promise<VerificationResult> {
-    const intent = this.intents.get(intentId);
-    if (!intent) return copyVerificationResult(failedVerification(intentId, "malformed_request", "Intent not found"));
-    if (intent.status !== "pending") {
-      return copyVerificationResult(failedVerification(intentId, "malformed_request", `Intent is not pending (current: ${intent.status})`));
-    }
+    return this.withIntentLock(intentId, async () => {
+      const intent = this.intents.get(intentId);
+      if (!intent) return copyVerificationResult(failedVerification(intentId, "malformed_request", "Intent not found"));
+      if (intent.status !== "pending") {
+        return copyVerificationResult(failedVerification(intentId, "malformed_request", `Intent is not pending (current: ${intent.status})`));
+      }
 
-    const requestValidation = await validateVerifierRequest(value);
-    if (!requestValidation.ok) {
-      return this.recordFailure(intent, failedVerification(intentId, requestValidation.failure_code, requestValidation.error));
-    }
+      const operation = this.beginOperation(intentId, ["pending"]);
+      if (!operation) {
+        return copyVerificationResult(failedVerification(intentId, "internal_error", "Unable to start ZKCP verification operation"));
+      }
 
-    if (requestValidation.request.proof.digest !== intent.proofHash) {
-      return this.recordFailure(intent, failedVerification(intentId, "proof_digest_mismatch", "Proof is not bound to the initialized intent"));
-    }
+      const requestValidation = await validateVerifierRequest(value);
+      if (!requestValidation.ok) {
+        return this.recordFailure(operation, failedVerification(intentId, requestValidation.failure_code, requestValidation.error));
+      }
 
-    const bindingValidation = await validateZKCPIntentBinding(intent, requestValidation.request);
-    if (!bindingValidation.ok) {
-      return this.recordFailure(intent, failedVerification(intentId, bindingValidation.failure_code, bindingValidation.error));
-    }
+      if (requestValidation.request.proof.digest !== intent.proofHash) {
+        return this.recordFailure(operation, failedVerification(intentId, "proof_digest_mismatch", "Proof is not bound to the initialized intent"));
+      }
 
-    if (!isZKProofSystem(requestValidation.request.proof_system)) {
-      return this.recordFailure(intent, failedVerification(intentId, "unsupported_backend", "The selected proof system is not a ZKCP proof system"));
-    }
+      const bindingValidation = await validateZKCPIntentBinding(intent, requestValidation.request);
+      if (!bindingValidation.ok) {
+        return this.recordFailure(operation, failedVerification(intentId, bindingValidation.failure_code, bindingValidation.error));
+      }
+      if (!this.isCurrentOperation(operation)) {
+        return copyVerificationResult(failedVerification(intentId, "internal_error", "ZKCP verification became stale before backend dispatch"));
+      }
 
-    const verifierBackend = this.verifier.backendIdentity;
-    if (!isBackendIdentity(verifierBackend)) {
-      return this.recordFailure(intent, failedVerification(intentId, "backend_mismatch", "Verifier adapter has no valid configured backend identity"));
-    }
-    if (!isUnavailableBackend(verifierBackend)
-      && !backendIdentityEquals(requestValidation.request.backend, verifierBackend)) {
-      return this.recordFailure(intent, failedVerification(intentId, "backend_mismatch", "Verifier request is not bound to the configured adapter backend"));
-    }
+      const proofSystem = requestValidation.request.proof_system;
+      if (!isZKProofSystem(proofSystem)) {
+        return this.recordFailure(operation, failedVerification(intentId, "unsupported_backend", "The selected proof system is not a ZKCP proof system"));
+      }
 
-    let result: VerificationResult;
-    try {
-      result = await this.verifier.verify(requestValidation.request);
-    } catch (error: unknown) {
-      result = createVerificationFailure(
-        "internal_error",
-        error instanceof Error ? error.message : "ZK proof verifier adapter failed",
-        {
+      const verifierBackend = this.verifier.backendIdentity;
+      if (!isBackendIdentity(verifierBackend)) {
+        return this.recordFailure(operation, failedVerification(intentId, "backend_mismatch", "Verifier adapter has no valid configured backend identity"));
+      }
+      if (!isUnavailableBackend(verifierBackend)
+        && !backendIdentityEquals(requestValidation.request.backend, verifierBackend)) {
+        return this.recordFailure(operation, failedVerification(intentId, "backend_mismatch", "Verifier request is not bound to the configured adapter backend"));
+      }
+
+      let result: VerificationResult;
+      try {
+        result = await this.verifier.verify(requestValidation.request);
+      } catch (error: unknown) {
+        result = createVerificationFailure(
+          "internal_error",
+          error instanceof Error ? error.message : "ZK proof verifier adapter failed",
+          {
+            request_digest: requestValidation.request_digest,
+            backend: verifierBackend,
+            provenance: requestValidation.request.provenance,
+          },
+        );
+      }
+      if (!this.isCurrentOperation(operation)) {
+        return copyVerificationResult(failedVerification(intentId, "internal_error", "ZKCP verification became stale after backend dispatch"));
+      }
+
+      const resultValidation = await validateVerificationResult(
+        result,
+        requestValidation.request,
+        requestValidation.request_digest,
+        verifierBackend,
+      );
+      if (!this.isCurrentOperation(operation)) {
+        return copyVerificationResult(failedVerification(intentId, "internal_error", "ZKCP verification became stale before result commit"));
+      }
+
+      if (!resultValidation.ok) {
+        result = createVerificationFailure(resultValidation.failure_code, resultValidation.error, {
           request_digest: requestValidation.request_digest,
           backend: verifierBackend,
           provenance: requestValidation.request.provenance,
-        },
-      );
-    }
-    const resultValidation = await validateVerificationResult(
-      result,
-      requestValidation.request,
-      requestValidation.request_digest,
-      verifierBackend,
-    );
+        });
+      } else {
+        result = rejectNonProductionVerification(resultValidation.result, verifierBackend);
+      }
 
-    if (!resultValidation.ok) {
-      result = createVerificationFailure(resultValidation.failure_code, resultValidation.error, {
+      if (!isProductionVerified(result, verifierBackend)) {
+        return this.recordFailure(operation, result);
+      }
+
+      const evidence: StoredVerificationEvidence = immutableCopy({
+        request: requestValidation.request,
         request_digest: requestValidation.request_digest,
-        backend: verifierBackend,
-        provenance: requestValidation.request.provenance,
+        result,
       });
-    } else {
-      result = rejectNonProductionVerification(resultValidation.result, verifierBackend);
-    }
-
-    if (!isProductionVerified(result, verifierBackend)) {
-      return this.recordFailure(intent, result);
-    }
-
-    const evidence: StoredVerificationEvidence = immutableCopy({
-      request: requestValidation.request,
-      request_digest: requestValidation.request_digest,
-      result,
+      if (!this.commitOperation(operation, (currentIntent) => {
+        this.verificationEvidence.set(currentIntent.id, evidence);
+        currentIntent.updatedAt = new Date().toISOString();
+        currentIntent.verification = immutableCopy(result);
+        currentIntent.status = "verified";
+        currentIntent.proofSystem = proofSystem;
+        this.emit({
+          type: "proof_verified",
+          intentId,
+          timestamp: currentIntent.updatedAt,
+          data: { proofSystem: currentIntent.proofSystem, backend: result.backend.id },
+        });
+      })) {
+        return copyVerificationResult(failedVerification(intentId, "internal_error", "ZKCP verification became stale before state commit"));
+      }
+      return copyVerificationResult(result);
     });
-    this.verificationEvidence.set(intent.id, evidence);
-    intent.updatedAt = new Date().toISOString();
-    intent.verification = result;
-    intent.status = "verified";
-    intent.proofSystem = requestValidation.request.proof_system;
-    this.emit({
-      type: "proof_verified",
-      intentId,
-      timestamp: intent.updatedAt,
-      data: { proofSystem: intent.proofSystem, backend: result.backend.id },
-    });
-    return copyVerificationResult(result);
   }
 
   private async revalidateProofEvidence(intent: ZKCPIntent): Promise<
@@ -685,51 +786,71 @@ export class ZKCPBridge {
   }
 
   public async watchForPayment(intentId: string): Promise<PaymentObservationResult> {
-    const intent = this.intents.get(intentId);
-    if (!intent) return copyPaymentResult(createPaymentFailure("payment_not_observed", "Intent not found"));
+    return this.withIntentLock(intentId, async () => {
+      const intent = this.intents.get(intentId);
+      if (!intent) return copyPaymentResult(createPaymentFailure("payment_not_observed", "Intent not found"));
 
-    if (intent.status === "paid" || intent.status === "finalized") {
-      const existingEvidence = await this.revalidatePaymentEvidence(intent);
-      if (!existingEvidence.ok) return copyPaymentResult(createPaymentFailure(existingEvidence.failure_code, existingEvidence.error));
-      return copyPaymentResult(this.paymentResultForObservation(existingEvidence.observation));
-    }
-    if (intent.status !== "verified") {
-      return copyPaymentResult(createPaymentFailure("payment_not_observed", "Production proof verification is required before payment observation"));
-    }
+      if (intent.status === "paid" || intent.status === "finalized") {
+        const existingEvidence = await this.revalidatePaymentEvidence(intent);
+        if (!existingEvidence.ok) return copyPaymentResult(createPaymentFailure(existingEvidence.failure_code, existingEvidence.error));
+        return copyPaymentResult(this.paymentResultForObservation(existingEvidence.observation));
+      }
+      if (intent.status !== "verified") {
+        return copyPaymentResult(createPaymentFailure("payment_not_observed", "Production proof verification is required before payment observation"));
+      }
 
-    const proofEvidence = await this.revalidateProofEvidence(intent);
-    if (!proofEvidence.ok) return createPaymentFailure(proofEvidence.failure_code, proofEvidence.error);
+      const operation = this.beginOperation(intentId, ["verified"]);
+      if (!operation) {
+        return copyPaymentResult(createPaymentFailure("internal_error", "Unable to start ZKCP payment observation operation"));
+      }
 
-    const observerBackend = this.onChainMonitor.backendIdentity;
-    if (!isBackendIdentity(observerBackend)) {
-      return createPaymentFailure("payment_mismatch", "Payment observer has no valid configured backend identity");
-    }
-    const request = paymentRequestFor(intent);
-    let observed: PaymentObservationResult;
-    try {
-      observed = await this.onChainMonitor.watchForPayment(request);
-    } catch (error: unknown) {
-      return copyPaymentResult(createPaymentFailure(
-        "internal_error",
-        error instanceof Error ? error.message : "Payment observer adapter failed",
-      ));
-    }
-    const result = await normalizePaymentResult(observed, request, observerBackend);
-    if (!isProductionPayment(result, observerBackend)) return copyPaymentResult(result);
+      const proofEvidence = await this.revalidateProofEvidence(intent);
+      if (!proofEvidence.ok) return copyPaymentResult(createPaymentFailure(proofEvidence.failure_code, proofEvidence.error));
+      if (!this.isCurrentOperation(operation)) {
+        return copyPaymentResult(createPaymentFailure("internal_error", "ZKCP payment observation became stale before backend dispatch"));
+      }
 
-    const observation = immutableCopy(result.observation);
-    this.paymentEvidence.set(intent.id, immutableCopy({ request, observation }));
-    intent.paymentObservation = observation;
-    intent.paymentHash = observation.txid;
-    intent.status = "paid";
-    intent.updatedAt = new Date().toISOString();
-    this.emit({
-      type: "payment_detected",
-      intentId,
-      timestamp: intent.updatedAt,
-      data: { txid: observation.txid, confirmations: observation.confirmations },
+      const observerBackend = this.onChainMonitor.backendIdentity;
+      if (!isBackendIdentity(observerBackend)) {
+        return copyPaymentResult(createPaymentFailure("payment_mismatch", "Payment observer has no valid configured backend identity"));
+      }
+      const request = paymentRequestFor(intent);
+      let observed: PaymentObservationResult;
+      try {
+        observed = await this.onChainMonitor.watchForPayment(request);
+      } catch (error: unknown) {
+        return copyPaymentResult(createPaymentFailure(
+          "internal_error",
+          error instanceof Error ? error.message : "Payment observer adapter failed",
+        ));
+      }
+      if (!this.isCurrentOperation(operation)) {
+        return copyPaymentResult(createPaymentFailure("internal_error", "ZKCP payment observation became stale after backend dispatch"));
+      }
+      const result = await normalizePaymentResult(observed, request, observerBackend);
+      if (!this.isCurrentOperation(operation)) {
+        return copyPaymentResult(createPaymentFailure("internal_error", "ZKCP payment observation became stale before result commit"));
+      }
+      if (!isProductionPayment(result, observerBackend)) return copyPaymentResult(result);
+
+      const observation = immutableCopy(result.observation);
+      if (!this.commitOperation(operation, (currentIntent) => {
+        this.paymentEvidence.set(currentIntent.id, immutableCopy({ request, observation }));
+        currentIntent.paymentObservation = observation;
+        currentIntent.paymentHash = observation.txid;
+        currentIntent.status = "paid";
+        currentIntent.updatedAt = new Date().toISOString();
+        this.emit({
+          type: "payment_detected",
+          intentId,
+          timestamp: currentIntent.updatedAt,
+          data: { txid: observation.txid, confirmations: observation.confirmations },
+        });
+      })) {
+        return copyPaymentResult(createPaymentFailure("internal_error", "ZKCP payment observation became stale before state commit"));
+      }
+      return copyPaymentResult(result);
     });
-    return copyPaymentResult(result);
   }
 
   private async revalidatePaymentEvidence(intent: ZKCPIntent): Promise<
@@ -762,8 +883,8 @@ export class ZKCPBridge {
   }
 
   public async finalizeSettlement(intentId: string): Promise<SettlementFinalizationResult> {
-    const intent = this.intents.get(intentId);
-    if (!intent) {
+    const initialIntent = this.intents.get(intentId);
+    if (!initialIntent) {
       return {
         finalized: false,
         status: "rejected",
@@ -773,13 +894,13 @@ export class ZKCPBridge {
       };
     }
 
-    if (intent.status === "finalized") {
+    if (initialIntent.status === "finalized") {
       return {
         finalized: true,
         status: "finalized",
         intentId,
-        paymentHash: intent.paymentHash,
-        decryptionKey: intent.decryptionKey,
+        paymentHash: initialIntent.paymentHash,
+        decryptionKey: initialIntent.decryptionKey,
       };
     }
 
@@ -788,7 +909,7 @@ export class ZKCPBridge {
         finalized: false,
         status: "rejected",
         intentId,
-        paymentHash: intent.paymentHash,
+        paymentHash: initialIntent.paymentHash,
         failure_code: "internal_error",
         error: "Settlement finalization is already in progress",
       };
@@ -796,7 +917,38 @@ export class ZKCPBridge {
 
     this.finalizationLocks.add(intentId);
     try {
-      return await this.finalizeSettlementInternal(intentId, intent);
+      return await this.withIntentLock(intentId, async () => {
+        const intent = this.intents.get(intentId);
+        if (!intent) {
+          return {
+            finalized: false,
+            status: "rejected",
+            intentId,
+            failure_code: "payment_not_observed",
+            error: "Intent not found",
+          };
+        }
+        if (intent.status === "finalized") {
+          return {
+            finalized: true,
+            status: "finalized",
+            intentId,
+            paymentHash: intent.paymentHash,
+            decryptionKey: intent.decryptionKey,
+          };
+        }
+        const operation = this.beginOperation(intentId, ["pending", "verified", "paid", "failed", "unsupported"]);
+        if (!operation) {
+          return {
+            finalized: false,
+            status: "rejected",
+            intentId,
+            failure_code: "internal_error",
+            error: "Unable to start ZKCP finalization operation",
+          };
+        }
+        return this.finalizeSettlementInternal(intentId, intent, operation);
+      });
     } finally {
       this.finalizationLocks.delete(intentId);
     }
@@ -805,6 +957,7 @@ export class ZKCPBridge {
   private async finalizeSettlementInternal(
     intentId: string,
     intent: ZKCPIntent,
+    operation: IntentOperation,
   ): Promise<SettlementFinalizationResult> {
 
     const proofEvidence = await this.revalidateProofEvidence(intent);
@@ -817,6 +970,15 @@ export class ZKCPBridge {
         error: proofEvidence.error,
       };
     }
+    if (!this.isCurrentOperation(operation)) {
+      return {
+        finalized: false,
+        status: "rejected",
+        intentId,
+        failure_code: "internal_error",
+        error: "ZKCP finalization became stale after proof revalidation",
+      };
+    }
 
     const paymentEvidence = await this.revalidatePaymentEvidence(intent);
     if (!paymentEvidence.ok) {
@@ -827,6 +989,16 @@ export class ZKCPBridge {
         paymentHash: intent.paymentHash,
         failure_code: paymentEvidence.failure_code,
         error: paymentEvidence.error,
+      };
+    }
+    if (!this.isCurrentOperation(operation, ["paid"])) {
+      return {
+        finalized: false,
+        status: "rejected",
+        intentId,
+        paymentHash: intent.paymentHash,
+        failure_code: "internal_error",
+        error: "ZKCP finalization requires an unchanged paid lifecycle state",
       };
     }
 
@@ -859,6 +1031,31 @@ export class ZKCPBridge {
       };
     }
 
+    if (!this.isCurrentOperation(operation, ["paid"])) {
+      return {
+        finalized: false,
+        status: "rejected",
+        intentId,
+        paymentHash: paymentEvidence.observation.txid,
+        failure_code: "internal_error",
+        error: "ZKCP finalization became stale after key release",
+      };
+    }
+
+    if (isRecord(release)
+      && ((typeof release.error === "string" && release.error.length > VERIFIER_RESOURCE_LIMITS.maxErrorChars)
+        || (typeof release.decryptionKey === "string"
+          && release.decryptionKey.length > VERIFIER_RESOURCE_LIMITS.maxDecryptionKeyChars))) {
+      return {
+        finalized: false,
+        status: "rejected",
+        intentId,
+        paymentHash: paymentEvidence.observation.txid,
+        failure_code: "resource_limit_exceeded",
+        error: "Key-release evidence exceeds the v1 resource limit",
+      };
+    }
+
     if (!isKeyReleaseResult(release)) {
       return {
         finalized: false,
@@ -881,15 +1078,26 @@ export class ZKCPBridge {
       };
     }
 
-    intent.status = "finalized";
-    intent.decryptionKey = release.decryptionKey;
-    intent.updatedAt = new Date().toISOString();
-    this.emit({
-      type: "settlement_finalized",
-      intentId,
-      timestamp: intent.updatedAt,
-      data: { paymentHash: paymentEvidence.observation.txid },
-    });
+    if (!this.commitOperation(operation, (currentIntent) => {
+      currentIntent.status = "finalized";
+      currentIntent.decryptionKey = release.decryptionKey;
+      currentIntent.updatedAt = new Date().toISOString();
+      this.emit({
+        type: "settlement_finalized",
+        intentId,
+        timestamp: currentIntent.updatedAt,
+        data: { paymentHash: paymentEvidence.observation.txid },
+      });
+    }, ["paid"])) {
+      return {
+        finalized: false,
+        status: "rejected",
+        intentId,
+        paymentHash: paymentEvidence.observation.txid,
+        failure_code: "internal_error",
+        error: "ZKCP finalization became stale before terminal state commit",
+      };
+    }
 
     return {
       finalized: true,

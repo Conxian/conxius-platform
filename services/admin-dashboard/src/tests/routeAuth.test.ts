@@ -22,6 +22,7 @@ import { POST as postGovernanceVote } from "../app/api/governance/votes/route";
 import { POST as postSecrets } from "../app/api/secrets/route";
 import { POST as postSettlementEngine } from "../app/api/v1/settlement-engine/route";
 import { M2MAuthenticator, M2MConfig, type Scope } from "../lib/support/m2m";
+import { VERIFIER_RESOURCE_LIMITS } from "../lib/support/verifier-contract";
 
 const NOW_SECONDS = 1_800_000_000;
 const STRONG_SECRET = "route-test-secret-with-at-least-32-bytes-for-hs256";
@@ -187,5 +188,44 @@ describe("route-level M2M authorization", () => {
     );
     expect(callerHash.status).toBe(422);
     expect(await callerHash.json()).toMatchObject({ failure_code: "payment_hash_not_authority" });
+  });
+
+  it("rejects oversized bodies and signature fields before backend dispatch", async () => {
+    const treasuryToken = await issueToken(["write:treasury", "m2m:internal"]);
+
+    const oversizedBody = await postSettlementEngine(
+      bearerRequest("POST", treasuryToken, {
+        action: "unknown-action",
+        padding: "x".repeat(VERIFIER_RESOURCE_LIMITS.maxRequestBodyBytes),
+      }),
+    );
+    expect(oversizedBody.status).toBe(413);
+    expect(await oversizedBody.json()).toMatchObject({ failure_code: "resource_limit_exceeded" });
+
+    const oversizedSignature = await postSettlementEngine(
+      bearerRequest("POST", treasuryToken, {
+        action: "submit-signature",
+        proofId: "route-proof",
+        verifierId: "route-verifier",
+        signature: "ab".repeat((VERIFIER_RESOURCE_LIMITS.maxSignatureChars / 2) + 1),
+      }),
+    );
+    expect(oversizedSignature.status).toBe(413);
+    expect(await oversizedSignature.json()).toMatchObject({ failure_code: "resource_limit_exceeded" });
+
+    const oversizedIntent = await postSettlementEngine(
+      bearerRequest("POST", treasuryToken, {
+        action: "zkcp-initialize",
+        id: "i".repeat(VERIFIER_RESOURCE_LIMITS.maxIdentifierChars + 1),
+        amount: 1000,
+        encryptedDataHash: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        proofHash: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        sellerAddress: "bc1qfixture-seller",
+        buyerAddress: "bc1qfixture-buyer",
+        network: "bitcoin-regtest",
+      }),
+    );
+    expect(oversizedIntent.status).toBe(413);
+    expect(await oversizedIntent.json()).toMatchObject({ failure_code: "resource_limit_exceeded" });
   });
 });

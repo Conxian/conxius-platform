@@ -1,4 +1,4 @@
-import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import {
@@ -19,9 +19,16 @@ export function createM2MRequestId(): string {
 }
 
 export function timingSafeStringEqual(left: string, right: string): boolean {
-  const leftDigest = createHash("sha256").update(left, "utf8").digest();
-  const rightDigest = createHash("sha256").update(right, "utf8").digest();
-  return timingSafeEqual(leftDigest, rightDigest);
+  const leftBytes = Buffer.from(left, "utf8");
+  const rightBytes = Buffer.from(right, "utf8");
+  const maxLength = Math.max(leftBytes.length, rightBytes.length);
+  const leftPadded = Buffer.alloc(maxLength);
+  const rightPadded = Buffer.alloc(maxLength);
+
+  leftBytes.copy(leftPadded);
+  rightBytes.copy(rightPadded);
+
+  return timingSafeEqual(leftPadded, rightPadded) && leftBytes.length === rightBytes.length;
 }
 
 export function m2mJson<T>(

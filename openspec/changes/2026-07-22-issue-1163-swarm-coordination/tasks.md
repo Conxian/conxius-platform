@@ -38,7 +38,7 @@
 - [x] Revalidate the derived #1162 `ContextAllowlist` and source `DiscoveryResult` at handover creation, validation, resumability, and handover-envelope replay/deduplication boundaries; add forged local-entry/snapshot digest regression coverage.
 - [x] Add the versioned content-addressed #1162 discovery attestation/trust-anchor contract, require the trusted anchor at authoritative context validation and merge boundaries, reject forged discovery/path/tier/skill/anchor mutations, and document that trusted-anchor delivery is an adapter/deployment responsibility outside the pure library.
 - [x] Adopt the strict RFC 3339 millisecond timestamp profile across runtime, schema, canonical specification, change artifacts, and boundary/digest tests; reject four-to-nine fractional digits and out-of-range UTC year conversion.
-- [x] Restore the root Next override to the dashboard's declared `16.2.11` while retaining explicitly pinned Ajv dependencies and a minimal lockfile regeneration; pin the dashboard compiler to TypeScript `6.0.3` because Next `16.2.11` requires the legacy `typescript/lib/typescript.js` build entrypoint, while leaving the other workspace TypeScript `7.0.2` declarations unchanged.
+- [x] Reconcile the root Next override and dashboard dependency graph with the latest `origin/main` repair at Next `15.5.18`, while retaining explicitly pinned Ajv dependencies and the dashboard TypeScript `6.0.3` compatibility pin used by the repaired graph; do not downgrade or remove the latest-main JWT/M2M dependencies.
 
 ## Phase 3 — Documentation and handover
 
@@ -62,7 +62,7 @@ The five issue-level criteria are checked against the canonical specification, r
 
 - [x] No repository-provided OpenSpec validator was found during inspection; structural checks cover `.openspec.yaml`, the canonical spec, required headings/links, all five acceptance IDs, and the change artifacts.
 - [x] Cross-document review confirms the proposal, design, spec delta, canonical spec, schema, implementation, tests, and docs use the same `conxian.swarm` v1 namespace, #1162 boundary, transport-neutral ownership, lifecycle, deterministic ordering, conflict, provenance, freshness, graph linkage, and authentication semantics.
-- [x] Focused validation passes: `pnpm run test:agent-coordination` (26/26), `pnpm run typecheck:agent-coordination`, `pnpm run test:agent-discovery` (11/11), and `pnpm run typecheck:agent-discovery`.
+- [x] Focused validation passes: `pnpm run test:agent-coordination` (26/26), `pnpm run typecheck:agent-coordination`, `pnpm run test:agent-discovery` (21/21), and `pnpm run typecheck:agent-discovery`.
 - [x] JSON Schema tests compile Ajv 2020 with explicitly declared `ajv` and `ajv-formats` dependencies and cover valid/invalid envelope, graph, result, handover, and context fixtures.
-- [x] Full validation passes: `pnpm install --frozen-lockfile`, `pnpm test`, `pnpm typecheck`, `pnpm run check:lifecycle-control`, `pnpm run lint`, `pnpm run build` (admin dashboard on Next `16.2.11`), JSON/YAML/OpenSpec/docs structural checks, and `git diff --check`.
+- [x] Full validation passes: `pnpm install --frozen-lockfile`, `pnpm test`, `pnpm typecheck`, `pnpm run check:lifecycle-control`, `pnpm run lint`, `pnpm run build` (admin dashboard on Next `15.5.18`), JSON/YAML/OpenSpec/docs structural checks, and `git diff --check`.
 - [x] `git diff --check` passes for the remediation diff. Independent external review/approval remains unchecked and is the only review gate outside this implementation.

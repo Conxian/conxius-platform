@@ -1236,3 +1236,43 @@ AGENTS.md (this update)
 - Do not infer scheduled `Synthesize` coverage from the successful manual dispatch; it validated Ingest, Research, Health, and the artifact repair only.
 - Do not claim Docker-local execution; only the hosted Synergy/Server/Cloud evidence is available.
 - Keep the documentation follow-up limited to the two requested files and preserve the existing OpenSpec proposal/design scope.
+### 2026-07-21 — PR #1171 TypeScript/Next.js Compatibility Repair
+**Trigger**: PR #1171 CI failures in the admin-dashboard Docker build.
+**What was done**:
+- Added the minimal OpenSpec change artifact at `openspec/changes/2026-07-21-typescript-next-compatibility/`.
+- Restored TypeScript `^6.0.3` in all three workspace manifests changed by the grouped dependency update.
+- Regenerated `pnpm-lock.yaml` with pnpm `9.15.5`, retaining Vite `8.1.5` and `@types/node` `26.1.1`.
+- Validated frozen installation, workspace typecheck/tests, local Next build equivalents, dependency versions, and diff hygiene.
+**Key discoveries**:
+- The observed failure is a Next.js build-time compiler discovery incompatibility with TypeScript `7.0.2`; it is not an application type error.
+- The exact Docker and Compose checks could not run because Docker and `docker-compose` are unavailable in the execution environment.
+**Files touched**:
+- `services/admin-dashboard/package.json`
+- `services/admin-pulse-bos/package.json`
+- `services/elizaos-plugin-conxian/package.json`
+- `pnpm-lock.yaml`
+- `openspec/changes/2026-07-21-typescript-next-compatibility/`
+- `AGENTS.md`
+**Gaps identified**:
+- Re-run the exact Docker and Compose build checks in CI or a Docker-enabled environment.
+**Gotchas**:
+- PR #1171's head branch is a Dependabot branch with merge commits; repair was applied directly without rebasing or rewriting history.
+
+### 2026-07-22 — PR #1170 Mainline Merge
+**Trigger**: PR #1170 request to merge the current `origin/main` into the existing Dependabot head branch.
+**What was done**:
+- Fetched `origin/main` at `eee5d099dbde1072dd8a6fe32603258996c36f1d` and merged it into `dependabot/npm_and_yarn/services/admin-dashboard/dashboard-dependencies-8387d3cff7` without rebasing or force-pushing.
+- Resolved `AGENTS.md` by retaining both existing PR #1170 and PR #1171 continuity entries, resolved the root manifest dependency overlap, and regenerated `pnpm-lock.yaml` with pnpm `9.15.5`.
+- Verified the frozen workspace install, admin-dashboard typecheck/tests/build, admin-pulse-bos typecheck/tests, workspace typecheck/tests, conflict-marker absence, and merge state.
+**Key discoveries**:
+- The checkout was shallow at `cdf53217ade89ceae9331f71585e3d9790e90660`; deepening the local history was required before Git could identify merge base `e9dde87c60b5ab88aafc698a6e1df84e7478fee1`.
+- The final root dependency state preserves the PR's locked `tsx` KB runner and the mainline `vite` `8.1.5` update.
+**Files touched**:
+- `AGENTS.md`
+- `package.json`
+- `pnpm-lock.yaml`
+- Mainline files brought into the merge: `openspec/changes/2026-07-21-typescript-next-compatibility/`, `services/admin-pulse-bos/package.json`, `services/admin-pulse-bos/src/__tests__/SovereignFinancialOffice.test.tsx`, and `services/admin-pulse-bos/vitest.config.ts`
+**Gaps identified**:
+- Hosted checks must be re-evaluated on the pushed merge commit.
+**Gotchas**:
+- Do not treat the initial shallow-clone `refusing to merge unrelated histories` message as a repository divergence; after local history deepening, the normal merge completed with three content conflicts.

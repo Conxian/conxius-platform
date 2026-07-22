@@ -10,6 +10,11 @@
  */
 
 import { NextResponse } from "next/server";
+import {
+  getM2MKeyStore,
+  parseM2MServiceKeyHeader,
+} from "./m2mKeyStore";
+import { isRotatableServiceId, type RotatableServiceId } from "./m2mKeyTypes";
 
 // Service identifiers for the platform
 export type ServiceId = 
@@ -101,6 +106,7 @@ export class M2MConfig {
     if (process.env.SERVICE_KEY_ORBIT) keys.orbit = process.env.SERVICE_KEY_ORBIT;
     if (process.env.SERVICE_KEY_WALLET) keys.wallet = process.env.SERVICE_KEY_WALLET;
     if (process.env.SERVICE_KEY_UI) keys.ui = process.env.SERVICE_KEY_UI;
+    if (process.env.SERVICE_KEY_ADMIN_DASHBOARD) keys['admin-dashboard'] = process.env.SERVICE_KEY_ADMIN_DASHBOARD;
     if (process.env.SERVICE_KEY_PULSE_BOS) keys['pulse-bos'] = process.env.SERVICE_KEY_PULSE_BOS;
     
     return keys as Record<ServiceId, string>;
@@ -143,8 +149,10 @@ export class M2MConfig {
 export interface AuthResult {
   valid: boolean;
   serviceId?: ServiceId;
+  generation?: number;
   scopes?: Scope[];
   error?: string;
+  unavailable?: boolean;
   source?: 'api-key' | 'service-key' | 'jwt' | 'external-key';
 }
 
@@ -187,36 +195,41 @@ export class M2MAuthenticator {
    * Validate service-to-service key from X-Service-Key header
    * Header format: X-Service-Key: <service-id>:<key>
    */
-  validateServiceKey(headerValue: string | null): AuthResult {
+  validateServiceKey(headerValue: string | null, expectedServiceId?: RotatableServiceId): AuthResult {
     if (!headerValue) {
       return { valid: false, error: 'Missing service key' };
     }
 
-    const parts = headerValue.split(':');
-    if (parts.length < 2) {
+    const separatorIndex = headerValue.indexOf(':');
+    if (separatorIndex <= 0) {
       return { valid: false, error: 'Invalid service key format' };
     }
 
-    const [serviceId, key] = parts;
-    
-    if (!Object.values(['gateway', 'elizaos', 'nexus', 'orbit', 'wallet', 'ui', 'admin-dashboard', 'pulse-bos', 'external'] as const).includes(serviceId as ServiceId)) {
-      return { valid: false, error: 'Unknown service ID' };
+    const parsed = parseM2MServiceKeyHeader(headerValue, expectedServiceId);
+    if (!parsed) {
+      const serviceId = headerValue.slice(0, separatorIndex);
+      if (!isRotatableServiceId(serviceId)) {
+        return { valid: false, error: 'Unknown service ID' };
+      }
+      return { valid: false, error: 'Invalid service key format' };
     }
 
-    const expectedKey = this.config.getServiceKey(serviceId as ServiceId);
-    
-    if (!expectedKey) {
-      return { valid: false, error: 'Service key not configured' };
+    let validation: ReturnType<ReturnType<typeof getM2MKeyStore>['validateServiceSecret']>;
+    try {
+      validation = getM2MKeyStore().validateServiceSecret(parsed.serviceId, parsed.secret);
+    } catch {
+      return { valid: false, error: 'Service key registry unavailable', unavailable: true };
     }
 
-    if (key !== expectedKey) {
+    if (!validation.valid) {
       return { valid: false, error: 'Invalid service key' };
     }
 
     return {
       valid: true,
-      serviceId: serviceId as ServiceId,
-      scopes: this.config.getServiceScopes(serviceId as ServiceId),
+      serviceId: parsed.serviceId,
+      generation: validation.generation,
+      scopes: this.config.getServiceScopes(parsed.serviceId),
       source: 'service-key'
     };
   }
@@ -293,9 +306,14 @@ export function validateM2MAuth(request: Request): NextResponse | null {
   const result = auth.authenticate(request);
 
   if (!result.valid) {
-    console.warn(`M2M Auth failed: ${result.error} from ${request.headers.get('x-forwarded-for') || 'unknown'}`);
+    if (result.unavailable) {
+      return NextResponse.json(
+        { error: 'm2m_registry_unavailable', message: 'M2M registry is unavailable' },
+        { status: 503 },
+      );
+    }
     return NextResponse.json(
-      { error: 'Unauthorized', message: result.error },
+      { error: 'Unauthorized', message: 'Unauthorized' },
       { status: 401 }
     );
   }
@@ -311,9 +329,18 @@ export function validateM2MAuthWithScope(request: Request, requiredScope: Scope)
   const result = auth.authenticate(request);
 
   if (!result.valid) {
+    if (result.unavailable) {
+      return {
+        response: NextResponse.json(
+          { error: 'm2m_registry_unavailable', message: 'M2M registry is unavailable' },
+          { status: 503 },
+        ),
+        auth: result,
+      };
+    }
     return {
       response: NextResponse.json(
-        { error: 'Unauthorized', message: result.error },
+        { error: 'Unauthorized', message: 'Unauthorized' },
         { status: 401 }
       ),
       auth: result

@@ -14,26 +14,26 @@
 
 ## Follow-up implementation tasks
 
-- [ ] **T1 — Define the storage abstraction and file backend.** Implement a
+- [x] **T1 — Define the storage abstraction and file backend.** Implement a
   versioned registry store with hash-only service records, monotonic revisions,
   atomic write/rename, mode-restricted files, bounded inter-process locking,
   durable candidate/journal and commit-marker recovery, recovery-required health
   latching, explicit persistent-path configuration, and future-backend seams.
-- [ ] **T2 — Implement environment bootstrap.** Map all supported environment
+- [x] **T2 — Implement environment bootstrap.** Map all supported environment
   keys, including `SERVICE_KEY_ADMIN_DASHBOARD`, into generation-1 records only
   when creating the registry for the first time; persist bootstrap audit events
   atomically; never overwrite or later auto-create registry records from
   environment drift.
-- [ ] **T3 — Implement secret generation and validation.** Generate 32 random
+- [x] **T3 — Implement secret generation and validation.** Generate 32 random
   bytes from the OS CSPRNG, encode as unpadded base64url, hash the exact
   transport value, compare digests with timing-safe equality, and enforce active
   versus previous grace/expiry semantics.
-- [ ] **T4 — Implement admin-only rotation.** Add
+- [x] **T4 — Implement admin-only rotation.** Add
   `POST /api/v1/m2m/service-keys/:serviceId/rotate`, require the admin API key
   only, validate request bounds, re-check `expectedGeneration` under lock, and
   return the generated secret exactly once with `Cache-Control: no-store`.
   Implement the documented JSON error envelope and conflict recovery metadata.
-- [ ] **T5 — Implement the optional metadata endpoint.** If enabled, add
+- [x] **T5 — Implement the optional metadata endpoint.** If enabled, add
   `GET /api/v1/m2m/service-keys` with admin-only authorization and metadata-only
   serialization; prove that hashes and secrets cannot appear in the response.
 - [ ] **T6 — Implement audit and expiry state.** Persist successful bootstrap,
@@ -41,7 +41,7 @@
   transaction as registry state; use effective previous deadlines; expose the
   required bounded Prometheus metrics; make threshold markers idempotent; do not
   add Slack/email calls.
-- [ ] **T7 — Implement failure and recovery behavior.** Return the exact error
+- [x] **T7 — Implement failure and recovery behavior.** Return the exact error
   codes/statuses, fail closed on malformed/unwritable state, surface lock
   contention as retryable `503` with `Retry-After`, recover only a
   marker-qualified candidate after a crash, distinguish pre-marker aborts from

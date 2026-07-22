@@ -111,13 +111,13 @@ The canonical spec and aggregator MUST define complete, partial, failed, cancell
 
 The canonical spec MUST define a versioned machine-readable handover document that includes source/target identity when known, graph and correlation IDs, lifecycle state, completed/active/blocked/pending tasks, artifact references with digests, decisions, risks/blockers, unresolved conflicts, bounded context snapshot, and deterministic resume instructions. A handover MUST be self-describing and MUST not depend on hidden process memory or prose-only fields.
 
-**Pass when** a fresh validator can reject malformed or incomplete handovers and a fresh agent can identify exactly what is resumable, blocked, stale, or unresolved from the document alone.
+**Pass when** a fresh validator supplied with the referenced graph and the validated #1162 allowlist/discovery provenance can reject malformed, incomplete, or locally re-digested unallowlisted handovers, and a fresh agent can identify exactly what is resumable, blocked, stale, or unresolved from the document plus those explicit validation inputs.
 
 ### AC-5 — Session context sharing
 
 The canonical spec and context validator MUST allow only #1162-declared repository sources or explicit task inputs, enforce item/byte/depth bounds, require provenance and redaction metadata, and expose precedence and staleness. Current task instructions and governance/canonical sources MUST outrank operational, evidence, historical, and agent-assumption context. Stale or truncated context MUST be marked and MUST NOT silently satisfy a current requirement.
 
-**Pass when** the same context inputs produce the same resolved snapshot, conflicts are explained by precedence/freshness, unallowlisted or over-bound inputs fail closed, and no raw secret or hidden repository file is admitted.
+**Pass when** the same context inputs produce the same resolved snapshot, conflicts are explained by precedence/freshness, unallowlisted or over-bound inputs fail closed at packaging and handover/envelope revalidation boundaries, and no raw secret or hidden repository file is admitted.
 
 ### Cross-cutting deterministic/security criteria
 

@@ -66,12 +66,16 @@ Every normative timestamp MUST be an RFC 3339 date-time with:
 - a four-digit non-zero year;
 - month `01`–`12`, valid day for that month and year, hour `00`–`23`, minute
   and second `00`–`59`;
-- optional fractional seconds with one to nine digits; and
+- optional fractional seconds with one to three digits (millisecond profile); and
 - `Z` or a numeric offset whose hour is `00`–`23` and minute is `00`–`59`.
 
 Impossible calendar dates, including non-leap-year February 29 and April 31,
 and invalid month/day/hour/offset values MUST be rejected. A valid timestamp
-MUST normalize deterministically to UTC ISO form before comparison or hashing.
+MUST normalize deterministically to UTC ISO form with exactly three fractional
+digits before comparison or hashing. Fractional precision from four through
+nine digits MUST be rejected rather than rounded or silently truncated. Offset
+normalization MUST also remain within the supported four-digit, non-zero year
+range.
 Date parser rollover behavior MUST NOT be used as validation.
 
 ## 5. Envelope, lifecycle, and replay semantics (AC-1)
@@ -223,6 +227,16 @@ Envelope validation and envelope replay/deduplication that carry a handover
 payload MUST receive the same referenced graph through their validation options;
 they MUST reject the payload when that graph input is absent or does not match.
 
+Handover creation, validation, resumability assessment, and envelope validation
+or replay/deduplication of a handover MUST also receive the validated derived
+`ContextAllowlist` and the successful #1162 `DiscoveryResult` that produced its
+manifest/registry provenance. Each boundary MUST revalidate the allowlist's
+internal path digest, `discovery_digest`, manifest/registry identity and
+versions, and every embedded context source against that allowlist. A locally
+recomputed context-entry, snapshot, handover, or envelope digest MUST NOT make
+an unallowlisted source authoritative. This provenance check is distinct from
+transport authentication, which remains envelope-only.
+
 Every handover conflict MUST contain at least two distinct `payload_digests`.
 The JSON Schema and runtime validator MUST enforce this minimum.
 
@@ -255,11 +269,14 @@ v1 allowlist contract is versioned as
 - `repository_paths_digest`; and
 - `discovery_digest` derived from the validated discovery result.
 
-`packageContext()` MUST validate both the allowlist's internal digest and its
-provenance against the supplied #1162 discovery result before admitting any
-context. Task-input keys, artifact IDs, and assumption keys MAY be explicitly
-provided by a caller, but repository paths MUST be traceable to sources
-declared by #1162 with matching tier metadata.
+`packageContext()` and any later boundary that validates an embedded snapshot
+MUST validate both the allowlist's internal digest and its provenance against
+the supplied #1162 discovery result before admitting any context. Task-input
+keys, artifact IDs, and assumption keys MAY be explicitly provided by a caller,
+but repository paths MUST be traceable to sources declared by #1162 with
+matching tier metadata. The structural schema carries `allowlist_digest`; the
+runtime API carries the allowlist and discovery result as mandatory validation
+inputs for handovers and handover envelopes.
 
 The coordination validator does not read the filesystem, environment, or
 network and does not resolve symlinks. An adapter that loads content remains

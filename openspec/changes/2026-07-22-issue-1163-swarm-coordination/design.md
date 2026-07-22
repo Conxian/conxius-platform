@@ -151,7 +151,7 @@ integrity
 
 Task arrays are sorted by graph order and then `task_id`; decisions, risks, and resume instructions have stable keys and explicit sequence numbers. Artifact locators are opaque references and do not grant access. A handover may identify a target agent, but it must remain valid when no target is known.
 
-The handover is a snapshot, not mutable shared memory. A resumed agent emits a new envelope and links it to the handover through `causation_id` and `correlation_id`. Missing required state, an invalid graph reference, stale mandatory context, or a failed digest check makes the handover invalid rather than partially executable.
+The handover is a snapshot, not mutable shared memory. A resumed agent emits a new envelope and links it to the handover through `causation_id` and `correlation_id`. Missing required state, an invalid graph reference, stale mandatory context, failed digest check, or missing/mismatched #1162 allowlist/discovery provenance makes the handover invalid rather than partially executable. `createHandover()`, `validateHandover()`, `assessHandoverResumability()`, and handover-envelope validation/deduplication receive the derived `ContextAllowlist` and its source `DiscoveryResult` as explicit validation inputs; the snapshot's `allowlist_digest` is evidence, not a substitute for those inputs.
 
 ## 6. Bounded session context
 
@@ -196,7 +196,7 @@ For shared context resolution, the precedence order is:
 
 This ordering follows the repository governance and information hierarchy. The current task is outside the snapshot and retains task-level authority over supplemental context. When entries at the same precedence conflict, non-stale entries outrank stale entries, then the newest valid `captured_at`, then the lexicographically smallest provenance digest. The resolver MUST retain a conflict record whenever lower-precedence values were discarded.
 
-Stale entries remain available for provenance but cannot satisfy a current required key unless the task explicitly opts into stale evidence. Expired entries cannot satisfy requirements at all. Unknown precedence, missing timestamps where required, or unparseable time values fail closed.
+Stale entries remain available for provenance but cannot satisfy a current required key unless the task explicitly opts into stale evidence. Expired entries cannot satisfy requirements at all. Unknown precedence, missing timestamps where required, or unparseable time values fail closed. The accepted timestamp profile has zero through three fractional digits; four through nine fractional digits are rejected rather than rounded.
 
 ## 7. Stable serialization and hashing
 
@@ -206,7 +206,7 @@ All normative objects use a canonical JSON profile:
 2. Object keys sorted lexicographically using the RFC 8785 JSON Canonicalization Scheme (JCS) rules.
 3. Arrays retain semantic order; set-like arrays are sorted by the field documented for that array.
 4. Duplicate object keys, `NaN`, `Infinity`, non-finite numbers, and implementation-specific values are rejected.
-5. Timestamps use RFC 3339 UTC with normalized precision; monetary/quantity values use integers or decimal strings rather than binary floating point.
+5. Timestamps use an RFC 3339 millisecond profile (zero through three input fractional digits, canonical UTC with exactly three fractional digits); monetary/quantity values use integers or decimal strings rather than binary floating point.
 6. Hashes are domain-separated SHA-256 values encoded as `sha256:<lowercase-hex>`.
 7. An integrity digest is calculated over the canonical object with its digest/signature field omitted, preventing recursive hashing.
 

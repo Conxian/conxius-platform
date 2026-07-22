@@ -26,7 +26,7 @@
     "timestamp": {
       "type": "string",
       "format": "date-time",
-      "pattern": "^(?!0000-)(\\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])T([01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,9})?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+      "pattern": "^(?!0000-)(\\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])T([01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,3})?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
     },
     "jsonValue": {
       "oneOf": [
@@ -339,6 +339,7 @@
       "properties": { "max_items": { "type": "integer", "minimum": 1 }, "max_total_bytes": { "type": "integer", "minimum": 1 }, "max_entry_bytes": { "type": "integer", "minimum": 1 }, "max_depth": { "type": "integer", "minimum": 1 } }
     },
     "contextSnapshot": {
+      "$comment": "At handover and embedded-envelope validation boundaries, the runtime validator must receive and verify the derived #1162 ContextAllowlist and DiscoveryResult; allowlist_digest alone is not authoritative.",
       "type": "object", "additionalProperties": false,
       "required": ["schema", "captured_at", "evaluated_at", "entries", "required_keys", "missing_required", "stale_required", "expired_required", "conflicts", "warnings", "limits", "allowlist_digest", "integrity"],
       "properties": {
@@ -388,6 +389,7 @@
       "properties": { "conflict_id": { "$ref": "#/$defs/identifier" }, "object_id": { "$ref": "#/$defs/identifier" }, "payload_digests": { "type": "array", "minItems": 2, "uniqueItems": true, "items": { "$ref": "#/$defs/digest" } }, "resolution_required": { "type": "boolean" }, "links": { "type": "array", "items": { "$ref": "#/$defs/link" } } }
     },
     "handover": {
+      "$comment": "Runtime create/validate/resumability and handover-envelope replay validation require the referenced TaskGraph plus the derived #1162 ContextAllowlist and DiscoveryResult as out-of-band validation inputs.",
       "type": "object", "additionalProperties": false,
       "required": ["schema", "handover_id", "correlation_id", "graph_id", "graph_digest", "captured_at", "expires_at", "lifecycle_state", "completed_tasks", "active_tasks", "blocked_tasks", "pending_tasks", "decisions", "artifacts", "unresolved_conflicts", "risks_and_blockers", "resume_instructions", "context_snapshot", "links", "integrity"],
       "properties": {

@@ -1318,10 +1318,15 @@ AGENTS.md (this update)
 - Added the canonical normative contract at `openspec/specs/swarm-coordination-v1.spec.md` and reconciled the proposal, design, spec delta, checklist, schema, runtime, tests, and docs.
 - Hardened capability matching, effective-now freshness, exact semantic result fingerprints, strict RFC 3339 calendar/offset validation, lifecycle sequence bounds, graph context budgets, and graph-linked handover validation.
 - Added versioned/digested #1162 allowlist provenance, explicit `.agents` source handling, tamper tests, prototype-key-safe JSON normalization/redaction, handover conflict cardinality checks, envelope-only authentication semantics, and Ajv 2020 schema fixtures.
+- Closed the second independent review's handover provenance gap: creation, validation, resumability, and handover-envelope replay/deduplication now require and revalidate the derived #1162 `ContextAllowlist` plus source `DiscoveryResult`; a locally re-digested `docs/not-allowlisted.md` snapshot is rejected.
+- Adopted the strict RFC 3339 millisecond profile across runtime, schema, canonical spec, change artifacts, docs, and digest tests; four-to-nine fractional digits are rejected instead of truncated.
+- Restored the root Next override and lockfile importer to `16.2.11`, kept Ajv explicitly pinned, and pinned only the admin dashboard compiler to TypeScript `6.0.3` because Next `16.2.11` requires `typescript/lib/typescript.js`; other workspace TypeScript `7.0.2` declarations remain unchanged.
 - Updated onboarding and session continuity documentation, retained focused CI commands, and recorded the implementation boundary without modifying #1162 artifacts or communicating externally.
 **Key discoveries**:
 - The implementation remains intentionally concentrated in `scripts/agent-coordination.ts` with structural contracts in `schemas/agent-swarm.schema.json`; the canonical normative source is now present at `openspec/specs/swarm-coordination-v1.spec.md`.
 - Root focused commands remain `test:agent-coordination` and `typecheck:agent-coordination`; Ajv 2020 and `ajv-formats` are explicit dev dependencies used by schema tests.
+- `context.allowlist_digest` and local entry/snapshot digests are content-integrity evidence, not transport authentication or authority; handover APIs must receive the authoritative derived allowlist and discovery result out of band.
+- Next `16.2.11` does not recognize TypeScript `7.0.2`'s compiler layout during its build-time dependency probe, so the dashboard uses the narrow `6.0.3` compatibility pin rather than changing the other workspace compilers.
 - The protocol validates and preserves evidence but does not provide transport delivery, provider selection, scheduling, broker behavior, or skill execution; authentication is only an envelope validation concern.
 **Files touched**:
 - `openspec/specs/swarm-coordination-v1.spec.md`
@@ -1330,6 +1335,7 @@ AGENTS.md (this update)
 - `scripts/agent-coordination.ts`
 - `scripts/agent-coordination.test.ts`
 - `package.json` and `pnpm-lock.yaml`
+- `services/admin-dashboard/package.json` and `services/admin-dashboard/tsconfig.json`
 - `docs/AGENT_ONBOARDING.md` and `docs/SESSION_CONTINUITY.md`
 - `AGENTS.md`
 **Gaps identified**:
@@ -1338,3 +1344,4 @@ AGENTS.md (this update)
 **Gotchas**:
 - Do not describe `conxian.swarm` as a scheduler, queue, broker, or provider runtime; it is a transport-neutral validation/interchange layer.
 - Do not treat a caller-provided free-form repository allowlist as authoritative; derive and validate it from #1162 discovery provenance.
+- Next `16.2.11` normalizes the dashboard `tsconfig.json` JSX mode to `react-jsx`; keep that generated compatibility change in the buildable tree.

@@ -15,6 +15,7 @@ import {
   ContextAllowlist,
   ContextInput,
   ContextLimits,
+  ContextSnapshot,
   TaskGraph,
   TaskNode,
   TaskResult,
@@ -112,6 +113,10 @@ function makeAllowlist(overrides: Parameters<typeof deriveContextAllowlist>[1] =
   return deriveContextAllowlist(DISCOVERY, { ...overrides, repository_paths: repositoryPaths });
 }
 
+function provenance(allowlist: ContextAllowlist = emptyAllowlist) {
+  return { allowlist, discovery: DISCOVERY };
+}
+
 function contextInput(overrides: Partial<ContextInput> = {}): ContextInput {
   return {
     context_id: 'context-1',
@@ -201,6 +206,11 @@ test('result validation enforces IDs, statuses, payload digest, and failure link
   const success = validateTaskResult(result('task-a', { output: 'ok' }));
   assert.equal(success.status, 'SUCCEEDED');
   assert.equal(validateTaskResult({ ...success, completed_at: '2026-07-22T08:00:00-04:00' }).completed_at, NOW);
+  assert.equal(validateTaskResult({ ...success, completed_at: '2026-07-22T12:00:00.1Z' }).completed_at, '2026-07-22T12:00:00.100Z');
+  assert.equal(validateTaskResult({ ...success, completed_at: '2026-07-22T12:00:00.12Z' }).completed_at, '2026-07-22T12:00:00.120Z');
+  const firstMillisecond = validateTaskResult({ ...success, completed_at: '2026-07-22T12:00:00.123Z' });
+  const nextMillisecond = validateTaskResult({ ...success, completed_at: '2026-07-22T12:00:00.124Z' });
+  assert.notEqual(digestFor('test.timestamp', firstMillisecond.completed_at), digestFor('test.timestamp', nextMillisecond.completed_at));
   for (const timestamp of [
     '2026-02-29T00:00:00Z',
     '2026-04-31T00:00:00Z',
@@ -208,6 +218,14 @@ test('result validation enforces IDs, statuses, payload digest, and failure link
     '2026-01-01T24:00:00Z',
     '2026-01-01T00:00:00+01:60',
     '0000-01-01T00:00:00Z',
+    '0001-01-01T00:00:00+01:00',
+    '9999-12-31T23:59:59-01:00',
+    '2026-01-01T00:00:00.1234Z',
+    '2026-01-01T00:00:00.12345Z',
+    '2026-01-01T00:00:00.123456Z',
+    '2026-01-01T00:00:00.1234567Z',
+    '2026-01-01T00:00:00.12345678Z',
+    '2026-01-01T00:00:00.123456789Z',
   ]) {
     expectCode(() => validateTaskResult({ ...success, completed_at: timestamp }), 'INVALID_TIMESTAMP');
   }
@@ -417,12 +435,12 @@ test('handover construction includes graph state, decisions, risks, conflicts, c
     risks_and_blockers: [{ risk_id: 'risk-1', severity: 'MEDIUM', status: 'OPEN', description: 'task-b has unresolved evidence', links: [] }],
     resume_instructions: [{ instruction_id: 'resume-1', sequence: 1, task_id: 'task-b', action: 'VERIFY', depends_on: ['task-a'], acceptance: 'verify the selected evidence before retrying', links: [] }],
     context_snapshot: emptyContext(), links: [{ relation: 'graph', target_id: 'graph-1', locator: 'urn:graph:graph-1' }],
-  }, graph);
-  assert.equal(validateHandover(handover, { graph }).handover_id, 'handover-1');
+  }, graph, provenance());
+  assert.equal(validateHandover(handover, { graph, ...provenance() }).handover_id, 'handover-1');
   assert.deepEqual(handover.completed_tasks.map((entry) => entry.task_id), ['task-a']);
   assert.deepEqual(handover.pending_tasks.map((entry) => entry.task_id), ['task-c']);
   assert.equal(handover.integrity.digest.startsWith('sha256:'), true);
-  const assessment = assessHandoverResumability(handover, graph, NOW);
+  const assessment = assessHandoverResumability(handover, { graph, ...provenance(), now: NOW });
   assert.equal(assessment.valid, true);
   assert.equal(assessment.resumable, false);
   assert.deepEqual(assessment.unresolved_conflict_ids, ['conflict-1']);
@@ -432,16 +450,17 @@ test('handover validation rejects missing fields, bad task linkage, stale contex
   const graph = graphFixture();
   const base = createHandover({
     handover_id: 'handover-2', correlation_id: 'correlation-1', graph_id: 'graph-1', captured_at: NOW, expires_at: FUTURE, lifecycle_state: 'STARTED', completed_tasks: [], active_tasks: [], blocked_tasks: [], pending_tasks: [], decisions: [], artifacts: [], unresolved_conflicts: [], risks_and_blockers: [], resume_instructions: [], context_snapshot: emptyContext(), links: [],
-  }, graph);
+  }, graph, provenance());
   const missing = { ...base } as Record<string, unknown>;
   delete missing.resume_instructions;
-  expectCode(() => validateHandover(missing, { graph }), 'INVALID_CONTRACT');
-  expectCode(() => validateHandover({ ...base, graph_id: 'graph-other' }, { graph }), 'INVALID_HANDOVER');
-  expectCode(() => validateHandover({ ...base, integrity: { ...base.integrity, digest: DIGEST } }, { graph }), 'INVALID_DIGEST');
-  expectCode(() => createHandover({ ...base, handover_id: 'handover-3', completed_tasks: [{ task_id: 'missing', state: 'COMPLETED', links: [] }] }, graph), 'INVALID_HANDOVER');
-  const staleContext = packageContext([contextInput({ stale_after: '2026-07-22T12:30:00Z' })], { allowlist: makeAllowlist({ task_input_keys: ['instructions'], required_task_input_keys: ['instructions'] }), discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW });
-  const staleHandover = createHandover({ ...base, handover_id: 'handover-stale', context_snapshot: staleContext }, graph);
-  const staleAssessment = assessHandoverResumability(staleHandover, graph, LATER);
+  expectCode(() => validateHandover(missing, { graph, ...provenance() }), 'INVALID_CONTRACT');
+  expectCode(() => validateHandover({ ...base, graph_id: 'graph-other' }, { graph, ...provenance() }), 'INVALID_HANDOVER');
+  expectCode(() => validateHandover({ ...base, integrity: { ...base.integrity, digest: DIGEST } }, { graph, ...provenance() }), 'INVALID_DIGEST');
+  expectCode(() => createHandover({ ...base, handover_id: 'handover-3', completed_tasks: [{ task_id: 'missing', state: 'COMPLETED', links: [] }] }, graph, provenance()), 'INVALID_HANDOVER');
+  const staleAllowlist = makeAllowlist({ task_input_keys: ['instructions'], required_task_input_keys: ['instructions'] });
+  const staleContext = packageContext([contextInput({ stale_after: '2026-07-22T12:30:00Z' })], { allowlist: staleAllowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW });
+  const staleHandover = createHandover({ ...base, handover_id: 'handover-stale', context_snapshot: staleContext }, graph, provenance(staleAllowlist));
+  const staleAssessment = assessHandoverResumability(staleHandover, { graph, ...provenance(staleAllowlist), now: LATER });
   assert.equal(staleAssessment.resumable, false);
   assert.deepEqual(staleAssessment.stale_context_ids, ['task:instructions']);
 });
@@ -499,22 +518,61 @@ test('prototype-key JSON values round-trip and redact without prototype pollutio
   assert.deepEqual(parseCanonicalJson(canonicalJson(redacted.value)), redacted.value);
 });
 
-test('graph context budgets and handover graph/authentication boundaries are enforced', () => {
+test('graph context budgets and handover graph/authentication/provenance boundaries are enforced', () => {
   const smallGraph = { ...graphFixture(), limits: { ...graphFixture().limits, max_context_bytes: 32 } };
   expectCode(() => packageContext([contextInput({ value: 'a'.repeat(128) })], { allowlist: makeAllowlist({ task_input_keys: ['instructions'], required_task_input_keys: ['instructions'] }), discovery: DISCOVERY, graph: smallGraph, limits: emptyLimits, captured_at: NOW, now: NOW }), 'CONTEXT_LIMIT');
 
   const graph = graphFixture();
-  const handover = createHandover({ handover_id: 'boundary-handover', correlation_id: 'correlation-1', graph_id: 'graph-1', captured_at: NOW, expires_at: FUTURE, lifecycle_state: 'STARTED', completed_tasks: [], active_tasks: [], blocked_tasks: [], pending_tasks: [], decisions: [], artifacts: [], unresolved_conflicts: [], risks_and_blockers: [], resume_instructions: [], context_snapshot: emptyContext(), links: [] }, graph);
-  expectCode(() => validateHandover({ ...handover, graph_digest: DIGEST }, { graph }), 'INVALID_HANDOVER');
-  expectCode(() => validateHandover({ ...handover, integrity: { ...handover.integrity, authentication: { scheme: 'signature', verified: true, subject: 'agent-a' } } }, { graph }), 'UNKNOWN_FIELD');
+  const handover = createHandover({ handover_id: 'boundary-handover', correlation_id: 'correlation-1', graph_id: 'graph-1', captured_at: NOW, expires_at: FUTURE, lifecycle_state: 'STARTED', completed_tasks: [], active_tasks: [], blocked_tasks: [], pending_tasks: [], decisions: [], artifacts: [], unresolved_conflicts: [], risks_and_blockers: [], resume_instructions: [], context_snapshot: emptyContext(), links: [] }, graph, provenance());
+  expectCode(() => validateHandover({ ...handover, graph_digest: DIGEST }, { graph, ...provenance() }), 'INVALID_HANDOVER');
+  expectCode(() => validateHandover({ ...handover, integrity: { ...handover.integrity, authentication: { scheme: 'signature', verified: true, subject: 'agent-a' } } }, { graph, ...provenance() }), 'UNKNOWN_FIELD');
 
   const handoverEnvelope = createEnvelope({
     message_id: 'handover-message-1', message_type: 'handover', sender: { agent_id: 'agent-a' }, recipient: { agent_id: 'agent-b' },
     correlation_id: 'correlation-1', idempotency_scope: 'workflow-1', idempotency_key: 'handover-key',
     lifecycle: { state: 'STARTED', sequence: 2, expires_at: FUTURE }, payload: { kind: 'handover', handover, links: [] }, links: [],
-  }, { graph });
+  }, { graph, ...provenance() });
   expectCode(() => deduplicateEnvelopes([handoverEnvelope]), 'INVALID_HANDOVER');
-  assert.equal(deduplicateEnvelopes([handoverEnvelope], { graph }).unique.length, 1);
+  expectCode(() => deduplicateEnvelopes([handoverEnvelope], { graph }), 'CONTEXT_NOT_ALLOWED');
+  assert.equal(deduplicateEnvelopes([handoverEnvelope], { graph, ...provenance() }).unique.length, 1);
+});
+
+test('handover provenance rejects a self-consistent unallowlisted context after local digest recomputation', () => {
+  const graph = graphFixture();
+  const allowlist = makeAllowlist({ task_input_keys: ['instructions'], required_task_input_keys: ['instructions'] });
+  const snapshot = packageContext([contextInput()], { allowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW });
+  const originalEntry = snapshot.entries[0];
+  assert.ok(originalEntry);
+
+  const forgedEntryRecord: Record<string, unknown> = {
+    ...originalEntry,
+    source: { kind: 'DECLARED_REPOSITORY', path: 'docs/not-allowlisted.md', tier: 'ARCHITECTURAL' },
+    precedence: 500,
+  };
+  delete forgedEntryRecord.provenance_digest;
+  const forgedEntry = {
+    ...forgedEntryRecord,
+    provenance_digest: digestFor('conxian.swarm.context-entry.v1', forgedEntryRecord),
+  };
+  const forgedSnapshotRecord: Record<string, unknown> = {
+    ...snapshot,
+    entries: [forgedEntry],
+    required_keys: ['repo:docs/not-allowlisted.md'],
+    missing_required: [],
+    stale_required: [],
+    expired_required: [],
+  };
+  delete forgedSnapshotRecord.integrity;
+  const forgedSnapshot = {
+    ...forgedSnapshotRecord,
+    integrity: { digest: digestFor('conxian.swarm.context.v1', forgedSnapshotRecord) },
+  } as unknown as ContextSnapshot;
+
+  assert.doesNotThrow(() => validateContextSnapshot(forgedSnapshot));
+  const validHandover = createHandover({
+    handover_id: 'provenance-base', correlation_id: 'correlation-1', graph_id: 'graph-1', captured_at: NOW, expires_at: FUTURE, lifecycle_state: 'STARTED', completed_tasks: [], active_tasks: [], blocked_tasks: [], pending_tasks: [], decisions: [], artifacts: [], unresolved_conflicts: [], risks_and_blockers: [], resume_instructions: [], context_snapshot: snapshot, links: [],
+  }, graph, provenance(allowlist));
+  expectCode(() => createHandover({ ...validHandover, handover_id: 'provenance-forged', context_snapshot: forgedSnapshot }, graph, provenance(allowlist)), 'CONTEXT_NOT_ALLOWED');
 });
 
 test('JSON Schema validation covers valid and invalid protocol fixtures', () => {
@@ -529,13 +587,14 @@ test('JSON Schema validation covers valid and invalid protocol fixtures', () => 
   const validGraph = graphFixture();
   const validResult = result('task-a', { output: 'schema' });
   const validContext = emptyContext();
-  const validHandover = createHandover({ handover_id: 'schema-handover', correlation_id: 'schema-correlation', graph_id: 'graph-1', captured_at: NOW, expires_at: FUTURE, lifecycle_state: 'STARTED', completed_tasks: [], active_tasks: [], blocked_tasks: [], pending_tasks: [], decisions: [], artifacts: [], unresolved_conflicts: [], risks_and_blockers: [], resume_instructions: [], context_snapshot: validContext, links: [] }, validGraph);
+  const validHandover = createHandover({ handover_id: 'schema-handover', correlation_id: 'schema-correlation', graph_id: 'graph-1', captured_at: NOW, expires_at: FUTURE, lifecycle_state: 'STARTED', completed_tasks: [], active_tasks: [], blocked_tasks: [], pending_tasks: [], decisions: [], artifacts: [], unresolved_conflicts: [], risks_and_blockers: [], resume_instructions: [], context_snapshot: validContext, links: [] }, validGraph, provenance());
   for (const fixture of [validEnvelope, validGraph, validResult, validHandover, validContext]) assert.equal(validate(fixture), true, JSON.stringify(validate.errors));
 
   const invalidFixtures: unknown[] = [
     { ...validEnvelope, integrity: undefined },
     { ...validGraph, nodes: [] },
     { ...validResult, attempt: 0 },
+    { ...validResult, completed_at: '2026-07-22T12:00:00.1234Z' },
     { ...validHandover, graph_digest: undefined },
     { ...validContext, evaluated_at: undefined },
     { ...validHandover, unresolved_conflicts: [{ conflict_id: 'conflict-1', object_id: 'task-a', payload_digests: [DIGEST], resolution_required: true, links: [] }] },

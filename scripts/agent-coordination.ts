@@ -169,6 +169,10 @@ export interface ContextAllowlist {
   assumption_keys: string[];
   provenance: ContextAllowlistProvenance;
 }
+export interface ContextProvenanceOptions {
+  allowlist: ContextAllowlist;
+  discovery: DiscoveryResult;
+}
 export interface ContextLimits { max_items: number; max_total_bytes: number; max_entry_bytes: number; max_depth: number; }
 export interface ContextInput {
   context_id: string;
@@ -305,9 +309,26 @@ export interface Envelope {
 export type CreateEnvelopeInput = Omit<Envelope, 'protocol' | 'schema' | 'integrity'> & {
   integrity?: Pick<IntegrityMetadata, 'authentication'>;
 };
-export interface EnvelopeValidationOptions { now?: string; require_authentication?: boolean; graph?: TaskGraph; }
-export interface ContextValidationOptions { now?: string; reject_stale_required?: boolean; graph?: TaskGraph; allowlist?: ContextAllowlist; }
-export interface CreateEnvelopeOptions { graph?: TaskGraph; }
+export interface EnvelopeValidationOptions {
+  now?: string;
+  require_authentication?: boolean;
+  graph?: TaskGraph;
+  allowlist?: ContextAllowlist;
+  discovery?: DiscoveryResult;
+}
+export interface ContextValidationOptions {
+  now?: string;
+  reject_stale_required?: boolean;
+  graph?: TaskGraph;
+  allowlist?: ContextAllowlist;
+  discovery?: DiscoveryResult;
+  require_provenance?: boolean;
+}
+export interface CreateEnvelopeOptions {
+  graph?: TaskGraph;
+  allowlist?: ContextAllowlist;
+  discovery?: DiscoveryResult;
+}
 export interface DuplicateEnvelopeEvidence { replay_key: string; payload_digest: Digest; message_ids: string[]; delivery_count: number; }
 export interface EnvelopeReplayConflict { replay_key: string; message_ids: string[]; payload_digests: Digest[]; }
 export interface EnvelopeDeduplication { unique: Envelope[]; duplicates: DuplicateEnvelopeEvidence[]; conflicts: EnvelopeReplayConflict[]; }
@@ -422,7 +443,8 @@ const IDENTIFIER_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const CONTEXT_KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$/;
 const CAPABILITY_PATTERN = /^[a-z0-9]+(?:[._/-][a-z0-9]+)*$/;
 const SEMVER_PATTERN = /^(\d+)\.(\d+)\.(\d+)$/;
-const RFC3339_PATTERN = /^(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])T([01]\d|2[0-3]):([0-5]\d):([0-5]\d)(?:\.\d{1,9})?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/;
+const RFC3339_PATTERN = /^(?!0000-)(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])T([01]\d|2[0-3]):([0-5]\d):([0-5]\d)(?:\.\d{1,3})?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/;
+const CANONICAL_TIMESTAMP_PATTERN = /^(?!0000-)(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])T([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\.\d{3}Z$/;
 const DIGEST_PATTERN = /^sha256:[a-f0-9]{64}$/;
 const SENSITIVE_KEY_PATTERN = /(?:secret|token|password|credential|private.?key|api.?key|authorization|cookie)/i;
 const MAX_INTEGER = 2_147_483_647;
@@ -498,7 +520,7 @@ function normalizeCapabilityId(value: unknown, path: string): string {
 function normalizeTimestamp(value: unknown, path: string): string {
   const timestamp = requireString(value, path);
   const match = RFC3339_PATTERN.exec(timestamp);
-  if (match === null) fail('INVALID_TIMESTAMP', 'must be a valid RFC 3339 date-time', path);
+  if (match === null) fail('INVALID_TIMESTAMP', 'must be a valid RFC 3339 date-time with at most millisecond precision', path);
   const year = Number(match[1]);
   const month = Number(match[2]);
   const day = Number(match[3]);
@@ -508,7 +530,9 @@ function normalizeTimestamp(value: unknown, path: string): string {
   if (day > daysInMonth) fail('INVALID_TIMESTAMP', 'contains an impossible calendar date', path);
   const parsed = Date.parse(timestamp);
   if (!Number.isFinite(parsed)) fail('INVALID_TIMESTAMP', 'must be a valid RFC 3339 date-time', path);
-  return new Date(parsed).toISOString();
+  const canonical = new Date(parsed).toISOString();
+  if (!CANONICAL_TIMESTAMP_PATTERN.test(canonical)) fail('INVALID_TIMESTAMP', 'timezone conversion must remain within the supported four-digit year range', path);
+  return canonical;
 }
 function normalizeDigest(value: unknown, path: string): Digest {
   const digest = requireString(value, path);
@@ -739,7 +763,7 @@ function normalizeDigestIntegrity(value: unknown, path: string): DigestIntegrity
   requireKeys(record, ['digest'], path);
   return { digest: normalizeDigest(record.digest, `${path}.digest`) };
 }
-function compareTimestamp(left: string, right: string): number { return Date.parse(left) - Date.parse(right); }
+function compareTimestamp(left: string, right: string): number { return compareStrings(left, right); }
 function assertNotExpired(timestamp: string, now: string | undefined, path: string): void {
   if (now !== undefined && compareTimestamp(timestamp, normalizeTimestamp(now, 'now')) <= 0) fail('EXPIRED', 'has expired', path);
 }
@@ -1078,7 +1102,7 @@ function normalizeContextReference(value: unknown, path: string): ContextReferen
   requireKeys(record, ['context_id', 'digest', 'links'], path);
   return { context_id: normalizeIdentifier(record.context_id, `${path}.context_id`), digest: normalizeDigest(record.digest, `${path}.digest`), links: normalizeLinks(record.links, `${path}.links`) };
 }
-function normalizeEnvelopePayload(value: unknown, path: string, graph: TaskGraph | undefined): EnvelopePayload {
+function normalizeEnvelopePayload(value: unknown, path: string, options: EnvelopeValidationOptions): EnvelopePayload {
   const record = requireRecord(value, path);
   const kind = requireString(record.kind, `${path}.kind`);
   switch (kind) {
@@ -1102,8 +1126,10 @@ function normalizeEnvelopePayload(value: unknown, path: string, graph: TaskGraph
       return { kind, result: validateTaskResult(record.result), links: normalizeLinks(record.links, `${path}.links`) };
     case 'handover':
       assertKeys(record, ['kind', 'handover', 'links'], path); requireKeys(record, ['kind', 'handover', 'links'], path);
-      if (graph === undefined) fail('INVALID_HANDOVER', 'handover payload validation requires the referenced task graph', `${path}.handover`);
-      return { kind, handover: validateHandover(record.handover, { graph, reject_stale_required: false }), links: normalizeLinks(record.links, `${path}.links`) };
+      if (options.graph === undefined) fail('INVALID_HANDOVER', 'handover payload validation requires the referenced task graph', `${path}.handover`);
+      const provenance = normalizeContextProvenance(options, `${path}.handover.context_snapshot`, true);
+      if (provenance === undefined) fail('CONTEXT_NOT_ALLOWED', 'handover payload validation requires #1162 context provenance', `${path}.handover.context_snapshot`);
+      return { kind, handover: validateHandover(record.handover, { graph: options.graph, ...provenance, reject_stale_required: false }), links: normalizeLinks(record.links, `${path}.links`) };
     case 'error':
       assertKeys(record, ['kind', 'code', 'message', 'affected_id', 'links'], path); requireKeys(record, ['kind', 'code', 'message', 'affected_id', 'links'], path);
       return { kind, code: requireString(record.code, `${path}.code`), message: requireString(record.message, `${path}.message`), affected_id: normalizeIdentifier(record.affected_id, `${path}.affected_id`), links: normalizeLinks(record.links, `${path}.links`) };
@@ -1117,7 +1143,7 @@ function normalizeEnvelopePayload(value: unknown, path: string, graph: TaskGraph
 function envelopeDigestInput(envelope: Omit<Envelope, 'integrity'>, authentication: AuthenticationAssertion | undefined): JsonValue {
   return toJsonValue({ ...envelope, integrity: authentication === undefined ? {} : { authentication } }, 'envelope-digest');
 }
-function normalizeEnvelopeCore(value: unknown, graph: TaskGraph | undefined): Omit<Envelope, 'integrity'> & { authentication?: AuthenticationAssertion } {
+function normalizeEnvelopeCore(value: unknown, options: EnvelopeValidationOptions): Omit<Envelope, 'integrity'> & { authentication?: AuthenticationAssertion } {
   const record = requireRecord(value, 'envelope');
   assertKeys(record, ['protocol', 'schema', 'message_id', 'message_type', 'sender', 'recipient', 'correlation_id', 'causation_id', 'idempotency_scope', 'idempotency_key', 'lifecycle', 'payload', 'context', 'links', 'integrity'], 'envelope');
   requireKeys(record, ['protocol', 'schema', 'message_id', 'message_type', 'sender', 'recipient', 'correlation_id', 'idempotency_scope', 'idempotency_key', 'lifecycle', 'payload', 'links'], 'envelope');
@@ -1136,27 +1162,34 @@ function normalizeEnvelopeCore(value: unknown, graph: TaskGraph | undefined): Om
     idempotency_scope: normalizeIdentifier(record.idempotency_scope, 'envelope.idempotency_scope'),
     idempotency_key: normalizeIdentifier(record.idempotency_key, 'envelope.idempotency_key'),
     lifecycle: normalizeLifecycle(record.lifecycle, 'envelope.lifecycle'),
-    payload: normalizeEnvelopePayload(record.payload, 'envelope.payload', graph),
+    payload: normalizeEnvelopePayload(record.payload, 'envelope.payload', options),
     links: normalizeLinks(record.links, 'envelope.links'),
   };
   if (record.causation_id !== undefined) {
     core.causation_id = normalizeIdentifier(record.causation_id, 'envelope.causation_id');
     if (core.causation_id === core.message_id) fail('INVALID_ID', 'causation_id must not equal message_id', 'envelope.causation_id');
   }
-  if (record.context !== undefined) core.context = Array.isArray(record.context) ? record.context.map((entry, index) => normalizeContextReference(entry, `envelope.context[${index}]`)) : validateContextSnapshot(record.context, { reject_stale_required: false, graph });
+  if (record.context !== undefined) {
+    if (Array.isArray(record.context)) core.context = record.context.map((entry, index) => normalizeContextReference(entry, `envelope.context[${index}]`));
+    else {
+      const provenance = normalizeContextProvenance(options, 'envelope.context', true);
+      if (provenance === undefined) fail('CONTEXT_NOT_ALLOWED', 'embedded envelope context requires #1162 context provenance', 'envelope.context');
+      core.context = validateContextSnapshot(record.context, { reject_stale_required: false, graph: options.graph, ...provenance, require_provenance: true });
+    }
+  }
   if (core.payload.kind !== core.message_type) fail('INVALID_CONTRACT', 'message_type must match payload.kind', 'envelope.message_type');
   return core;
 }
 
 /** Builds an envelope and calculates its integrity digest. */
 export function createEnvelope(input: CreateEnvelopeInput, options: CreateEnvelopeOptions = {}): Envelope {
-  const core = normalizeEnvelopeCore({ ...input, protocol: SWARM_PROTOCOL, schema: SWARM_SCHEMAS.envelope }, options.graph);
+  const core = normalizeEnvelopeCore({ ...input, protocol: SWARM_PROTOCOL, schema: SWARM_SCHEMAS.envelope }, options);
   const digest = digestFor('conxian.swarm.envelope.v1', envelopeDigestInput(core, input.integrity?.authentication));
   return validateEnvelope({ ...core, integrity: { digest, ...(input.integrity?.authentication === undefined ? {} : { authentication: input.integrity.authentication }) } }, options);
 }
 /** Validates envelope identity, linkage, expiry, authentication, payload, and digest. */
 export function validateEnvelope(value: unknown, options: EnvelopeValidationOptions = {}): Envelope {
-  const core = normalizeEnvelopeCore(value, options.graph);
+  const core = normalizeEnvelopeCore(value, options);
   const record = requireRecord(value, 'envelope');
   const integrity = normalizeIntegrity(record.integrity, 'envelope.integrity');
   const normalized: Envelope = { ...core, integrity };
@@ -1542,6 +1575,22 @@ function validateAllowlistAgainstDiscovery(allowlist: ContextAllowlist, discover
     fail('CONTEXT_NOT_ALLOWED', 'allowlist repository paths or provenance do not match the validated #1162 discovery result', 'allowlist.provenance');
   }
 }
+function normalizeContextProvenance(
+  options: { allowlist?: ContextAllowlist; discovery?: DiscoveryResult } | undefined,
+  path: string,
+  required: boolean,
+): ContextProvenanceOptions | undefined {
+  const allowlist = options?.allowlist;
+  const discovery = options?.discovery;
+  if (allowlist === undefined && discovery === undefined) {
+    if (required) fail('CONTEXT_NOT_ALLOWED', 'validated #1162 allowlist and discovery provenance are required', path);
+    return undefined;
+  }
+  if (allowlist === undefined || discovery === undefined) fail('CONTEXT_NOT_ALLOWED', 'allowlist and discovery provenance must be supplied together', path);
+  const normalizedAllowlist = normalizeAllowlist(allowlist);
+  validateAllowlistAgainstDiscovery(normalizedAllowlist, discovery);
+  return { allowlist: normalizedAllowlist, discovery };
+}
 function normalizeLimits(value: unknown, path: string): ContextLimits {
   const record = requireRecord(value, path);
   assertKeys(record, ['max_items', 'max_total_bytes', 'max_entry_bytes', 'max_depth'], path);
@@ -1872,9 +1921,15 @@ export function validateContextSnapshot(value: unknown, options: ContextValidati
   const evaluatedAt = normalizeTimestamp(record.evaluated_at, 'context.evaluated_at');
   const declaredLimits = normalizeLimits(record.limits, 'context.limits');
   const effectiveLimits = effectiveContextLimits(declaredLimits, options.graph);
-  const allowlist = options.allowlist === undefined ? undefined : normalizeAllowlist(options.allowlist);
+  const provenance = normalizeContextProvenance(options, 'context.provenance', options.require_provenance === true);
+  const allowlist = provenance?.allowlist;
   const allowlistedHiddenPaths = allowlist?.repository_paths.map((entry) => entry.path) ?? [];
   const entries = requireArray(record.entries, 'context.entries').map((entry, index) => normalizeContextEntry(entry, `context.entries[${index}]`, evaluatedAt, allowlistedHiddenPaths));
+  if (allowlist !== undefined) {
+    entries.forEach((entry, index) => {
+      if (!sourceAllowed(entry.source, allowlist)) fail('CONTEXT_NOT_ALLOWED', 'source is not declared by the validated #1162 allowlist', `context.entries[${index}].source`);
+    });
+  }
   if (entries.length > declaredLimits.max_items || entries.length > effectiveLimits.max_items) fail('CONTEXT_LIMIT', 'entry count exceeds context bound', 'context.entries');
   assertUnique(entries.map((entry) => entry.context_id), 'context.entries'); assertUnique(entries.map((entry) => entry.key), 'context.entries');
   const totalBytes = entries.reduce((total, entry) => total + entry.byte_length, 0);
@@ -1911,7 +1966,7 @@ export function validateContextSnapshot(value: unknown, options: ContextValidati
     fail('INVALID_CONTEXT', 'required context status lists do not match entries', 'context');
   }
   if (options.now !== undefined || options.reject_stale_required === true) {
-    const resolution = resolveContextSnapshot(snapshot, options.now ?? evaluatedAt);
+    const resolution = resolveContextSnapshot(snapshot, options.now ?? evaluatedAt, provenance);
     if (options.reject_stale_required === true && !resolution.valid) {
       if (resolution.missing_required.length > 0) fail('MISSING_CONTEXT', 'required context is missing', 'context');
       fail('STALE_CONTEXT', 'required context is stale or expired', 'context');
@@ -1960,8 +2015,11 @@ function reevaluateContextEntry(entry: ContextEntry, evaluatedAt: string): Conte
 }
 
 /** Re-evaluates freshness at a caller-supplied time without mutating the snapshot. */
-export function resolveContextSnapshot(snapshotValue: ContextSnapshot, nowValue: string): ContextResolution {
-  const snapshot = validateContextSnapshot(snapshotValue, { reject_stale_required: false });
+export function resolveContextSnapshot(snapshotValue: ContextSnapshot, nowValue: string, provenance?: ContextProvenanceOptions): ContextResolution {
+  const snapshot = validateContextSnapshot(snapshotValue, {
+    reject_stale_required: false,
+    ...(provenance === undefined ? {} : { allowlist: provenance.allowlist, discovery: provenance.discovery, require_provenance: true }),
+  });
   const now = normalizeTimestamp(nowValue, 'now');
   const missing: string[] = []; const stale: string[] = []; const expired: string[] = [];
   for (const token of snapshot.required_keys) {
@@ -2100,14 +2158,14 @@ function normalizeHandoverConflict(value: unknown, path: string): HandoverConfli
 function handoverDigestInput(handover: Omit<HandoverDocument, 'integrity'>): JsonValue {
   return toJsonValue(handover, 'handover-digest');
 }
-function normalizeHandoverCore(value: unknown, graph: TaskGraph): Omit<HandoverDocument, 'integrity'> {
+function normalizeHandoverCore(value: unknown, graph: TaskGraph, provenance: ContextProvenanceOptions): Omit<HandoverDocument, 'integrity'> {
   const record = requireRecord(value, 'handover');
   assertKeys(record, ['schema', 'handover_id', 'correlation_id', 'graph_id', 'graph_digest', 'source_agent', 'target_agent', 'captured_at', 'expires_at', 'lifecycle_state', 'completed_tasks', 'active_tasks', 'blocked_tasks', 'pending_tasks', 'decisions', 'artifacts', 'unresolved_conflicts', 'risks_and_blockers', 'resume_instructions', 'context_snapshot', 'links', 'integrity'], 'handover');
   requireKeys(record, ['schema', 'handover_id', 'correlation_id', 'graph_id', 'graph_digest', 'captured_at', 'expires_at', 'lifecycle_state', 'completed_tasks', 'active_tasks', 'blocked_tasks', 'pending_tasks', 'decisions', 'artifacts', 'unresolved_conflicts', 'risks_and_blockers', 'resume_instructions', 'context_snapshot', 'links'], 'handover');
   if (record.schema !== SWARM_SCHEMAS.handover) fail('UNSUPPORTED_VERSION', `schema must be '${SWARM_SCHEMAS.handover}'`, 'handover.schema');
   const core: Omit<HandoverDocument, 'integrity'> = {
     schema: SWARM_SCHEMAS.handover, handover_id: normalizeIdentifier(record.handover_id, 'handover.handover_id'), correlation_id: normalizeIdentifier(record.correlation_id, 'handover.correlation_id'), graph_id: normalizeIdentifier(record.graph_id, 'handover.graph_id'), graph_digest: normalizeDigest(record.graph_digest, 'handover.graph_digest'), captured_at: normalizeTimestamp(record.captured_at, 'handover.captured_at'), expires_at: normalizeTimestamp(record.expires_at, 'handover.expires_at'), lifecycle_state: normalizeStatus(record.lifecycle_state, 'handover.lifecycle_state'),
-    completed_tasks: requireArray(record.completed_tasks, 'handover.completed_tasks').map((entry, index) => normalizeHandoverTaskReference(entry, `handover.completed_tasks[${index}]`)), active_tasks: requireArray(record.active_tasks, 'handover.active_tasks').map((entry, index) => normalizeHandoverTaskReference(entry, `handover.active_tasks[${index}]`)), blocked_tasks: requireArray(record.blocked_tasks, 'handover.blocked_tasks').map((entry, index) => normalizeHandoverTaskReference(entry, `handover.blocked_tasks[${index}]`)), pending_tasks: requireArray(record.pending_tasks, 'handover.pending_tasks').map((entry, index) => normalizeHandoverTaskReference(entry, `handover.pending_tasks[${index}]`)), decisions: requireArray(record.decisions, 'handover.decisions').map((entry, index) => normalizeHandoverDecision(entry, `handover.decisions[${index}]`)), artifacts: requireArray(record.artifacts, 'handover.artifacts').map((entry, index) => normalizeArtifact(entry, `handover.artifacts[${index}]`)), unresolved_conflicts: requireArray(record.unresolved_conflicts, 'handover.unresolved_conflicts').map((entry, index) => normalizeHandoverConflict(entry, `handover.unresolved_conflicts[${index}]`)), risks_and_blockers: requireArray(record.risks_and_blockers, 'handover.risks_and_blockers').map((entry, index) => normalizeHandoverRisk(entry, `handover.risks_and_blockers[${index}]`)), resume_instructions: requireArray(record.resume_instructions, 'handover.resume_instructions').map((entry, index) => normalizeResumeInstruction(entry, `handover.resume_instructions[${index}]`)), context_snapshot: validateContextSnapshot(record.context_snapshot, { reject_stale_required: false, graph }), links: normalizeLinks(record.links, 'handover.links'),
+    completed_tasks: requireArray(record.completed_tasks, 'handover.completed_tasks').map((entry, index) => normalizeHandoverTaskReference(entry, `handover.completed_tasks[${index}]`)), active_tasks: requireArray(record.active_tasks, 'handover.active_tasks').map((entry, index) => normalizeHandoverTaskReference(entry, `handover.active_tasks[${index}]`)), blocked_tasks: requireArray(record.blocked_tasks, 'handover.blocked_tasks').map((entry, index) => normalizeHandoverTaskReference(entry, `handover.blocked_tasks[${index}]`)), pending_tasks: requireArray(record.pending_tasks, 'handover.pending_tasks').map((entry, index) => normalizeHandoverTaskReference(entry, `handover.pending_tasks[${index}]`)), decisions: requireArray(record.decisions, 'handover.decisions').map((entry, index) => normalizeHandoverDecision(entry, `handover.decisions[${index}]`)), artifacts: requireArray(record.artifacts, 'handover.artifacts').map((entry, index) => normalizeArtifact(entry, `handover.artifacts[${index}]`)), unresolved_conflicts: requireArray(record.unresolved_conflicts, 'handover.unresolved_conflicts').map((entry, index) => normalizeHandoverConflict(entry, `handover.unresolved_conflicts[${index}]`)), risks_and_blockers: requireArray(record.risks_and_blockers, 'handover.risks_and_blockers').map((entry, index) => normalizeHandoverRisk(entry, `handover.risks_and_blockers[${index}]`)), resume_instructions: requireArray(record.resume_instructions, 'handover.resume_instructions').map((entry, index) => normalizeResumeInstruction(entry, `handover.resume_instructions[${index}]`)), context_snapshot: validateContextSnapshot(record.context_snapshot, { reject_stale_required: false, graph, ...provenance, require_provenance: true }), links: normalizeLinks(record.links, 'handover.links'),
   };
   if (record.source_agent !== undefined) core.source_agent = normalizeAgentIdentity(record.source_agent, 'handover.source_agent');
   if (record.target_agent !== undefined) core.target_agent = normalizeAgentIdentity(record.target_agent, 'handover.target_agent');
@@ -2134,34 +2192,43 @@ function validateHandoverTaskGraphReferences(core: Omit<HandoverDocument, 'integ
 }
 
 /** Builds a self-describing handover and calculates its integrity digest. */
-export function createHandover(input: CreateHandoverInput, graph: TaskGraph): HandoverDocument {
+export function createHandover(input: CreateHandoverInput, graph: TaskGraph, provenanceOptions: ContextProvenanceOptions): HandoverDocument {
   const normalizedGraph = validateTaskGraph(graph);
-  const core = normalizeHandoverCore({ ...input, schema: SWARM_SCHEMAS.handover, graph_digest: taskGraphDigest(normalizedGraph) }, normalizedGraph);
+  const provenance = normalizeContextProvenance(provenanceOptions, 'handover.context_snapshot', true);
+  if (provenance === undefined) fail('CONTEXT_NOT_ALLOWED', 'handover creation requires #1162 context provenance', 'handover.context_snapshot');
+  const core = normalizeHandoverCore({ ...input, schema: SWARM_SCHEMAS.handover, graph_digest: taskGraphDigest(normalizedGraph) }, normalizedGraph, provenance);
   if (core.graph_id !== normalizedGraph.graph_id) fail('INVALID_HANDOVER', 'graph_id does not match supplied graph', 'handover.graph_id');
   validateHandoverTaskGraphReferences(core, normalizedGraph);
   sortHandoverByGraph(core, normalizedGraph);
   const digest = digestFor('conxian.swarm.handover.v1', handoverDigestInput(core));
-  return validateHandover({ ...core, integrity: { digest } }, { graph: normalizedGraph, reject_stale_required: true });
+  return validateHandover({ ...core, integrity: { digest } }, { graph: normalizedGraph, ...provenance, reject_stale_required: true });
 }
-export interface HandoverValidationOptions { graph: TaskGraph; now?: string; reject_stale_required?: boolean; }
+export interface HandoverValidationOptions extends ContextProvenanceOptions {
+  graph: TaskGraph;
+  now?: string;
+  reject_stale_required?: boolean;
+}
 /** Validates handover state, graph linkage, digest, expiry, and mandatory context freshness. */
 export function validateHandover(value: unknown, options: HandoverValidationOptions): HandoverDocument {
+  if (options === undefined) fail('CONTEXT_NOT_ALLOWED', 'handover validation requires #1162 context provenance', 'handover.context_snapshot');
   const graph = validateTaskGraph(options.graph);
-  const core = normalizeHandoverCore(value, graph); const record = requireRecord(value, 'handover'); const integrity = normalizeDigestIntegrity(record.integrity, 'handover.integrity');
+  const provenance = normalizeContextProvenance(options, 'handover.context_snapshot', true);
+  if (provenance === undefined) fail('CONTEXT_NOT_ALLOWED', 'handover validation requires #1162 context provenance', 'handover.context_snapshot');
+  const core = normalizeHandoverCore(value, graph, provenance); const record = requireRecord(value, 'handover'); const integrity = normalizeDigestIntegrity(record.integrity, 'handover.integrity');
   if (core.graph_id !== graph.graph_id) fail('INVALID_HANDOVER', 'graph_id does not match supplied graph', 'handover.graph_id');
   if (core.graph_digest !== taskGraphDigest(graph)) fail('INVALID_HANDOVER', 'graph_digest does not match supplied graph', 'handover.graph_digest');
   validateHandoverTaskGraphReferences(core, graph); sortHandoverByGraph(core, graph);
   assertNotExpired(core.expires_at, options.now, 'handover.expires_at');
   if (digestFor('conxian.swarm.handover.v1', handoverDigestInput(core)) !== integrity.digest) fail('INVALID_DIGEST', 'handover integrity digest does not match', 'handover.integrity.digest');
-  const resolution = resolveContextSnapshot(core.context_snapshot, options.now ?? core.captured_at);
+  const resolution = resolveContextSnapshot(core.context_snapshot, options.now ?? core.captured_at, provenance);
   if (options.reject_stale_required !== false && !resolution.valid) fail('INVALID_HANDOVER', 'handover context is missing, stale, or expired', 'handover.context_snapshot');
   return { ...core, integrity };
 }
 /** Returns resumability evidence without silently treating stale context as current. */
-export function assessHandoverResumability(value: unknown, graph: TaskGraph, now?: string): HandoverAssessment {
+export function assessHandoverResumability(value: unknown, options: HandoverValidationOptions): HandoverAssessment {
   try {
-    const handover = validateHandover(value, { graph, now, reject_stale_required: false });
-    const resolution = resolveContextSnapshot(handover.context_snapshot, now ?? handover.captured_at);
+    const handover = validateHandover(value, { ...options, reject_stale_required: false });
+    const resolution = resolveContextSnapshot(handover.context_snapshot, options.now ?? handover.captured_at, options);
     return {
       valid: true,
       resumable: resolution.valid && handover.unresolved_conflicts.every((conflict) => !conflict.resolution_required),

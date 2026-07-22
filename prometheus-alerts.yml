@@ -169,7 +169,7 @@ groups:
           description: "The dashboard has not completed a validated M2M registry load or has latched registry recovery."
 
       - alert: M2MServiceKeyRegistryRevisionMissing
-        expr: absent(m2m_service_key_registry_revision) and m2m_service_key_registry_ready == 1
+        expr: m2m_service_key_registry_ready == 1 unless m2m_service_key_registry_revision
         for: 10m
         labels:
           severity: critical

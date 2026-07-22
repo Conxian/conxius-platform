@@ -1368,3 +1368,38 @@ AGENTS.md (this update)
 - Hosted checks remain the final PR validation gate after the branch update.
 **Gotchas**:
 - Keep the existing OpenSpec handoff scope intact and do not rewrite prior session-log entries.
+
+### 2026-07-22 — PR #1189 Mainline Merge Resolution
+**Trigger**: PR #1189 request to fetch `origin/main`, resolve all merge conflicts, validate, and update the PR head branch.
+**What was done**:
+- Fetched `origin/main` at `0117d55a59155e36ec6e6fd1efcf487aef632268`, checked out `fix/1162-agent-discovery-hardening` at `2bf3f0505cee57bfeb4830913f22a110b8740e7f`, and merged `origin/main` without rebasing.
+- Resolved the two content conflicts in `scripts/agent-discovery.ts` and `scripts/agent-discovery.test.ts` by retaining mainline's cross-platform helper contract while preserving the PR's stricter empty/current/traversal-segment containment checks, priority validation, and regression coverage.
+- Preserved all non-conflicting mainline changes, including the revenue-automation handoff and dependency-consistency updates.
+- Passed focused discovery tests and strict typecheck, plus the root test and typecheck suites.
+**Key discoveries**:
+- The devbox checkout is shallow at the mainline remediation boundary; deepening the fetched main history was required for Git to identify the valid merge base `f8a231baa8131398b27139a1fbbc22b2d0a3a290` instead of treating the histories as unrelated.
+- The final containment implementation exposes the mainline `isRelativePathWithinRoot` seam and keeps the PR's `isContainedRelativePath` seam as a compatibility alias over the same hardened predicate.
+**Files touched**:
+- `scripts/agent-discovery.ts`
+- `scripts/agent-discovery.test.ts`
+- `AGENTS.md`
+- Mainline files brought into the merge from `origin/main`.
+**Gaps identified**:
+- Hosted checks must be re-evaluated on the pushed merge commit.
+**Gotchas**:
+- Do not use `--allow-unrelated-histories` for this repository; the initial refusal came from the shallow clone, and history deepening restored the normal merge base.
+
+### 2026-07-22 — PR #1189 CI/Rebase Remediation Follow-up
+**Trigger**: PR #1189 formal review after CI repair PR #1190 and a concurrent remote PR-branch merge.
+**What was done**:
+- Preserved the remote PR merge resolution against current `origin/main` rather than overwriting its newer work, then corrected the canonical taxonomy reference in `docs/AGENT_ONBOARDING.md`.
+- Confirmed the follow-up changed no dependency manifests or lockfiles and kept the synthetic discovery fixture path unchanged.
+**Key discoveries**:
+- PR #1190 fixed the base mismatch on main by restoring the Next.js `15.5.18` / TypeScript `6.0.3` dependency graph; PR #1189 needed no additional dependency policy change.
+**Files touched**:
+- `docs/AGENT_ONBOARDING.md`
+- `AGENTS.md`
+**Gaps identified**:
+- Hosted checks must be re-evaluated on the final pushed PR head.
+**Gotchas**:
+- The synthetic discovery fixture intentionally uses `.github/REPOSITORY_TAXONOMY.md` for an isolated optional-file test; the corrected production documentation path is `docs/REPOSITORY_TAXONOMY.md`.

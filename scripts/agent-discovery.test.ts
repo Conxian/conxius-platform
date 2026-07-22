@@ -27,6 +27,7 @@ import {
   REQUIRED_CONTEXT_PATHS,
   discoverRepository,
   executeCli,
+  isContainedRelativePath,
   isRelativePathWithinRoot,
 } from './agent-discovery';
 
@@ -126,6 +127,14 @@ function expectDiscoveryError(callback: () => unknown, code: string): void {
   assert.throws(callback, (error: unknown) => error instanceof DiscoveryError && error.code === code);
 }
 
+function getErrorCode(error: unknown): string | undefined {
+  if (typeof error !== 'object' || error === null) {
+    return undefined;
+  }
+  const code = (error as { code?: unknown }).code;
+  return typeof code === 'string' ? code : undefined;
+}
+
 test('parses the checked-in manifest and schemas and discovers the real skill', () => {
   const manifest = JSON.parse(readFileSync(join(repositoryRoot, '.agents', 'manifest.json'), 'utf8')) as Record<string, unknown>;
   const registry = JSON.parse(readFileSync(join(repositoryRoot, '.agents', 'skills', 'registry.json'), 'utf8')) as Record<string, unknown>;
@@ -181,6 +190,15 @@ test('supports upward discovery from nested directories with deterministic JSON 
   assert.equal(rootOutput.stdout, repeatedOutput.stdout);
 });
 
+test('treats both slash conventions safely when checking relative containment', () => {
+  assert.equal(isContainedRelativePath('nested/file.md'), true);
+  assert.equal(isContainedRelativePath('nested\\file.md'), true);
+  assert.equal(isContainedRelativePath('..\\outside'), false);
+  assert.equal(isContainedRelativePath('../outside'), false);
+  assert.equal(isContainedRelativePath('nested/./file.md'), false);
+  assert.equal(isContainedRelativePath('nested//file.md'), false);
+});
+
 test('loads an explicitly selected active skill without executing it', () => {
   const root = createFixture();
   const result = executeCli(['--json', '--root', root, '--skill', 'agent-onboarding']);
@@ -200,6 +218,49 @@ test('rejects duplicate context paths and duplicate skill IDs', () => {
     registry.skills.push({ ...registry.skills[0] });
   });
   expectDiscoveryError(() => discoverRepository(duplicateSkills), 'duplicate-entry');
+});
+
+test('rejects non-ascending and duplicate context priorities', () => {
+  const nonAscending = createFixture((manifest) => {
+    manifest.context.required[2] = { ...manifest.context.required[2], priority: 15 };
+  });
+  expectDiscoveryError(() => discoverRepository(nonAscending), 'invalid-priority');
+
+  const duplicatePriority = createFixture((manifest) => {
+    manifest.context.required[1] = { ...manifest.context.required[1], priority: 10 };
+  });
+  expectDiscoveryError(() => discoverRepository(duplicatePriority), 'duplicate-entry');
+
+  const duplicateAcrossLists = createFixture((manifest) => {
+    manifest.context.optional[0] = { ...manifest.context.optional[0], priority: 40 };
+  });
+  expectDiscoveryError(() => discoverRepository(duplicateAcrossLists), 'duplicate-entry');
+
+  const optionalOutOfOrder = createFixture((manifest) => {
+    manifest.context.optional[0] = { ...manifest.context.optional[0], priority: 35 };
+  });
+  expectDiscoveryError(() => discoverRepository(optionalOutOfOrder), 'invalid-priority');
+});
+
+test('rejects duplicate registry skill paths and capabilities', () => {
+  const duplicatePath = createFixture((_manifest, registry) => {
+    registry.skills.push({
+      ...registry.skills[0],
+      id: 'second-skill',
+      name: 'Second Skill',
+      description: 'Second fixture skill.',
+      capabilities: ['second-capability'],
+    });
+  });
+  expectDiscoveryError(() => discoverRepository(duplicatePath), 'duplicate-entry');
+
+  const duplicateCapabilities = createFixture((_manifest, registry) => {
+    registry.skills[0] = {
+      ...registry.skills[0],
+      capabilities: ['onboarding', 'onboarding'],
+    };
+  });
+  expectDiscoveryError(() => discoverRepository(duplicateCapabilities), 'duplicate-entry');
 });
 
 test('rejects absolute and traversal paths', () => {
@@ -240,6 +301,25 @@ test('rejects symlinks that escape the repository root', () => {
   expectDiscoveryError(() => discoverRepository(root), 'unsafe-path');
 });
 
+test('allows symlinks that resolve within the repository root when supported', (context) => {
+  const root = createFixture();
+  const inRootFile = join(root, 'docs', 'AGENT_ONBOARDING.md');
+  unlinkSync(inRootFile);
+  try {
+    symlinkSync(join(root, 'docs', 'SESSION_CONTINUITY.md'), inRootFile);
+  } catch (error: unknown) {
+    const code = getErrorCode(error);
+    if (code !== undefined && ['EACCES', 'EINVAL', 'ENOTSUP', 'EPERM'].includes(code)) {
+      context.skip(`Symlinks are not supported in this environment (${code}).`);
+      return;
+    }
+    throw error;
+  }
+
+  const result = discoverRepository(root);
+  assert.equal(result.context.required[2]?.content, 'continuity-context\n');
+});
+
 test('fails closed for missing required context and warns for missing optional context', () => {
   const requiredMissing = createFixture();
   unlinkSync(join(requiredMissing, 'GOVERNANCE.md'));
@@ -267,6 +347,73 @@ test('rejects unsupported manifest and registry major versions', () => {
     registry.registryVersion = '2.0.0';
   });
   expectDiscoveryError(() => discoverRepository(unsupportedRegistry), 'unsupported-major');
+});
+
+test('rejects malformed manifest and registry JSON', () => {
+  const malformedManifest = createFixture();
+  writeFileSync(join(malformedManifest, '.agents', 'manifest.json'), '{ malformed\n', 'utf8');
+  expectDiscoveryError(() => discoverRepository(malformedManifest), 'invalid-json');
+
+  const malformedRegistry = createFixture();
+  writeFileSync(
+    join(malformedRegistry, '.agents', 'skills', 'registry.json'),
+    '{ malformed\n',
+    'utf8',
+  );
+  expectDiscoveryError(() => discoverRepository(malformedRegistry), 'invalid-json');
+});
+
+test('rejects invalid selected skill frontmatter', () => {
+  const root = createFixture((_manifest, _registry, fixtureRoot) => {
+    writeFileSync(
+      join(fixtureRoot, '.agents', 'skills', 'agent-onboarding', 'SKILL.md'),
+      '# Missing frontmatter\n',
+      'utf8',
+    );
+  });
+  expectDiscoveryError(() => discoverRepository(root), 'invalid-skill');
+});
+
+test('requires active default skills', () => {
+  const inactiveDefault = createFixture((_manifest, registry) => {
+    registry.skills[0] = { ...registry.skills[0], status: 'inactive' };
+  });
+  expectDiscoveryError(() => discoverRepository(inactiveDefault), 'invalid-contract');
+
+  const noDefault = createFixture((_manifest, registry) => {
+    registry.skills[0] = { ...registry.skills[0], default: false };
+  });
+  expectDiscoveryError(() => discoverRepository(noDefault), 'invalid-contract');
+});
+
+test('rejects duplicate repeated skill selections explicitly', () => {
+  const root = createFixture();
+  const result = executeCli([
+    '--json',
+    '--root',
+    root,
+    '--skill',
+    'agent-onboarding',
+    '--skill',
+    'agent-onboarding',
+  ]);
+  assert.equal(result.exitCode, 1);
+  const parsed = JSON.parse(result.stdout) as { error: { code: string } };
+  assert.equal(parsed.error.code, 'duplicate-entry');
+});
+
+test('rejects unknown CLI flags and missing option values', () => {
+  const unknownFlag = executeCli(['--json', '--unknown']);
+  assert.equal(unknownFlag.exitCode, 1);
+  assert.equal((JSON.parse(unknownFlag.stdout) as { error: { code: string } }).error.code, 'invalid-arguments');
+
+  const missingRoot = executeCli(['--json', '--root']);
+  assert.equal(missingRoot.exitCode, 1);
+  assert.equal((JSON.parse(missingRoot.stdout) as { error: { code: string } }).error.code, 'invalid-arguments');
+
+  const missingSkill = executeCli(['--json', '--skill']);
+  assert.equal(missingSkill.exitCode, 1);
+  assert.equal((JSON.parse(missingSkill.stdout) as { error: { code: string } }).error.code, 'invalid-arguments');
 });
 
 test('does not read or emit unlisted sensitive files', () => {

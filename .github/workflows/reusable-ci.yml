@@ -58,6 +58,12 @@ jobs:
       - name: Typecheck Agent Discovery
         run: pnpm run typecheck:agent-discovery
 
+      - name: Run Agent Coordination Tests
+        run: pnpm run test:agent-coordination
+
+      - name: Typecheck Agent Coordination
+        run: pnpm run typecheck:agent-coordination
+
       - name: Run Lint
         if: ${{ inputs.run-lint }}
         run: |

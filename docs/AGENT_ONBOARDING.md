@@ -256,6 +256,10 @@ When delegating to sub-agents:
 
 ## Swarm Coordination
 
+Issue #1163 adds a versioned, transport-neutral `conxian.swarm` v1 protocol for exchanging and validating coordination state. The normative contract is [`openspec/specs/swarm-coordination-v1.spec.md`](../openspec/specs/swarm-coordination-v1.spec.md); the checked-in interchange contract is [`schemas/agent-swarm.schema.json`](../schemas/agent-swarm.schema.json), and the side-effect-free TypeScript implementation is [`scripts/agent-coordination.ts`](../scripts/agent-coordination.ts). The implementation normalizes caller-provided data and returns validation, ordering, digest, conflict, provenance, freshness, and resumability evidence.
+
+`conxian.swarm` is **not** a scheduler, worker pool, queue, broker, or provider runtime. It does not open network connections, deliver messages, execute tasks or skills, select an executor, issue credentials, or maintain shared process state. Transport delivery, authentication, retries at the provider boundary, and runtime scheduling remain responsibilities of consuming systems.
+
 ### Agent Types and Their Roles
 
 | Agent Type | Use Case | Tools Available |
@@ -264,6 +268,26 @@ When delegating to sub-agents:
 | `code-explorer` | Understanding code, tracing | terminal |
 | `general-purpose` | Multi-step tasks | terminal, file_editor, task_tracker |
 | `web-researcher` | External research | browser_tool_set |
+
+### `conxian.swarm` protocol surface
+
+**Envelope and lifecycle.** Core messages use `envelope.v1` with `message_id`, `message_type`, `sender`, `recipient`, `correlation_id`, optional `causation_id`, scoped `idempotency_key`, lifecycle state/sequence, expiry, payload, links, and an integrity digest. Message types are `task`, `ack`, `progress`, `result`, `handover`, `error`, and `cancel`. Valid lifecycle transitions are `PROPOSED → ACCEPTED → STARTED → COMPLETED|FAILED|BLOCKED|CANCELLED|EXPIRED`, with `BLOCKED → STARTED`; terminal states cannot be reopened. Normative timestamps accept zero through three fractional digits, canonicalize to UTC with exactly three millisecond digits, and reject four through nine fractional digits. Unknown fields, unsupported versions, invalid transitions, expired messages, authentication requirements, and digest mismatches fail closed.
+
+**Decomposition and capability matching.** `task-graph.v1` represents work as a bounded DAG. Each node has a stable `task_id`, objective/schema, sorted dependencies, required/optional status, normalized capability requirements, retry/backoff/timeout policy, and links. Validation rejects duplicate IDs, missing/self dependencies, cycles, invalid limits, and retry/timeout budgets that exceed graph limits. `GraphLimits.max_context_bytes` is the effective minimum total context budget when a graph is supplied. `deterministicTopologicalOrder()` uses a stable lexical ready queue. `matchCapabilities()` normalizes lowercase capability IDs and semantic versions, checks declared constraints, treats a missing offered constraint as unmet rather than throwing, and returns candidates ordered by unmet requirements, exact-version matches, declared priority, agent ID, and instance ID. `selected_candidates` are evidence of full matches—not a scheduling command.
+
+**Idempotent delivery and aggregation.** Envelope replays are grouped by `idempotency_scope` + `idempotency_key` and compared by canonical payload digest. Identical deliveries collapse to one unique envelope while retaining duplicate evidence; different payloads produce a replay conflict without choosing an arrival-order winner. Results use graph/task/attempt identity and an exact semantic fingerprint covering status, error, agent, evidence, artifacts, links, and other normative metadata (excluding only delivery `result_id`). Same-payload results with different semantic metadata remain conflicts. `aggregateResults()` emits deterministic `COMPLETE`, `PARTIAL`, `FAILED`, `BLOCKED`, `CONFLICT`, or `CANCELLED` outcomes: required failures block completion, optional unresolved work is partial, dependency failures propagate as blocked, and conflicting attempts remain visible as evidence. Result ordering follows graph order and stable digest/ID tie-breakers rather than transport or provider order.
+
+**Handover and context boundary.** `handover.v1` carries graph and correlation linkage, a required `graph_digest` verified against a supplied graph, task state, artifacts/digests, decisions, conflicts with at least two distinct payload digests, risks/blockers, resume instructions, a bounded context snapshot, and digest-only integrity. `createHandover(input, graph, { allowlist, discovery, trusted_discovery_anchor })`, `validateHandover(handover, { graph, allowlist, discovery, trusted_discovery_anchor })`, resumability assessment, and handover-envelope validation/replay/deduplication all require the validated derived #1162 `ContextAllowlist`, source `DiscoveryResult`, and the same content-addressed trusted discovery anchor. The anchor is supplied out of band by a trusted adapter/deployment boundary and must never be taken from an untrusted swarm message; the pure library verifies its content binding but cannot authenticate the boundary that supplied it. Each boundary rechecks the allowlist/anchor/discovery provenance and every embedded source. Authentication is enforced only at the envelope boundary; handovers reject authentication fields rather than silently accepting them. Context packaging consumes only explicit task inputs, a versioned/digested allowlist derived from a validated #1162 discovery result and trusted anchor, validated artifact references, or marked assumptions. It preserves provenance, classification, redaction, capture/evaluated/stale/expiry state, precedence, byte/depth bounds, and truncation digests; raw secrets, hidden/unlisted files, environment dumps, and provider transcripts are not admitted. `.agents/manifest.json`, `.agents/skills/registry.json`, and declared inert skill Markdown are the only explicit hidden-source exceptions. The coordination module does not read the filesystem or resolve symlinks; adapters own those checks.
+
+### Canonical surface and usage
+
+Use the exported helpers in [`scripts/agent-coordination.ts`](../scripts/agent-coordination.ts), including `createEnvelope`, `validateEnvelope`, `validateTaskGraph`, `deterministicTopologicalOrder`, `matchCapabilities`, `deduplicateEnvelopes`, `aggregateResults`, `createHandover`, `validateHandover`, `packageContext`, `validateContextSnapshot`, `resolveContextSnapshot`, and `mergeContextSnapshots`. Handover, snapshot-validation, merge, and handover-envelope calls must carry `{ allowlist, discovery, trusted_discovery_anchor }` alongside the graph where applicable. `validateContextSnapshot()` has no authoritative structural-only mode; its private structural normalizer is not a handover/security boundary. `mergeContextSnapshots()` validates every input against the same provenance triple and preserves the standard derived allowlist digest. Canonical JSON sorts object keys, preserves array order, normalizes `-0`, rejects non-finite values/duplicate keys, and uses domain-separated SHA-256 digests:
+
+```text
+{ "b": 2, "a": 1 }  →  {"a":1,"b":2}
+```
+
+The canonical spec is the normative human-readable reference, while the schema is the compact machine-readable structural reference; documentation should link to both rather than copy the full contract.
 
 ### Coordination Patterns
 

@@ -178,12 +178,18 @@ All services use multi-layered M2M auth per `docs/M2M_AUTHENTICATION.md`:
 - **Revenue automation handoff** — the protocol-owned `Conxian/Conxian` repository contains `contracts/treasury/revenue-automation.clar` with a current observed 100 bps / 1% baseline; platform specification and handoff are tracked in #1164/#1167, while protocol hardening and integration remain tracked in `Conxian/Conxian#538`
 - **JWT-based M2M token auth** — platform-side JWT issuance/verification is implemented; coordinated Rust Gateway verification remains open (#1160)
 - **Key rotation mechanism** — M2M keys are static, no rotation API (#1161)
-- **Swarm coordination** — Multi-agent patterns not implemented (#1163)
+- **Swarm runtime transports/scheduling** — The transport-neutral `conxian.swarm` v1 protocol, validators, and tests are implemented for #1163; provider transports, authentication, and runtime scheduling remain out of scope.
 - **"Harvest Sovereign Yield"** — both SFO implementations use `Math.random()` stubs
 - **Yield sources** defined in scoring matrix (Babylon Staking G-43, ctUSD G-22, Lightning Async Payments G-53) have no UI integration
 - **Proof-carrying treasury analytics** (`openspec/changes/2026-05-12-proof-carrying-analytics-treasury-oracle/`) — defined but not implemented
 
 > **Note**: Contributor Claim Ledger implemented (#1159). Self-evolving KB scaffolded, TAVILY secret set (#1165). Key Gaps list updated 2026-07-15.
+
+### Swarm Coordination Protocol (#1163)
+- **Canonical contract**: `openspec/specs/swarm-coordination-v1.spec.md` is the normative `conxian.swarm` v1 specification; `schemas/agent-swarm.schema.json` is the structural interchange contract and `schemas/agent-discovery-trust.schema.json` defines the #1162 attestation/trust-anchor shapes.
+- **Implementation**: `scripts/agent-coordination.ts` provides strict envelope/lifecycle validation, canonical JSON and domain-separated digests, DAG ordering, capability matching, semantic result fingerprints/conflicts, deterministic aggregation, graph-linked handover validation, mandatory authoritative context provenance, and bounded context packaging/merging. `scripts/agent-discovery-contract.ts` defines the pure content-addressed #1162 attestation/anchor contract; `scripts/agent-discovery.ts` packages the adapter-side result and anchor.
+- **Boundary**: The module is zero-network and side-effect free. It does not schedule agents, broker messages, execute skills, select providers, or provide transport delivery/authentication integration; those remain consumer responsibilities. Authentication assertions are validated only at the envelope boundary.
+- **Dependency/trust boundary**: Context packaging consumes only explicit task data, validated artifact references, marked assumptions, or a versioned/digested repository allowlist derived from a validated #1162 discovery result and the same trusted discovery anchor. The anchor is versioned/content-addressed and must be delivered by a trusted adapter/deployment boundary, never an untrusted swarm message; the pure library verifies its binding but does not authenticate its origin. Explicit `.agents` sources remain limited to #1162-declared manifest, registry, and inert skill paths. Public `validateContextSnapshot()` and `mergeContextSnapshots()` require the full `{ trusted_discovery_anchor, discovery, allowlist }` provenance triple.
 
 ### Reward Source Breakdown (Merged in #1115)
 - API: `GET /api/v1/rewards/sources` → 4 revenue sources (Protocol Fees 38%, Staking Yield 28%, Treasury Yield 20%, Service Revenue 14%) mapped to 4 allocation categories (Community 40%, Governance 25%, Operations 20%, Reserve 15%), each tagged with SFO operational units
@@ -404,7 +410,7 @@ See `docs/SELF_EVOLVING_KB.md` for full architecture.
 | Contributor Claim Ledger | **Implemented** | #1159 |
 | Agent Onboarding & Discovery | **Implemented (manifest/registry/CLI/tests)** | #1162 |
 | M2M Authentication | **Implemented (keys/scopes + platform JWT)** | #1160, #1161 |
-| Swarm Coordination | **Patterns documented** | #1163 |
+| Swarm Coordination | **Implemented (transport-neutral protocol/validation/tests; patterns documented)** | #1163 |
 | **Self-Evolving KB** | **Implemented (scaffolded)** | #1165 |
 | Proof-carrying treasury analytics | Spec-only | — |
 | SFO yield harvesting | Math.random() stubs | — |
@@ -560,7 +566,7 @@ See `docs/M2M_AUTHENTICATION.md` for full M2M auth configuration.
 - Release: SemVer tag validation, conventional commit changelog generation
 
 *OpenSpec Changes (36 proposals)*:
-- Templates always include: `proposal.md` (required), `tasks.md` (common), `design.md` (complex), `spec-delta.md` (spec changes), `.openspec.yaml` (config)
+- Current `spec-driven` CLI artifacts are `proposal.md`, `specs/<capability>/spec.md`, `design.md`, `tasks.md`, and `.openspec.yaml`; a legacy `spec-delta.md` may remain only as a non-normative repository index.
 - Most active areas: Sovereign Computing (6 proposals), Phase 6 alignment (5 proposals), BitVM/BitVMX research (2 proposals), lifecycle/control gates (4 proposals)
 - Notable unimplemented specs: BitVM2 multi-party aggregation, BitVMX high-efficiency computation, micro-frontend federation for admin dashboard
 - Archive contains only 1 proposal: system-alignment-v2 from 2026-03-08
@@ -1366,6 +1372,67 @@ AGENTS.md (this update)
 **Gotchas**:
 - The current `origin/main` dependency lockfile predates the root Next.js override update; this issue-1162 change intentionally avoids unrelated dependency graph repairs.
 
+### 2026-07-22 — Swarm Coordination Review Hardening and Canonical Spec (#1163)
+**Trigger**: Issue #1163 — remediate independent review findings, publish the canonical specification, and leave `feat/1163-swarm-coordination` PR-ready pending external review/approval.
+**What was done**:
+- Added the canonical normative contract at `openspec/specs/swarm-coordination-v1.spec.md` and reconciled the proposal, design, spec delta, checklist, schema, runtime, tests, and docs.
+- Hardened capability matching, effective-now freshness, exact semantic result fingerprints, strict RFC 3339 calendar/offset validation, lifecycle sequence bounds, graph context budgets, and graph-linked handover validation.
+- Added versioned/digested #1162 allowlist provenance, explicit `.agents` source handling, tamper tests, prototype-key-safe JSON normalization/redaction, handover conflict cardinality checks, envelope-only authentication semantics, and Ajv 2020 schema fixtures.
+- Closed the final independent review provenance gap: #1162 now emits a versioned content-addressed attestation, trusted adapters can supply a separate content-addressed `DiscoveryTrustAnchor`, and allowlist derivation verifies manifest/registry identity plus exact required/subset optional/skill scope against that unchanged anchor; injected, removed, re-tiered, changed-content, and anchor-digest tampering fails closed.
+- Public `validateContextSnapshot()` and `mergeContextSnapshots()` now require `{ allowlist, discovery, trusted_discovery_anchor }`; structural normalization is private/non-authoritative, merge preserves the standard allowlist digest, rejects mixed/forged provenance, and its output enters handover validation.
+- Adopted the strict RFC 3339 millisecond profile across runtime, schema, canonical spec, change artifacts, docs, and digest tests; four-to-nine fractional digits are rejected instead of truncated.
+- Restored the root Next override and lockfile importer to `16.2.11`, kept Ajv explicitly pinned, and pinned only the admin dashboard compiler to TypeScript `6.0.3` because Next `16.2.11` requires `typescript/lib/typescript.js`; other workspace TypeScript `7.0.2` declarations remain unchanged.
+- Updated onboarding and session continuity documentation, retained focused CI commands, and recorded the implementation boundary without modifying #1162 artifacts or communicating externally.
+**Key discoveries**:
+- The implementation remains intentionally concentrated in `scripts/agent-coordination.ts` with structural contracts in `schemas/agent-swarm.schema.json`; the canonical normative source is now present at `openspec/specs/swarm-coordination-v1.spec.md`.
+- Root focused commands remain `test:agent-coordination` and `typecheck:agent-coordination`; Ajv 2020 and `ajv-formats` are explicit dev dependencies used by schema tests.
+- `context.allowlist_digest` and local entry/snapshot digests are content-integrity evidence, not transport authentication or authority; handover APIs must receive the authoritative derived allowlist, discovery result, and trusted anchor out of band. The pure library verifies the anchor's content binding but does not authenticate the adapter/deployment that supplied it.
+- Next `16.2.11` does not recognize TypeScript `7.0.2`'s compiler layout during its build-time dependency probe, so the dashboard uses the narrow `6.0.3` compatibility pin rather than changing the other workspace compilers.
+- The protocol validates and preserves evidence but does not provide transport delivery, provider selection, scheduling, broker behavior, or skill execution; authentication is only an envelope validation concern.
+**Files touched**:
+- `openspec/specs/swarm-coordination-v1.spec.md`
+- `openspec/changes/2026-07-22-issue-1163-swarm-coordination/{proposal.md,design.md,spec-delta.md,tasks.md}`
+- `schemas/agent-swarm.schema.json`
+- `schemas/agent-discovery-trust.schema.json`
+- `scripts/agent-coordination.ts`
+- `scripts/agent-coordination.test.ts`
+- `scripts/agent-discovery-contract.ts`
+- `scripts/agent-discovery.ts` and `scripts/agent-discovery.test.ts`
+- `package.json` and `pnpm-lock.yaml`
+- `services/admin-dashboard/package.json` and `services/admin-dashboard/tsconfig.json`
+- `docs/AGENT_ONBOARDING.md` and `docs/SESSION_CONTINUITY.md`
+- `AGENTS.md`
+**Gaps identified**:
+- Independent external review/approval remains outstanding and intentionally unchecked; no issue or PR state was changed by this remediation.
+- Provider transports, authentication integration, and runtime scheduling are intentionally out of scope for #1163.
+**Gotchas**:
+- Do not describe `conxian.swarm` as a scheduler, queue, broker, or provider runtime; it is a transport-neutral validation/interchange layer.
+- Do not treat a caller-provided free-form repository allowlist as authoritative; derive and validate it from #1162 discovery provenance.
+- Do not treat a caller-provided discovery result or trust anchor as self-authenticating; the adapter/deployment boundary owns trusted anchor delivery, while the pure library only verifies content binding.
+- Next `16.2.11` normalizes the dashboard `tsconfig.json` JSX mode to `react-jsx`; keep that generated compatibility change in the buildable tree.
+
+### 2026-07-22 — Trusted #1162 Discovery Anchor and Authoritative Context Merge (#1163)
+**Trigger**: Final independent-review remediation for issue #1163, focused on context provenance and merge correctness.
+**What was done**:
+- Added `scripts/agent-discovery-contract.ts` and `schemas/agent-discovery-trust.schema.json` for versioned, domain-separated, content-addressed #1162 attestations and trusted discovery anchors.
+- Required anchor + discovery + derived allowlist provenance for public context validation, packaging, resolution, merge, handover, resumability, and handover-envelope paths; kept structural normalization private and non-authoritative.
+- Made same-provenance context merges deterministic, preserved the standard allowlist digest, and verified merged snapshots through authoritative validation and handover creation.
+- Added tamper coverage for injected/removed/re-tiered/changed discovery paths and skills, anchor digest mutation, mixed-provenance snapshots, forged snapshots, and valid #1162 discovery/anchor use.
+- Reconciled schemas, OpenSpec artifacts, onboarding, session continuity, and the prior #1163 session entry without changing issue/PR state or communicating externally.
+**Key discoveries**:
+- A content digest proves the supplied anchor's bytes, not the identity or policy authority of the adapter/deployment boundary that supplied it; that boundary remains responsible for trusted delivery.
+- Required discovery context remains an exact anchor match, while selected optional context and inert skills are constrained to anchor-declared entries before allowlist derivation.
+**Files touched**:
+- `scripts/agent-discovery-contract.ts`, `scripts/agent-discovery.ts`, `scripts/agent-discovery.test.ts`
+- `scripts/agent-coordination.ts`, `scripts/agent-coordination.test.ts`
+- `schemas/agent-discovery-trust.schema.json`, `schemas/agent-swarm.schema.json`
+- `openspec/specs/swarm-coordination-v1.spec.md`, `openspec/changes/2026-07-22-issue-1163-swarm-coordination/`
+- `docs/AGENT_ONBOARDING.md`, `docs/SESSION_CONTINUITY.md`, `AGENTS.md`
+**Gaps identified**:
+- Independent external review/approval remains unchecked; provider transports, authentication integration, and runtime scheduling remain outside this pure library.
+**Gotchas**:
+- Never accept `trusted_discovery_anchor` from an untrusted swarm payload or describe the pure coordination library as authenticating its origin.
+
 ### 2026-07-22 — Post-merge PR #1188 Discovery and CI Remediation
 **Trigger**: Formal post-merge review `4754509039` for PR #1188.
 **What was done**:
@@ -1481,6 +1548,46 @@ AGENTS.md (this update)
 **Gotchas**:
 - Next build auto-rewrites `tsconfig.json` to `jsx: react-jsx`; restore the repository's intentional `jsx: preserve` setting after each build diagnostic. The final worktree keeps the original setting.
 
+### 2026-07-22 — OpenSpec Delta Layout Remediation (#1163)
+**Trigger**: Issue #1163 strict OpenSpec validation after merging the latest `origin/main`.
+**What was done**:
+- Added the current `spec-driven` change-local delta at `openspec/changes/2026-07-22-issue-1163-swarm-coordination/specs/swarm-coordination/spec.md` with one `ADDED` requirement and scenario mapped to each of AC-1 through AC-5.
+- Kept `openspec/specs/swarm-coordination-v1.spec.md` as the single detailed canonical normative contract and converted the old `spec-delta.md` into a non-duplicating index.
+- Updated the proposal, design, tasks, and session evidence with the exact capability name, CLI format, and validation results; onboarding and continuity docs already linked the canonical spec and were not duplicated.
+**Key discoveries**:
+- `pnpm dlx @fission-ai/openspec --version` resolves the current CLI as `1.6.0`; strict validation requires `specs/<capability>/spec.md`, `## ADDED Requirements`, `### Requirement:`, and at least one `#### Scenario:` per requirement.
+- The exact #1163 capability name is `swarm-coordination`; the strict change validator passes with five parsed deltas.
+- Repo-wide `validate --all` still reports 21 older active changes that lack current delta directories; #1160 and #1163 both pass, and this remediation does not broaden scope to rewrite those changes.
+**Files touched**:
+- `openspec/changes/2026-07-22-issue-1163-swarm-coordination/specs/swarm-coordination/spec.md`
+- `openspec/changes/2026-07-22-issue-1163-swarm-coordination/{proposal.md,design.md,spec-delta.md,tasks.md}`
+- `AGENTS.md`
+**Gaps identified**:
+- Independent external review/approval for #1163 remains outstanding.
+- The 21 pre-existing active OpenSpec changes without current `specs/<capability>/spec.md` deltas remain outside this focused remediation.
+**Gotchas**:
+- The deprecated `openspec change show` command is not the preferred inspection path; after aligning proposal headings to `Why` and `What Changes`, the current `openspec show ... --json --deltas-only` command reports the five deltas cleanly.
+
+### 2026-07-22 — PR #1195 Formal Review Correctness Remediation
+**Trigger**: Formal review `4756630826` on PR #1195.
+**What was done**:
+- Normalized envelope authentication assertions before integrity digest construction, preserving RFC 3339 offset normalization and the strict 0–3 fractional-second profile.
+- Enforced canonical per-entry context byte/depth limits in authoritative snapshot validation and added forged-snapshot regressions across direct, merge, handover, and envelope paths, including exact-boundary acceptance.
+- Replaced both HS256 tampering-test final-character mutations with a shared deterministic first-signature-character mutation; production authentication behavior is unchanged.
+**Key discoveries**:
+- `createEnvelope()` already normalized the envelope core before hashing; authentication was the only digest-bearing subobject still hashed in caller form.
+- `normalizeContextEntry()` recomputes canonical byte/depth accounting, so authoritative validation can safely apply the declared snapshot limits to the normalized value without trusting self-reported metrics.
+- The final Base64URL signature character can contain unused padding bits, so mutating it may leave the decoded HS256 signature unchanged; tampering tests must change a significant signature character.
+**Files touched**:
+- `scripts/agent-coordination.ts`
+- `scripts/agent-coordination.test.ts`
+- `services/admin-dashboard/src/tests/m2m.test.ts`
+- `AGENTS.md`
+**Gaps identified**:
+- No canonical OpenSpec or JSON Schema correction was needed; both already state authentication normalization and per-entry byte/depth bounds.
+**Gotchas**:
+- A self-consistent forged snapshot must recompute both its context integrity digest and declared limits to exercise the authoritative-boundary bypass; changing only the limits is sufficient because entry provenance remains valid.
+
 ### 2026-07-22 — PR #1194 Mainline Merge Resolution
 **Trigger**: PR #1194 request to fetch `origin/main`, resolve all conflicts, validate, and update `feature/1161-m2m-key-rotation`.
 **What was done**:
@@ -1520,3 +1627,20 @@ AGENTS.md (this update)
 - Hosted Docker/Compose checks remain the final validation gate after the repaired branch is pushed.
 **Gotchas**:
 - Keep the Compose secret declaration fail-closed and validate only file type and mode; never print the secret value.
+
+### 2026-07-22 — PR #1195 Mainline Merge Conflict Resolution
+**Trigger**: PR #1195 request to fetch `origin/main`, resolve all merge conflicts, validate, and update `feat/1163-swarm-coordination`.
+**What was done**:
+- Fetched `origin/main` at `c007cc80fa7e718a104b18fe37e661bd5306a0c4` and the PR head at `23ca3c2cf8c876af966f9aa205126c1be9c2783e`, then performed a normal non-rebase merge.
+- Resolved the two content conflicts in `AGENTS.md` and `services/admin-dashboard/src/tests/m2m.test.ts` by retaining all #1163 swarm-coordination entries, mainline #1194 entries, M2M rotation test setup, and deterministic first-signature JWT tampering coverage.
+- Verified the merged branch with the full test, typecheck, lint, and build suites, strict #1163 OpenSpec validation, dependency consistency, whitespace, and conflict-marker checks.
+**Key discoveries**:
+- The repository's remote fetch refspec tracks `main`; the PR ref was fetched and checked out explicitly from `refs/remotes/origin/feat/1163-swarm-coordination`.
+- The mainline M2M rotation change still uses the older delta layout and remains outside this focused conflict resolution; strict validation of that unrelated artifact reports no `specs/` deltas.
+**Files touched**:
+- `AGENTS.md`
+- `services/admin-dashboard/src/tests/m2m.test.ts`
+**Gaps identified**:
+- Hosted PR checks and GitHub mergeability remain to be re-evaluated after the merge commit is pushed.
+**Gotchas**:
+- Do not rewrite the existing mainline or #1163 session-log entries; this entry is appended after both histories are preserved.

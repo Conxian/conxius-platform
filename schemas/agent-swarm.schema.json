@@ -1,0 +1,403 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Conxian/conxius-platform/schemas/agent-swarm.schema.json",
+  "title": "Conxian Transport-Neutral Swarm Coordination Protocol",
+  "description": "Strict v1 interchange contracts for envelopes, task DAGs, results, handovers, and bounded session context.",
+  "oneOf": [
+    { "$ref": "#/$defs/envelope" },
+    { "$ref": "#/$defs/taskGraph" },
+    { "$ref": "#/$defs/taskResult" },
+    { "$ref": "#/$defs/handover" },
+    { "$ref": "#/$defs/contextSnapshot" }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "contextKey": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?!0000-)(\\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])T([01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,3})?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+    },
+    "jsonValue": {
+      "oneOf": [
+        { "type": "null" },
+        { "type": "string" },
+        { "type": "boolean" },
+        { "type": "number" },
+        { "type": "array", "items": { "$ref": "#/$defs/jsonValue" } },
+        { "type": "object", "additionalProperties": { "$ref": "#/$defs/jsonValue" } }
+      ]
+    },
+    "link": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relation", "target_id", "locator"],
+      "properties": {
+        "relation": { "type": "string", "minLength": 1 },
+        "target_id": { "$ref": "#/$defs/identifier" },
+        "locator": { "type": "string", "minLength": 1 },
+        "digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agent_id"],
+      "properties": {
+        "agent_id": { "$ref": "#/$defs/identifier" },
+        "instance_id": { "$ref": "#/$defs/identifier" }
+      }
+    },
+    "recipient": {
+      "oneOf": [
+        { "$ref": "#/$defs/identity" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["capability"],
+          "properties": {
+            "capability": { "type": "string", "pattern": "^[a-z0-9]+(?:[._/-][a-z0-9]+)*$" },
+            "version_range": { "type": "string", "minLength": 1 }
+          }
+        }
+      ]
+    },
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "sequence", "expires_at"],
+      "properties": {
+        "state": { "enum": ["PROPOSED", "ACCEPTED", "STARTED", "COMPLETED", "FAILED", "BLOCKED", "CANCELLED", "REJECTED", "EXPIRED"] },
+        "sequence": { "type": "integer", "minimum": 0 },
+        "expires_at": { "$ref": "#/$defs/timestamp" }
+      }
+    },
+    "authentication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scheme", "verified", "subject"],
+      "properties": {
+        "scheme": { "enum": ["transport", "signature"] },
+        "verified": { "type": "boolean" },
+        "subject": { "$ref": "#/$defs/identifier" },
+        "expires_at": { "$ref": "#/$defs/timestamp" }
+      }
+    },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["digest"],
+      "properties": {
+        "digest": { "$ref": "#/$defs/digest" },
+        "authentication": { "$ref": "#/$defs/authentication" }
+      }
+    },
+    "digestIntegrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["digest"],
+      "properties": {
+        "digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "repositoryPath": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*//)(?!.*(^|/)\\.)[^\\u0000-\\u001F]+$"
+        },
+        { "const": ".agents/manifest.json" },
+        { "const": ".agents/skills/registry.json" },
+        { "type": "string", "pattern": "^\\.agents/skills/[A-Za-z0-9][A-Za-z0-9._-]*/SKILL\\.md$" }
+      ]
+    },
+    "allowlistRepositoryPath": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "tier", "required"],
+      "properties": {
+        "path": { "$ref": "#/$defs/repositoryPath" },
+        "tier": { "enum": ["GOVERNANCE", "CANONICAL", "ARCHITECTURAL", "OPERATIONAL", "EVIDENCE", "HISTORICAL"] },
+        "required": { "type": "boolean" }
+      }
+    },
+    "contextAllowlistProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol", "version", "discovery_protocol", "trusted_discovery_anchor_protocol", "trusted_discovery_anchor_version", "trusted_discovery_anchor_digest", "manifest_path", "manifest_version", "registry_path", "registry_version", "repository_paths", "repository_paths_digest", "discovery_digest"],
+      "properties": {
+        "protocol": { "const": "conxian.swarm.context-allowlist" },
+        "version": { "const": "1.0.0" },
+        "discovery_protocol": { "const": "conxian-agent-discovery" },
+        "trusted_discovery_anchor_protocol": { "const": "conxian-agent-discovery.trust-anchor" },
+        "trusted_discovery_anchor_version": { "const": "1.0.0" },
+        "trusted_discovery_anchor_digest": { "$ref": "#/$defs/digest" },
+        "manifest_path": { "const": ".agents/manifest.json" },
+        "manifest_version": { "type": "string", "pattern": "^1\\.\\d+\\.\\d+$" },
+        "registry_path": { "const": ".agents/skills/registry.json" },
+        "registry_version": { "type": "string", "pattern": "^1\\.\\d+\\.\\d+$" },
+        "repository_paths": { "type": "array", "items": { "$ref": "#/$defs/allowlistRepositoryPath" }, "uniqueItems": true },
+        "repository_paths_digest": { "$ref": "#/$defs/digest" },
+        "discovery_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "contextAllowlist": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository_paths", "task_input_keys", "required_task_input_keys", "artifact_ids", "required_artifact_ids", "assumption_keys", "provenance"],
+      "properties": {
+        "repository_paths": { "type": "array", "items": { "$ref": "#/$defs/allowlistRepositoryPath" }, "uniqueItems": true },
+        "task_input_keys": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/contextKey" } },
+        "required_task_input_keys": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/contextKey" } },
+        "artifact_ids": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } },
+        "required_artifact_ids": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } },
+        "assumption_keys": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/contextKey" } },
+        "provenance": { "$ref": "#/$defs/contextAllowlistProvenance" }
+      }
+    },
+    "failure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message"],
+      "properties": {
+        "code": { "type": "string", "minLength": 1 },
+        "message": { "type": "string", "minLength": 1 },
+        "details": { "type": "string" }
+      }
+    },
+    "constraint": {
+      "type": "object",
+      "additionalProperties": { "type": ["string", "number", "boolean", "null"] }
+    },
+    "capabilityRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability_id", "version_range", "constraints"],
+      "properties": {
+        "capability_id": { "type": "string", "pattern": "^[a-z0-9]+(?:[._/-][a-z0-9]+)*$" },
+        "version_range": { "type": "string", "minLength": 1 },
+        "constraints": { "$ref": "#/$defs/constraint" }
+      }
+    },
+    "retry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_attempts", "backoff_ms", "timeout_ms"],
+      "properties": {
+        "max_attempts": { "type": "integer", "minimum": 1, "maximum": 64 },
+        "backoff_ms": { "type": "integer", "minimum": 0 },
+        "timeout_ms": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "taskNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task_id", "objective", "schema", "depends_on", "required", "capabilities", "retry", "links"],
+      "properties": {
+        "task_id": { "$ref": "#/$defs/identifier" },
+        "objective": { "type": "string", "minLength": 1 },
+        "schema": { "type": "string", "minLength": 1 },
+        "depends_on": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } },
+        "required": { "type": "boolean" },
+        "capabilities": { "type": "array", "items": { "$ref": "#/$defs/capabilityRequirement" } },
+        "retry": { "$ref": "#/$defs/retry" },
+        "links": { "type": "array", "items": { "$ref": "#/$defs/link" } }
+      }
+    },
+    "graphLimits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_nodes", "max_depth", "max_retry_budget", "max_timeout_ms", "max_context_bytes"],
+      "properties": {
+        "max_nodes": { "type": "integer", "minimum": 1 },
+        "max_depth": { "type": "integer", "minimum": 1 },
+        "max_retry_budget": { "type": "integer", "minimum": 0 },
+        "max_timeout_ms": { "type": "integer", "minimum": 1 },
+        "max_context_bytes": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "aggregationPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["optional_failure", "required_failure", "required_blocked", "conflict", "cancellation"],
+      "properties": {
+        "optional_failure": { "const": "PARTIAL" },
+        "required_failure": { "const": "FAILED" },
+        "required_blocked": { "const": "BLOCKED" },
+        "conflict": { "const": "CONFLICT" },
+        "cancellation": { "const": "CANCELLED" }
+      }
+    },
+    "taskGraph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "graph_id", "root_task_id", "nodes", "limits", "aggregation_policy", "links"],
+      "properties": {
+        "schema": { "const": "task-graph.v1" },
+        "graph_id": { "$ref": "#/$defs/identifier" },
+        "root_task_id": { "$ref": "#/$defs/identifier" },
+        "nodes": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/taskNode" } },
+        "limits": { "$ref": "#/$defs/graphLimits" },
+        "aggregation_policy": { "$ref": "#/$defs/aggregationPolicy" },
+        "links": { "type": "array", "items": { "$ref": "#/$defs/link" } }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidence_id", "kind", "locator", "digest", "summary", "links"],
+      "properties": {
+        "evidence_id": { "$ref": "#/$defs/identifier" },
+        "kind": { "type": "string", "minLength": 1 },
+        "locator": { "type": "string", "minLength": 1 },
+        "digest": { "$ref": "#/$defs/digest" },
+        "summary": { "type": "string" },
+        "links": { "type": "array", "items": { "$ref": "#/$defs/link" } }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact_id", "locator", "media_type", "digest", "classification", "links"],
+      "properties": {
+        "artifact_id": { "$ref": "#/$defs/identifier" },
+        "locator": { "type": "string", "minLength": 1 },
+        "media_type": { "type": "string", "minLength": 1 },
+        "digest": { "$ref": "#/$defs/digest" },
+        "classification": { "enum": ["PUBLIC", "INTERNAL", "CONFIDENTIAL", "RESTRICTED"] },
+        "links": { "type": "array", "items": { "$ref": "#/$defs/link" } }
+      }
+    },
+    "taskResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "graph_id", "task_id", "attempt", "result_id", "agent_id", "status", "payload", "canonical_payload_digest", "completed_at", "evidence", "artifacts", "links"],
+      "properties": {
+        "schema": { "const": "result.v1" },
+        "graph_id": { "$ref": "#/$defs/identifier" },
+        "task_id": { "$ref": "#/$defs/identifier" },
+        "attempt": { "type": "integer", "minimum": 1, "maximum": 64 },
+        "result_id": { "$ref": "#/$defs/identifier" },
+        "agent_id": { "$ref": "#/$defs/identifier" },
+        "status": { "enum": ["SUCCEEDED", "FAILED", "BLOCKED", "CANCELLED", "EXPIRED"] },
+        "payload": { "$ref": "#/$defs/jsonValue" },
+        "canonical_payload_digest": { "$ref": "#/$defs/digest" },
+        "completed_at": { "$ref": "#/$defs/timestamp" },
+        "error": { "$ref": "#/$defs/failure" },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } },
+        "artifacts": { "type": "array", "items": { "$ref": "#/$defs/artifact" } },
+        "links": { "type": "array", "items": { "$ref": "#/$defs/link" } }
+      }
+    },
+    "contextSource": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false, "required": ["kind", "key"],
+          "properties": { "kind": { "const": "TASK_INPUT" }, "key": { "$ref": "#/$defs/contextKey" } }
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["kind", "path", "tier"],
+          "properties": { "kind": { "const": "DECLARED_REPOSITORY" }, "path": { "$ref": "#/$defs/repositoryPath" }, "tier": { "enum": ["GOVERNANCE", "CANONICAL", "ARCHITECTURAL", "OPERATIONAL", "EVIDENCE", "HISTORICAL"] } }
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["kind", "artifact_id", "tier"],
+          "properties": { "kind": { "const": "ARTIFACT" }, "artifact_id": { "$ref": "#/$defs/identifier" }, "tier": { "enum": ["GOVERNANCE", "CANONICAL", "ARCHITECTURAL", "OPERATIONAL", "EVIDENCE", "HISTORICAL"] } }
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["kind", "key"],
+          "properties": { "kind": { "const": "ASSUMPTION" }, "key": { "$ref": "#/$defs/contextKey" } }
+        }
+      ]
+    },
+    "redaction": {
+      "type": "object", "additionalProperties": false, "required": ["redacted", "fields"],
+      "properties": { "redacted": { "type": "boolean" }, "fields": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }, "reason": { "enum": ["SENSITIVE_FIELD", "SECRET", "CREDENTIAL", "PERSONAL_DATA", "RESTRICTED", "TRUNCATED"] } }
+    },
+    "contextEntry": {
+      "type": "object", "additionalProperties": false,
+      "required": ["context_id", "key", "source", "value", "classification", "sensitivity", "redaction", "captured_at", "precedence", "byte_length", "depth", "truncated", "provenance_digest", "stale", "expired", "links"],
+      "properties": {
+        "context_id": { "$ref": "#/$defs/identifier" }, "key": { "$ref": "#/$defs/contextKey" }, "source": { "$ref": "#/$defs/contextSource" }, "value": { "$ref": "#/$defs/jsonValue" },
+        "classification": { "enum": ["PUBLIC", "INTERNAL", "CONFIDENTIAL", "RESTRICTED"] }, "sensitivity": { "enum": ["NONE", "SECRET", "CREDENTIAL", "PERSONAL_DATA", "RESTRICTED"] }, "redaction": { "$ref": "#/$defs/redaction" },
+        "captured_at": { "$ref": "#/$defs/timestamp" }, "stale_after": { "$ref": "#/$defs/timestamp" }, "expires_at": { "$ref": "#/$defs/timestamp" }, "precedence": { "type": "integer", "minimum": 1 }, "byte_length": { "type": "integer", "minimum": 1 }, "depth": { "type": "integer", "minimum": 1 }, "truncated": { "type": "boolean" }, "original_digest": { "$ref": "#/$defs/digest" }, "provenance_digest": { "$ref": "#/$defs/digest" }, "stale": { "type": "boolean" }, "expired": { "type": "boolean" }, "links": { "type": "array", "items": { "$ref": "#/$defs/link" } }
+      }
+    },
+    "contextConflict": {
+      "type": "object", "additionalProperties": false, "required": ["conflict_id", "key", "selected_context_id", "discarded_context_ids", "reason", "links"],
+      "properties": { "conflict_id": { "$ref": "#/$defs/digest" }, "key": { "$ref": "#/$defs/contextKey" }, "selected_context_id": { "$ref": "#/$defs/identifier" }, "discarded_context_ids": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } }, "reason": { "enum": ["lower-precedence", "stale", "expired", "newer-capture", "digest-tiebreak"] }, "links": { "type": "array", "items": { "$ref": "#/$defs/link" } } }
+    },
+    "contextLimits": {
+      "type": "object", "additionalProperties": false, "required": ["max_items", "max_total_bytes", "max_entry_bytes", "max_depth"],
+      "properties": { "max_items": { "type": "integer", "minimum": 1 }, "max_total_bytes": { "type": "integer", "minimum": 1 }, "max_entry_bytes": { "type": "integer", "minimum": 1 }, "max_depth": { "type": "integer", "minimum": 1 } }
+    },
+    "contextSnapshot": {
+      "$comment": "At every public validation, handover, embedded-envelope, resumability, and merge boundary, the runtime validator must receive and verify the derived #1162 ContextAllowlist, DiscoveryResult, and versioned content-addressed trusted discovery anchor; allowlist_digest alone is not authoritative. The anchor is out-of-band adapter/deployment input and is not authenticated by this pure library.",
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "captured_at", "evaluated_at", "entries", "required_keys", "missing_required", "stale_required", "expired_required", "conflicts", "warnings", "limits", "allowlist_digest", "integrity"],
+      "properties": {
+        "schema": { "const": "context.v1" }, "captured_at": { "$ref": "#/$defs/timestamp" }, "evaluated_at": { "$ref": "#/$defs/timestamp" }, "entries": { "type": "array", "items": { "$ref": "#/$defs/contextEntry" } }, "required_keys": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }, "missing_required": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }, "stale_required": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }, "expired_required": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }, "conflicts": { "type": "array", "items": { "$ref": "#/$defs/contextConflict" } }, "warnings": { "type": "array", "items": { "type": "string" } }, "limits": { "$ref": "#/$defs/contextLimits" }, "allowlist_digest": { "$ref": "#/$defs/digest" }, "integrity": { "$ref": "#/$defs/digestIntegrity" }
+      }
+    },
+    "contextReference": {
+      "type": "object", "additionalProperties": false, "required": ["context_id", "digest", "links"],
+      "properties": { "context_id": { "$ref": "#/$defs/identifier" }, "digest": { "$ref": "#/$defs/digest" }, "links": { "type": "array", "items": { "$ref": "#/$defs/link" } } }
+    },
+    "payload": {
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["kind", "graph_id", "task", "links"], "properties": { "kind": { "const": "task" }, "graph_id": { "$ref": "#/$defs/identifier" }, "task": { "$ref": "#/$defs/taskNode" }, "links": { "type": "array", "items": { "$ref": "#/$defs/link" } } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind", "for_message_id", "accepted", "links"], "properties": { "kind": { "const": "ack" }, "for_message_id": { "$ref": "#/$defs/identifier" }, "accepted": { "type": "boolean" }, "reason": { "type": "string" }, "links": { "type": "array", "items": { "$ref": "#/$defs/link" } } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind", "graph_id", "task_id", "state", "progress_bps", "evidence", "links"], "properties": { "kind": { "const": "progress" }, "graph_id": { "$ref": "#/$defs/identifier" }, "task_id": { "$ref": "#/$defs/identifier" }, "state": { "enum": ["PROPOSED", "ACCEPTED", "STARTED", "COMPLETED", "FAILED", "BLOCKED", "CANCELLED", "REJECTED", "EXPIRED"] }, "progress_bps": { "type": "integer", "minimum": 0, "maximum": 10000 }, "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } }, "links": { "type": "array", "items": { "$ref": "#/$defs/link" } } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind", "result", "links"], "properties": { "kind": { "const": "result" }, "result": { "$ref": "#/$defs/taskResult" }, "links": { "type": "array", "items": { "$ref": "#/$defs/link" } } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind", "handover", "links"], "properties": { "kind": { "const": "handover" }, "handover": { "$ref": "#/$defs/handover" }, "links": { "type": "array", "items": { "$ref": "#/$defs/link" } } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind", "code", "message", "affected_id", "links"], "properties": { "kind": { "const": "error" }, "code": { "type": "string", "minLength": 1 }, "message": { "type": "string", "minLength": 1 }, "affected_id": { "$ref": "#/$defs/identifier" }, "links": { "type": "array", "items": { "$ref": "#/$defs/link" } } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind", "target_id", "reason", "links"], "properties": { "kind": { "const": "cancel" }, "target_id": { "$ref": "#/$defs/identifier" }, "reason": { "type": "string", "minLength": 1 }, "links": { "type": "array", "items": { "$ref": "#/$defs/link" } } } }
+      ]
+    },
+    "envelope": {
+      "type": "object", "additionalProperties": false,
+      "required": ["protocol", "schema", "message_id", "message_type", "sender", "recipient", "correlation_id", "idempotency_scope", "idempotency_key", "lifecycle", "payload", "links", "integrity"],
+      "properties": {
+        "protocol": { "const": "conxian.swarm" }, "schema": { "const": "envelope.v1" }, "message_id": { "$ref": "#/$defs/identifier" }, "message_type": { "enum": ["task", "ack", "progress", "result", "handover", "error", "cancel"] }, "sender": { "$ref": "#/$defs/identity" }, "recipient": { "$ref": "#/$defs/recipient" }, "correlation_id": { "$ref": "#/$defs/identifier" }, "causation_id": { "$ref": "#/$defs/identifier" }, "idempotency_scope": { "$ref": "#/$defs/identifier" }, "idempotency_key": { "$ref": "#/$defs/identifier" }, "lifecycle": { "$ref": "#/$defs/lifecycle" }, "payload": { "$ref": "#/$defs/payload" }, "context": { "oneOf": [{ "$ref": "#/$defs/contextSnapshot" }, { "type": "array", "items": { "$ref": "#/$defs/contextReference" } }] }, "links": { "type": "array", "items": { "$ref": "#/$defs/link" } }, "integrity": { "$ref": "#/$defs/integrity" }
+      }
+    },
+    "handoverTask": {
+      "type": "object", "additionalProperties": false, "required": ["task_id", "state", "links"],
+      "properties": { "task_id": { "$ref": "#/$defs/identifier" }, "state": { "enum": ["PROPOSED", "ACCEPTED", "STARTED", "COMPLETED", "BLOCKED"] }, "attempt": { "type": "integer", "minimum": 1, "maximum": 64 }, "reason": { "type": "string" }, "links": { "type": "array", "items": { "$ref": "#/$defs/link" } } }
+    },
+    "decision": {
+      "type": "object", "additionalProperties": false, "required": ["decision_id", "sequence", "key", "value", "rationale", "links"],
+      "properties": { "decision_id": { "$ref": "#/$defs/identifier" }, "sequence": { "type": "integer", "minimum": 1 }, "key": { "$ref": "#/$defs/contextKey" }, "value": { "$ref": "#/$defs/jsonValue" }, "rationale": { "type": "string", "minLength": 1 }, "links": { "type": "array", "items": { "$ref": "#/$defs/link" } } }
+    },
+    "risk": {
+      "type": "object", "additionalProperties": false, "required": ["risk_id", "severity", "status", "description", "links"],
+      "properties": { "risk_id": { "$ref": "#/$defs/identifier" }, "severity": { "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] }, "status": { "enum": ["OPEN", "MITIGATED", "ACCEPTED"] }, "description": { "type": "string", "minLength": 1 }, "links": { "type": "array", "items": { "$ref": "#/$defs/link" } } }
+    },
+    "resume": {
+      "type": "object", "additionalProperties": false, "required": ["instruction_id", "sequence", "task_id", "action", "depends_on", "acceptance", "links"],
+      "properties": { "instruction_id": { "$ref": "#/$defs/identifier" }, "sequence": { "type": "integer", "minimum": 1 }, "task_id": { "$ref": "#/$defs/identifier" }, "action": { "enum": ["RESUME", "RETRY", "UNBLOCK", "VERIFY", "WAIT"] }, "depends_on": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } }, "acceptance": { "type": "string", "minLength": 1 }, "links": { "type": "array", "items": { "$ref": "#/$defs/link" } } }
+    },
+    "handoverConflict": {
+      "type": "object", "additionalProperties": false, "required": ["conflict_id", "object_id", "payload_digests", "resolution_required", "links"],
+      "properties": { "conflict_id": { "$ref": "#/$defs/identifier" }, "object_id": { "$ref": "#/$defs/identifier" }, "payload_digests": { "type": "array", "minItems": 2, "uniqueItems": true, "items": { "$ref": "#/$defs/digest" } }, "resolution_required": { "type": "boolean" }, "links": { "type": "array", "items": { "$ref": "#/$defs/link" } } }
+    },
+    "handover": {
+      "$comment": "Runtime create/validate/resumability, merge, and handover-envelope replay validation require the referenced TaskGraph plus the derived #1162 ContextAllowlist, DiscoveryResult, and trusted discovery anchor as out-of-band validation inputs.",
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "handover_id", "correlation_id", "graph_id", "graph_digest", "captured_at", "expires_at", "lifecycle_state", "completed_tasks", "active_tasks", "blocked_tasks", "pending_tasks", "decisions", "artifacts", "unresolved_conflicts", "risks_and_blockers", "resume_instructions", "context_snapshot", "links", "integrity"],
+      "properties": {
+        "schema": { "const": "handover.v1" }, "handover_id": { "$ref": "#/$defs/identifier" }, "correlation_id": { "$ref": "#/$defs/identifier" }, "graph_id": { "$ref": "#/$defs/identifier" }, "graph_digest": { "$ref": "#/$defs/digest" }, "source_agent": { "$ref": "#/$defs/identity" }, "target_agent": { "$ref": "#/$defs/identity" }, "captured_at": { "$ref": "#/$defs/timestamp" }, "expires_at": { "$ref": "#/$defs/timestamp" }, "lifecycle_state": { "enum": ["PROPOSED", "ACCEPTED", "STARTED", "COMPLETED", "FAILED", "BLOCKED", "CANCELLED", "REJECTED", "EXPIRED"] }, "completed_tasks": { "type": "array", "items": { "$ref": "#/$defs/handoverTask" } }, "active_tasks": { "type": "array", "items": { "$ref": "#/$defs/handoverTask" } }, "blocked_tasks": { "type": "array", "items": { "$ref": "#/$defs/handoverTask" } }, "pending_tasks": { "type": "array", "items": { "$ref": "#/$defs/handoverTask" } }, "decisions": { "type": "array", "items": { "$ref": "#/$defs/decision" } }, "artifacts": { "type": "array", "items": { "$ref": "#/$defs/artifact" } }, "unresolved_conflicts": { "type": "array", "items": { "$ref": "#/$defs/handoverConflict" } }, "risks_and_blockers": { "type": "array", "items": { "$ref": "#/$defs/risk" } }, "resume_instructions": { "type": "array", "items": { "$ref": "#/$defs/resume" } }, "context_snapshot": { "$ref": "#/$defs/contextSnapshot" }, "links": { "type": "array", "items": { "$ref": "#/$defs/link" } }, "integrity": { "$ref": "#/$defs/digestIntegrity" }
+      }
+    }
+  }
+}

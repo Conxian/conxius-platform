@@ -13,6 +13,36 @@ import {
   resolve,
 } from 'node:path';
 
+import {
+  DISCOVERY_ATTESTATION_PROTOCOL,
+  DISCOVERY_ATTESTATION_VERSION,
+  DISCOVERY_TRUST_ANCHOR_PROTOCOL,
+  DISCOVERY_TRUST_ANCHOR_VERSION,
+  discoveryAttestationScope,
+  discoveryDigestFor,
+  type DiscoveryAttestation,
+  type DiscoveryContextTier,
+  type DiscoveryDigest,
+  type DiscoveryTrustAnchor,
+  type DiscoveryTrustContextEntry,
+  type DiscoveryTrustSkillEntry,
+} from './agent-discovery-contract';
+
+export {
+  DISCOVERY_ATTESTATION_PROTOCOL,
+  DISCOVERY_ATTESTATION_VERSION,
+  DISCOVERY_TRUST_ANCHOR_PROTOCOL,
+  DISCOVERY_TRUST_ANCHOR_VERSION,
+} from './agent-discovery-contract';
+export type {
+  DiscoveryAttestation,
+  DiscoveryContextTier,
+  DiscoveryDigest,
+  DiscoveryTrustAnchor,
+  DiscoveryTrustContextEntry,
+  DiscoveryTrustSkillEntry,
+} from './agent-discovery-contract';
+
 export const DISCOVERY_PROTOCOL = 'conxian-agent-discovery';
 export const SUPPORTED_PROTOCOL_MAJOR = 1;
 export const MANIFEST_RELATIVE_PATH = '.agents/manifest.json';
@@ -102,6 +132,7 @@ export interface DiscoveryResult {
     };
     selected: LoadedSkill[];
   };
+  attestation: DiscoveryAttestation;
   warnings: string[];
 }
 
@@ -364,10 +395,10 @@ function readDeclaredFile(declaredFile: DeclaredFile, label: string): string {
   }
 }
 
-function parseJsonFile(declaredFile: DeclaredFile, label: string): unknown {
+function parseJsonFile(declaredFile: DeclaredFile, label: string): { content: string; value: unknown } {
   const content = readDeclaredFile(declaredFile, label);
   try {
-    return JSON.parse(content) as unknown;
+    return { content, value: JSON.parse(content) as unknown };
   } catch {
     throw new DiscoveryError('invalid-json', `${label} is not valid JSON.`);
   }
@@ -689,6 +720,58 @@ function toPublicSkillMetadata(skill: InternalSkillMetadata): SkillMetadata {
   };
 }
 
+function discoveryTierForPath(path: string): DiscoveryContextTier {
+  if (path === 'GOVERNANCE.md') return 'GOVERNANCE';
+  if (path === '.agents/manifest.json' || path === '.agents/skills/registry.json') return 'CANONICAL';
+  return 'ARCHITECTURAL';
+}
+
+function contextAttestation(entry: LoadedContext, required: boolean): DiscoveryTrustContextEntry {
+  return {
+    path: entry.path,
+    tier: discoveryTierForPath(entry.path),
+    required,
+    priority: entry.priority,
+    description: entry.description,
+    content_digest: discoveryDigestFor('conxian-agent-discovery.context-content.v1', entry.content),
+  };
+}
+
+function skillAttestation(skill: LoadedSkill): DiscoveryTrustSkillEntry {
+  return {
+    id: skill.metadata.id,
+    path: skill.metadata.path,
+    metadata_digest: discoveryDigestFor('conxian-agent-discovery.skill-metadata.v1', skill.metadata),
+    content_digest: discoveryDigestFor('conxian-agent-discovery.skill-content.v1', skill.content),
+  };
+}
+
+/**
+* Packages a locally validated #1162 result as an adapter-supplied trust anchor.
+* This helper is deterministic packaging only; it does not authenticate the
+* adapter, repository, or deployment that decides to trust the returned value.
+*/
+export function buildDiscoveryTrustAnchor(result: DiscoveryResult): DiscoveryTrustAnchor {
+  const attestationScope = discoveryAttestationScope(result.attestation);
+  const comparePaths = (left: { path: string }, right: { path: string }): number => left.path < right.path ? -1 : left.path > right.path ? 1 : 0;
+  const scope = {
+    ...attestationScope,
+    context: {
+      required: [...attestationScope.context.required].sort(comparePaths),
+      optional: [...attestationScope.context.optional].sort(comparePaths),
+    },
+    skills: {
+      selected: [...attestationScope.skills.selected].sort(comparePaths),
+    },
+  };
+  return {
+    protocol: DISCOVERY_TRUST_ANCHOR_PROTOCOL,
+    version: DISCOVERY_TRUST_ANCHOR_VERSION,
+    ...scope,
+    digest: discoveryDigestFor('conxian-agent-discovery.trust-anchor.v1', scope),
+  };
+}
+
 export function discoverRepository(
   startDirectory: string = process.cwd(),
   options: DiscoveryOptions = {},
@@ -699,7 +782,8 @@ export function discoverRepository(
     absolutePath: location.manifestPath,
     exists: true,
   };
-  const manifest = parseManifest(parseJsonFile(manifestFile, MANIFEST_RELATIVE_PATH));
+  const manifestFileContent = parseJsonFile(manifestFile, MANIFEST_RELATIVE_PATH);
+  const manifest = parseManifest(manifestFileContent.value);
 
   const contextTargets = [
     ...manifest.context.required.map((entry) => ({ entry, required: true })),
@@ -744,7 +828,8 @@ export function discoverRepository(
     `Skill registry '${manifest.skills.registry}'`,
     true,
   );
-  const registry = parseRegistry(parseJsonFile(registryFile, `Skill registry '${manifest.skills.registry}'`));
+  const registryFileContent = parseJsonFile(registryFile, `Skill registry '${manifest.skills.registry}'`);
+  const registry = parseRegistry(registryFileContent.value);
 
   const internalSkills: InternalSkillMetadata[] = registry.skills.map((skill) => ({
     ...skill,
@@ -788,6 +873,33 @@ export function discoverRepository(
   }
 
   warnings.sort();
+  const comparePaths = (left: { path: string }, right: { path: string }): number => left.path < right.path ? -1 : left.path > right.path ? 1 : 0;
+  const attestationScope = {
+    repository: { root: '.' as const },
+    manifest: {
+      path: MANIFEST_RELATIVE_PATH as '.agents/manifest.json',
+      version: manifest.manifestVersion,
+      content_digest: discoveryDigestFor('conxian-agent-discovery.manifest-content.v1', manifestFileContent.content),
+    },
+    registry: {
+      path: '.agents/skills/registry.json' as const,
+      version: registry.registryVersion,
+      content_digest: discoveryDigestFor('conxian-agent-discovery.registry-content.v1', registryFileContent.content),
+    },
+    context: {
+      required: requiredContext.map((entry) => contextAttestation(entry, true)).sort(comparePaths),
+      optional: optionalContext.map((entry) => contextAttestation(entry, false)).sort(comparePaths),
+    },
+    skills: {
+      selected: selectedSkills.map(skillAttestation).sort(comparePaths),
+    },
+  };
+  const attestation: DiscoveryAttestation = {
+    protocol: DISCOVERY_ATTESTATION_PROTOCOL,
+    version: DISCOVERY_ATTESTATION_VERSION,
+    ...attestationScope,
+    digest: discoveryDigestFor('conxian-agent-discovery.attestation.v1', attestationScope),
+  };
   return {
     ok: true,
     protocol: DISCOVERY_PROTOCOL,
@@ -807,6 +919,7 @@ export function discoverRepository(
       },
       selected: selectedSkills,
     },
+    attestation,
     warnings,
   };
 }

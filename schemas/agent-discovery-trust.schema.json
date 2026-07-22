@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Conxian/conxius-platform/schemas/agent-discovery-trust.schema.json",
+  "title": "Conxian #1162 Discovery Attestation and Trust Anchor",
+  "description": "Strict content-addressed contracts for a validated discovery attestation and its adapter-supplied trust anchor. The schema constrains shape; the coordination library verifies digests and discovery-to-anchor binding.",
+  "oneOf": [
+    { "$ref": "#/$defs/attestation" },
+    { "$ref": "#/$defs/trustAnchor" }
+  ],
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^1\\.\\d+\\.\\d+$"
+    },
+    "contextTier": {
+      "enum": ["GOVERNANCE", "CANONICAL", "ARCHITECTURAL", "OPERATIONAL", "EVIDENCE", "HISTORICAL"]
+    },
+    "contextEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "tier", "required", "priority", "description", "content_digest"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1, "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*//)(?!.*(^|/)\\.)[^\\u0000-\\u001F]+$" },
+        "tier": { "$ref": "#/$defs/contextTier" },
+        "required": { "type": "boolean" },
+        "priority": { "type": "integer", "minimum": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "content_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "skillEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path", "metadata_digest", "content_digest"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$" },
+        "path": { "type": "string", "pattern": "^\\.agents/skills/[A-Za-z0-9][A-Za-z0-9._-]*/SKILL\\.md$" },
+        "metadata_digest": { "$ref": "#/$defs/digest" },
+        "content_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "required": ["repository", "manifest", "registry", "context", "skills"],
+      "properties": {
+        "repository": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["root"],
+          "properties": { "root": { "const": "." } }
+        },
+        "manifest": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "version", "content_digest"],
+          "properties": {
+            "path": { "const": ".agents/manifest.json" },
+            "version": { "$ref": "#/$defs/version" },
+            "content_digest": { "$ref": "#/$defs/digest" }
+          }
+        },
+        "registry": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "version", "content_digest"],
+          "properties": {
+            "path": { "const": ".agents/skills/registry.json" },
+            "version": { "$ref": "#/$defs/version" },
+            "content_digest": { "$ref": "#/$defs/digest" }
+          }
+        },
+        "context": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["required", "optional"],
+          "properties": {
+            "required": { "type": "array", "items": { "$ref": "#/$defs/contextEntry" }, "uniqueItems": true },
+            "optional": { "type": "array", "items": { "$ref": "#/$defs/contextEntry" }, "uniqueItems": true }
+          }
+        },
+        "skills": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["selected"],
+          "properties": {
+            "selected": { "type": "array", "items": { "$ref": "#/$defs/skillEntry" }, "uniqueItems": true }
+          }
+        }
+      }
+    },
+    "attestation": {
+      "allOf": [
+        { "$ref": "#/$defs/scope" },
+        {
+          "type": "object",
+          "required": ["protocol", "version", "digest"],
+          "properties": {
+            "protocol": { "const": "conxian-agent-discovery.attestation" },
+            "version": { "const": "1.0.0" },
+            "digest": { "$ref": "#/$defs/digest" }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "trustAnchor": {
+      "allOf": [
+        { "$ref": "#/$defs/scope" },
+        {
+          "type": "object",
+          "required": ["protocol", "version", "digest"],
+          "properties": {
+            "protocol": { "const": "conxian-agent-discovery.trust-anchor" },
+            "version": { "const": "1.0.0" },
+            "digest": { "$ref": "#/$defs/digest" }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    }
+  }
+}

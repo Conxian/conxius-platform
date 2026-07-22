@@ -83,6 +83,10 @@
   - [x] Phase 3C local review-fix validation: provisioning shell syntax and
     smoke checks, YAML structure checks, focused/full dashboard tests,
     readiness/metrics/auth coverage, typecheck, and diff hygiene.
+  - [x] CI workflow repair: both affected Compose workflows provision the
+    repository-owned Prometheus scrape secret and assert a regular mode-600
+    host file before Compose startup; hosted execution remains the final
+    Docker/Compose validation gate.
 
 ## Acceptance criteria
 

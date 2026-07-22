@@ -1501,3 +1501,22 @@ AGENTS.md (this update)
 - Hosted PR checks and GitHub mergeability remain to be re-evaluated after the merge commit is pushed.
 **Gotchas**:
 - The dashboard Prettier executable was not usable in this devbox, so formatting was not claimed as verified; TypeScript, Vitest, conflict-marker, and whitespace checks were used instead.
+
+### 2026-07-22 — PR #1194 Prometheus Secret Workflow Repair
+**Trigger**: Formal review `4756445434` and follow-up request on PR #1194.
+**What was done**:
+- Re-checked the remote PR head after it advanced from the diagnosed `b03be061ed3641529ff12abc6ef78edca98ff08b` to `f51bc26042ad5051547a43845b3d58cde7e89785`, preserving the newer provisioning commit.
+- Extended `synergy-test` and `multi-env-test` so the repository-owned provisioner is followed by a regular-file and mode-600 assertion for `.secrets/prometheus-scrape.password` before Compose startup.
+- Recorded the workflow repair in the existing M2M rotation OpenSpec validation checklist without creating a new proposal.
+**Key discoveries**:
+- The current PR head already invoked `scripts/provision-secrets.sh`; the missing hardening was an explicit CI assertion that the host-side Compose secret exists with the required permissions.
+- The isolated provisioner smoke test created a 65-byte newline-terminated secret file with mode 600 without exposing its contents.
+**Files touched**:
+- `.github/workflows/synergy-test.yml`
+- `.github/workflows/multi-env-test.yml`
+- `openspec/changes/2026-07-22-m2m-service-key-rotation/tasks.md`
+- `AGENTS.md`
+**Gaps identified**:
+- Hosted Docker/Compose checks remain the final validation gate after the repaired branch is pushed.
+**Gotchas**:
+- Keep the Compose secret declaration fail-closed and validate only file type and mode; never print the secret value.

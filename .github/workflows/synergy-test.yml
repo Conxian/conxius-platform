@@ -42,7 +42,19 @@ jobs:
     - name: Provision CI secrets
       env:
         CONXIAN_ENV_PROFILE: development
-      run: bash scripts/provision-secrets.sh
+      run: |
+        bash scripts/provision-secrets.sh
+        secret_file=".secrets/prometheus-scrape.password"
+        if [[ ! -f "$secret_file" || -L "$secret_file" ]]; then
+          echo "::error::Prometheus scrape password must be a regular file at $secret_file before Compose startup."
+          exit 1
+        fi
+        mode="$(stat -c '%a' -- "$secret_file" 2>/dev/null || true)"
+        if [[ "$mode" != "600" ]]; then
+          echo "::error::Prometheus scrape password at $secret_file must have mode 600 (found ${mode:-unknown})."
+          exit 1
+        fi
+        echo "Prometheus scrape password provisioned as a regular mode-600 file."
     - name: Build admin-dashboard image
       # Isolated build step for clearer failure attribution (Issue #954).
       # TypeScript errors in the admin-dashboard surface here rather than

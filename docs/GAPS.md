@@ -2,6 +2,15 @@
 
 This document tracks the resolution of gaps and identifies new technical requirements.
 
+### Readiness interpretation (2026-07-22)
+
+Strategic alignment and TypeScript orchestration are not evidence of production
+cryptographic readiness. The BitVM2, BitVM3, BitVMX, and ZKCP entries below
+remain research/scaffolding lanes until an explicitly injected, independently
+accepted Gateway/Core/Nexus backend is available. Issue [#1187](https://github.com/Conxian/conxius-platform/issues/1187)
+quarantines the former length-only and unconditional success paths in this
+repository; it does not implement a proof backend.
+
 ## 1. Service Gaps (Updated June 2026)
 ### Phase 7 Sovereign Redesign (Active Transition)
 - **Status**: 🏗️ Active Scaffolding.
@@ -41,7 +50,7 @@ This document tracks the resolution of gaps and identifies new technical require
 
 | Gap ID | Description | Research Reference | Implementation Path |
 | :--- | :--- | :--- | :--- |
-| **G-01** | BitVM2 Verification Floor | [FULL_STACK_BITCOIN_RESEARCH.md#21](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#21) | `lib-conxian-core/bitvm` |
+| **G-01** | BitVM2 Verification Floor | [FULL_STACK_BITCOIN_RESEARCH.md#21](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#21) | 🛡️ **Fail-closed platform boundary** in `services/admin-dashboard/src/lib/support/bitvm.ts`; production `lib-conxian-core/bitvm` adapter pending |
 | **G-02** | FDC3 Native Resolver | [FDC3_INTEROPERABILITY.md](./architecture/FDC3_INTEROPERABILITY.md) | 🟢 **Implemented**. Standardized mapping in `resolver.ts`. |
 | **G-03** | Usage Validation | [usage-validation-instrumentation-v1.spec.md](../openspec/specs/usage-validation-instrumentation-v1.spec.md) | 🟢 **Implemented**. Score-based triage in `usageValidation.ts`. |
 | **G-04** | Wasm Wallet-BFF | [FULL_STACK_BITCOIN_RESEARCH.md#15](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#15) | `lib-conxian-core` (Wasm) |
@@ -51,7 +60,7 @@ This document tracks the resolution of gaps and identifies new technical require
 | **G-08** | ZK-Rollup T1 Adapters (Citrea/Strata) | [FULL_STACK_BITCOIN_RESEARCH.md#28](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#28) | `conxian-nexus/adapters` |
 | **G-09** | BIP-322 Signed Intents | [FULL_STACK_BITCOIN_RESEARCH.md#29](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#29) | 🟢 **Implemented**. CON-1266 bridge active. |
 | **G-10** | MuSig2 Aggregation | [FULL_STACK_BITCOIN_RESEARCH.md#31](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#31) | `lib-conxian-core/musig2` |
-| **G-11** | BitVM2 Multi-Party Aggregation | [FULL_STACK_BITCOIN_RESEARCH.md#31](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#31) | 🏗️ **Active Scaffolding**. CON-1306 initialized. |
+| **G-11** | BitVM2 Multi-Party Aggregation | [FULL_STACK_BITCOIN_RESEARCH.md#31](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#31) | 🏗️ **Scaffolding only**. Signature aggregation is gated behind a verified floor and explicit backend policy. |
 | **G-12** | ERC-7683 Solver Selection | [FULL_STACK_BITCOIN_RESEARCH.md#32](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#32) | 🏗️ **Active Scaffolding**. CON-1307 initialized. |
 | **G-13** | MFE Federation | [SOVEREIGN_REPR_2026.md#3](./architecture/SOVEREIGN_REPR_2026.md#3) | Webpack Module Federation |
 | **G-14** | FROST Threshold Signatures | [FULL_STACK_BITCOIN_RESEARCH.md#34](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#34) | 🏗️ **Active Scaffolding**. TypeScript coordination types in `frost.ts`. Rust crypto target: `lib-conxian-core/frost`. |
@@ -60,7 +69,7 @@ This document tracks the resolution of gaps and identifies new technical require
 | **G-17** | BIP-353 DNS Payments | [FULL_STACK_BITCOIN_RESEARCH.md#32](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#32) | 🟢 **Implemented**. Foundational bridge active. |
 | **G-18** | BIP-324 Transport | [FULL_STACK_BITCOIN_RESEARCH.md#38](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#38) | `conxian-nexus/transport` |
 | **G-19** | Spider Network Routing | [FULL_STACK_BITCOIN_RESEARCH.md#39](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#39) | `conxian-nexus/spider` |
-| **G-20** | BitVM3 Adaptive Proofs | [FULL_STACK_BITCOIN_RESEARCH.md#40](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#40) | `lib-conxian-core/bitvm3` |
+| **G-20** | BitVM3 Adaptive Proofs | [FULL_STACK_BITCOIN_RESEARCH.md#40](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#40) | 🛡️ **Fail-closed platform boundary** in `bitvm3.ts`; recursive backend and acceptance evidence pending |
 | **G-21** | Sangria/Nova Proof Folding | [FULL_STACK_BITCOIN_RESEARCH.md#24](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#24) | `lib-conxian-core/sangria` |
 | **G-22** | ctUSD Stablecoin Logic | [FULL_STACK_BITCOIN_RESEARCH.md#26](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#26) | 🏗️ **Active Scaffolding**. TypeScript types in `lib/usi/stablecoin.ts`. OpenSpec proposal at `openspec/changes/2026-07-04-ctusd-dlc-stablecoin/`. |
 | **G-23** | Ark V-UTXO Protocol | [FULL_STACK_BITCOIN_RESEARCH.md#25](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#25) | `lib-conxian-core/ark` |
@@ -73,15 +82,15 @@ This document tracks the resolution of gaps and identifies new technical require
 | **G-47** | BIP-119 (CTV) Vaults | [FULL_STACK_BITCOIN_RESEARCH.md#47](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#47) | `lib-conxian-core/covenants` |
 | **G-48** | BIP-324 V2 Transport | [FULL_STACK_BITCOIN_RESEARCH.md#48](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#48) | `conxian-nexus/transport` |
 | **G-49** | Decentralized USI Transport | [FULL_STACK_BITCOIN_RESEARCH.md#49](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#49) | `services/admin-dashboard/src/lib/support/event-bus.ts` |
-| **G-50** | ZK Contingent Payments | [FULL_STACK_BITCOIN_RESEARCH.md#50](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#50) | `lib-conxian-core/zkcp` |
-| **G-51** | BitVM2 Optimized Verifier | [FULL_STACK_BITCOIN_RESEARCH.md#51](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#51) | `lib-conxian-core/bitvm` |
+| **G-50** | ZK Contingent Payments | [FULL_STACK_BITCOIN_RESEARCH.md#50](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#50) | 🛡️ **Fail-closed platform boundary** in `zkcp.ts`; ZK verifier, payment observer, and key-release backends pending |
+| **G-51** | BitVM2 Optimized Verifier | [FULL_STACK_BITCOIN_RESEARCH.md#51](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#51) | 🏗️ **Research/scaffolding lane**; no pairing or optimized verifier is implemented here |
 | **G-52** | BRC-20 / Runes Integration | [FULL_STACK_BITCOIN_RESEARCH.md#52](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#52) | `conxian-nexus/adapters` |
 | **G-53** | Lightning Async Payments | [FULL_STACK_BITCOIN_RESEARCH.md#53](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#53) | `lib-conxian-core/lightning` |
 | **G-54** | OP_VAULT (BIP-345) | [FULL_STACK_BITCOIN_RESEARCH.md#54](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#54) | `lib-conxian-core/covenants` |
 | **G-55** | Enterprise ERP Simulation & Programmable Mock Engines | [ENTERPRISE_ERP_SIMULATION_RESEARCH.md](./architecture/ENTERPRISE_ERP_SIMULATION_RESEARCH.md) | 🏗️ **Active Scaffolding**. CON-1320 initialized. |
 
 ---
-*Updated by Jules (Sovereign Engineering Agent) - June 2026*
+*Updated by Charlie (issue #1187 remediation) - 2026-07-22*
 
 ## 5. Implementation Status (June 2026 Update)
 - **G-55 (Enterprise ERP Simulation)**: 🏗️ **Active Scaffolding**. Initialized via CON-1320.
@@ -91,7 +100,10 @@ This document tracks the resolution of gaps and identifies new technical require
 - **G-07 (NWC Transport)**: 🟢 **Implemented**.
 - **G-09 (BIP-322 Intents)**: 🟢 **Implemented**.
 - **G-17 (BIP-353 DNS)**: 🟢 **Implemented**.
-- **G-01 (BitVM2 Floor)**: 🏗️ **Active Scaffolding**.
-- **G-11 (BitVM2 Multi-Party)**: 🏗️ **Active Scaffolding**.
+- **G-01 (BitVM2 Floor)**: 🛡️ **Fail-closed boundary; backend unavailable by default**.
+- **G-11 (BitVM2 Multi-Party)**: 🏗️ **Scaffolding gated behind a verified floor**.
+- **G-20 (BitVM3)**: 🛡️ **Fail-closed boundary; recursive backend pending**.
+- **G-50 (ZKCP)**: 🛡️ **Fail-closed boundary; verifier/payment/key-release backends pending**.
+- **G-51 (Optimized verifier)**: 🏗️ **Research only; no pairing implementation in this repository**.
 - **G-05 (Silent Payments)**: 🏗️ **Active Scaffolding**.
 - **G-44 (BitVMX Computation)**: 🏗️ **Active Scaffolding**.

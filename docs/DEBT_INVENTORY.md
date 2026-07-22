@@ -1,7 +1,7 @@
 # Technical Debt Inventory & Burn-Down Plan
 
 Per [#1104](../../issues/1103) — systematic debt reduction across conxius-platform.
-Last updated: 2026-07-04.
+Last updated: 2026-07-22.
 
 ## Debt Classification
 
@@ -28,7 +28,7 @@ Last updated: 2026-07-04.
 
 | ID | Item | Risk Class | Status |
 |----|------|-----------|--------|
-| D-04 | 15+ `console.log`/`console.error` in library code | Dev-Efficiency | 🏗️ Created `lib/support/logger.ts`. Migrated citrea, ark, bitvmx, event-bus. Remaining: bip322, bitvm, bitvm3, solver, zkcp, imap-worker, observability |
+| D-04 | 15+ `console.log`/`console.error` in library code | Dev-Efficiency | 🏗️ Created `lib/support/logger.ts`. Migrated citrea, ark, bitvm, bitvm3, bitvmx, event-bus. Remaining: bip322, solver, imap-worker, observability |
 | D-05 | `console.error` scattered across 15+ page files | Dev-Efficiency | ⬜ Page-level `console.error` in catch blocks is acceptable (client-side debugging). Defer migration. |
 
 ### Determinism (Correctness → Fixed this session)
@@ -65,6 +65,13 @@ Last updated: 2026-07-04.
 | D-18 | No test file for new `babylon.py` (149 lines) | Test | ⬜ Add when Babylon API integration is live. |
 | D-19 | No test file for `logger.ts` or `idgen.ts` | Test | ⬜ Utility modules. Low priority — test when consumed by critical paths. |
 
+### Cryptographic readiness (Security / Correctness)
+
+| ID | Item | Risk Class | Status |
+|----|------|-----------|--------|
+| D-20 | BitVM2/BitVM3/ZKCP production verifier, payment-observer, and key-release backends are not available in this repository | Security / Correctness | 🛡️ **Quarantined by issue #1187** — typed contracts and unavailable adapters fail closed; Gateway/Core/Nexus implementation and independent acceptance remain pending |
+| D-21 | Historical BitVM2/ZKCP helper behavior could present simulation as authoritative success | Security / Correctness | ✅ **Remediated in #1187** — proof-length checks, unconditional success, caller-only payment hashes, and synthetic keys are rejected or removed |
+
 ## Burn-Down Priority
 
 ### Sprint N (this session) — ✅ Complete
@@ -76,7 +83,7 @@ Last updated: 2026-07-04.
 - [x] Create deterministic ID generator (`lib/support/idgen.ts`)
 
 ### Sprint N+1 — Recommended
-- [ ] D-04: Migrate remaining lib console.log calls to logger (bip322, bitvm, bitvm3, solver, zkcp)
+- [ ] D-04: Migrate remaining lib console.log calls to logger (bip322, solver, imap-worker, observability)
 - [ ] D-11: Extract shared type definitions (RewardAllocation, etc.) to lib modules
 - [ ] D-15: Add basic test scaffolding for admin-pulse-bos
 - [ ] D-10: Replace event-bus Math.random() with real adapter delivery
@@ -88,6 +95,7 @@ Last updated: 2026-07-04.
 
 ### Backlog
 - [ ] D-19: Test logger and idgen utilities
+- [ ] D-20: Integrate and independently accept Gateway/Core/Nexus verifier, payment-observer, and key-release backends
 - [ ] Full cross-repo debt inventory (gateway, nexus, wallet, orbit, enclave-sdk, conxian_ui, conxian-labs-site)
 - [ ] D-05: Consider structured error reporting for client-side pages
 
@@ -97,7 +105,7 @@ Last updated: 2026-07-04.
 |--------|--------|-------|
 | `:any` types in source | 30+ | **0** (except `types.ts` payload field) |
 | `Math.random()` in prod code | 8 | **1** (POC simulation in event-bus) |
-| `console.log` in lib code | 25+ | **~18 remaining** (imap-worker + unscaffolded adapters) |
+| `console.log` in lib code | 25+ | **~16 remaining** (imap-worker + unscaffolded adapters) |
 | `err.message` type-safe | 8 files broken | **20 files fixed** |
 | Structured logger | ❌ | ✅ `lib/support/logger.ts` |
 | Deterministic ID gen | ❌ | ✅ `lib/support/idgen.ts` |

@@ -2,7 +2,8 @@
 <#
 .SYNOPSIS
     Scans the production boundary for forbidden patterns: [STUB] markers,
-    localhost URLs, simulated Operational status, and .stub.json references.
+    localhost URLs, simulated Operational status, .stub.json references, and
+    verifier/settlement success-contamination classes.
 #>
 
 $ErrorActionPreference = "Stop"
@@ -26,6 +27,17 @@ $RULES = @(
     @{ Id = "stub-json-reference"; Pattern = '\.stub\.json' }
 )
 
+$VERIFIER_RULES = @(
+    @{ Id = "unconditional-verifier-success"; Pattern = '\b(?:verified|isVerified)\s*[:=]\s*true\b' }
+    @{ Id = "proof-length-predicate"; Pattern = '\b(?:proof|rawProof)\s*\.length\s*(?:===|!==|>=|<=|>|<)' }
+    @{ Id = "production-simulator-construction"; Pattern = '\b(?:class\s+Default\w*(?:Verifier|Monitor)|new\s+Default\w*(?:Verifier|Monitor)|new\s+\w*(?:Simulator|Simulation)\s*\(|new\s+(?:BitVMBridge|BitVM3Orchestrator|ZKCPBridge)\s*\(\s*\))' }
+    @{ Id = "synthetic-decryption-key"; Pattern = '(?:key-\$\{|(?:decryptionKey|decryption_key)\s*[:=]\s*[`"''](?:key-|synthetic|fake|dummy))' }
+)
+
+$SETTLEMENT_RULES = @(
+    @{ Id = "settlement-success-default"; Pattern = '\b(?:success\s*:\s*true|status\s*:\s*["''](?:idle|success|ok)["''])' }
+)
+
 function ScanFile([string]$relPath) {
     $absPath = Join-Path $REPO_ROOT $relPath
     $findings = @()
@@ -39,7 +51,14 @@ function ScanFile([string]$relPath) {
     for ($i = 0; $i -lt $lines.Count; $i++) {
         $line = $lines[$i]
         $lineNum = $i + 1
-        foreach ($rule in $RULES) {
+        $rules = @($RULES)
+        if ($relPath -match '^services/admin-dashboard/src/lib/support/(bitvm|bitvm3|zkcp)\.ts$') {
+            $rules += $VERIFIER_RULES
+        }
+        if ($relPath -match '^services/admin-dashboard/src/app/api/v1/settlement-engine/route\.ts$') {
+            $rules += $SETTLEMENT_RULES
+        }
+        foreach ($rule in $rules) {
             if ($line -match $rule.Pattern) {
                 $snippet = $line.Trim()
                 if ($snippet.Length -gt 200) { $snippet = $snippet.Substring(0, 200) }

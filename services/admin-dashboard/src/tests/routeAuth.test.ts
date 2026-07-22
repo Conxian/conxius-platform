@@ -109,7 +109,7 @@ describe("route-level M2M authorization", () => {
     expect(secretsResponse.status).toBe(200);
     expect(deploymentResponse.status).toBe(200);
     expect(governanceResponse.status).toBe(200);
-    expect(treasuryResponse.status).toBe(200);
+    expect(treasuryResponse.status).toBe(503);
   });
 
   it("returns 403 from sensitive handlers when a valid JWT lacks the route scope", async () => {
@@ -167,5 +167,25 @@ describe("route-level M2M authorization", () => {
 
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({ error: "Unauthorized" });
+  });
+
+  it("rejects unknown actions and caller-supplied payment hashes", async () => {
+    const treasuryToken = await issueToken(["write:treasury", "m2m:internal"]);
+
+    const unknownAction = await postSettlementEngine(
+      bearerRequest("POST", treasuryToken, { action: "unknown-action" }),
+    );
+    expect(unknownAction.status).toBe(422);
+    expect(await unknownAction.json()).toMatchObject({ failure_code: "unknown_action" });
+
+    const callerHash = await postSettlementEngine(
+      bearerRequest("POST", treasuryToken, {
+        action: "zkcp-finalize",
+        id: "route-payment-hash",
+        paymentHash: "caller-controlled-txid",
+      }),
+    );
+    expect(callerHash.status).toBe(422);
+    expect(await callerHash.json()).toMatchObject({ failure_code: "payment_hash_not_authority" });
   });
 });

@@ -48,6 +48,10 @@ jobs:
           echo "GATEWAY_ADMIN_API_KEY=$(openssl rand -hex 32)" >> $GITHUB_ENV
           echo "ADMIN_DASHBOARD_API_KEY=$(openssl rand -hex 32)" >> $GITHUB_ENV
           echo "GRAFANA_PASSWORD=$(openssl rand -hex 16)" >> $GITHUB_ENV
+      - name: Provision CI secrets
+        env:
+          CONXIAN_ENV_PROFILE: development
+        run: bash scripts/provision-secrets.sh
       - name: Start platform services
         env:
           POSTGRES_USER: conxian

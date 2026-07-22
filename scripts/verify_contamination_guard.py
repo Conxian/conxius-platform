@@ -40,12 +40,50 @@ def is_scanned_prod_boundary_file(path: str) -> bool:
 
 RULES: list[tuple[str, re.Pattern[str]]] = [
     ("stub-marker", re.compile(r"\[STUB\]")),
-    ("localhost-url", re.compile(r"http://localhost|127\\.0\\.0\\.1")),
+    ("localhost-url", re.compile(r"http://localhost|127\.0\.0\.1")),
     (
         "simulated-operational-status",
-        re.compile(r"status\\s*[:=]\\s*\\\"Operational\\\""),
+        re.compile(r'status\s*[:=]\s*"Operational"'),
     ),
-    ("stub-json-reference", re.compile(r"\\.stub\\.json")),
+    ("stub-json-reference", re.compile(r"\.stub\.json")),
+]
+
+VERIFIER_PATH = re.compile(
+    r"^services/admin-dashboard/src/lib/support/(?:bitvm|bitvm3|zkcp)\.ts$"
+)
+SETTLEMENT_PATH = re.compile(
+    r"^services/admin-dashboard/src/app/api/v1/settlement-engine/route\.ts$"
+)
+
+VERIFIER_RULES: list[tuple[str, re.Pattern[str]]] = [
+    (
+        "unconditional-verifier-success",
+        re.compile(r"\b(?:verified|isVerified)\s*[:=]\s*true\b"),
+    ),
+    (
+        "proof-length-predicate",
+        re.compile(r"\b(?:proof|rawProof)\s*\.length\s*(?:===|!==|>=|<=|>|<)"),
+    ),
+    (
+        "production-simulator-construction",
+        re.compile(
+            r"\b(?:class\s+Default\w*(?:Verifier|Monitor)|new\s+Default\w*(?:Verifier|Monitor)|"
+            r"new\s+\w*(?:Simulator|Simulation)\s*\(|new\s+(?:BitVMBridge|BitVM3Orchestrator|ZKCPBridge)\s*\(\s*\))"
+        ),
+    ),
+    (
+        "synthetic-decryption-key",
+        re.compile(
+            r"(?:key-\$\{|(?:decryptionKey|decryption_key)\s*[:=]\s*[`\"'](?:key-|synthetic|fake|dummy))"
+        ),
+    ),
+]
+
+SETTLEMENT_RULES: list[tuple[str, re.Pattern[str]]] = [
+    (
+        "settlement-success-default",
+        re.compile(r"\b(?:success\s*:\s*true|status\s*:\s*[\"'](?:idle|success|ok)[\"'])"),
+    ),
 ]
 
 
@@ -58,7 +96,13 @@ def scan_file(rel_path: str) -> list[Finding]:
 
     findings: list[Finding] = []
     for idx, line in enumerate(content.splitlines(), start=1):
-        for rule_id, pattern in RULES:
+        rules = list(RULES)
+        if VERIFIER_PATH.fullmatch(rel_path):
+            rules.extend(VERIFIER_RULES)
+        if SETTLEMENT_PATH.fullmatch(rel_path):
+            rules.extend(SETTLEMENT_RULES)
+
+        for rule_id, pattern in rules:
             if pattern.search(line):
                 findings.append(
                     Finding(

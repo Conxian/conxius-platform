@@ -131,7 +131,7 @@ Based on comprehensive external research + org repo analysis (repos are **far ah
 #### BitVM Family (External Research)
 - **BitVM2**: USENIX Security 2026 validated [7]
 - **BitVM3**: Garbled circuits for efficient bridges [6]
-- **Note**: `conxius-enclave-sdk` already has BitVM2 implementation
+- **Readiness distinction**: research validation and cross-repository SDK capability do not make the `conxius-platform` settlement boundary production-ready. Issue #1187 requires explicit Gateway/Core/Nexus backend evidence and keeps the platform default unavailable.
 
 #### Primary Sources (Verified)
 - [1] https://docs.stacks.co/learn/block-production/what-was-the-nakamoto-upgrade
@@ -147,7 +147,7 @@ Based on comprehensive external research + org repo analysis (repos are **far ah
 |------|----------------|--------|
 | **Protocol** | ✅ Conxian/Conxian | Revenue system live (CXIP-013) |
 | FROST DKG | ✅ conxius-enclave-sdk | No action needed |
-| BitVM2 | ✅ conxius-enclave-sdk | No action needed |
+| BitVM2 | ✅ conxius-enclave-sdk capability; platform boundary fail-closed | Gateway/Core/Nexus adapter acceptance still required before routing enablement |
 | Fedimint | ✅ conxius-enclave-sdk + lib-conxian-core | No action needed |
 | Babylon | ✅ lib-conxian-core adapter | UI integration only |
 | sBTC | 🔄 conxian-gateway | Verify routing integration |
@@ -175,6 +175,7 @@ All services use multi-layered M2M auth per `docs/M2M_AUTHENTICATION.md`:
 - **Gateway clients**: `services/admin-dashboard/src/lib/sidl/gateway.ts`, `services/elizaos-plugin-conxian/src/conxianClient.ts` now include M2M auth headers
 
 ### Key Gaps Still Open
+- **BitVM/ZKCP verifier readiness (#1187)** — `services/admin-dashboard` now has versioned proof/payment contracts, unavailable defaults, simulation quarantine, and typed settlement failures; no production cryptographic verifier, payment observer, or key-release backend is selected or claimed here.
 - **Revenue automation handoff** — the protocol-owned `Conxian/Conxian` repository contains `contracts/treasury/revenue-automation.clar` with a current observed 100 bps / 1% baseline; platform specification and handoff are tracked in #1164/#1167, while protocol hardening and integration remain tracked in `Conxian/Conxian#538`
 - **JWT-based M2M token auth** — platform-side JWT issuance/verification is implemented; coordinated Rust Gateway verification remains open (#1160)
 - **Key rotation mechanism** — M2M keys are static, no rotation API (#1161)
@@ -1644,3 +1645,24 @@ AGENTS.md (this update)
 - Hosted PR checks and GitHub mergeability remain to be re-evaluated after the merge commit is pushed.
 **Gotchas**:
 - Do not rewrite the existing mainline or #1163 session-log entries; this entry is appended after both histories are preserved.
+
+### 2026-07-22 — Fail-Closed Verifier Boundaries (#1187)
+**Trigger**: Issue #1187 — replace BitVM/ZKCP simulation defaults with fail-closed verifier boundaries.
+**What was done**:
+- Created and strictly validated `openspec/changes/2026-07-22-issue-1187-fail-closed-verifier-boundaries/` before implementation edits.
+- Replaced BitVM2 proof-length success, BitVM3 unconditional recursive success, and ZKCP length-only/default monitor behavior with versioned typed contracts and explicitly injected unavailable adapters.
+- Added canonical proof/key/circuit/input/statement/domain/backend/provenance bindings, independently observed payment contracts, key-release injection, simulation quarantine, and unknown-action/caller-payment-hash rejection in the settlement route.
+- Extended Python and PowerShell contamination guards for unconditional verifier success, proof-length predicates, simulator construction, synthetic keys, and settlement default success while excluding test-only fixtures.
+- Rewrote focused tests for unavailable/simulated backends, wrong key, mutated proof/input order, malformed encoding, curve/circuit mismatch, invalid challenge/signature, arbitrary payment hashes, and unknown actions.
+- Updated readiness, risk, debt, production-boundary, Phase 7, BitVMX, and Bitcoin research documentation to separate strategic alignment from cryptographic readiness and to qualify `364` as profile-specific.
+**Key discoveries**:
+- The dashboard has no production cryptographic backend; a future Gateway/Core/Nexus adapter must satisfy the shared `conxian.verifier.v1` contract and independently accepted provenance before settlement can advance.
+- A simulated valid-looking fixture must remain explicitly `simulated`; the bridge converts it to a typed non-success result before storing verified state.
+- Payment hashes are evidence identifiers only. Finalization requires stored, production-observed payment plus an injected production key-release backend; no synthetic key is generated.
+**Files touched**: `services/admin-dashboard/src/lib/support/{verifier-contract.ts,bitvm.ts,bitvm3.ts,zkcp.ts}`, settlement route/tests, contamination guards, OpenSpec change, and readiness/debt/boundary docs.
+**Gaps identified**:
+- Gateway/Core/Nexus still need the real verifier, payment observer, key-release integration, artifact provenance, and independent security/release acceptance.
+- No pairing arithmetic, `snarkjs`, production backend selection, or cross-repository changes were made.
+**Gotchas**:
+- `364` is a research/profile-specific tap layout and must not be used as a universal verification predicate.
+- `Web Crypto` is used only for contract digest binding; it is not a proof verifier.

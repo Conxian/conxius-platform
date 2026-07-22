@@ -3,6 +3,7 @@
   "$id": "https://github.com/Conxian/conxius-platform/schemas/agent-manifest.schema.json",
   "title": "Conxian Agent Discovery Manifest",
   "description": "Versioned repository-local allowlist for deterministic agent context discovery.",
+  "$comment": "This schema validates structural shape and local field constraints. Runtime discovery additionally enforces unique context paths across required and optional entries, unique priorities, strict ascending declaration order across both arrays, canonical required paths, and filesystem/symlink containment.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -37,17 +38,22 @@
     "context": {
       "type": "object",
       "additionalProperties": false,
+      "$comment": "Runtime discovery treats required entries followed by optional entries as one deterministic priority sequence. JSON Schema cannot express path uniqueness across both arrays or strict cross-item ordering.",
       "required": ["required", "optional"],
       "properties": {
         "required": {
           "type": "array",
+          "description": "Required context entries. Runtime requires unique paths and priorities and strictly ascending priority order.",
           "minItems": 4,
+          "uniqueItems": true,
           "items": {
             "$ref": "#/$defs/contextEntry"
           }
         },
         "optional": {
           "type": "array",
+          "description": "Optional context entries. Runtime validates them after required entries for unique paths and globally ascending priorities.",
+          "uniqueItems": true,
           "items": {
             "$ref": "#/$defs/contextEntry"
           }
@@ -148,7 +154,8 @@
         },
         "priority": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "description": "Positive context priority. Runtime requires priorities to be unique and strictly ascending in required-then-optional declaration order."
         },
         "description": {
           "type": "string",

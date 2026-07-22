@@ -41,6 +41,8 @@ The current protocol major version is `1`. Discovery starts at the requested dir
 
 Optional context is read only when explicitly requested. The default active `agent-onboarding` skill is loaded as metadata plus inert Markdown content; registry entries are manual-activation metadata and never imply automatic execution.
 
+The checked-in JSON Schemas validate contract structure and local field constraints. Runtime discovery additionally enforces cross-item and filesystem invariants that JSON Schema cannot express here: unique context paths across required and optional entries, unique priorities in strict required-then-optional ascending order, unique skill IDs and paths, unique capabilities, active defaults, at least one active default skill, frontmatter identity, and in-root real-path/symlink containment.
+
 ### Discovery CLI
 
 Run from the repository root:
@@ -57,12 +59,13 @@ Run from a nested directory by setting the search start directory:
 pnpm --silent agent-discovery --json --root services/admin-dashboard
 ```
 
-`--skill` may be repeated to select active skills explicitly. `--root` changes only the upward-search starting point; it does not bypass repository containment checks. JSON output uses repository-relative paths and omits timestamps by default, so repeated runs are deterministic.
+`--skill` may be repeated to select distinct active skills explicitly. When any `--skill` flag is provided, it replaces the registry's default selection; repeating the same skill ID is rejected with a deterministic `duplicate-entry` error rather than silently selecting it twice. `--root` changes only the upward-search starting point; it does not bypass repository containment checks. JSON output uses repository-relative paths and omits timestamps by default, so repeated runs are deterministic.
 
 ### Version and Failure Behavior
 
 - Unsupported protocol/manifest/registry major versions, malformed contracts, duplicate declarations, unsafe paths, missing required files, and selected-skill failures fail closed.
 - Absolute paths, `..` traversal, backslash/drive paths, and symlinks resolving outside the repository root are rejected.
+- The runtime checks unique context priorities and strict ascending order across required entries followed by optional entries; it does not sort declarations silently.
 - Missing declared optional files produce warnings; their content is read only when `--include-optional` is used.
 - Discovery reads only declared files and never scans unrelated files or executes skill content.
 
@@ -70,14 +73,16 @@ pnpm --silent agent-discovery --json --root services/admin-dashboard
 
 Repositories without a valid manifest can still use the manual onboarding sequence below: read `AGENTS.md`, then `GOVERNANCE.md`, then `docs/AGENT_ONBOARDING.md`, and `docs/SESSION_CONTINUITY.md`. This fallback is for compatibility and human-guided onboarding; automated discovery must not silently downgrade an invalid manifest or bypass its failure result.
 
-The canonical context signals are:
+The current manifest context signals are:
 
-| Signal | Location | Priority |
-|--------|----------|----------|
-| `AGENTS.md` | Repository root | **REQUIRED** - read first |
-| `GOVERNANCE.md` | Repository root | **REQUIRED** - governance rules |
-| `docs/REPOSITORY_TAXONOMY.md` | `docs/` | Cross-repo context |
-| `docs/INFORMATION_HIERARCHY.md` | `docs/` | Doc navigation |
+| Signal | Location | Priority | Contract |
+|--------|----------|----------|----------|
+| `AGENTS.md` | Repository root | 10 | **REQUIRED** - primary knowledge base |
+| `GOVERNANCE.md` | Repository root | 20 | **REQUIRED** - governance rules |
+| `docs/AGENT_ONBOARDING.md` | `docs/` | 30 | **REQUIRED** - onboarding protocol |
+| `docs/SESSION_CONTINUITY.md` | `docs/` | 40 | **REQUIRED** - session handover |
+| `.github/REPOSITORY_TAXONOMY.md` | `.github/` | 50 | Optional cross-repo context |
+| `docs/INFORMATION_HIERARCHY.md` | `docs/` | 60 | Optional documentation navigation |
 
 ### Auto-Discovery Sequence
 

@@ -20,14 +20,14 @@ The directory containing `.agents/manifest.json` is the logical repository root.
 
 ## 2. Manifest contract
 
-`.agents/manifest.json` uses `manifestVersion` and `protocol` fields. Context is split into ordered `required` and `optional` arrays. Each entry contains a safe relative `path`, a positive integer `priority`, and a human-readable `description`. Arrays must be strictly ordered by ascending priority, paths must be unique across both arrays, and the required list must include the four canonical onboarding documents:
+`.agents/manifest.json` uses `manifestVersion` and `protocol` fields. Context is split into ordered `required` and `optional` arrays. Each entry contains a safe relative `path`, a positive integer `priority`, and a human-readable `description`. The combined required-then-optional declaration must use unique priorities in strict ascending order, paths must be unique across both arrays, and the required list must include the four canonical onboarding documents:
 
 1. `AGENTS.md`
 2. `GOVERNANCE.md`
 3. `docs/AGENT_ONBOARDING.md`
 4. `docs/SESSION_CONTINUITY.md`
 
-The `skills.registry` field points to the registry using the same safe relative-path rules. Registry entries mark default active skill IDs explicitly rather than inferring them from directory contents.
+The `skills.registry` field points to the registry using the same safe relative-path rules. Registry entries mark default active skill IDs explicitly rather than inferring them from directory contents. Runtime discovery requires context priorities to be unique and strictly ascending across the required entries followed by the optional entries; it does not silently sort declarations.
 
 ## 3. Registry contract
 

@@ -3,6 +3,7 @@
   "$id": "https://github.com/Conxian/conxius-platform/schemas/agent-skill-registry.schema.json",
   "title": "Conxian Agent Skill Registry",
   "description": "Metadata-only registry of repository skills. Registry entries never define automatic execution.",
+  "$comment": "This schema validates structural shape and local field constraints. Runtime discovery additionally enforces unique skill IDs and paths, active defaults, at least one active default, frontmatter identity, and filesystem/symlink containment.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -24,7 +25,9 @@
     },
     "skills": {
       "type": "array",
+      "description": "Skill metadata entries. Runtime requires unique IDs and paths and at least one active default skill.",
       "minItems": 1,
+      "uniqueItems": true,
       "items": {
         "$ref": "#/$defs/skill"
       }
@@ -44,6 +47,7 @@
     "skill": {
       "type": "object",
       "additionalProperties": false,
+      "$comment": "Runtime rejects duplicate IDs or paths across entries and rejects default=true unless status=active.",
       "required": [
         "id",
         "name",
@@ -77,7 +81,8 @@
           "enum": ["active", "inactive", "deprecated"]
         },
         "default": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Whether this active skill is selected by default. Runtime rejects default=true for inactive or deprecated skills."
         },
         "activation": {
           "const": "manual"
@@ -90,6 +95,7 @@
         },
         "capabilities": {
           "type": "array",
+          "description": "Capability identifiers. Duplicate capability values are rejected by both schema and runtime.",
           "minItems": 1,
           "items": {
             "type": "string",

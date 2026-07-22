@@ -26,10 +26,21 @@ Invoke this skill when:
 
 ### 1. Entry Point Discovery
 
-Read these files in order:
+When the versioned discovery protocol is available, treat `.agents/manifest.json` and the discovery CLI output as the source of truth for repository root, context order, optional files, and skill selection. Do not infer or maintain a separate context allowlist in this skill.
+
+For this repository, the manifest currently requires these four context files in order:
 1. `AGENTS.md` - Primary knowledge base
 2. `GOVERNANCE.md` - Governance rules
 3. `docs/AGENT_ONBOARDING.md` - Comprehensive guide
+4. `docs/SESSION_CONTINUITY.md` - Session handover and continuity requirements
+
+Use the repository-local CLI to resolve the active contract:
+
+```bash
+pnpm --silent agent-discovery --json
+```
+
+If a repository does not provide a valid manifest, use the compatibility fallback in its onboarding documentation rather than silently treating this list as an executable discovery mechanism.
 
 ### 2. Session Start Protocol
 

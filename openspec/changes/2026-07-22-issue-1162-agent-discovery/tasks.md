@@ -26,6 +26,13 @@
 - [x] Required context order and optional/skill selection semantics are observable and tested.
 - [x] Full requested validation is run and any unrelated/environment-owned failure is documented with focused evidence.
 
+## Audit hardening follow-up
+
+- [x] Harden containment checks for both POSIX and Windows path separators while preserving absolute, traversal, and symlink-escape rejection.
+- [x] Align schema comments/descriptions with runtime-enforced cross-item and filesystem invariants.
+- [x] Expand deterministic regression coverage for priority ordering, registry uniqueness, malformed inputs, frontmatter, repeated skill selection, CLI argument failures, and in-root symlinks.
+- [x] Make the onboarding skill defer to the manifest/discovery CLI and document schema-versus-runtime validation boundaries.
+
 ## Validation evidence
 
 - `pnpm lint` passed.

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { BitVM3Orchestrator, UnavailableBitVM3Verifier } from "../lib/support/bitvm3";
+import {
+  BITVM3_TIMESTAMP_MAX_MS,
+  BitVM3ConfigurationError,
+  BitVM3Orchestrator,
+  UnavailableBitVM3Verifier,
+} from "../lib/support/bitvm3";
 import type { BitVM3Verifier } from "../lib/support/bitvm3";
 import {
   createVerificationResult,
@@ -111,6 +116,67 @@ function makeClock(initial = 0): { now: () => number; set: (value: number) => vo
 }
 
 describe("BitVM3Orchestrator fail-closed boundary", () => {
+  it("uses the exact published defaults and accepts only lower test overrides", () => {
+    expect(VERIFIER_BITVM3_RETENTION_POLICY.maxRetainedStates).toBe(1024);
+    expect(VERIFIER_BITVM3_RETENTION_POLICY.terminalTtlMs).toBe(15 * 60 * 1000);
+
+    const defaults = new BitVM3Orchestrator(new UnavailableBitVM3Verifier());
+    expect(defaults.getRetentionSnapshot()).toMatchObject({
+      max_retained_states: 1024,
+      terminal_ttl_ms: 15 * 60 * 1000,
+    });
+
+    const lowerOverride = new BitVM3Orchestrator(new UnavailableBitVM3Verifier(), {
+      retention: { maxRetainedStates: 2, terminalTtlMs: 1 },
+    });
+    expect(lowerOverride.getRetentionSnapshot()).toMatchObject({
+      max_retained_states: 2,
+      terminal_ttl_ms: 1,
+    });
+  });
+
+  it.each([
+    ["maxRetainedStates", { maxRetainedStates: VERIFIER_BITVM3_RETENTION_POLICY.maxRetainedStates + 1 }],
+    ["terminalTtlMs", { terminalTtlMs: VERIFIER_BITVM3_RETENTION_POLICY.terminalTtlMs + 1 }],
+  ] as const)("rejects an above-policy %s override with a typed configuration error", (option, retention) => {
+    expect(() => new BitVM3Orchestrator(new UnavailableBitVM3Verifier(), { retention })).toThrowError(
+      BitVM3ConfigurationError,
+    );
+    try {
+      new BitVM3Orchestrator(new UnavailableBitVM3Verifier(), { retention });
+      throw new Error("expected BitVM3ConfigurationError");
+    } catch (error: unknown) {
+      expect(error).toBeInstanceOf(BitVM3ConfigurationError);
+      expect(error).toMatchObject({ code: "invalid_retention_policy", option });
+    }
+  });
+
+  it.each([
+    0,
+    -1,
+    1.5,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.MAX_SAFE_INTEGER + 1,
+  ])("rejects invalid maxRetainedStates override %s", (value) => {
+    expect(() => new BitVM3Orchestrator(new UnavailableBitVM3Verifier(), {
+      retention: { maxRetainedStates: value },
+    })).toThrowError(BitVM3ConfigurationError);
+  });
+
+  it.each([
+    0,
+    -1,
+    1.5,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.MAX_SAFE_INTEGER + 1,
+  ])("rejects invalid terminalTtlMs override %s", (value) => {
+    expect(() => new BitVM3Orchestrator(new UnavailableBitVM3Verifier(), {
+      retention: { terminalTtlMs: value },
+    })).toThrowError(BitVM3ConfigurationError);
+  });
+
   it("returns unavailable instead of unconditional recursive success", async () => {
     const request = makeRecursiveRequest(await makeVerifierRequest());
     const orchestrator = new BitVM3Orchestrator(new UnavailableBitVM3Verifier());
@@ -422,5 +488,97 @@ describe("BitVM3Orchestrator fail-closed boundary", () => {
     expect(replayAfterExpiry.status).toBe("verified");
     expect(verifier.calls).toBe(2);
     expect(orchestrator.getState(request.proof_id)?.status).toBe("verified");
+  });
+
+  it("accepts the exact ECMAScript Date serialization boundary on adapter commit", async () => {
+    const verifier = new AuthoritativeFixtureVerifier();
+    const orchestrator = new BitVM3Orchestrator(verifier, {
+      now: () => BITVM3_TIMESTAMP_MAX_MS,
+    });
+    const request = makeRecursiveRequest(await makeVerifierRequest({
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production",
+    }));
+
+    const state = await orchestrator.verifyRecursive(request);
+
+    expect(state.status).toBe("verified");
+    expect(state.timestamp).toBe(new Date(BITVM3_TIMESTAMP_MAX_MS).toISOString());
+    expect(verifier.calls).toBe(1);
+  });
+
+  it("rejects invalid injected timestamps without dispatch or untyped throws", async () => {
+    const cases = [
+      { label: "negative", value: -1, failure_code: "malformed_request" },
+      { label: "non-finite", value: Number.NaN, failure_code: "malformed_request" },
+      { label: "unsafe", value: Number.MAX_SAFE_INTEGER + 1, failure_code: "malformed_request" },
+      { label: "just over Date range", value: BITVM3_TIMESTAMP_MAX_MS + 1, failure_code: "resource_limit_exceeded" },
+    ] as const;
+
+    for (const testCase of cases) {
+      const verifier = new AuthoritativeFixtureVerifier();
+      const orchestrator = new BitVM3Orchestrator(verifier, { now: () => testCase.value });
+      const request = makeRecursiveRequest(await makeVerifierRequest({
+        backend: AUTHORITATIVE_TEST_BACKEND,
+        provenance: "production",
+      }));
+
+      await expect(orchestrator.verifyRecursive(request)).resolves.toMatchObject({
+        status: "failed",
+        failure_code: testCase.failure_code,
+      });
+      expect(verifier.calls).toBe(0);
+      expect(() => orchestrator.getRetentionSnapshot()).not.toThrow();
+    }
+  });
+
+  it("returns a typed failure when the injected clock rolls back during adapter commit", async () => {
+    const clock = makeClock(100);
+    const verifier = new AuthoritativeFixtureVerifier();
+    const verify = verifier.verify.bind(verifier);
+    verifier.verify = async (request) => {
+      const result = await verify(request);
+      clock.set(99);
+      return result;
+    };
+    const orchestrator = new BitVM3Orchestrator(verifier, { now: clock.now });
+    const request = makeRecursiveRequest(await makeVerifierRequest({
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production",
+    }));
+
+    const state = await orchestrator.verifyRecursive(request);
+
+    expect(state.status).toBe("failed");
+    expect(state.failure_code).toBe("internal_error");
+    expect(state.error).toContain("moved backwards");
+    expect(verifier.calls).toBe(1);
+    expect(orchestrator.getState(request.proof_id)).toBeUndefined();
+    expect(orchestrator.getRetentionSnapshot().in_flight_count).toBe(0);
+  });
+
+  it("returns a typed failure when the injected clock throws during adapter commit", async () => {
+    let calls = 0;
+    const verifier = new AuthoritativeFixtureVerifier();
+    const orchestrator = new BitVM3Orchestrator(verifier, {
+      now: () => {
+        calls += 1;
+        if (calls === 1) return 100;
+        throw new Error("fixture clock failure");
+      },
+    });
+    const request = makeRecursiveRequest(await makeVerifierRequest({
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production",
+    }));
+
+    const state = await orchestrator.verifyRecursive(request);
+
+    expect(state.status).toBe("failed");
+    expect(state.failure_code).toBe("internal_error");
+    expect(state.error).toBe("fixture clock failure");
+    expect(verifier.calls).toBe(1);
+    expect(orchestrator.getState(request.proof_id)).toBeUndefined();
+    expect(orchestrator.getRetentionSnapshot().in_flight_count).toBe(0);
   });
 });

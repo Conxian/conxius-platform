@@ -161,13 +161,22 @@ proof ids cannot exceed the cap; a full cap MUST return
 `resource_limit_exceeded` without backend dispatch. In-flight reservations and
 proof queues MUST never be evicted.
 
+Every `BitVM3Orchestrator` instance MUST use the policy defaults of 1,024
+retained states and 15 minutes exactly. Constructor overrides MAY lower either
+value for deterministic tests, but invalid, non-positive, non-integer, unsafe,
+or above-policy values MUST be rejected with a typed configuration error.
+
 When an idle terminal record reaches the TTL, cleanup MUST atomically remove
 the state, initialization metadata, generation counter, and idle queue metadata
 for that proof id. Cleanup MUST skip any proof with an in-flight or queued
-operation. The clock MUST be injectable for deterministic tests. An identical
-request before expiry MUST be a read-only replay; after expiry it MUST safely
-re-verify or return a typed expired/unknown result, and a conflicting request
-MUST remain a typed conflict.
+operation. The clock MUST be injectable for deterministic tests and MUST return
+finite, safe, non-negative integer milliseconds within the inclusive
+ECMAScript Date serialization range `0..8.64e15`. Accepted readings MUST be
+monotonic; a negative, non-finite, unsafe, out-of-range, or rolled-back reading
+MUST return a typed failure without an uncaught serialization error or state
+commit. An identical request before expiry MUST be a read-only replay; after
+expiry it MUST safely re-verify or return a typed expired/unknown result, and a
+conflicting request MUST remain a typed conflict.
 
 #### Scenario: BitVM3 capacity fails before backend dispatch
 
@@ -189,6 +198,15 @@ MUST remain a typed conflict.
 - **THEN** the state, initialization, generation, and queue records are removed
   together before the replay dispatch, and the request is safely re-verified
   under the bounded policy
+
+#### Scenario: BitVM3 retention and clock configuration stay within policy
+
+- **WHEN** an orchestrator is constructed with an invalid/above-policy retention
+  override or an injected clock returns an invalid, out-of-range, or rolled-back
+  value
+- **THEN** construction fails with a typed configuration error, or verification
+  returns a typed bounded failure without backend dispatch or an uncaught
+  `toISOString()` exception
 
 ### Requirement: Bounded ZKCP retention and paginated listing
 

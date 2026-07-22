@@ -147,6 +147,15 @@ overcommit the cap; a full cap returns typed `resource_limit_exceeded` without
 backend dispatch. Reservations and proof queues count as in-flight metadata and
 are never evicted.
 
+The constructor applies those defaults exactly on every instance. Test-only
+overrides may lower the cap or TTL, while zero/negative/non-integer/unsafe and
+above-policy values raise the typed BitVM3 configuration error instead of
+creating a weaker policy. The injectable clock is normalized by one timestamp
+helper before serialization: it accepts only monotonic, finite, safe,
+non-negative integer milliseconds in the inclusive `0..8.64e15` ECMAScript Date
+range. Invalid, rolled-back, or thrown clock readings become typed failures and
+cannot reach `Date.prototype.toISOString()` or commit terminal state.
+
 When cleanup runs, only idle terminal records at or beyond the TTL are removed.
 State, initialization metadata, generation counters, and idle queue metadata
 are deleted together under the lifecycle lock. In-flight or queued operations

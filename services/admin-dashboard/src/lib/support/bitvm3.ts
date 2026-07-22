@@ -9,6 +9,7 @@ import {
   isBackendIdentity,
   isProductionVerified,
   isUnavailableBackend,
+  normalizeBoundaryError,
   rejectNonProductionVerification,
   VERIFIER_BITVM3_RETENTION_POLICY,
   VERIFIER_BITVM3_RETENTION_POLICY_VERSION,
@@ -27,6 +28,16 @@ import {
 */
 
 const logger = createLogger("BitVM3");
+
+/**
+* BitVM3 stores serialized timestamps in terminal state. ECMAScript Date
+* serialization accepts this inclusive millisecond range, but the
+* orchestrator intentionally rejects negative values so the injected clock
+* cannot move before the Unix epoch.
+*/
+export const BITVM3_TIMESTAMP_MIN_MS = 0;
+export const BITVM3_TIMESTAMP_MAX_MS = 8.64e15;
+const BITVM3_FALLBACK_TIMESTAMP = "1970-01-01T00:00:00.000Z";
 
 export interface BitVM3VerificationRequest {
   contract_version: typeof VERIFIER_CONTRACT_VERSION;
@@ -51,6 +62,23 @@ export interface BitVM3State {
 export interface BitVM3Verifier {
   readonly backendIdentity: BackendIdentity;
   verify(request: VerifierRequest): Promise<VerificationResult>;
+}
+
+export type BitVM3ConfigurationErrorCode = "invalid_retention_policy";
+
+export class BitVM3ConfigurationError extends Error {
+  public readonly code: BitVM3ConfigurationErrorCode;
+  public readonly option: "maxRetainedStates" | "terminalTtlMs";
+
+  public constructor(
+    option: "maxRetainedStates" | "terminalTtlMs",
+    message: string,
+  ) {
+    super(message);
+    this.name = "BitVM3ConfigurationError";
+    this.code = "invalid_retention_policy";
+    this.option = option;
+  }
 }
 
 export class UnavailableBitVM3Verifier implements BitVM3Verifier {
@@ -92,6 +120,72 @@ interface RecursiveValidationFailure {
 }
 
 type RecursiveValidation = RecursiveValidationSuccess | RecursiveValidationFailure;
+
+type BitVM3ClockFailureCode = "internal_error" | "malformed_request" | "resource_limit_exceeded";
+
+interface BitVM3ClockFailure {
+  ok: false;
+  failure_code: BitVM3ClockFailureCode;
+  error: string;
+}
+
+interface BitVM3Timestamp {
+  ok: true;
+  milliseconds: number;
+  iso: string;
+}
+
+type BitVM3TimestampResult = BitVM3Timestamp | BitVM3ClockFailure;
+
+function safeTimestamp(value: unknown, previousMilliseconds?: number): BitVM3TimestampResult {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return {
+      ok: false,
+      failure_code: "malformed_request",
+      error: "BitVM3 clock must return a finite numeric timestamp",
+    };
+  }
+  if (!Number.isSafeInteger(value)) {
+    return {
+      ok: false,
+      failure_code: "malformed_request",
+      error: "BitVM3 clock must return a safe integer timestamp",
+    };
+  }
+  if (value < BITVM3_TIMESTAMP_MIN_MS) {
+    return {
+      ok: false,
+      failure_code: "malformed_request",
+      error: "BitVM3 clock must not return a negative timestamp",
+    };
+  }
+  if (value < -8.64e15 || value > BITVM3_TIMESTAMP_MAX_MS) {
+    return {
+      ok: false,
+      failure_code: "resource_limit_exceeded",
+      error: "BitVM3 clock timestamp exceeds the ECMAScript Date serialization range",
+    };
+  }
+  if (previousMilliseconds !== undefined && value < previousMilliseconds) {
+    return {
+      ok: false,
+      failure_code: "internal_error",
+      error: "BitVM3 clock moved backwards and violated monotonicity",
+    };
+  }
+
+  try {
+    const iso = new Date(value).toISOString();
+    return { ok: true, milliseconds: value, iso };
+  } catch (error: unknown) {
+    const normalized = normalizeBoundaryError(error, "BitVM3 timestamp serialization failed");
+    return {
+      ok: false,
+      failure_code: normalized.truncated ? "resource_limit_exceeded" : "internal_error",
+      error: normalized.message,
+    };
+  }
+}
 
 async function validateRecursiveRequest(value: unknown): Promise<RecursiveValidation> {
   if (!isRecord(value)
@@ -175,6 +269,7 @@ function stateFor(
   authority: BackendIdentity,
   timestampMs = Date.now(),
 ): BitVM3State {
+  const timestamp = safeTimestamp(timestampMs);
   return {
     id: boundedIdentifier(proofId),
     recursiveHeight,
@@ -184,7 +279,7 @@ function stateFor(
       ...verification,
       backend: { ...verification.backend },
     },
-    timestamp: new Date(timestampMs).toISOString(),
+    timestamp: timestamp.ok ? timestamp.iso : BITVM3_FALLBACK_TIMESTAMP,
     failure_code: verification.failure_code,
     error: verification.error,
   };
@@ -235,7 +330,13 @@ type RetentionPreparation =
   | { kind: "replay"; state: BitVM3State }
   | { kind: "conflict" }
   | { kind: "capacity" }
+  | { kind: "clock_failure"; failure: BitVM3ClockFailure }
   | { kind: "reserved"; generation: number };
+
+type RetentionCommit =
+  | { kind: "committed"; state: BitVM3State }
+  | { kind: "stale" }
+  | { kind: "clock_failure"; failure: BitVM3ClockFailure };
 
 export class BitVM3Orchestrator {
   private readonly states = new Map<string, BitVM3State>();
@@ -245,6 +346,7 @@ export class BitVM3Orchestrator {
   private readonly retainedReservations = new Set<string>();
   private readonly now: () => number;
   private readonly retentionPolicy: BitVM3RetentionPolicy;
+  private lastObservedTimeMs: number | undefined;
   private retentionQueue: Promise<void> = Promise.resolve();
 
   public constructor(
@@ -252,14 +354,16 @@ export class BitVM3Orchestrator {
     options: BitVM3OrchestratorOptions = {},
   ) {
     this.now = options.now ?? (() => Date.now());
-    const maxRetainedStates = options.retention?.maxRetainedStates
-      ?? VERIFIER_BITVM3_RETENTION_POLICY.maxRetainedStates;
-    const terminalTtlMs = options.retention?.terminalTtlMs
-      ?? VERIFIER_BITVM3_RETENTION_POLICY.terminalTtlMs;
-    if (!Number.isSafeInteger(maxRetainedStates) || maxRetainedStates <= 0
-      || !Number.isSafeInteger(terminalTtlMs) || terminalTtlMs <= 0) {
-      throw new Error("BitVM3 retention policy must use positive safe integers");
-    }
+    const maxRetainedStates = this.policyOption(
+      options.retention?.maxRetainedStates,
+      VERIFIER_BITVM3_RETENTION_POLICY.maxRetainedStates,
+      "maxRetainedStates",
+    );
+    const terminalTtlMs = this.policyOption(
+      options.retention?.terminalTtlMs,
+      VERIFIER_BITVM3_RETENTION_POLICY.terminalTtlMs,
+      "terminalTtlMs",
+    );
     this.retentionPolicy = {
       version: VERIFIER_BITVM3_RETENTION_POLICY_VERSION,
       maxRetainedStates,
@@ -267,12 +371,42 @@ export class BitVM3Orchestrator {
     };
   }
 
-  private currentTime(): number {
-    const value = this.now();
-    if (!Number.isFinite(value) || !Number.isSafeInteger(value) || value < 0) {
-      throw new Error("BitVM3 clock must return a non-negative safe integer");
+  private policyOption(
+    value: number | undefined,
+    fallback: number,
+    option: "maxRetainedStates" | "terminalTtlMs",
+  ): number {
+    if (value === undefined) return fallback;
+    if (typeof value !== "number" || !Number.isSafeInteger(value) || value <= 0) {
+      throw new BitVM3ConfigurationError(
+        option,
+        `BitVM3 ${option} must be a positive safe integer at or below the v1 policy`,
+      );
+    }
+    if (value > fallback) {
+      throw new BitVM3ConfigurationError(
+        option,
+        `BitVM3 ${option} must not exceed the v1 policy maximum`,
+      );
     }
     return value;
+  }
+
+  private currentTimestamp(): BitVM3TimestampResult {
+    let value: unknown;
+    try {
+      value = this.now();
+    } catch (error: unknown) {
+      const normalized = normalizeBoundaryError(error, "BitVM3 clock failed");
+      return {
+        ok: false,
+        failure_code: normalized.truncated ? "resource_limit_exceeded" : "internal_error",
+        error: normalized.message,
+      };
+    }
+    const timestamp = safeTimestamp(value, this.lastObservedTimeMs);
+    if (timestamp.ok) this.lastObservedTimeMs = timestamp.milliseconds;
+    return timestamp;
   }
 
   private async withRetentionLock<T>(operation: () => Promise<T> | T): Promise<T> {
@@ -307,7 +441,10 @@ export class BitVM3Orchestrator {
    * operation as in flight, so cleanup must leave every associated map alone
    * until the operation commits or releases its reservation.
    */
-  private cleanupExpiredTerminalStates(now = this.currentTime()): void {
+  private cleanupExpiredTerminalStates(): BitVM3ClockFailure | undefined {
+    const timestamp = this.currentTimestamp();
+    if (!timestamp.ok) return timestamp;
+    const now = timestamp.milliseconds;
     for (const proofId of this.retainedProofIds()) {
       if (this.proofQueues.has(proofId) || this.retainedReservations.has(proofId)) continue;
       const initialization = this.initializations.get(proofId);
@@ -321,6 +458,7 @@ export class BitVM3Orchestrator {
       this.generations.delete(proofId);
       if (!this.proofQueues.has(proofId)) this.proofQueues.delete(proofId);
     }
+    return undefined;
   }
 
   private async prepareRetention(
@@ -331,7 +469,8 @@ export class BitVM3Orchestrator {
     requestBackend: BackendIdentity,
   ): Promise<RetentionPreparation> {
     return this.withRetentionLock(() => {
-      this.cleanupExpiredTerminalStates();
+      const clockFailure = this.cleanupExpiredTerminalStates();
+      if (clockFailure) return { kind: "clock_failure", failure: clockFailure };
       const existing = this.initializations.get(proofId);
       if (existing) {
         const sameInitialization = existing.verifier_request_digest === verifierRequestDigest
@@ -369,22 +508,23 @@ export class BitVM3Orchestrator {
     verifierBackend: BackendIdentity;
     verifierRequestDigest: string;
     generation: number;
-  }): Promise<BitVM3State | undefined> {
+  }): Promise<RetentionCommit> {
     return this.withRetentionLock(() => {
       if (!this.retainedReservations.has(input.proofId)
         || (this.generations.get(input.proofId) ?? 0) !== input.generation
         || this.states.has(input.proofId)
         || this.initializations.has(input.proofId)) {
-        return undefined;
+        return { kind: "stale" };
       }
 
-      const retainedAt = this.currentTime();
+      const retainedAt = this.currentTimestamp();
+      if (!retainedAt.ok) return { kind: "clock_failure", failure: retainedAt };
       const state = stateFor(
         input.proofId,
         input.recursiveHeight,
         input.verification,
         input.verifierBackend,
-        retainedAt,
+        retainedAt.milliseconds,
       );
       this.states.set(input.proofId, state);
       this.initializations.set(input.proofId, {
@@ -392,11 +532,11 @@ export class BitVM3Orchestrator {
         recursive_height: input.recursiveHeight,
         verifier_backend: { ...input.verifierBackend },
         state,
-        retained_at_ms: retainedAt,
+        retained_at_ms: retainedAt.milliseconds,
       });
       this.generations.set(input.proofId, input.generation + 1);
       this.retainedReservations.delete(input.proofId);
-      return state;
+      return { kind: "committed", state };
     });
   }
 
@@ -466,6 +606,22 @@ export class BitVM3Orchestrator {
         validation.request.verifier_request.backend,
       );
       if (preparation.kind === "replay") return preparation.state;
+      if (preparation.kind === "clock_failure") {
+        return stateFor(
+          validation.request.proof_id,
+          validation.request.recursive_height,
+          createVerificationFailure(
+            preparation.failure.failure_code,
+            preparation.failure.error,
+            {
+              request_digest: validation.verifier_request_digest,
+              backend: verifierBackend,
+              provenance: validation.request.verifier_request.provenance,
+            },
+          ),
+          verifierBackend,
+        );
+      }
       if (preparation.kind === "conflict") {
         return stateFor(
           validation.request.proof_id,
@@ -534,7 +690,7 @@ export class BitVM3Orchestrator {
         }
 
         if (isProductionVerified(verification, verifierBackend)) {
-          const state = await this.commitVerifiedState({
+          const commit = await this.commitVerifiedState({
             proofId: validation.request.proof_id,
             recursiveHeight: validation.request.recursive_height,
             verification,
@@ -542,7 +698,23 @@ export class BitVM3Orchestrator {
             verifierRequestDigest: validation.verifier_request_digest,
             generation: preparation.generation,
           });
-          if (!state) {
+          if (commit.kind === "clock_failure") {
+            return stateFor(
+              validation.request.proof_id,
+              validation.request.recursive_height,
+              createVerificationFailure(
+                commit.failure.failure_code,
+                commit.failure.error,
+                {
+                  request_digest: validation.verifier_request_digest,
+                  backend: verifierBackend,
+                  provenance: validation.request.verifier_request.provenance,
+                },
+              ),
+              verifierBackend,
+            );
+          }
+          if (commit.kind === "stale") {
             return stateFor(
               validation.request.proof_id,
               validation.request.recursive_height,
@@ -551,7 +723,7 @@ export class BitVM3Orchestrator {
             );
           }
           reserved = false;
-          return copyState(state);
+          return copyState(commit.state);
         }
 
         return stateFor(

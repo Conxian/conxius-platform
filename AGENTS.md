@@ -1788,3 +1788,24 @@ AGENTS.md (this update)
 - PowerShell runtime execution remains unavailable in this devbox; contamination parity remains static/self-test based.
 **Gotchas**:
 - The strict OpenSpec validator and `git diff --check` must be rerun after this session-log append; hosted PR checks must be inspected after pushing the single focused commit.
+
+### 2026-07-22 — PR #1198 Retention and Clock Boundary Follow-up
+**Trigger**: Formal review `4759442687` on PR #1198.
+**What was done**:
+- Enforced the published `conxian.bitvm3.retention.v1` defaults exactly at 1,024 retained states and 15 minutes, with typed `BitVM3ConfigurationError` rejection for invalid or above-policy constructor overrides; lower test overrides remain supported.
+- Centralized BitVM3 timestamp validation before `toISOString()`, accepting only monotonic finite safe non-negative milliseconds through the inclusive ECMAScript boundary `0..8.64e15`; negative, non-finite, unsafe, out-of-range, rolled-back, and thrown clock values now become bounded typed failures without adapter-state commits.
+- Added default/override/cap/invalid-configuration tests plus exact-boundary, just-over-boundary, invalid-value, rollback, and thrown-clock commit tests.
+- Updated the issue #1187 OpenSpec requirement/design to record constructor caps, clock range, monotonicity, and typed failure guarantees.
+**Key discoveries**:
+- A successful BitVM3 adapter commit needs its own safe timestamp read after asynchronous verification; validating only the cleanup/pre-dispatch read still permits a clock failure to escape from terminal-state serialization.
+- Monotonic clock tracking must advance only after a fully validated reading; failed or rolled-back readings leave the last accepted value unchanged and release any in-flight reservation through the existing `finally` path.
+**Files touched**:
+- `services/admin-dashboard/src/lib/support/bitvm3.ts`
+- `services/admin-dashboard/src/tests/bitvm3.test.ts`
+- `openspec/changes/2026-07-22-issue-1187-fail-closed-verifier-boundaries/{design.md,specs/fail-closed-verifier-boundaries/spec.md}`
+- `AGENTS.md`
+**Gaps identified**:
+- The production cryptographic verifier, payment observer, and key-release backends remain unavailable and require independent Gateway/Core/Nexus acceptance.
+- PowerShell runtime execution remains unavailable in this devbox; static contamination parity/self-tests remain the available validation.
+**Gotchas**:
+- The strict OpenSpec validator and `git diff --check` must be rerun after this session-log append; hosted PR checks must be inspected after pushing the focused commit.

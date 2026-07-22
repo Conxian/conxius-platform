@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Conxian/conxius-platform/schemas/agent-manifest.schema.json",
+  "title": "Conxian Agent Discovery Manifest",
+  "description": "Versioned repository-local allowlist for deterministic agent context discovery.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "manifestVersion",
+    "protocol",
+    "repository",
+    "context",
+    "skills"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "manifestVersion": {
+      "type": "string",
+      "description": "Semantic version of the manifest contract.",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "protocol": {
+      "const": "conxian-agent-discovery"
+    },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rootMarker"],
+      "properties": {
+        "rootMarker": {
+          "$ref": "#/$defs/relativePath"
+        }
+      }
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "optional"],
+      "properties": {
+        "required": {
+          "type": "array",
+          "minItems": 4,
+          "items": {
+            "$ref": "#/$defs/contextEntry"
+          }
+        },
+        "optional": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/contextEntry"
+          }
+        }
+      }
+    },
+    "skills": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["registry"],
+      "properties": {
+        "registry": {
+          "$ref": "#/$defs/relativePath"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "properties": {
+        "context": {
+          "properties": {
+            "required": {
+              "contains": {
+                "required": ["path"],
+                "properties": {
+                  "path": { "const": "AGENTS.md" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "context": {
+          "properties": {
+            "required": {
+              "contains": {
+                "required": ["path"],
+                "properties": {
+                  "path": { "const": "GOVERNANCE.md" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "context": {
+          "properties": {
+            "required": {
+              "contains": {
+                "required": ["path"],
+                "properties": {
+                  "path": { "const": "docs/AGENT_ONBOARDING.md" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "context": {
+          "properties": {
+            "required": {
+              "contains": {
+                "required": ["path"],
+                "properties": {
+                  "path": { "const": "docs/SESSION_CONTINUITY.md" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "description": "POSIX repository-relative path without traversal, backslashes, or empty segments.",
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!\\\\)(?!.*\\\\)(?!.*(^|/)\\.\\.(/|$))(?!.*(^|/)\\.(/|$))(?!.*//)(?!.*\\/$)[^\\u0000]+$"
+    },
+    "contextEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "priority", "description"],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/relativePath"
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

@@ -49,6 +49,12 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Run Agent Discovery Tests
+        run: pnpm run test:agent-discovery
+
+      - name: Typecheck Agent Discovery
+        run: pnpm run typecheck:agent-discovery
+
       - name: Run Lint
         if: ${{ inputs.run-lint }}
         run: |

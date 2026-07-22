@@ -1,0 +1,47 @@
+{
+  "$schema": "../schemas/agent-manifest.schema.json",
+  "manifestVersion": "1.0.0",
+  "protocol": "conxian-agent-discovery",
+  "repository": {
+    "rootMarker": "AGENTS.md"
+  },
+  "context": {
+    "required": [
+      {
+        "path": "AGENTS.md",
+        "priority": 10,
+        "description": "Primary repository knowledge base, directives, and session log."
+      },
+      {
+        "path": "GOVERNANCE.md",
+        "priority": 20,
+        "description": "Authoritative repository governance and change-control rules."
+      },
+      {
+        "path": "docs/AGENT_ONBOARDING.md",
+        "priority": 30,
+        "description": "Canonical onboarding protocol and agent working patterns."
+      },
+      {
+        "path": "docs/SESSION_CONTINUITY.md",
+        "priority": 40,
+        "description": "Session handover and continuity requirements."
+      }
+    ],
+    "optional": [
+      {
+        "path": "docs/REPOSITORY_TAXONOMY.md",
+        "priority": 50,
+        "description": "Cross-repository ownership and dependency context when available."
+      },
+      {
+        "path": "docs/INFORMATION_HIERARCHY.md",
+        "priority": 60,
+        "description": "Documentation authority and active reading-chain guidance."
+      }
+    ]
+  },
+  "skills": {
+    "registry": ".agents/skills/registry.json"
+  }
+}

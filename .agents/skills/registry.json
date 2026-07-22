@@ -1,0 +1,26 @@
+{
+  "$schema": "../../schemas/agent-skill-registry.schema.json",
+  "registryVersion": "1.0.0",
+  "protocol": "conxian-agent-discovery",
+  "skills": [
+    {
+      "id": "agent-onboarding",
+      "name": "Agent Onboarding",
+      "description": "Repository-local onboarding, session continuity, and knowledge-base guidance.",
+      "path": ".agents/skills/agent-onboarding/SKILL.md",
+      "status": "active",
+      "default": true,
+      "activation": "manual",
+      "loadPolicy": "content-only",
+      "contentFormat": "markdown-with-frontmatter",
+      "capabilities": [
+        "onboarding",
+        "session-continuity"
+      ],
+      "metadata": {
+        "version": "1.0.0",
+        "owner": "platform"
+      }
+    }
+  ]
+}

@@ -14,6 +14,7 @@ import {
   getM2MKeyStore,
   parseM2MServiceKeyHeader,
 } from "./m2mKeyStore";
+import { timingSafeStringEqual } from "./m2mKeyHttp";
 import { isRotatableServiceId, type RotatableServiceId } from "./m2mKeyTypes";
 
 // Service identifiers for the platform
@@ -180,7 +181,7 @@ export class M2MAuthenticator {
       return { valid: false, error: 'Missing API key' };
     }
 
-    if (headerValue !== expectedKey) {
+    if (!timingSafeStringEqual(headerValue, expectedKey)) {
       return { valid: false, error: 'Invalid API key' };
     }
 

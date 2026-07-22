@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import {
@@ -16,6 +16,12 @@ export interface M2MHttpError {
 
 export function createM2MRequestId(): string {
   return `req_${randomUUID()}`;
+}
+
+export function timingSafeStringEqual(left: string, right: string): boolean {
+  const leftDigest = createHash("sha256").update(left, "utf8").digest();
+  const rightDigest = createHash("sha256").update(right, "utf8").digest();
+  return timingSafeEqual(leftDigest, rightDigest);
 }
 
 export function m2mJson<T>(
@@ -63,7 +69,8 @@ export function authorizeM2MAdmin(request: Request, requestId: string): NextResp
     );
   }
 
-  if (request.headers.get("X-Admin-API-Key") !== expectedKey) {
+  const presentedKey = request.headers.get("X-Admin-API-Key");
+  if (!presentedKey || !timingSafeStringEqual(presentedKey, expectedKey)) {
     return m2mErrorResponse(
       { status: 401, code: "unauthorized", message: "Unauthorized" },
       requestId,

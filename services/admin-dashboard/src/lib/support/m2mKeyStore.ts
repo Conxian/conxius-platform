@@ -9,6 +9,17 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import {
+  recordM2MExpiryThresholdCrossed,
+  recordM2MRegistryState,
+  recordM2MRegistryWriteFailure,
+  recordM2MRotationOutcome,
+  recordM2MRollbackOutcome,
+  recordM2MValidationOutcome,
+  type M2MMetricOutcome,
+  type M2MMetricServiceState,
+  type M2MRegistryFailureStage,
+} from "../sidl/observability";
+import {
   DEFAULT_M2M_GRACE_PERIOD_SECONDS,
   DEFAULT_M2M_LOCK_WAIT_MS,
   MAX_M2M_GRACE_PERIOD_SECONDS,
@@ -358,6 +369,28 @@ function isBeforeNow(timestamp: string, now: Date): boolean {
   return now.getTime() < new Date(timestamp).getTime();
 }
 
+function mutationOutcomeForError(error: unknown): M2MMetricOutcome {
+  if (!(error instanceof M2MKeyStoreError)) return "failure";
+
+  switch (error.code) {
+    case "generation_conflict":
+    case "rollback_window_expired":
+    case "rollback_target_conflict":
+      return "conflict";
+    case "invalid_generation_precondition":
+    case "invalid_grace_period":
+    case "invalid_expiry":
+    case "invalid_request":
+    case "service_not_found":
+      return "rejected";
+    case "m2m_registry_busy":
+    case "m2m_registry_unavailable":
+      return "unavailable";
+    default:
+      return "failure";
+  }
+}
+
 function hashSecret(secret: string): { formatted: string; digest: Buffer } {
   const digest = createHash("sha256").update(Buffer.from(secret, "utf8")).digest();
   return { formatted: `${SHA256_PREFIX}${digest.toString("hex")}`, digest };
@@ -506,6 +539,22 @@ function servicePreviousState(
   return isBeforeNow(effectivePreviousDeadline(previous), now) ? "grace" : "expired";
 }
 
+function metricServicesForDocument(document: M2MRegistryDocument): M2MMetricServiceState[] {
+  return ROTATABLE_SERVICE_IDS.flatMap((serviceId) => {
+    const service = document.services[serviceId];
+    if (!service) return [];
+
+    return [{
+      serviceId,
+      generation: service.generation,
+      activeExpiresAt: service.active.expiresAt,
+      previousEffectiveUntil: service.previous
+        ? effectivePreviousDeadline(service.previous)
+        : null,
+    }];
+  });
+}
+
 export class FileM2MKeyStore implements M2MKeyStoreBackend {
   private readonly environment: NodeJS.ProcessEnv;
   private readonly registryPath: string;
@@ -593,7 +642,7 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
 
       this.cleanupOrphanArtifactsUnderLock();
       const initial = this.buildInitialDocument();
-      this.commitDocumentUnderLock(null, initial);
+      this.commitDocumentUnderLock(null, initial, undefined, "bootstrap");
       return initial;
     });
   }
@@ -602,11 +651,19 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
     serviceId: RotatableServiceId,
     secret: string,
   ): M2MServiceValidationResult {
-    const document = this.ensureReady();
+    let document: M2MRegistryDocument;
+    try {
+      document = this.ensureReady();
+    } catch (error) {
+      recordM2MValidationOutcome(serviceId, "unavailable");
+      throw error;
+    }
+    recordM2MRegistryState(document.revision, metricServicesForDocument(document));
     const service = document.services[serviceId];
     const presentedDigest = hashSecret(secret).digest;
 
     if (!service) {
+      recordM2MValidationOutcome(serviceId, "invalid");
       return { valid: false, serviceId };
     }
 
@@ -623,17 +680,26 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
         service.previous?.expiresAt === undefined ||
         isBeforeNow(service.previous.expiresAt, currentTime));
 
-    if (activeAccepted) return { valid: true, serviceId, generation: service.generation };
+    if (activeAccepted) {
+      recordM2MValidationOutcome(serviceId, "success");
+      return { valid: true, serviceId, generation: service.generation };
+    }
     if (previousAccepted && service.previous) {
+      recordM2MValidationOutcome(serviceId, "success");
       return { valid: true, serviceId, generation: service.previous.generation };
     }
 
+    recordM2MValidationOutcome(
+      serviceId,
+      activeMatch || previousMatch ? "expired" : "invalid",
+    );
     return { valid: false, serviceId };
   }
 
   listMetadata(requestId = newSystemRequestId()): M2MRegistryMetadataResponse {
     const document = this.ensureReady();
     const evaluated = this.persistExpiryThresholds(document, requestId);
+    recordM2MRegistryState(evaluated.revision, metricServicesForDocument(evaluated));
     const currentTime = this.now();
     const services = ROTATABLE_SERVICE_IDS
       .filter((serviceId) => evaluated.services[serviceId])
@@ -643,12 +709,24 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
   }
 
   rotate(input: M2MRotateInput): M2MRotationResult {
+    try {
+      return this.rotateInternal(input);
+    } catch (error) {
+      if (isRotatableServiceId(input.serviceId)) {
+        recordM2MRotationOutcome(input.serviceId, mutationOutcomeForError(error));
+      }
+      throw error;
+    }
+  }
+
+  private rotateInternal(input: M2MRotateInput): M2MRotationResult {
     if (!isRotatableServiceId(input.serviceId)) {
       throw new M2MKeyStoreError("service_not_found", "Service key service not found");
     }
     validateGeneration(input.expectedGeneration);
     const gracePeriodSeconds = validateGracePeriod(input.gracePeriodSeconds);
-    this.ensureReady();
+    const ready = this.ensureReady();
+    recordM2MRegistryState(ready.revision, metricServicesForDocument(ready));
 
     return this.withWriterLock(() => {
       const current = this.loadDocumentForMutationUnderLock();
@@ -727,7 +805,9 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
         auditEvents: [...current.auditEvents, auditEvent],
       };
 
-      this.commitDocumentUnderLock(current, nextDocument);
+      this.commitDocumentUnderLock(current, nextDocument, undefined, "mutation");
+      recordM2MRegistryState(nextRevision, metricServicesForDocument(nextDocument));
+      recordM2MRotationOutcome(input.serviceId, "success");
 
       return {
         serviceId: input.serviceId,
@@ -742,13 +822,25 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
   }
 
   rollback(input: M2MRollbackInput): M2MRollbackResult {
+    try {
+      return this.rollbackInternal(input);
+    } catch (error) {
+      if (isRotatableServiceId(input.serviceId)) {
+        recordM2MRollbackOutcome(input.serviceId, mutationOutcomeForError(error));
+      }
+      throw error;
+    }
+  }
+
+  private rollbackInternal(input: M2MRollbackInput): M2MRollbackResult {
     if (!isRotatableServiceId(input.serviceId)) {
       throw new M2MKeyStoreError("service_not_found", "Service key service not found");
     }
     validateGeneration(input.expectedGeneration);
     validateGeneration(input.targetGeneration);
     const reason = sanitizeRollbackReason(input.reason);
-    this.ensureReady();
+    const ready = this.ensureReady();
+    recordM2MRegistryState(ready.revision, metricServicesForDocument(ready));
 
     return this.withWriterLock(() => {
       const current = this.loadDocumentForMutationUnderLock();
@@ -821,7 +913,9 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
         auditEvents: [...current.auditEvents, auditEvent],
       };
 
-      this.commitDocumentUnderLock(current, nextDocument);
+      this.commitDocumentUnderLock(current, nextDocument, undefined, "mutation");
+      recordM2MRegistryState(nextRevision, metricServicesForDocument(nextDocument));
+      recordM2MRollbackOutcome(input.serviceId, "success");
 
       return {
         serviceId: input.serviceId,
@@ -941,7 +1035,15 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
         });
       }
 
-      this.commitDocumentUnderLock(current, nextDocument);
+      this.commitDocumentUnderLock(current, nextDocument, undefined, "threshold");
+      recordM2MRegistryState(nextRevision, metricServicesForDocument(nextDocument));
+      for (const candidate of currentCandidates) {
+        recordM2MExpiryThresholdCrossed(
+          candidate.serviceId,
+          candidate.keyRole,
+          candidate.threshold,
+        );
+      }
       return nextDocument;
     });
   }
@@ -1135,7 +1237,7 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
       candidateFile: marker.candidateFile,
       journalFile: marker.journalFile,
     };
-    this.commitDocumentUnderLock(committed, nextDocument, staleArtifacts);
+    this.commitDocumentUnderLock(committed, nextDocument, staleArtifacts, "recovery");
     return nextDocument;
   }
 
@@ -1143,11 +1245,13 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
     previous: M2MRegistryDocument | null,
     next: M2MRegistryDocument,
     staleArtifacts?: ArtifactCleanup,
+    failureStage: M2MRegistryFailureStage = "mutation",
   ): void {
     if (
       (previous === null && next.revision !== 1) ||
       (previous !== null && next.revision !== previous.revision + 1)
     ) {
+      recordM2MRegistryWriteFailure(failureStage, "invariant");
       throw new M2MKeyStoreError("m2m_registry_unavailable", "M2M registry revision invariant failed");
     }
 
@@ -1201,6 +1305,10 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
       this.fsyncDirectory();
       this.recoveryRequired = false;
     } catch (error) {
+      recordM2MRegistryWriteFailure(
+        failureStage,
+        markerCommitted ? "post_marker" : "pre_marker",
+      );
       if (markerCommitted) {
         this.recoveryRequired = true;
         throw new M2MKeyStoreError(
@@ -1218,19 +1326,37 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
   private readActiveDocument(): M2MRegistryDocument | null {
     if (this.fileExists(this.registryPath)) this.assertPrivateFile(this.registryPath, true);
     const parsed = this.readJsonFile(this.registryPath);
-    return parsed === null ? null : validateRegistryDocument(parsed);
+    if (parsed === null) return null;
+    try {
+      return validateRegistryDocument(parsed);
+    } catch (error) {
+      recordM2MRegistryWriteFailure("storage", "malformed");
+      throw error;
+    }
   }
 
   private readArtifactDocument(filePath: string): M2MRegistryDocument | null {
     if (this.fileExists(filePath)) this.assertPrivateFile(filePath, false);
     const parsed = this.readJsonFile(filePath);
-    return parsed === null ? null : validateRegistryDocument(parsed);
+    if (parsed === null) return null;
+    try {
+      return validateRegistryDocument(parsed);
+    } catch (error) {
+      recordM2MRegistryWriteFailure("recovery", "malformed");
+      throw error;
+    }
   }
 
   private readCommitMarker(): M2MRegistryCommitMarker | null {
     if (this.fileExists(this.markerPath)) this.assertPrivateFile(this.markerPath, false);
     const parsed = this.readJsonFile(this.markerPath);
-    return parsed === null ? null : validateCommitMarker(parsed, this.registryBaseName);
+    if (parsed === null) return null;
+    try {
+      return validateCommitMarker(parsed, this.registryBaseName);
+    } catch (error) {
+      recordM2MRegistryWriteFailure("recovery", "malformed");
+      throw error;
+    }
   }
 
   private readJsonFile(filePath: string): unknown | null {
@@ -1239,12 +1365,14 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
       contents = fs.readFileSync(filePath, "utf8");
     } catch (error) {
       if (isNodeError(error) && error.code === "ENOENT") return null;
+      recordM2MRegistryWriteFailure("storage", "read");
       throw new M2MKeyStoreError("m2m_registry_unavailable", "M2M registry cannot be read");
     }
 
     try {
       return JSON.parse(contents);
     } catch {
+      recordM2MRegistryWriteFailure("storage", "malformed");
       throw new M2MKeyStoreError("m2m_registry_unavailable", "M2M registry JSON is malformed");
     }
   }
@@ -1302,6 +1430,7 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
 
         if (isNodeError(error) && error.code === "EEXIST") {
           if (Date.now() - startedAt >= this.lockWaitMs) {
+            recordM2MRegistryWriteFailure("lock", "busy");
             throw new M2MKeyStoreError(
               "m2m_registry_busy",
               "M2M registry writer is busy",
@@ -1312,6 +1441,7 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
           continue;
         }
 
+        recordM2MRegistryWriteFailure("lock", "write");
         throw new M2MKeyStoreError("m2m_registry_unavailable", "M2M registry lock cannot be acquired");
       }
     }
@@ -1343,6 +1473,7 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
         throw new Error("M2M registry directory mode is not private");
       }
     } catch {
+      recordM2MRegistryWriteFailure("storage", "permission");
       throw new M2MKeyStoreError("m2m_registry_unavailable", "M2M registry storage is unavailable");
     }
   }
@@ -1361,6 +1492,7 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
           // Preserve the fail-closed directory durability error.
         }
       }
+      recordM2MRegistryWriteFailure("storage", "flush");
       throw new M2MKeyStoreError("m2m_registry_unavailable", "M2M registry directory cannot be flushed");
     }
   }
@@ -1370,6 +1502,7 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
       fs.unlinkSync(filePath);
     } catch (error) {
       if (!(isNodeError(error) && error.code === "ENOENT")) {
+        recordM2MRegistryWriteFailure("storage", "cleanup");
         throw new M2MKeyStoreError("m2m_registry_unavailable", "M2M registry cleanup failed");
       }
     }
@@ -1428,6 +1561,7 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
       );
     } catch (error) {
       if (isNodeError(error) && error.code === "ENOENT") return false;
+      recordM2MRegistryWriteFailure("storage", "read");
       throw new M2MKeyStoreError("m2m_registry_unavailable", "M2M registry storage cannot be inspected");
     }
   }
@@ -1439,6 +1573,7 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
         throw new Error("M2M registry file mode is not private");
       }
     } catch {
+      recordM2MRegistryWriteFailure("storage", "permission");
       throw new M2MKeyStoreError("m2m_registry_unavailable", "M2M registry file permissions are invalid");
     }
   }
@@ -1449,6 +1584,7 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
       return true;
     } catch (error) {
       if (isNodeError(error) && error.code === "ENOENT") return false;
+      recordM2MRegistryWriteFailure("storage", "read");
       throw new M2MKeyStoreError("m2m_registry_unavailable", "M2M registry state cannot be inspected");
     }
   }

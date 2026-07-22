@@ -53,6 +53,10 @@ describe('Admin API Auth (CON-353)', () => {
       });
       const response = await getMetrics(req);
       expect(response.status).toBe(200);
+      expect(response.headers.get('Content-Type')).toContain('text/plain');
+      const payload = await response.text();
+      expect(payload).toContain('admin_dashboard_sidl_requests_total');
+      expect(payload).toContain('m2m_service_key_registry_revision');
     });
   });
 });

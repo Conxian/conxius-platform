@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { M2MAuthenticator, M2MConfig, validateM2MAuth, validateM2MAuthWithScope, validateAdminAuth } from '../lib/support/m2m';
+import { timingSafeStringEqual } from '../lib/support/m2mKeyHttp';
 
 // Mock environment factory - called each time the mock is accessed
 const mockEnv = {
@@ -38,6 +39,12 @@ describe('M2M Authentication', () => {
   });
 
   describe('API Key Validation', () => {
+    it('compares admin keys safely across equal and unequal lengths', () => {
+      expect(timingSafeStringEqual('test-admin-key', 'test-admin-key')).toBe(true);
+      expect(timingSafeStringEqual('test-admin-key', 'test-admin-key-extra')).toBe(false);
+      expect(timingSafeStringEqual('wrong-admin-key', 'test-admin-key')).toBe(false);
+    });
+
     it('should validate correct API key', () => {
       const result = authenticator.validateApiKey('test-admin-key');
       expect(result.valid).toBe(true);

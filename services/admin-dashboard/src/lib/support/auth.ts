@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { timingSafeStringEqual } from "./m2mKeyHttp";
 
 /**
  * Validates the X-Admin-API-Key header against the configured ADMIN_DASHBOARD_API_KEY environment variable.
@@ -13,7 +14,7 @@ export function validateAdminAuth(req: Request): NextResponse | null {
     return NextResponse.json({ error: "Configuration Error" }, { status: 500 });
   }
 
-  if (authHeader !== expectedKey) {
+  if (!authHeader || !timingSafeStringEqual(authHeader, expectedKey)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

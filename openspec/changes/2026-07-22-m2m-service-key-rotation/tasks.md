@@ -36,7 +36,7 @@
 - [x] **T5 — Implement the optional metadata endpoint.** If enabled, add
   `GET /api/v1/m2m/service-keys` with admin-only authorization and metadata-only
   serialization; prove that hashes and secrets cannot appear in the response.
-- [ ] **T6 — Implement audit and expiry state.** Persist successful bootstrap,
+- [x] **T6 — Implement audit and expiry state.** Persist successful bootstrap,
   rotation, rollback, threshold, and registry-recovery events in the same
   transaction as registry state; use effective previous deadlines; expose the
   required bounded Prometheus metrics; make threshold markers idempotent; do not
@@ -55,6 +55,11 @@
   post-marker failure latching, journal/candidate recovery, lock contention,
   same-generation races, restart authority, rollback input/deadline/target
   conflicts, exact metadata responses, and lost-response recovery.
+  - [x] Phase 3A coverage: expiry-boundary and effective-deadline behavior,
+    second-rotation invalidation, rollback conflicts and expiry caps, malformed
+    and wrong-version fail-closed behavior, route validation/redaction, marker
+    idempotency, marker-qualified recovery, and inter-process same-generation
+    races.
 - [ ] **T9 — Document deployment and compatibility operations.** Record the
   persistent-volume/single-writer requirement, consumer update sequence, admin
   dashboard self-key procedure, distinction between service and admin API keys,

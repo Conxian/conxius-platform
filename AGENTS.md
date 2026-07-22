@@ -174,7 +174,6 @@ All services use multi-layered M2M auth per `docs/M2M_AUTHENTICATION.md`:
 - **`revenue-automation.clar`** — referenced in `docs/runbooks/MAINTAINER_BOUNTY_RUNBOOK.md` but does not exist in the repo (#1164)
 - **JWT-based M2M token auth** — M2M module supports keys/scopes, but JWT tokens not implemented (#1160)
 - **Key rotation mechanism** — M2M keys are static, no rotation API (#1161)
-- **Agent discovery mechanism** — No automatic agent context discovery (#1162)
 - **Swarm coordination** — Multi-agent patterns not implemented (#1163)
 - **"Harvest Sovereign Yield"** — both SFO implementations use `Math.random()` stubs
 - **Yield sources** defined in scoring matrix (Babylon Staking G-43, ctUSD G-22, Lightning Async Payments G-53) have no UI integration
@@ -400,7 +399,7 @@ See `docs/SELF_EVOLVING_KB.md` for full architecture.
 | MFE Federation | Scaffolded | — |
 | Contributor Claim Ledger | **Implemented** | #1159 |
 | M2M Authentication | **Implemented (keys/scopes)** | #1160, #1161 |
-| Agent Onboarding | **Implemented (docs/skills)** | #1162 |
+| Agent Onboarding & Discovery | **Implemented (manifest/registry/CLI/tests)** | #1162 |
 | Swarm Coordination | **Patterns documented** | #1163 |
 | **Self-Evolving KB** | **Implemented (scaffolded)** | #1165 |
 | Proof-carrying treasury analytics | Spec-only | — |
@@ -1276,3 +1275,33 @@ AGENTS.md (this update)
 - Hosted checks must be re-evaluated on the pushed merge commit.
 **Gotchas**:
 - Do not treat the initial shallow-clone `refusing to merge unrelated histories` message as a repository divergence; after local history deepening, the normal merge completed with three content conflicts.
+
+### 2026-07-22 — Automatic Agent Discovery Protocol
+**Trigger**: Issue #1162 — implement automatic agent discovery for repository onboarding.
+**What was done**:
+- Added the OpenSpec change at `openspec/changes/2026-07-22-issue-1162-agent-discovery/` before implementation edits.
+- Added `.agents/manifest.json`, the metadata-only `.agents/skills/registry.json`, portable JSON Schemas, and a minimal YAML frontmatter compatibility repair for `agent-onboarding`.
+- Implemented zero-network discovery in `scripts/agent-discovery.ts`, with ordered required context, optional warnings, explicit skill selection, deterministic JSON output, fail-closed version/path/file handling, and symlink containment checks.
+- Added Node test-runner coverage, root package scripts, reusable CI steps, and onboarding documentation for the protocol and compatibility fallback.
+**Key discoveries**:
+- The existing onboarding skill had no YAML frontmatter; the small repair is required for registry identity validation and does not change its manual activation semantics.
+- The root TypeScript configuration includes `src/` only, so the strict discovery check uses the already-declared Node typings from `services/elizaos-plugin-conxian` without changing the repository dependency graph.
+- Manifest discovery walks upward only and never scans unrelated files; all declared targets are checked against the manifest repository root after symlink resolution.
+**Files touched**:
+- `.agents/manifest.json`
+- `.agents/skills/registry.json`
+- `.agents/skills/agent-onboarding/SKILL.md`
+- `schemas/agent-manifest.schema.json`
+- `schemas/agent-skill-registry.schema.json`
+- `scripts/agent-discovery.ts`
+- `scripts/agent-discovery.test.ts`
+- `package.json`
+- `.github/workflows/reusable-ci.yml`
+- `docs/AGENT_ONBOARDING.md`
+- `AGENTS.md`
+- `openspec/changes/2026-07-22-issue-1162-agent-discovery/`
+**Gaps identified**:
+- Swarm coordination remains issue #1163 scope and is intentionally not implemented here.
+- Hosted checks remain to be evaluated after the feature branch is pushed.
+**Gotchas**:
+- The current `origin/main` dependency lockfile predates the root Next.js override update; this issue-1162 change intentionally avoids unrelated dependency graph repairs.

@@ -1,3 +1,13 @@
+---
+name: agent-onboarding
+description: "Inducts AI agents into the Conxian ecosystem with repository context and session continuity guidance."
+license: MIT
+compatibility: "Repository-local; content is inert until a human or agent explicitly activates it."
+metadata:
+  version: "1.0.0"
+  execution: "manual"
+---
+
 # Agent Onboarding Skill
 
 ## Purpose

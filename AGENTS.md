@@ -1384,3 +1384,18 @@ AGENTS.md (this update)
 - Hosted checks must be re-evaluated on the pushed merge commit.
 **Gotchas**:
 - Do not use `--allow-unrelated-histories` for this repository; the initial refusal came from the shallow clone, and history deepening restored the normal merge base.
+
+### 2026-07-22 — PR #1189 CI/Rebase Remediation Follow-up
+**Trigger**: PR #1189 formal review after CI repair PR #1190 and a concurrent remote PR-branch merge.
+**What was done**:
+- Preserved the remote PR merge resolution against current `origin/main` rather than overwriting its newer work, then corrected the canonical taxonomy reference in `docs/AGENT_ONBOARDING.md`.
+- Confirmed the follow-up changed no dependency manifests or lockfiles and kept the synthetic discovery fixture path unchanged.
+**Key discoveries**:
+- PR #1190 fixed the base mismatch on main by restoring the Next.js `15.5.18` / TypeScript `6.0.3` dependency graph; PR #1189 needed no additional dependency policy change.
+**Files touched**:
+- `docs/AGENT_ONBOARDING.md`
+- `AGENTS.md`
+**Gaps identified**:
+- Hosted checks must be re-evaluated on the final pushed PR head.
+**Gotchas**:
+- The synthetic discovery fixture intentionally uses `.github/REPOSITORY_TAXONOMY.md` for an isolated optional-file test; the corrected production documentation path is `docs/REPOSITORY_TAXONOMY.md`.

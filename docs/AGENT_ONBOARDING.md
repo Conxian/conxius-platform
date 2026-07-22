@@ -81,7 +81,7 @@ The current manifest context signals are:
 | `GOVERNANCE.md` | Repository root | 20 | **REQUIRED** - governance rules |
 | `docs/AGENT_ONBOARDING.md` | `docs/` | 30 | **REQUIRED** - onboarding protocol |
 | `docs/SESSION_CONTINUITY.md` | `docs/` | 40 | **REQUIRED** - session handover |
-| `.github/REPOSITORY_TAXONOMY.md` | `.github/` | 50 | Optional cross-repo context |
+| `docs/REPOSITORY_TAXONOMY.md` | `docs/` | 50 | Optional cross-repo context |
 | `docs/INFORMATION_HIERARCHY.md` | `docs/` | 60 | Optional documentation navigation |
 
 ### Auto-Discovery Sequence

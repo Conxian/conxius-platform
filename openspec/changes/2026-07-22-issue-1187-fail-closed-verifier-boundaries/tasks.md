@@ -115,3 +115,24 @@
 - [ ] Re-run focused/full Vitest, dashboard typecheck, lifecycle/control and
   contamination guards, strict OpenSpec validation, diff hygiene, and hosted
   PR checks after the focused commit is pushed.
+
+## Phase 9 — Final P2 resource-boundary remediation (PR #1198 review 4759335450)
+
+- [x] Change signature-verifier attestations to bounded canonical JSON string
+  payloads; reject object/proxy values before parsing, enforce encoded length
+  before `JSON.parse`, apply detached JSON validation/canonicalization, and
+  document canonical reserialization as authoritative for duplicate-key
+  ambiguity.
+- [x] Add hostile proxy/own-key, over-limit pre-parse, malformed, deep/large,
+  and valid canonical snapshot/digest regression tests.
+- [x] Add versioned BitVM3 bounded terminal-retention policy with a hard cap,
+  pre-dispatch capacity reservation, injectable clock, terminal TTL cleanup,
+  all-map/queue cleanup, in-flight preservation, and safe replay after expiry.
+- [x] Add BitVM3 cap, no-dispatch, no-in-flight-eviction, TTL/map-cleanup, and
+  replay-after-expiry regression tests.
+- [x] Update the change-local design/spec, production-boundary/limits/risk
+  documentation, and one session-continuity entry without selecting or
+  claiming a production verifier backend.
+- [ ] Re-run focused/full Vitest, dashboard typecheck, lifecycle/control and
+  contamination guards, strict OpenSpec validation, diff hygiene, and hosted
+  PR checks after the focused commit is pushed.

@@ -69,7 +69,7 @@ repository; it does not implement a proof backend.
 | **G-17** | BIP-353 DNS Payments | [FULL_STACK_BITCOIN_RESEARCH.md#32](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#32) | 🟢 **Implemented**. Foundational bridge active. |
 | **G-18** | BIP-324 Transport | [FULL_STACK_BITCOIN_RESEARCH.md#38](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#38) | `conxian-nexus/transport` |
 | **G-19** | Spider Network Routing | [FULL_STACK_BITCOIN_RESEARCH.md#39](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#39) | `conxian-nexus/spider` |
-| **G-20** | BitVM3 Adaptive Proofs | [FULL_STACK_BITCOIN_RESEARCH.md#40](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#40) | 🛡️ **Fail-closed platform boundary** in `bitvm3.ts`; bounded same-proof FIFO replay/conflict protection is implemented, while recursive backend and acceptance evidence remain pending |
+| **G-20** | BitVM3 Adaptive Proofs | [FULL_STACK_BITCOIN_RESEARCH.md#40](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#40) | 🛡️ **Fail-closed platform boundary** in `bitvm3.ts`; bounded same-proof FIFO replay/conflict protection and versioned terminal cap/TTL retention are implemented, while recursive backend and acceptance evidence remain pending |
 | **G-21** | Sangria/Nova Proof Folding | [FULL_STACK_BITCOIN_RESEARCH.md#24](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#24) | `lib-conxian-core/sangria` |
 | **G-22** | ctUSD Stablecoin Logic | [FULL_STACK_BITCOIN_RESEARCH.md#26](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#26) | 🏗️ **Active Scaffolding**. TypeScript types in `lib/usi/stablecoin.ts`. OpenSpec proposal at `openspec/changes/2026-07-04-ctusd-dlc-stablecoin/`. |
 | **G-23** | Ark V-UTXO Protocol | [FULL_STACK_BITCOIN_RESEARCH.md#25](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#25) | `lib-conxian-core/ark` |
@@ -102,7 +102,7 @@ repository; it does not implement a proof backend.
 - **G-17 (BIP-353 DNS)**: 🟢 **Implemented**.
 - **G-01 (BitVM2 Floor)**: 🛡️ **Fail-closed boundary; backend unavailable by default**.
 - **G-11 (BitVM2 Multi-Party)**: 🛡️ **Fail-closed scaffolding**. Authorized unique signers and bounded detached signature attestations are required; the default verifier is unavailable.
-- **G-20 (BitVM3)**: 🛡️ **Fail-closed boundary; same-proof FIFO replay/conflict protection is implemented, recursive backend pending**.
+- **G-20 (BitVM3)**: 🛡️ **Fail-closed boundary; same-proof FIFO replay/conflict protection and bounded terminal retention are implemented, recursive backend pending**.
 - **G-50 (ZKCP)**: 🛡️ **Fail-closed boundary; versioned intent binding, bounded retention/pagination, and immutable evidence revalidation are implemented, but verifier/payment/key-release backends remain pending**.
 - **G-51 (Optimized verifier)**: 🏗️ **Research only; no pairing implementation in this repository**.
 - **G-05 (Silent Payments)**: 🏗️ **Active Scaffolding**.

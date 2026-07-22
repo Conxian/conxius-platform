@@ -17,8 +17,8 @@ import {
   isVerificationFailureCode,
   isUnavailableBackend,
   normalizeBoundaryError,
+  parseBoundedJsonPayload,
   rejectNonProductionVerification,
-  snapshotBoundedJson,
   VERIFIER_RESOURCE_LIMITS,
   VERIFIER_SIGNATURE_ENCODING,
   VERIFIER_SIGNATURE_ENCODING_VERSION,
@@ -94,6 +94,13 @@ export interface SignatureAttestation {
   attestation_digest: Digest;
 }
 
+/**
+* Adapter-owned signature evidence crosses the trust boundary as bounded,
+* canonical JSON text. Parsed attestations are detached before storage and use
+* the object shape above only inside this module's validated state.
+*/
+export type SignatureAttestationPayload = string;
+
 export interface PartialSignature {
   verifier_id: string;
   signature: string;
@@ -150,7 +157,7 @@ export interface BitVMSignatureVerification {
   verified: boolean;
   backend: BackendIdentity;
   provenance: Provenance;
-  attestation?: SignatureAttestation;
+  attestation?: SignatureAttestationPayload;
   failure_code?: VerificationFailureCode;
   error?: string;
 }
@@ -188,7 +195,7 @@ export async function createSignatureAttestation(input: {
   signature: string;
   backend: BackendIdentity;
   provenance: Provenance;
-}): Promise<SignatureAttestation> {
+}): Promise<SignatureAttestationPayload> {
   if (!isNonEmptyString(input.proofId)
     || !isNonEmptyString(input.verifierId)
     || !isCanonicalSignatureHex(input.signature)
@@ -199,15 +206,15 @@ export async function createSignatureAttestation(input: {
     || input.signature.length > VERIFIER_RESOURCE_LIMITS.maxSignatureChars) {
     throw new Error("Verifier resource limit exceeded: signature attestation");
   }
-  const backendSnapshot = snapshotBoundedJson(input.backend);
-  if (!backendSnapshot.ok || !isCanonicalBackendIdentity(backendSnapshot.snapshot)) {
-    throw new Error(
-      backendSnapshot.ok
-        ? "Malformed signature attestation backend identity"
-        : backendSnapshot.error,
-    );
+  const backend = {
+    id: input.backend.id,
+    version: input.backend.version,
+    artifact_digest: input.backend.artifact_digest,
+    authority: input.backend.authority,
+  };
+  if (!isCanonicalBackendIdentity(backend)) {
+    throw new Error("Malformed signature attestation backend identity");
   }
-  const backend = backendSnapshot.snapshot;
   const signature_digest = await digestCanonical({ signature: input.signature });
   const attestationWithoutDigest = {
     proof_id: input.proofId,
@@ -217,10 +224,11 @@ export async function createSignatureAttestation(input: {
     backend,
     provenance: input.provenance,
   };
-  return {
+  const attestation = {
     ...attestationWithoutDigest,
     attestation_digest: await digestCanonical(attestationWithoutDigest),
   };
+  return canonicalJson(attestation);
 }
 
 interface FloorValidationSuccess {
@@ -268,6 +276,7 @@ function isSignatureVerification(value: unknown): value is BitVMSignatureVerific
     || typeof value.verified !== "boolean"
     || !isBackendIdentity(value.backend)
     || !isProvenance(value.provenance)
+    || (value.attestation !== undefined && typeof value.attestation !== "string")
     || (value.error !== undefined && typeof value.error !== "string")
     || (value.failure_code !== undefined && !isVerificationFailureCode(value.failure_code))) {
     return false;
@@ -818,7 +827,7 @@ export class BitVMBridge {
         let attestationMatches = false;
         let attestationSnapshot: SignatureAttestation | undefined;
         try {
-          const snapshot = snapshotBoundedJson(signatureVerification.attestation);
+          const snapshot = parseBoundedJsonPayload(signatureVerification.attestation);
           if (!snapshot.ok) {
             return {
               accepted: false,
@@ -846,8 +855,8 @@ export class BitVMBridge {
             backend: signatureVerification.backend,
             provenance: signatureVerification.provenance,
           });
-          attestationSnapshot = snapshot.snapshot;
-          attestationMatches = canonicalJson(attestationSnapshot) === canonicalJson(expectedAttestation);
+          attestationSnapshot = snapshot.snapshot as SignatureAttestation;
+          attestationMatches = snapshot.canonical === expectedAttestation;
         } catch {
           attestationMatches = false;
         }

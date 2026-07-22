@@ -85,6 +85,8 @@ calculation, or adapter dispatch:
 | BitVM signatures | `conxian.verifier.signature.v1`, canonical even-length hex, 64–512 decoded bytes / 1,024 characters |
 | Authorized signers / tap count | 64 signers / 1,024 taps |
 | BitVM3 proof id / recursive height | 128 characters / safe integer `0..1,024` |
+| BitVM signature attestation payload | canonical JSON string, 4,096 characters / 16 KiB UTF-8 |
+| BitVM3 retained terminal state | `conxian.bitvm3.retention.v1`, 1,024 states / 15-minute TTL |
 | Confirmation count | 1,000,000 |
 | Decryption-key evidence | 4,096 characters |
 
@@ -101,22 +103,25 @@ boundaries return the same typed failure without invoking a backend.
 
 ### 2.3 Bounded adapter attestations
 
-Adapter-owned attestation objects are governed by the versioned
-`conxian.verifier.attestation.v1` profile before digesting or storage. The
-profile caps total canonical text at 4,096 characters and UTF-8 bytes at 16 KiB,
-depth at 8, object keys at 16, array length at 16, keys at 64 characters, and
-strings at 1,024 characters. Only `null`, booleans, finite numbers, strings,
-plain objects, and dense arrays are permitted. Symbols, accessors, hidden
-properties, custom or polluted prototypes, forbidden keys, sparse arrays, and
-cycles are rejected. Validation uses an explicit bounded work stack rather than
-recursive traversal, then builds a detached deeply frozen snapshot; the
-adapter-owned object is never retained as authoritative evidence and mutations
-after return cannot alter aggregation state.
+The signature-verifier result contract carries attestation evidence as a
+canonical JSON string, never as an adapter-owned object or proxy. The encoded
+character and UTF-8 byte ceilings are checked before `JSON.parse`; non-string
+values fail closed without reflection or key enumeration. After parsing, the
+standard JSON value is passed through the existing iterative
+`conxian.verifier.attestation.v1` validator: depth is capped at 8, object keys
+at 16, array length at 16, keys at 64 characters, and strings at 1,024
+characters. Only `null`, booleans, finite numbers, strings, plain objects, and
+dense arrays are permitted. Symbols, accessors, hidden properties, custom or
+polluted prototypes, forbidden keys, sparse arrays, and cycles are rejected.
 
-Attestation failures use the same typed resource/malformed boundary as the
-request contract. BitVM2 accepts only the exact versioned signature-attestation
-shape, with bounded identifiers and digest fields, after the detached snapshot
-has been checked. Direct-library and route failures collapse invalid or
+Because this repository does not add a second JSON parser, canonical
+reserialization is authoritative: the input string must equal the canonical
+serialization of the detached parsed snapshot. This rejects duplicate-key,
+whitespace, key-order, escape, and number-format ambiguity after the standard
+parser's last-value behavior, without retaining parser-owned or adapter-owned
+objects. BitVM2 accepts only the exact versioned signature-attestation shape,
+with bounded identifiers and digest fields, and stores the detached deeply
+frozen snapshot. Direct-library and route failures collapse invalid or
 oversized proof identifiers to the fixed `unknown` sentinel; bounded summaries
 are used for all verifier/settlement logger fields and responses rather than
 echoing attacker-controlled identifiers.
@@ -132,7 +137,26 @@ presence checks remain at commit, and queue cleanup is protected by `finally`,
 so deferred completion, adapter throws, and retries cannot leave returned state
 different from stored state or poison future operations.
 
-### 2.5 Bounded ZKCP retention and listing
+### 2.5 BitVM3 bounded terminal retention
+
+BitVM3 publishes the versioned `conxian.bitvm3.retention.v1` lifecycle policy.
+The default process-local cap is 1,024 retained terminal states and the default
+terminal TTL is 15 minutes. A global capacity reservation is acquired before
+the asynchronous verifier dispatch, so concurrent unique proof ids cannot
+overcommit the cap; a full cap returns typed `resource_limit_exceeded` without
+backend dispatch. Reservations and proof queues count as in-flight metadata and
+are never evicted.
+
+When cleanup runs, only idle terminal records at or beyond the TTL are removed.
+State, initialization metadata, generation counters, and idle queue metadata
+are deleted together under the lifecycle lock. In-flight or queued operations
+are preserved until they commit or release their reservation. An identical
+request after expiry is a safe re-verification (rather than an unbounded replay
+of stale state); a request before expiry remains a deterministic read-only
+replay, while a conflicting request remains a typed conflict. The clock is
+injectable for deterministic tests.
+
+### 2.6 Bounded ZKCP retention and listing
 
 ZKCP publishes `conxian.zkcp.retention.v1`: at most 1,024 active intents and
 2,048 total retained intents, with terminal records retained for at most 15

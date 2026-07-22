@@ -4,6 +4,8 @@ import type { BitVM3Verifier } from "../lib/support/bitvm3";
 import {
   createVerificationResult,
   digestVerifierRequest,
+  VERIFIER_BITVM3_RETENTION_POLICY,
+  VERIFIER_BITVM3_RETENTION_POLICY_VERSION,
   VERIFIER_RESOURCE_LIMITS,
   type BackendIdentity,
   type VerifierRequest,
@@ -93,6 +95,19 @@ class FirstCallThrowingBitVM3Verifier extends AuthoritativeFixtureVerifier {
     }
     return super.verify(request);
   }
+}
+
+function makeClock(initial = 0): { now: () => number; set: (value: number) => void; advance: (delta: number) => void } {
+  let current = initial;
+  return {
+    now: () => current,
+    set: (value) => {
+      current = value;
+    },
+    advance: (delta) => {
+      current += delta;
+    },
+  };
 }
 
 describe("BitVM3Orchestrator fail-closed boundary", () => {
@@ -297,6 +312,114 @@ describe("BitVM3Orchestrator fail-closed boundary", () => {
 
     expect(failed.failure_code).toBe("internal_error");
     expect(retried.status).toBe("verified");
+    expect(verifier.calls).toBe(2);
+    expect(orchestrator.getState(request.proof_id)?.status).toBe("verified");
+  });
+
+  it("publishes a versioned hard cap and refuses unique proofs before dispatch", async () => {
+    const verifier = new AuthoritativeFixtureVerifier();
+    const orchestrator = new BitVM3Orchestrator(verifier, {
+      retention: { maxRetainedStates: 2, terminalTtlMs: 100 },
+    });
+    const verifierRequest = await makeVerifierRequest({
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production",
+    });
+
+    const first = await orchestrator.verifyRecursive(makeRecursiveRequest(verifierRequest));
+    const second = await orchestrator.verifyRecursive({
+      ...makeRecursiveRequest(verifierRequest),
+      proof_id: "fixture-recursive-2",
+    });
+    const third = await orchestrator.verifyRecursive({
+      ...makeRecursiveRequest(verifierRequest),
+      proof_id: "fixture-recursive-3",
+    });
+
+    expect(first.status).toBe("verified");
+    expect(second.status).toBe("verified");
+    expect(third.failure_code).toBe("resource_limit_exceeded");
+    expect(verifier.calls).toBe(2);
+    expect(orchestrator.getRetentionSnapshot()).toMatchObject({
+      policy_version: VERIFIER_BITVM3_RETENTION_POLICY_VERSION,
+      max_retained_states: 2,
+      retained_state_count: 2,
+      state_map_count: 2,
+      initialization_map_count: 2,
+      generation_map_count: 2,
+      in_flight_count: 0,
+      proof_queue_count: 0,
+    });
+    expect(VERIFIER_BITVM3_RETENTION_POLICY.maxRetainedStates).toBeGreaterThan(0);
+  });
+
+  it("does not evict an in-flight reservation or proof queue during cleanup", async () => {
+    const clock = makeClock();
+    const verifier = new DeferredBitVM3Verifier();
+    const orchestrator = new BitVM3Orchestrator(verifier, {
+      now: clock.now,
+      retention: { maxRetainedStates: 1, terminalTtlMs: 10 },
+    });
+    const verifierRequest = await makeVerifierRequest({
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production",
+    });
+    const request = makeRecursiveRequest(verifierRequest);
+    const pending = orchestrator.verifyRecursive(request);
+    await verifier.started;
+
+    clock.advance(100);
+    const duringFlight = orchestrator.getRetentionSnapshot();
+    expect(duringFlight.retained_state_count).toBe(0);
+    expect(duringFlight.in_flight_count).toBe(1);
+    expect(duringFlight.proof_queue_count).toBe(1);
+
+    const blocked = await orchestrator.verifyRecursive({
+      ...request,
+      proof_id: "fixture-recursive-capacity",
+    });
+    expect(blocked.failure_code).toBe("resource_limit_exceeded");
+    expect(verifier.calls).toBe(0);
+
+    verifier.release();
+    expect((await pending).status).toBe("verified");
+    expect(orchestrator.getRetentionSnapshot().in_flight_count).toBe(0);
+  });
+
+  it("cleans every retained BitVM3 map after terminal TTL and safely re-verifies", async () => {
+    const clock = makeClock();
+    const verifier = new AuthoritativeFixtureVerifier();
+    const orchestrator = new BitVM3Orchestrator(verifier, {
+      now: clock.now,
+      retention: { maxRetainedStates: 2, terminalTtlMs: 10 },
+    });
+    const request = makeRecursiveRequest(await makeVerifierRequest({
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production",
+    }));
+
+    const first = await orchestrator.verifyRecursive(request);
+    expect(first.status).toBe("verified");
+    expect(orchestrator.getRetentionSnapshot()).toMatchObject({
+      retained_state_count: 1,
+      state_map_count: 1,
+      initialization_map_count: 1,
+      generation_map_count: 1,
+    });
+
+    clock.advance(10);
+    expect(orchestrator.getState(request.proof_id)).toBeUndefined();
+    expect(orchestrator.getRetentionSnapshot()).toMatchObject({
+      retained_state_count: 0,
+      state_map_count: 0,
+      initialization_map_count: 0,
+      generation_map_count: 0,
+      in_flight_count: 0,
+      proof_queue_count: 0,
+    });
+
+    const replayAfterExpiry = await orchestrator.verifyRecursive(request);
+    expect(replayAfterExpiry.status).toBe("verified");
     expect(verifier.calls).toBe(2);
     expect(orchestrator.getState(request.proof_id)?.status).toBe("verified");
   });

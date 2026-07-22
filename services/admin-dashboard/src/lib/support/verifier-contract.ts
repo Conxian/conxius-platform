@@ -10,6 +10,7 @@ export const VERIFIER_SIGNATURE_ENCODING_VERSION = "conxian.verifier.signature.v
 export const VERIFIER_ATTESTATION_LIMITS_VERSION = "conxian.verifier.attestation.v1" as const;
 export const VERIFIER_ZKCP_RETENTION_POLICY_VERSION = "conxian.zkcp.retention.v1" as const;
 export const VERIFIER_ZKCP_LIST_POLICY_VERSION = "conxian.zkcp.list.v1" as const;
+export const VERIFIER_BITVM3_RETENTION_POLICY_VERSION = "conxian.bitvm3.retention.v1" as const;
 export const VERIFIER_SIGNATURE_ENCODING = "hex" as const;
 
 /**
@@ -58,6 +59,17 @@ export const VERIFIER_ATTESTATION_LIMITS = Object.freeze({
   maxArrayLength: 16,
   maxKeyChars: 64,
   maxStringChars: 1024,
+} as const);
+
+/**
+* BitVM3 terminal state is process-local orchestration evidence. The cap and
+* TTL are part of the public boundary contract so a future backend cannot turn
+* unique proof ids into process-lifetime state without an explicit policy.
+*/
+export const VERIFIER_BITVM3_RETENTION_POLICY = Object.freeze({
+  version: VERIFIER_BITVM3_RETENTION_POLICY_VERSION,
+  maxRetainedStates: 1024,
+  terminalTtlMs: 15 * 60 * 1000,
 } as const);
 
 export type VerifierContractVersion = typeof VERIFIER_CONTRACT_VERSION;
@@ -348,6 +360,20 @@ export interface BoundedJsonSnapshotFailure {
 }
 
 export type BoundedJsonSnapshotResult = BoundedJsonSnapshotSuccess | BoundedJsonSnapshotFailure;
+
+export interface CanonicalJsonPayloadSuccess {
+  ok: true;
+  snapshot: unknown;
+  canonical: string;
+}
+
+export interface CanonicalJsonPayloadFailure {
+  ok: false;
+  failure_code: "resource_limit_exceeded" | "malformed_request";
+  error: string;
+}
+
+export type CanonicalJsonPayloadResult = CanonicalJsonPayloadSuccess | CanonicalJsonPayloadFailure;
 
 interface SnapshotEnterFrame {
   kind: "enter";
@@ -744,6 +770,84 @@ export function canonicalJson(value: unknown): string {
     return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(",")}}`;
   }
   throw new Error("Unsupported value in canonical JSON");
+}
+
+/**
+* Parse adapter evidence only after its encoded representation is bounded.
+* Signature-verifier results must provide this canonical JSON string rather
+* than an adapter-owned object or proxy. The standard JSON parser resolves a
+* duplicate key to its last value; requiring byte-for-byte equality with the
+* canonical reserialization makes that reserialization authoritative and
+* rejects duplicate-key, whitespace, key-order, escape, and number-format
+* ambiguities without adding a second parser dependency.
+*/
+export function parseBoundedJsonPayload(value: unknown): CanonicalJsonPayloadResult {
+  if (typeof value !== "string") {
+    return {
+      ok: false,
+      failure_code: "malformed_request",
+      error: "Bounded JSON evidence must be a canonical string payload",
+    };
+  }
+  if (value.length > VERIFIER_ATTESTATION_LIMITS.maxTotalEncodedChars) {
+    return {
+      ok: false,
+      failure_code: "resource_limit_exceeded",
+      error: "Bounded JSON evidence exceeds the v1 encoded-character limit",
+    };
+  }
+
+  let encodedBytes: number;
+  try {
+    encodedBytes = new TextEncoder().encode(value).byteLength;
+  } catch {
+    return {
+      ok: false,
+      failure_code: "malformed_request",
+      error: "Bounded JSON evidence could not be encoded",
+    };
+  }
+  if (encodedBytes > VERIFIER_ATTESTATION_LIMITS.maxTotalEncodedBytes) {
+    return {
+      ok: false,
+      failure_code: "resource_limit_exceeded",
+      error: "Bounded JSON evidence exceeds the v1 encoded-byte limit",
+    };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value) as unknown;
+  } catch {
+    return {
+      ok: false,
+      failure_code: "malformed_request",
+      error: "Bounded JSON evidence is malformed",
+    };
+  }
+
+  const snapshot = snapshotBoundedJson(parsed);
+  if (!snapshot.ok) return snapshot;
+
+  let canonical: string;
+  try {
+    canonical = canonicalJson(snapshot.snapshot);
+  } catch {
+    return {
+      ok: false,
+      failure_code: "malformed_request",
+      error: "Bounded JSON evidence is not canonicalizable",
+    };
+  }
+  if (canonical !== value) {
+    return {
+      ok: false,
+      failure_code: "malformed_request",
+      error: "Bounded JSON evidence must match canonical reserialization",
+    };
+  }
+
+  return { ok: true, snapshot: snapshot.snapshot, canonical };
 }
 
 export async function digestCanonical(value: unknown): Promise<Digest> {

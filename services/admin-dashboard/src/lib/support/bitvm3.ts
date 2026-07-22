@@ -10,6 +10,8 @@ import {
   isProductionVerified,
   isUnavailableBackend,
   rejectNonProductionVerification,
+  VERIFIER_BITVM3_RETENTION_POLICY,
+  VERIFIER_BITVM3_RETENTION_POLICY_VERSION,
   VERIFIER_RESOURCE_LIMITS,
   type BackendIdentity,
   type VerificationFailureCode,
@@ -171,6 +173,7 @@ function stateFor(
   recursiveHeight: number,
   verification: VerificationResult,
   authority: BackendIdentity,
+  timestampMs = Date.now(),
 ): BitVM3State {
   return {
     id: boundedIdentifier(proofId),
@@ -181,7 +184,7 @@ function stateFor(
       ...verification,
       backend: { ...verification.backend },
     },
-    timestamp: new Date().toISOString(),
+    timestamp: new Date(timestampMs).toISOString(),
     failure_code: verification.failure_code,
     error: verification.error,
   };
@@ -202,15 +205,200 @@ interface BitVM3Initialization {
   recursive_height: number;
   verifier_backend: BackendIdentity;
   state: BitVM3State;
+  retained_at_ms: number;
 }
+
+export interface BitVM3RetentionPolicy {
+  version: typeof VERIFIER_BITVM3_RETENTION_POLICY_VERSION;
+  maxRetainedStates: number;
+  terminalTtlMs: number;
+}
+
+export interface BitVM3OrchestratorOptions {
+  now?: () => number;
+  retention?: Partial<Pick<BitVM3RetentionPolicy, "maxRetainedStates" | "terminalTtlMs">>;
+}
+
+export interface BitVM3RetentionSnapshot {
+  policy_version: typeof VERIFIER_BITVM3_RETENTION_POLICY_VERSION;
+  max_retained_states: number;
+  terminal_ttl_ms: number;
+  retained_state_count: number;
+  state_map_count: number;
+  initialization_map_count: number;
+  generation_map_count: number;
+  in_flight_count: number;
+  proof_queue_count: number;
+}
+
+type RetentionPreparation =
+  | { kind: "replay"; state: BitVM3State }
+  | { kind: "conflict" }
+  | { kind: "capacity" }
+  | { kind: "reserved"; generation: number };
 
 export class BitVM3Orchestrator {
   private readonly states = new Map<string, BitVM3State>();
   private readonly initializations = new Map<string, BitVM3Initialization>();
   private readonly generations = new Map<string, number>();
   private readonly proofQueues = new Map<string, Promise<void>>();
+  private readonly retainedReservations = new Set<string>();
+  private readonly now: () => number;
+  private readonly retentionPolicy: BitVM3RetentionPolicy;
+  private retentionQueue: Promise<void> = Promise.resolve();
 
-  public constructor(private readonly verifier: BitVM3Verifier) {}
+  public constructor(
+    private readonly verifier: BitVM3Verifier,
+    options: BitVM3OrchestratorOptions = {},
+  ) {
+    this.now = options.now ?? (() => Date.now());
+    const maxRetainedStates = options.retention?.maxRetainedStates
+      ?? VERIFIER_BITVM3_RETENTION_POLICY.maxRetainedStates;
+    const terminalTtlMs = options.retention?.terminalTtlMs
+      ?? VERIFIER_BITVM3_RETENTION_POLICY.terminalTtlMs;
+    if (!Number.isSafeInteger(maxRetainedStates) || maxRetainedStates <= 0
+      || !Number.isSafeInteger(terminalTtlMs) || terminalTtlMs <= 0) {
+      throw new Error("BitVM3 retention policy must use positive safe integers");
+    }
+    this.retentionPolicy = {
+      version: VERIFIER_BITVM3_RETENTION_POLICY_VERSION,
+      maxRetainedStates,
+      terminalTtlMs,
+    };
+  }
+
+  private currentTime(): number {
+    const value = this.now();
+    if (!Number.isFinite(value) || !Number.isSafeInteger(value) || value < 0) {
+      throw new Error("BitVM3 clock must return a non-negative safe integer");
+    }
+    return value;
+  }
+
+  private async withRetentionLock<T>(operation: () => Promise<T> | T): Promise<T> {
+    const previous = this.retentionQueue;
+    let release!: () => void;
+    const current = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const queued = previous.then(() => current);
+    this.retentionQueue = queued;
+    await previous;
+    try {
+      return await operation();
+    } finally {
+      release();
+      if (this.retentionQueue === queued) {
+        this.retentionQueue = Promise.resolve();
+      }
+    }
+  }
+
+  private retainedProofIds(): Set<string> {
+    const ids = new Set<string>();
+    for (const id of this.states.keys()) ids.add(id);
+    for (const id of this.initializations.keys()) ids.add(id);
+    for (const id of this.generations.keys()) ids.add(id);
+    return ids;
+  }
+
+  /**
+   * Remove only idle terminal records. A proof queue or reservation marks an
+   * operation as in flight, so cleanup must leave every associated map alone
+   * until the operation commits or releases its reservation.
+   */
+  private cleanupExpiredTerminalStates(now = this.currentTime()): void {
+    for (const proofId of this.retainedProofIds()) {
+      if (this.proofQueues.has(proofId) || this.retainedReservations.has(proofId)) continue;
+      const initialization = this.initializations.get(proofId);
+      const expired = !initialization
+        || (now >= initialization.retained_at_ms
+          && now - initialization.retained_at_ms >= this.retentionPolicy.terminalTtlMs);
+      if (!expired) continue;
+
+      this.states.delete(proofId);
+      this.initializations.delete(proofId);
+      this.generations.delete(proofId);
+      if (!this.proofQueues.has(proofId)) this.proofQueues.delete(proofId);
+    }
+  }
+
+  private async prepareRetention(
+    proofId: string,
+    verifierRequestDigest: string,
+    recursiveHeight: number,
+    verifierBackend: BackendIdentity,
+    requestBackend: BackendIdentity,
+  ): Promise<RetentionPreparation> {
+    return this.withRetentionLock(() => {
+      this.cleanupExpiredTerminalStates();
+      const existing = this.initializations.get(proofId);
+      if (existing) {
+        const sameInitialization = existing.verifier_request_digest === verifierRequestDigest
+          && existing.recursive_height === recursiveHeight
+          && backendIdentityEquals(existing.verifier_backend, verifierBackend)
+          && backendIdentityEquals(existing.verifier_backend, requestBackend);
+        return sameInitialization
+          ? { kind: "replay", state: copyState(existing.state) }
+          : { kind: "conflict" };
+      }
+
+      if (this.retainedProofIds().size + this.retainedReservations.size
+        >= this.retentionPolicy.maxRetainedStates) {
+        return { kind: "capacity" };
+      }
+
+      this.retainedReservations.add(proofId);
+      return {
+        kind: "reserved",
+        generation: this.generations.get(proofId) ?? 0,
+      };
+    });
+  }
+
+  private async releaseRetentionReservation(proofId: string): Promise<void> {
+    await this.withRetentionLock(() => {
+      this.retainedReservations.delete(proofId);
+    });
+  }
+
+  private async commitVerifiedState(input: {
+    proofId: string;
+    recursiveHeight: number;
+    verification: VerificationResult;
+    verifierBackend: BackendIdentity;
+    verifierRequestDigest: string;
+    generation: number;
+  }): Promise<BitVM3State | undefined> {
+    return this.withRetentionLock(() => {
+      if (!this.retainedReservations.has(input.proofId)
+        || (this.generations.get(input.proofId) ?? 0) !== input.generation
+        || this.states.has(input.proofId)
+        || this.initializations.has(input.proofId)) {
+        return undefined;
+      }
+
+      const retainedAt = this.currentTime();
+      const state = stateFor(
+        input.proofId,
+        input.recursiveHeight,
+        input.verification,
+        input.verifierBackend,
+        retainedAt,
+      );
+      this.states.set(input.proofId, state);
+      this.initializations.set(input.proofId, {
+        verifier_request_digest: input.verifierRequestDigest,
+        recursive_height: input.recursiveHeight,
+        verifier_backend: { ...input.verifierBackend },
+        state,
+        retained_at_ms: retainedAt,
+      });
+      this.generations.set(input.proofId, input.generation + 1);
+      this.retainedReservations.delete(input.proofId);
+      return state;
+    });
+  }
 
   private async withProofLock<T>(proofId: string, operation: () => Promise<T>): Promise<T> {
     const previous = this.proofQueues.get(proofId) ?? Promise.resolve();
@@ -270,14 +458,15 @@ export class BitVM3Orchestrator {
     }
 
     return this.withProofLock(validation.request.proof_id, async () => {
-      const existing = this.initializations.get(validation.request.proof_id);
-      if (existing) {
-        const sameInitialization = existing.verifier_request_digest === validation.verifier_request_digest
-          && existing.recursive_height === validation.request.recursive_height
-          && backendIdentityEquals(existing.verifier_backend, verifierBackend)
-          && backendIdentityEquals(existing.verifier_backend, validation.request.verifier_request.backend);
-        if (sameInitialization) return copyState(existing.state);
-
+      const preparation = await this.prepareRetention(
+        validation.request.proof_id,
+        validation.verifier_request_digest,
+        validation.request.recursive_height,
+        verifierBackend,
+        validation.request.verifier_request.backend,
+      );
+      if (preparation.kind === "replay") return preparation.state;
+      if (preparation.kind === "conflict") {
         return stateFor(
           validation.request.proof_id,
           validation.request.recursive_height,
@@ -293,79 +482,109 @@ export class BitVM3Orchestrator {
           verifierBackend,
         );
       }
+      if (preparation.kind === "capacity") {
+        return stateFor(
+          validation.request.proof_id,
+          validation.request.recursive_height,
+          createVerificationFailure(
+            "resource_limit_exceeded",
+            "BitVM3 retained-state capacity is full; no backend dispatch occurred",
+            {
+              request_digest: validation.verifier_request_digest,
+              backend: verifierBackend,
+              provenance: validation.request.verifier_request.provenance,
+            },
+          ),
+          verifierBackend,
+        );
+      }
 
-      const generation = this.generations.get(validation.request.proof_id) ?? 0;
-      logger.info(`Received recursive verification request for proof ${boundedIdentifier(validation.request.proof_id)}`);
-      let verification: VerificationResult;
+      let reserved = true;
       try {
-        verification = await this.verifier.verify(validation.request.verifier_request);
-      } catch (error: unknown) {
-        verification = createVerificationFailure(
-          "internal_error",
-          error,
-          {
+        logger.info(`Received recursive verification request for proof ${boundedIdentifier(validation.request.proof_id)}`);
+        let verification: VerificationResult;
+        try {
+          verification = await this.verifier.verify(validation.request.verifier_request);
+        } catch (error: unknown) {
+          verification = createVerificationFailure(
+            "internal_error",
+            error,
+            {
+              request_digest: validation.verifier_request_digest,
+              backend: verifierBackend,
+              provenance: validation.request.verifier_request.provenance,
+            },
+          );
+        }
+        const resultValidation = await validateVerificationResult(
+          verification,
+          validation.request.verifier_request,
+          validation.verifier_request_digest,
+          verifierBackend,
+        );
+
+        if (!resultValidation.ok) {
+          verification = createVerificationFailure(resultValidation.failure_code, resultValidation.error, {
             request_digest: validation.verifier_request_digest,
             backend: verifierBackend,
             provenance: validation.request.verifier_request.provenance,
-          },
-        );
-      }
-      const resultValidation = await validateVerificationResult(
-        verification,
-        validation.request.verifier_request,
-        validation.verifier_request_digest,
-        verifierBackend,
-      );
-
-      if (!resultValidation.ok) {
-        verification = createVerificationFailure(resultValidation.failure_code, resultValidation.error, {
-          request_digest: validation.verifier_request_digest,
-          backend: verifierBackend,
-          provenance: validation.request.verifier_request.provenance,
-        });
-      } else {
-        verification = rejectNonProductionVerification(resultValidation.result, verifierBackend);
-      }
-
-      if (isProductionVerified(verification, verifierBackend)) {
-        if ((this.generations.get(validation.request.proof_id) ?? 0) !== generation
-          || this.states.has(validation.request.proof_id)) {
-          return stateFor(
-            validation.request.proof_id,
-            validation.request.recursive_height,
-            createVerificationFailure("internal_error", "BitVM3 proof state changed before commit"),
-            verifierBackend,
-          );
+          });
+        } else {
+          verification = rejectNonProductionVerification(resultValidation.result, verifierBackend);
         }
-        const state = stateFor(
+
+        if (isProductionVerified(verification, verifierBackend)) {
+          const state = await this.commitVerifiedState({
+            proofId: validation.request.proof_id,
+            recursiveHeight: validation.request.recursive_height,
+            verification,
+            verifierBackend,
+            verifierRequestDigest: validation.verifier_request_digest,
+            generation: preparation.generation,
+          });
+          if (!state) {
+            return stateFor(
+              validation.request.proof_id,
+              validation.request.recursive_height,
+              createVerificationFailure("internal_error", "BitVM3 proof state changed before commit"),
+              verifierBackend,
+            );
+          }
+          reserved = false;
+          return copyState(state);
+        }
+
+        return stateFor(
           validation.request.proof_id,
           validation.request.recursive_height,
           verification,
           verifierBackend,
         );
-        this.states.set(validation.request.proof_id, state);
-        this.initializations.set(validation.request.proof_id, {
-          verifier_request_digest: validation.verifier_request_digest,
-          recursive_height: validation.request.recursive_height,
-          verifier_backend: { ...verifierBackend },
-          state,
-        });
-        this.generations.set(validation.request.proof_id, generation + 1);
-        return copyState(state);
+      } finally {
+        if (reserved) await this.releaseRetentionReservation(validation.request.proof_id);
       }
-
-      return stateFor(
-        validation.request.proof_id,
-        validation.request.recursive_height,
-        verification,
-        verifierBackend,
-      );
     });
   }
 
   public getState(id: string): BitVM3State | undefined {
+    this.cleanupExpiredTerminalStates();
     const state = this.states.get(id);
     return state ? copyState(state) : undefined;
+  }
+
+  public getRetentionSnapshot(): BitVM3RetentionSnapshot {
+    this.cleanupExpiredTerminalStates();
+    return {
+      policy_version: this.retentionPolicy.version,
+      max_retained_states: this.retentionPolicy.maxRetainedStates,
+      terminal_ttl_ms: this.retentionPolicy.terminalTtlMs,
+      retained_state_count: this.retainedProofIds().size,
+      state_map_count: this.states.size,
+      initialization_map_count: this.initializations.size,
+      generation_map_count: this.generations.size,
+      in_flight_count: this.retainedReservations.size,
+      proof_queue_count: this.proofQueues.size,
+    };
   }
 }
 

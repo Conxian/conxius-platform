@@ -1,9 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
+  canonicalJson,
   createPaymentObservation,
+  digestCanonical,
   isCanonicalSignatureHex,
   isEncodedValueWithinLimit,
   maxEncodedLengthForBytes,
+  parseBoundedJsonPayload,
   snapshotBoundedJson,
   validateVerifierRequest,
   VERIFIER_ATTESTATION_LIMITS,
@@ -206,5 +209,63 @@ describe("verifier contract resource limits", () => {
       deep = child;
     }
     expect(snapshotBoundedJson(root)).toMatchObject({ ok: false, failure_code: "resource_limit_exceeded" });
+  });
+
+  it("accepts only canonical bounded JSON strings and detaches a valid snapshot", async () => {
+    const payload = '{"nested":{"enabled":true},"values":[1,null,"ok"]}';
+    const parsed = parseBoundedJsonPayload(payload);
+
+    expect(parsed).toMatchObject({ ok: true, canonical: payload });
+    if (!parsed.ok) return;
+    expect(parsed.snapshot).not.toBe(JSON.parse(payload));
+    expect(canonicalJson(parsed.snapshot)).toBe(payload);
+    expect(await digestCanonical(parsed.snapshot)).toMatch(/^sha256:[0-9a-f]{64}$/);
+
+    expect(parseBoundedJsonPayload('{"nested":{"enabled":true}, "values":[1,null,"ok"]}'))
+      .toMatchObject({ ok: false, failure_code: "malformed_request" });
+    expect(parseBoundedJsonPayload('{"proof_id":"first","proof_id":"last"}'))
+      .toMatchObject({ ok: false, failure_code: "malformed_request" });
+    expect(parseBoundedJsonPayload('{"nested":'))
+      .toMatchObject({ ok: false, failure_code: "malformed_request" });
+  });
+
+  it("rejects over-limit strings before JSON.parse and bounds parsed hostile content", () => {
+    const parseSpy = vi.spyOn(JSON, "parse");
+    const oversized = parseBoundedJsonPayload(
+      "x".repeat(VERIFIER_ATTESTATION_LIMITS.maxTotalEncodedChars + 1),
+    );
+    expect(oversized).toMatchObject({ ok: false, failure_code: "resource_limit_exceeded" });
+    expect(parseSpy).not.toHaveBeenCalled();
+    parseSpy.mockRestore();
+
+    const deep: Record<string, unknown> = {};
+    let cursor = deep;
+    for (let index = 0; index <= VERIFIER_ATTESTATION_LIMITS.maxDepth; index += 1) {
+      const child: Record<string, unknown> = {};
+      cursor.child = child;
+      cursor = child;
+    }
+    expect(parseBoundedJsonPayload(JSON.stringify(deep)))
+      .toMatchObject({ ok: false, failure_code: "resource_limit_exceeded" });
+
+    const largeObject: Record<string, number> = {};
+    for (let index = 0; index < VERIFIER_ATTESTATION_LIMITS.maxObjectKeys + 1; index += 1) {
+      largeObject[`key-${index}`] = index;
+    }
+    expect(parseBoundedJsonPayload(JSON.stringify(largeObject)))
+      .toMatchObject({ ok: false, failure_code: "resource_limit_exceeded" });
+  });
+
+  it("rejects object and proxy payloads without enumerating adapter-owned keys", () => {
+    let ownKeysCalls = 0;
+    const hostile = new Proxy({}, {
+      ownKeys: () => {
+        ownKeysCalls += 1;
+        throw new Error("ownKeys trap must not run");
+      },
+    });
+
+    expect(parseBoundedJsonPayload(hostile)).toMatchObject({ ok: false, failure_code: "malformed_request" });
+    expect(ownKeysCalls).toBe(0);
   });
 });

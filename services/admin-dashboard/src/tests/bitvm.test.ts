@@ -3,9 +3,10 @@ import {
   BitVMBridge,
   createSignatureAttestation,
   UnavailableBitVMVerifier,
+  type BitVMSignatureVerification,
   type BitVMSignatureVerifier,
   type BitVMVerifier,
-  type SignatureAttestation,
+  type SignatureAttestationPayload,
 } from "../lib/support/bitvm";
 import {
   createVerificationResult,
@@ -55,7 +56,9 @@ class ContradictoryFixtureVerifier extends AuthoritativeFixtureVerifier {
 class ExplicitSignatureVerifier implements BitVMSignatureVerifier {
   public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
 
-  public async verify(input: Parameters<BitVMSignatureVerifier["verify"]>[0]) {
+  public async verify(
+    input: Parameters<BitVMSignatureVerifier["verify"]>[0],
+  ): Promise<BitVMSignatureVerification> {
     const attestation = await createSignatureAttestation({
       proofId: input.proofId,
       verifierId: input.verifierId,
@@ -74,7 +77,7 @@ class ExplicitSignatureVerifier implements BitVMSignatureVerifier {
 }
 
 class MutableSignatureVerifier extends ExplicitSignatureVerifier {
-  public returnedAttestation?: SignatureAttestation;
+  public returnedAttestation?: SignatureAttestationPayload;
 
   public override async verify(input: Parameters<BitVMSignatureVerifier["verify"]>[0]) {
     const result = await super.verify(input);
@@ -84,15 +87,17 @@ class MutableSignatureVerifier extends ExplicitSignatureVerifier {
 }
 
 class AttestationVariantVerifier extends ExplicitSignatureVerifier {
-  public constructor(private readonly variant: (attestation: SignatureAttestation) => SignatureAttestation) {
+  public constructor(private readonly variant: (attestation: SignatureAttestationPayload) => unknown) {
     super();
   }
 
-  public override async verify(input: Parameters<BitVMSignatureVerifier["verify"]>[0]) {
+  public override async verify(
+    input: Parameters<BitVMSignatureVerifier["verify"]>[0],
+  ): Promise<BitVMSignatureVerification> {
     const result = await super.verify(input);
     return {
       ...result,
-      attestation: this.variant(result.attestation),
+      attestation: this.variant(result.attestation ?? "") as SignatureAttestationPayload,
     };
   }
 }
@@ -522,15 +527,13 @@ describe("BitVMBridge fail-closed boundary", () => {
     expect(accepted.accepted).toBe(true);
     expect(signatureVerifier.returnedAttestation).toBeDefined();
     if (signatureVerifier.returnedAttestation) {
-      signatureVerifier.returnedAttestation.proof_id = "adapter-mutated-proof";
-      signatureVerifier.returnedAttestation.attestation_digest =
-        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+      signatureVerifier.returnedAttestation = signatureVerifier.returnedAttestation
+        .replace("fixture-floor-1", "adapter-mutated-proof");
     }
 
     const stored = bridge.getAggregation("fixture-floor-1");
     expect(stored?.signatures[0]?.attestation.proof_id).toBe("fixture-floor-1");
-    expect(stored?.signatures[0]?.attestation.attestation_digest)
-      .not.toBe("sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+    expect(stored?.signatures[0]?.attestation.proof_id).not.toBe("adapter-mutated-proof");
 
     if (stored?.signatures[0]) {
       stored.signatures[0].attestation.proof_id = "caller-mutated-proof";
@@ -540,25 +543,42 @@ describe("BitVMBridge fail-closed boundary", () => {
   });
 
   it("rejects cyclic, accessor, and oversized adapter attestations before storage", async () => {
-    const variants: Array<(attestation: SignatureAttestation) => SignatureAttestation> = [
+    const variants: Array<(attestation: SignatureAttestationPayload) => unknown> = [
       (attestation) => {
-        const cyclic: Record<string, unknown> = { ...attestation };
+        const cyclic: Record<string, unknown> = {
+          ...JSON.parse(attestation) as Record<string, unknown>,
+        };
         cyclic.self = cyclic;
-        return cyclic as unknown as SignatureAttestation;
+        return cyclic;
       },
       (attestation) => {
-        const accessor = { ...attestation } as Record<string, unknown>;
+        const accessor = {
+          ...JSON.parse(attestation) as Record<string, unknown>,
+        } as Record<string, unknown>;
         Object.defineProperty(accessor, "proof_id", {
           configurable: true,
           enumerable: true,
           get: () => "fixture-floor-1",
         });
-        return accessor as unknown as SignatureAttestation;
+        return accessor;
+      },
+      () => ({
+        oversized: "x".repeat(VERIFIER_RESOURCE_LIMITS.maxErrorChars * 8),
+      }),
+      () => {
+        const deep: Record<string, unknown> = {};
+        let cursor = deep;
+        for (let index = 0; index < 12; index += 1) {
+          const child: Record<string, unknown> = {};
+          cursor.child = child;
+          cursor = child;
+        }
+        return deep;
       },
       (attestation) => ({
-        ...attestation,
+        ...JSON.parse(attestation) as Record<string, unknown>,
         extra: "x".repeat(VERIFIER_RESOURCE_LIMITS.maxErrorChars * 8),
-      } as unknown as SignatureAttestation),
+      }),
     ];
 
     for (const variant of variants) {
@@ -570,6 +590,27 @@ describe("BitVMBridge fail-closed boundary", () => {
         .toContain(result.failure_code);
       expect(bridge.getAggregation("fixture-floor-1")?.signatures).toHaveLength(0);
     }
+  });
+
+  it("rejects object and proxy attestations without invoking ownKeys", async () => {
+    let ownKeysCalls = 0;
+    const hostile = new Proxy({
+      proof_id: "fixture-floor-1",
+      verifier_id: "verifier-1",
+    }, {
+      ownKeys: () => {
+        ownKeysCalls += 1;
+        throw new Error("ownKeys trap must not run");
+      },
+    });
+    const bridge = await makeAuthoritativeBridge(new AttestationVariantVerifier(() => hostile));
+
+    const result = await bridge.submitSignature("fixture-floor-1", "verifier-1", "ab".repeat(64));
+
+    expect(result.accepted).toBe(false);
+    expect(result.failure_code).toBe("attestation_mismatch");
+    expect(ownKeysCalls).toBe(0);
+    expect(bridge.getAggregation("fixture-floor-1")?.signatures).toHaveLength(0);
   });
 
   it("enforces the versioned even-byte signature encoding at both boundaries", async () => {

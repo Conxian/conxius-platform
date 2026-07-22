@@ -1765,3 +1765,26 @@ AGENTS.md (this update)
 - PowerShell runtime execution remains unavailable in this devbox; static parity/self-tests remain the available validation.
 **Gotchas**:
 - Strict OpenSpec validation uses the positional change identifier with `--type change`; rerun it and `git diff --check` after any final session-log edit.
+
+### 2026-07-22 — PR #1198 Final P2 Resource Follow-up
+**Trigger**: Formal review `4759335450` on PR #1198.
+**What was done**:
+- Changed BitVM2 signature-verifier attestations from adapter-owned objects to bounded canonical JSON string payloads; encoded limits run before `JSON.parse`, object/proxy values are rejected without own-key enumeration, parsed values are detached and validated, and canonical reserialization is authoritative for duplicate-key ambiguity.
+- Added hostile proxy/own-key, over-limit pre-parse, malformed JSON, deep/large content, canonical snapshot/digest, and valid signature-attestation regressions.
+- Added versioned `conxian.bitvm3.retention.v1` state retention with an injectable clock, hard retained-state cap, pre-dispatch capacity reservations, terminal TTL cleanup, atomic state/metadata/generation/queue cleanup, in-flight preservation, and safe re-verification after expiry.
+- Added BitVM3 cap/no-dispatch, no-in-flight-eviction, map-cleanup, and replay-after-expiry tests.
+- Updated the issue #1187 OpenSpec design/spec/tasks and production-boundary, risk, gap, and debt documentation without selecting or claiming a production backend.
+**Key discoveries**:
+- A canonical string contract removes adapter-owned `ownKeys` amplification from the signature-attestation trust boundary while retaining the existing bounded detached JSON validator for parsed content.
+- BitVM3 capacity requires a reservation held across the asynchronous backend call; counting only terminal maps would allow concurrent unique proofs to overcommit the hard cap.
+- Expiry is implemented as safe re-verification rather than a new public expired result: idle terminal records are removed before a new request reserves capacity, while queued/in-flight proofs remain untouched.
+**Files touched**:
+- `services/admin-dashboard/src/lib/support/{verifier-contract.ts,bitvm.ts,bitvm3.ts}`
+- `services/admin-dashboard/src/tests/{verifierContract.test.ts,bitvm.test.ts,bitvm3.test.ts}`
+- `openspec/changes/2026-07-22-issue-1187-fail-closed-verifier-boundaries/{design.md,tasks.md,specs/fail-closed-verifier-boundaries/spec.md}`
+- `docs/{PRODUCTION_BOUNDARY.md,PHASE_7_RISK_REGISTER.md,GAPS.md,DEBT_INVENTORY.md}` and `AGENTS.md`
+**Gaps identified**:
+- The production cryptographic verifier, payment observer, and key-release backends remain unavailable and must still be independently accepted in Gateway/Core/Nexus before enablement.
+- PowerShell runtime execution remains unavailable in this devbox; contamination parity remains static/self-test based.
+**Gotchas**:
+- The strict OpenSpec validator and `git diff --check` must be rerun after this session-log append; hosted PR checks must be inspected after pushing the single focused commit.

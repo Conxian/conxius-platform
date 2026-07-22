@@ -78,24 +78,33 @@ signature or recursive verifier adapter is invoked. A resource overage MUST retu
 
 ### Requirement: Bounded adapter attestations and detached evidence
 
-Adapter-owned attestation values MUST conform to the versioned
-`conxian.verifier.attestation.v1` profile before canonicalization, digesting, or
+Adapter-owned attestation values MUST cross the signature-verifier boundary as
+a canonical JSON string under the versioned `conxian.verifier.attestation.v1`
+profile. The encoded character and UTF-8 byte limits MUST be checked before
+`JSON.parse`; non-string object/proxy values MUST be rejected without
+reflection or own-key enumeration. The parsed value MUST then pass the
+existing bounded iterative validator before canonicalization, digesting, or
 storage. The profile MUST bound total encoded characters and bytes, traversal
 depth, object-key count, array length, key length, and string length. It MUST
 permit only JSON-like null, boolean, finite-number, string, plain-object, and
 dense-array values. Accessors, hidden properties, symbols, cycles, sparse
 arrays, custom/prototype-polluted objects, forbidden prototype keys, and
-non-finite numbers MUST be rejected. Validation MUST use bounded iterative work
-and MUST create a detached deeply immutable canonical snapshot; adapter-owned
-objects MUST NOT remain authoritative after return.
+non-finite numbers MUST be rejected. Validation MUST create a detached deeply
+immutable canonical snapshot; adapter-owned objects MUST NOT remain
+authoritative after return. Because no second JSON parser is introduced, the
+input MUST equal the canonical reserialization of the parsed snapshot, making
+that reserialization authoritative and rejecting duplicate-key and other
+standard-parser representation ambiguities.
 
 #### Scenario: Hostile attestation graphs fail closed
 
-- **WHEN** a signature adapter returns an oversized, deep, cyclic, accessor,
-  sparse, custom-prototype, polluted, or mutable-after-return attestation
+- **WHEN** a signature adapter returns an object/proxy, oversized, malformed,
+  deep, cyclic, accessor, sparse, custom-prototype, polluted, duplicate-key,
+  or mutable-after-return attestation payload
 - **THEN** the boundary returns a typed malformed/resource failure, performs no
-  digest or aggregation commit from the hostile graph, and any later mutation
-  of the adapter-owned object cannot change stored aggregation state
+  digest or aggregation commit from the hostile payload, invokes no own-key
+  trap for object/proxy values, and any later mutation of adapter-owned data
+  cannot change stored aggregation state
 
 #### Scenario: Attestation bounds are enforced before storage
 
@@ -103,6 +112,14 @@ objects MUST NOT remain authoritative after return.
   length, or string length quota
 - **THEN** the boundary returns `resource_limit_exceeded`, retains no private
   evidence from that value, and leaves aggregation completeness unchanged
+
+#### Scenario: Canonical payload bounds precede parsing
+
+- **WHEN** an attestation string exceeds the encoded character/byte ceiling or
+  parses to content beyond the depth, key, array, or string quotas
+- **THEN** an over-limit result is returned before JSON decoding for the raw
+  string case, otherwise the parsed content fails with
+  `resource_limit_exceeded`, and no adapter-owned evidence is retained
 
 ### Requirement: Same-proof BitVM3 replay and concurrency protection
 
@@ -134,6 +151,44 @@ failure, and adapter throw.
   order relative to a queued replay
 - **THEN** the thrown operation is typed `internal_error`, queue cleanup runs,
   and subsequent deliberate operations cannot deadlock or commit stale state
+
+### Requirement: Versioned bounded BitVM3 terminal retention
+
+BitVM3 MUST publish the versioned `conxian.bitvm3.retention.v1` lifecycle
+policy with a hard cap on retained terminal states and a terminal TTL. Capacity
+MUST be reserved before asynchronous verifier dispatch so concurrent unique
+proof ids cannot exceed the cap; a full cap MUST return
+`resource_limit_exceeded` without backend dispatch. In-flight reservations and
+proof queues MUST never be evicted.
+
+When an idle terminal record reaches the TTL, cleanup MUST atomically remove
+the state, initialization metadata, generation counter, and idle queue metadata
+for that proof id. Cleanup MUST skip any proof with an in-flight or queued
+operation. The clock MUST be injectable for deterministic tests. An identical
+request before expiry MUST be a read-only replay; after expiry it MUST safely
+re-verify or return a typed expired/unknown result, and a conflicting request
+MUST remain a typed conflict.
+
+#### Scenario: BitVM3 capacity fails before backend dispatch
+
+- **WHEN** retained terminal states plus in-flight reservations reach the
+  versioned cap and a new unique proof id is submitted
+- **THEN** the request returns `resource_limit_exceeded`, the configured
+  verifier is not invoked, and existing state remains unchanged
+
+#### Scenario: BitVM3 cleanup preserves in-flight operations
+
+- **WHEN** TTL cleanup runs while a proof verification is deferred or queued
+- **THEN** its reservation and queue metadata remain present, no in-flight
+  operation is evicted, and the operation may commit or release normally
+
+#### Scenario: BitVM3 expiry cleans all maps and permits safe replay
+
+- **WHEN** an idle verified proof exceeds the terminal TTL and the same request
+  is submitted again
+- **THEN** the state, initialization, generation, and queue records are removed
+  together before the replay dispatch, and the request is safely re-verified
+  under the bounded policy
 
 ### Requirement: Bounded ZKCP retention and paginated listing
 

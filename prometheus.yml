@@ -14,6 +14,9 @@ scrape_configs:
 
   - job_name: 'conxian-admin-dashboard'
     metrics_path: /api/metrics
+    basic_auth:
+      username: prometheus
+      password_file: /run/secrets/prometheus_scrape_password
     static_configs:
       - targets: ['admin-dashboard:3001']
         labels:

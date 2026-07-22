@@ -9,6 +9,7 @@
     "start": "next start -p ${PORT:-3001}",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
+    "test:m2m": "vitest run src/tests/m2m.test.ts src/tests/m2mKeyRotation.test.ts",
     "test:phase7": "vitest run src/tests/phase7Alignment.test.ts src/tests/bitvmx.test.ts",
     "prepublishOnly": "node -e \"console.error('pnpm publish is disabled for now in this repository; use Git tags and GitHub Releases.'); process.exit(1)\""
   },

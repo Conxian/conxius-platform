@@ -20,5 +20,14 @@ BitVMX is an evolution of the BitVM architecture designed for general-purpose co
 
 ## Alignment
 - **Status**: 🏗️ Research Phase.
+
+## Platform readiness boundary (2026-07-22)
+
+The BitVMX material is strategic research and scaffolding, not an enabled
+verification backend. The admin-dashboard boundary accepts only explicit,
+typed backend evidence and returns unavailable/unsupported results until
+Gateway/Core/Nexus implementation and independent acceptance exist. No
+BitVMX proof execution, pairing arithmetic, or production backend selection is
+introduced by issue #1187.
 - **Strategic Anchor**: Phase 7 Sovereign Redesign.
 - **Linear Issue**: [CON-1311](https://linear.app/conxian-labs/issue/CON-1311)

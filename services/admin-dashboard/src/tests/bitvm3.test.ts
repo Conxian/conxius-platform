@@ -58,6 +58,43 @@ class ThrowingVerifier implements BitVM3Verifier {
   }
 }
 
+class DeferredBitVM3Verifier extends AuthoritativeFixtureVerifier {
+  private resolveStarted!: () => void;
+  private resolveGate!: () => void;
+  public readonly started: Promise<void>;
+  private readonly gate: Promise<void>;
+
+  public constructor() {
+    super();
+    this.started = new Promise<void>((resolve) => {
+      this.resolveStarted = resolve;
+    });
+    this.gate = new Promise<void>((resolve) => {
+      this.resolveGate = resolve;
+    });
+  }
+
+  public override async verify(request: VerifierRequest) {
+    this.resolveStarted();
+    await this.gate;
+    return super.verify(request);
+  }
+
+  public release(): void {
+    this.resolveGate();
+  }
+}
+
+class FirstCallThrowingBitVM3Verifier extends AuthoritativeFixtureVerifier {
+  public override async verify(request: VerifierRequest) {
+    if (this.calls === 0) {
+      this.calls += 1;
+      throw new Error("fixture BitVM3 transient verifier failure");
+    }
+    return super.verify(request);
+  }
+}
+
 describe("BitVM3Orchestrator fail-closed boundary", () => {
   it("returns unavailable instead of unconditional recursive success", async () => {
     const request = makeRecursiveRequest(await makeVerifierRequest());
@@ -201,5 +238,66 @@ describe("BitVM3Orchestrator fail-closed boundary", () => {
     });
     expect(nanHeight.failure_code).toBe("malformed_request");
     expect(verifier.calls).toBe(1);
+  });
+
+  it("serializes identical same-proof requests and returns a deterministic read-only replay", async () => {
+    const verifier = new DeferredBitVM3Verifier();
+    const request = makeRecursiveRequest(await makeVerifierRequest({
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production",
+    }));
+    const orchestrator = new BitVM3Orchestrator(verifier);
+
+    const first = orchestrator.verifyRecursive(request);
+    await verifier.started;
+    const replay = orchestrator.verifyRecursive({ ...request });
+
+    expect(verifier.calls).toBe(0);
+    verifier.release();
+    const [firstState, replayState] = await Promise.all([first, replay]);
+
+    expect(verifier.calls).toBe(1);
+    expect(firstState).toEqual(replayState);
+    expect(firstState.status).toBe("verified");
+    expect(orchestrator.getState(request.proof_id)).toEqual(firstState);
+  });
+
+  it("fails closed for conflicting same-proof requests without dispatching a second backend call", async () => {
+    const verifier = new DeferredBitVM3Verifier();
+    const request = makeRecursiveRequest(await makeVerifierRequest({
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production",
+    }));
+    const conflicting = { ...request, recursive_height: request.recursive_height + 1 };
+    const orchestrator = new BitVM3Orchestrator(verifier);
+
+    const first = orchestrator.verifyRecursive(request);
+    await verifier.started;
+    const second = orchestrator.verifyRecursive(conflicting);
+
+    verifier.release();
+    const [firstState, conflictingState] = await Promise.all([first, second]);
+
+    expect(verifier.calls).toBe(1);
+    expect(firstState.status).toBe("verified");
+    expect(conflictingState.failure_code).toBe("malformed_request");
+    expect(orchestrator.getState(request.proof_id)?.recursiveHeight).toBe(request.recursive_height);
+  });
+
+  it("cleans the per-proof queue after an adapter throw so a deliberate retry cannot deadlock", async () => {
+    const verifier = new FirstCallThrowingBitVM3Verifier();
+    const request = makeRecursiveRequest(await makeVerifierRequest({
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production",
+    }));
+    const orchestrator = new BitVM3Orchestrator(verifier);
+
+    const failed = await orchestrator.verifyRecursive(request);
+    const retried = await orchestrator.verifyRecursive(request);
+
+    expect(failed.failure_code).toBe("internal_error");
+    expect(retried.status).toBe("verified");
+    expect(verifier.calls).toBe(2);
+    expect(orchestrator.getState(request.proof_id)?.status).toBe("verified");
   });
 });

@@ -7,6 +7,9 @@
 export const VERIFIER_CONTRACT_VERSION = "conxian.verifier.v1" as const;
 export const VERIFIER_RESOURCE_LIMITS_VERSION = "conxian.verifier.limits.v1" as const;
 export const VERIFIER_SIGNATURE_ENCODING_VERSION = "conxian.verifier.signature.v1" as const;
+export const VERIFIER_ATTESTATION_LIMITS_VERSION = "conxian.verifier.attestation.v1" as const;
+export const VERIFIER_ZKCP_RETENTION_POLICY_VERSION = "conxian.zkcp.retention.v1" as const;
+export const VERIFIER_ZKCP_LIST_POLICY_VERSION = "conxian.zkcp.list.v1" as const;
 export const VERIFIER_SIGNATURE_ENCODING = "hex" as const;
 
 /**
@@ -35,6 +38,26 @@ export const VERIFIER_RESOURCE_LIMITS = Object.freeze({
   maxTimestampChars: 64,
   maxActionChars: 64,
   maxDecryptionKeyChars: 4096,
+  maxZkcpActiveIntents: 1024,
+  maxZkcpTotalIntents: 2048,
+  maxZkcpListPageSize: 100,
+  maxZkcpListOffset: 2048,
+  maxZkcpTerminalRetentionMs: 15 * 60 * 1000,
+} as const);
+
+/**
+* Adapter attestations are bounded JSON-like evidence, not arbitrary object
+* graphs. These limits are checked while a detached snapshot is built,
+* before canonicalization or storage.
+*/
+export const VERIFIER_ATTESTATION_LIMITS = Object.freeze({
+  maxTotalEncodedChars: 4096,
+  maxTotalEncodedBytes: 16 * 1024,
+  maxDepth: 8,
+  maxObjectKeys: 16,
+  maxArrayLength: 16,
+  maxKeyChars: 64,
+  maxStringChars: 1024,
 } as const);
 
 export type VerifierContractVersion = typeof VERIFIER_CONTRACT_VERSION;
@@ -267,6 +290,19 @@ function isBoundedNonEmptyString(value: unknown, maxLength: number): value is st
   return isNonEmptyString(value) && value.length <= maxLength;
 }
 
+export const BOUNDED_IDENTIFIER_SENTINEL = "unknown" as const;
+
+/**
+* Invalid and oversized identifiers collapse to a fixed sentinel. This keeps
+* direct-library failures, route payloads, and logs from echoing attacker
+* controlled input outside the identifier boundary.
+*/
+export function boundedIdentifier(value: unknown): string {
+  return isBoundedNonEmptyString(value, VERIFIER_RESOURCE_LIMITS.maxIdentifierChars)
+    ? value
+    : BOUNDED_IDENTIFIER_SENTINEL;
+}
+
 function isOversizedString(value: unknown, maxLength: number): boolean {
   return typeof value === "string" && value.length > maxLength;
 }
@@ -298,6 +334,221 @@ export function normalizeBoundaryError(value: unknown, fallback: string): Normal
     message: message.slice(0, VERIFIER_RESOURCE_LIMITS.maxErrorChars),
     truncated: true,
   };
+}
+
+export interface BoundedJsonSnapshotSuccess {
+  ok: true;
+  snapshot: unknown;
+}
+
+export interface BoundedJsonSnapshotFailure {
+  ok: false;
+  failure_code: "resource_limit_exceeded" | "malformed_request";
+  error: string;
+}
+
+export type BoundedJsonSnapshotResult = BoundedJsonSnapshotSuccess | BoundedJsonSnapshotFailure;
+
+interface SnapshotEnterFrame {
+  kind: "enter";
+  value: unknown;
+  depth: number;
+  parent?: Record<string, unknown> | unknown[];
+  key?: string | number;
+}
+
+interface SnapshotExitFrame {
+  kind: "exit";
+  original: object;
+  snapshot: Record<string, unknown> | unknown[];
+}
+
+type SnapshotFrame = SnapshotEnterFrame | SnapshotExitFrame;
+
+function isForbiddenJsonKey(key: string): boolean {
+  return key === "__proto__" || key === "constructor" || key === "prototype";
+}
+
+function canonicalTokenSize(value: null | boolean | number | string): { chars: number; bytes: number } {
+  const encoded = JSON.stringify(value);
+  if (typeof encoded !== "string") throw new Error("Unable to encode bounded JSON value");
+  return {
+    chars: encoded.length,
+    bytes: new TextEncoder().encode(encoded).byteLength,
+  };
+}
+
+/**
+* Build a detached, deeply frozen, bounded JSON-like snapshot without
+* recursive traversal. Accessors, symbols, custom prototypes, cycles, sparse
+* arrays, non-finite numbers, and prototype-pollution keys are rejected.
+*/
+export function snapshotBoundedJson(value: unknown): BoundedJsonSnapshotResult {
+  let totalChars = 0;
+  let totalBytes = 0;
+  let root: unknown;
+  const active = new WeakSet<object>();
+  const stack: SnapshotFrame[] = [{ kind: "enter", value, depth: 0 }];
+
+  const fail = (
+    failure_code: BoundedJsonSnapshotFailure["failure_code"],
+    error: string,
+  ): BoundedJsonSnapshotFailure => ({ ok: false, failure_code, error });
+
+  const account = (chars: number, bytes: number): BoundedJsonSnapshotFailure | undefined => {
+    totalChars += chars;
+    totalBytes += bytes;
+    if (totalChars > VERIFIER_ATTESTATION_LIMITS.maxTotalEncodedChars
+      || totalBytes > VERIFIER_ATTESTATION_LIMITS.maxTotalEncodedBytes) {
+      return fail("resource_limit_exceeded", "Attestation exceeds the v1 encoded-size limit");
+    }
+    return undefined;
+  };
+
+  const assign = (
+    parent: Record<string, unknown> | unknown[] | undefined,
+    key: string | number | undefined,
+    child: unknown,
+  ): void => {
+    if (parent === undefined || key === undefined) {
+      root = child;
+      return;
+    }
+    if (Array.isArray(parent)) {
+      parent[key as number] = child;
+      return;
+    }
+    Object.defineProperty(parent, key as string, {
+      configurable: true,
+      enumerable: true,
+      value: child,
+      writable: true,
+    });
+  };
+
+  try {
+    while (stack.length > 0) {
+      const frame = stack.pop() as SnapshotFrame;
+      if (frame.kind === "exit") {
+        Object.freeze(frame.snapshot);
+        active.delete(frame.original);
+        continue;
+      }
+
+      const current = frame.value;
+      if (current === null || typeof current === "boolean" || typeof current === "string" || typeof current === "number") {
+        if (typeof current === "string" && current.length > VERIFIER_ATTESTATION_LIMITS.maxStringChars) {
+          return fail("resource_limit_exceeded", "Attestation string exceeds the v1 length limit");
+        }
+        if (typeof current === "number" && !Number.isFinite(current)) {
+          return fail("malformed_request", "Attestation contains a non-finite number");
+        }
+        const size = canonicalTokenSize(current);
+        const budgetFailure = account(size.chars, size.bytes);
+        if (budgetFailure) return budgetFailure;
+        assign(frame.parent, frame.key, current);
+        continue;
+      }
+
+      if (typeof current !== "object" || current === undefined) {
+        return fail("malformed_request", "Attestation contains a value outside the JSON-like type set");
+      }
+      if (frame.depth > VERIFIER_ATTESTATION_LIMITS.maxDepth) {
+        return fail("resource_limit_exceeded", "Attestation exceeds the v1 depth limit");
+      }
+      if (active.has(current)) {
+        return fail("malformed_request", "Attestation contains a cycle");
+      }
+
+      const isArray = Array.isArray(current);
+      const prototype = Object.getPrototypeOf(current);
+      if (isArray ? prototype !== Array.prototype : prototype !== Object.prototype && prototype !== null) {
+        return fail("malformed_request", "Attestation contains a disallowed prototype");
+      }
+
+      const ownKeys = Reflect.ownKeys(current);
+      if (isArray) {
+        const lengthDescriptor = Object.getOwnPropertyDescriptor(current, "length");
+        if (!lengthDescriptor || !("value" in lengthDescriptor)
+          || !Number.isSafeInteger(lengthDescriptor.value)
+          || lengthDescriptor.value < 0
+          || lengthDescriptor.value > VERIFIER_ATTESTATION_LIMITS.maxArrayLength
+          || ownKeys.length > VERIFIER_ATTESTATION_LIMITS.maxArrayLength + 1) {
+          return fail("resource_limit_exceeded", "Attestation array exceeds the v1 length limit");
+        }
+        const length = lengthDescriptor.value;
+        for (const ownKey of ownKeys) {
+          if (ownKey === "length") continue;
+          if (typeof ownKey !== "string" || !/^(0|[1-9][0-9]*)$/.test(ownKey)) {
+            return fail("malformed_request", "Attestation array contains a non-index property");
+          }
+          const index = Number(ownKey);
+          if (!Number.isSafeInteger(index) || index < 0 || index >= length) {
+            return fail("malformed_request", "Attestation array contains an invalid index");
+          }
+        }
+        for (let index = 0; index < length; index += 1) {
+          const descriptor = Object.getOwnPropertyDescriptor(current, String(index));
+          if (!descriptor || !("value" in descriptor) || descriptor.enumerable !== true) {
+            return fail("malformed_request", "Attestation arrays must not contain holes or accessors");
+          }
+        }
+        const structuralChars = 2 + Math.max(0, length - 1);
+        const budgetFailure = account(structuralChars, structuralChars);
+        if (budgetFailure) return budgetFailure;
+        const snapshot: unknown[] = [];
+        assign(frame.parent, frame.key, snapshot);
+        active.add(current);
+        stack.push({ kind: "exit", original: current, snapshot });
+        for (let index = length - 1; index >= 0; index -= 1) {
+          const descriptor = Object.getOwnPropertyDescriptor(current, String(index)) as PropertyDescriptor;
+          stack.push({ kind: "enter", value: descriptor.value, depth: frame.depth + 1, parent: snapshot, key: index });
+        }
+        continue;
+      }
+
+      if (ownKeys.length > VERIFIER_ATTESTATION_LIMITS.maxObjectKeys) {
+        return fail("resource_limit_exceeded", "Attestation object exceeds the v1 key-count limit");
+      }
+      const keys: string[] = [];
+      for (const ownKey of ownKeys) {
+        if (typeof ownKey !== "string"
+          || ownKey.length > VERIFIER_ATTESTATION_LIMITS.maxKeyChars
+          || isForbiddenJsonKey(ownKey)) {
+          return fail("malformed_request", "Attestation contains an invalid object key");
+        }
+        const descriptor = Object.getOwnPropertyDescriptor(current, ownKey);
+        if (!descriptor || !("value" in descriptor) || descriptor.enumerable !== true) {
+          return fail("malformed_request", "Attestation objects must not contain accessors or hidden properties");
+        }
+        keys.push(ownKey);
+      }
+      keys.sort();
+      let structuralChars = 2 + Math.max(0, keys.length - 1);
+      let structuralBytes = structuralChars;
+      for (const key of keys) {
+        const size = canonicalTokenSize(key);
+        structuralChars += size.chars + 1;
+        structuralBytes += size.bytes + 1;
+      }
+      const budgetFailure = account(structuralChars, structuralBytes);
+      if (budgetFailure) return budgetFailure;
+
+      const snapshot: Record<string, unknown> = Object.create(null) as Record<string, unknown>;
+      assign(frame.parent, frame.key, snapshot);
+      active.add(current);
+      stack.push({ kind: "exit", original: current, snapshot });
+      for (let index = keys.length - 1; index >= 0; index -= 1) {
+        const key = keys[index];
+        const descriptor = Object.getOwnPropertyDescriptor(current, key) as PropertyDescriptor;
+        stack.push({ kind: "enter", value: descriptor.value, depth: frame.depth + 1, parent: snapshot, key });
+      }
+    }
+  } catch {
+    return fail("malformed_request", "Attestation could not be safely snapshotted");
+  }
+
+  return { ok: true, snapshot: root };
 }
 
 export function isCanonicalSignatureHex(value: unknown): value is string {

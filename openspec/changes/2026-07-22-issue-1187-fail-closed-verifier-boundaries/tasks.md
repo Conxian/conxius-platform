@@ -94,3 +94,24 @@
   safe-integer, overflow, negative, NaN, and adapter-dispatch tests.
 - [x] Re-run focused/full Vitest, dashboard typecheck, lifecycle/control and
   contamination guards, strict OpenSpec validation, and diff hygiene.
+
+## Phase 8 — P2 review remediation (PR #1198 review 4759182306)
+
+- [x] Collapse oversized BitVM proof identifiers to a fixed bounded sentinel in
+  direct-library and route failures, with response regression coverage.
+- [x] Add versioned bounded attestation constraints, iterative hostile-graph
+  validation, detached deeply immutable snapshots, adapter mutation protection,
+  and cycle/accessor/prototype/size tests.
+- [x] Add per-proof BitVM3 FIFO replay/conflict/CAS protection with deferred
+  identical-replay, conflicting-request, adapter-throw, and queue-cleanup tests.
+- [x] Add versioned ZKCP active/total quotas, terminal TTL cleanup, atomic
+  evidence removal, injectable clock, deterministic paginated listing, route
+  pagination validation, capacity, no-active-eviction, and retention tests.
+- [x] Bound direct-library verifier/settlement logs and add a spy regression
+  proving oversized intent identifiers are never logged verbatim.
+- [x] Update the production-boundary, risk, gap, debt, and session-continuity
+  documentation to record attestation, retention, pagination, logging, and
+  same-proof concurrency guarantees without claiming production backends.
+- [ ] Re-run focused/full Vitest, dashboard typecheck, lifecycle/control and
+  contamination guards, strict OpenSpec validation, diff hygiene, and hosted
+  PR checks after the focused commit is pushed.

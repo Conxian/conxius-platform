@@ -230,6 +230,54 @@ describe("route-level M2M authorization", () => {
     expect(await oversizedIntent.json()).toMatchObject({ failure_code: "resource_limit_exceeded" });
   });
 
+  it("bounds oversized proof ids in route failures and caps ZKCP list responses", async () => {
+    const treasuryToken = await issueToken(["write:treasury", "m2m:internal"]);
+    const oversizedProofId = "p".repeat(VERIFIER_RESOURCE_LIMITS.maxIdentifierChars + 1);
+
+    const oversizedProof = await postSettlementEngine(
+      bearerRequest("POST", treasuryToken, {
+        action: "verify-floor",
+        request: {
+          contract_version: "conxian.verifier.v1",
+          proof_id: oversizedProofId,
+        },
+      }),
+    );
+    const oversizedProofBody = await oversizedProof.json() as {
+      proof_id?: string;
+      failure_code?: string;
+    };
+    expect(oversizedProof.status).toBe(413);
+    expect(oversizedProofBody.failure_code).toBe("resource_limit_exceeded");
+    expect(oversizedProofBody.proof_id).toBe("unknown");
+    expect(JSON.stringify(oversizedProofBody)).not.toContain(oversizedProofId);
+
+    const invalidLimit = await postSettlementEngine(
+      bearerRequest("POST", treasuryToken, { action: "zkcp-list", limit: 0, offset: 0 }),
+    );
+    expect(invalidLimit.status).toBe(422);
+    expect(await invalidLimit.json()).toMatchObject({ failure_code: "malformed_request" });
+
+    const oversizedLimit = await postSettlementEngine(
+      bearerRequest("POST", treasuryToken, {
+        action: "zkcp-list",
+        limit: VERIFIER_RESOURCE_LIMITS.maxZkcpListPageSize + 1,
+        offset: 0,
+      }),
+    );
+    expect(oversizedLimit.status).toBe(413);
+    expect(await oversizedLimit.json()).toMatchObject({ failure_code: "resource_limit_exceeded" });
+
+    const page = await postSettlementEngine(
+      bearerRequest("POST", treasuryToken, { action: "zkcp-list", limit: 1, offset: 0 }),
+    );
+    const pageBody = await page.json() as { intents?: unknown[]; count?: number; limit?: number };
+    expect(page.status).toBe(200);
+    expect(pageBody.limit).toBe(1);
+    expect(pageBody.count).toBeLessThanOrEqual(1);
+    expect(pageBody.intents?.length).toBeLessThanOrEqual(1);
+  });
+
   it("bounds unexpected settlement catch errors before returning them", async () => {
     const treasuryToken = await issueToken(["write:treasury", "m2m:internal"]);
     const verifyFloor = vi.spyOn(bitvmBridge, "verifyFloor")

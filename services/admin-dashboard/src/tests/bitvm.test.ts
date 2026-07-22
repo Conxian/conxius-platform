@@ -5,6 +5,7 @@ import {
   UnavailableBitVMVerifier,
   type BitVMSignatureVerifier,
   type BitVMVerifier,
+  type SignatureAttestation,
 } from "../lib/support/bitvm";
 import {
   createVerificationResult,
@@ -68,6 +69,30 @@ class ExplicitSignatureVerifier implements BitVMSignatureVerifier {
       backend: AUTHORITATIVE_TEST_BACKEND,
       provenance: "test" as const,
       attestation,
+    };
+  }
+}
+
+class MutableSignatureVerifier extends ExplicitSignatureVerifier {
+  public returnedAttestation?: SignatureAttestation;
+
+  public override async verify(input: Parameters<BitVMSignatureVerifier["verify"]>[0]) {
+    const result = await super.verify(input);
+    this.returnedAttestation = result.attestation;
+    return result;
+  }
+}
+
+class AttestationVariantVerifier extends ExplicitSignatureVerifier {
+  public constructor(private readonly variant: (attestation: SignatureAttestation) => SignatureAttestation) {
+    super();
+  }
+
+  public override async verify(input: Parameters<BitVMSignatureVerifier["verify"]>[0]) {
+    const result = await super.verify(input);
+    return {
+      ...result,
+      attestation: this.variant(result.attestation),
     };
   }
 }
@@ -474,6 +499,77 @@ describe("BitVMBridge fail-closed boundary", () => {
       },
     });
     expect(result.failure_code).toBe("resource_limit_exceeded");
+  });
+
+  it("collapses an oversized proof id to a bounded sentinel in direct-library failures", async () => {
+    const request = makeFloorRequest(await makeVerifierRequest());
+    const oversizedProofId = "p".repeat(VERIFIER_RESOURCE_LIMITS.maxIdentifierChars + 1);
+    const bridge = new BitVMBridge(new UnavailableBitVMVerifier());
+
+    const result = await bridge.verifyFloor({ ...request, proof_id: oversizedProofId });
+
+    expect(result.failure_code).toBe("resource_limit_exceeded");
+    expect(result.proof_id).toBe("unknown");
+    expect(result.proof_id).not.toContain(oversizedProofId);
+    expect(result.proof_id.length).toBeLessThanOrEqual(VERIFIER_RESOURCE_LIMITS.maxIdentifierChars);
+  });
+
+  it("detaches adapter attestations before storing aggregation evidence", async () => {
+    const signatureVerifier = new MutableSignatureVerifier();
+    const bridge = await makeAuthoritativeBridge(signatureVerifier);
+    const accepted = await bridge.submitSignature("fixture-floor-1", "verifier-1", "ab".repeat(64));
+
+    expect(accepted.accepted).toBe(true);
+    expect(signatureVerifier.returnedAttestation).toBeDefined();
+    if (signatureVerifier.returnedAttestation) {
+      signatureVerifier.returnedAttestation.proof_id = "adapter-mutated-proof";
+      signatureVerifier.returnedAttestation.attestation_digest =
+        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    }
+
+    const stored = bridge.getAggregation("fixture-floor-1");
+    expect(stored?.signatures[0]?.attestation.proof_id).toBe("fixture-floor-1");
+    expect(stored?.signatures[0]?.attestation.attestation_digest)
+      .not.toBe("sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+
+    if (stored?.signatures[0]) {
+      stored.signatures[0].attestation.proof_id = "caller-mutated-proof";
+    }
+    expect(bridge.getAggregation("fixture-floor-1")?.signatures[0]?.attestation.proof_id)
+      .toBe("fixture-floor-1");
+  });
+
+  it("rejects cyclic, accessor, and oversized adapter attestations before storage", async () => {
+    const variants: Array<(attestation: SignatureAttestation) => SignatureAttestation> = [
+      (attestation) => {
+        const cyclic: Record<string, unknown> = { ...attestation };
+        cyclic.self = cyclic;
+        return cyclic as unknown as SignatureAttestation;
+      },
+      (attestation) => {
+        const accessor = { ...attestation } as Record<string, unknown>;
+        Object.defineProperty(accessor, "proof_id", {
+          configurable: true,
+          enumerable: true,
+          get: () => "fixture-floor-1",
+        });
+        return accessor as unknown as SignatureAttestation;
+      },
+      (attestation) => ({
+        ...attestation,
+        extra: "x".repeat(VERIFIER_RESOURCE_LIMITS.maxErrorChars * 8),
+      } as unknown as SignatureAttestation),
+    ];
+
+    for (const variant of variants) {
+      const bridge = await makeAuthoritativeBridge(new AttestationVariantVerifier(variant));
+      const result = await bridge.submitSignature("fixture-floor-1", "verifier-1", "ab".repeat(64));
+
+      expect(result.accepted).toBe(false);
+      expect(["attestation_mismatch", "malformed_request", "resource_limit_exceeded"])
+        .toContain(result.failure_code);
+      expect(bridge.getAggregation("fixture-floor-1")?.signatures).toHaveLength(0);
+    }
   });
 
   it("enforces the versioned even-byte signature encoding at both boundaries", async () => {

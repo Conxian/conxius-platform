@@ -4,7 +4,9 @@ import {
   isCanonicalSignatureHex,
   isEncodedValueWithinLimit,
   maxEncodedLengthForBytes,
+  snapshotBoundedJson,
   validateVerifierRequest,
+  VERIFIER_ATTESTATION_LIMITS,
   VERIFIER_RESOURCE_LIMITS,
   VERIFIER_RESOURCE_LIMITS_VERSION,
   VERIFIER_SIGNATURE_ENCODING,
@@ -130,5 +132,79 @@ describe("verifier contract resource limits", () => {
       },
       provenance: "production",
     })).rejects.toThrow("payment observation");
+  });
+
+  it("creates a detached deeply immutable snapshot within the attestation contract", () => {
+    const original: {
+      nested: { value: string };
+      values: [number, { enabled: boolean }];
+    } = {
+      nested: { value: "before" },
+      values: [1, { enabled: true }],
+    };
+
+    const result = snapshotBoundedJson(original);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const snapshot = result.snapshot as {
+      nested: { value: string };
+      values: [number, { enabled: boolean }];
+    };
+    expect(snapshot).not.toBe(original);
+    expect(Object.isFrozen(snapshot)).toBe(true);
+    expect(Object.isFrozen(snapshot.nested)).toBe(true);
+    expect(Object.isFrozen(snapshot.values)).toBe(true);
+    expect(Object.isFrozen(snapshot.values[1])).toBe(true);
+
+    original.nested.value = "after";
+    original.values[0] = 9;
+    original.values[1].enabled = false;
+
+    expect(snapshot.nested.value).toBe("before");
+    expect(snapshot.values).toEqual([1, { enabled: true }]);
+    expect(() => {
+      snapshot.nested.value = "mutation";
+    }).toThrow();
+  });
+
+  it("rejects cycles, accessors, polluted prototypes, non-finite numbers, and bounded-shape violations", () => {
+    const cyclic: Record<string, unknown> = {};
+    cyclic.self = cyclic;
+    expect(snapshotBoundedJson(cyclic)).toMatchObject({ ok: false, failure_code: "malformed_request" });
+
+    const accessor: Record<string, unknown> = {};
+    Object.defineProperty(accessor, "value", {
+      enumerable: true,
+      configurable: true,
+      get: () => "secret",
+    });
+    expect(snapshotBoundedJson(accessor)).toMatchObject({ ok: false, failure_code: "malformed_request" });
+
+    const customPrototype = Object.create({ polluted: true }) as Record<string, unknown>;
+    customPrototype.value = "fixture";
+    expect(snapshotBoundedJson(customPrototype)).toMatchObject({ ok: false, failure_code: "malformed_request" });
+
+    expect(snapshotBoundedJson({ value: Number.NaN })).toMatchObject({ ok: false, failure_code: "malformed_request" });
+    expect(snapshotBoundedJson({ value: "x".repeat(VERIFIER_ATTESTATION_LIMITS.maxStringChars + 1) }))
+      .toMatchObject({ ok: false, failure_code: "resource_limit_exceeded" });
+
+    const tooManyKeys: Record<string, unknown> = {};
+    for (let index = 0; index < VERIFIER_ATTESTATION_LIMITS.maxObjectKeys + 1; index += 1) {
+      tooManyKeys[`key-${index}`] = index;
+    }
+    expect(snapshotBoundedJson(tooManyKeys)).toMatchObject({ ok: false, failure_code: "resource_limit_exceeded" });
+
+    const tooManyItems = Array.from({ length: VERIFIER_ATTESTATION_LIMITS.maxArrayLength + 1 }, () => "item");
+    expect(snapshotBoundedJson(tooManyItems)).toMatchObject({ ok: false, failure_code: "resource_limit_exceeded" });
+
+    let deep: Record<string, unknown> = {};
+    const root = deep;
+    for (let index = 0; index <= VERIFIER_ATTESTATION_LIMITS.maxDepth; index += 1) {
+      const child: Record<string, unknown> = {};
+      deep.child = child;
+      deep = child;
+    }
+    expect(snapshotBoundedJson(root)).toMatchObject({ ok: false, failure_code: "resource_limit_exceeded" });
   });
 });

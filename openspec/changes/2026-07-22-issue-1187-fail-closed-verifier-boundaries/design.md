@@ -99,6 +99,56 @@ oversized hex/base64/base64url values before decoding or hashing. The settlement
 route maps `resource_limit_exceeded` to HTTP `413`; helper and adapter
 boundaries return the same typed failure without invoking a backend.
 
+### 2.3 Bounded adapter attestations
+
+Adapter-owned attestation objects are governed by the versioned
+`conxian.verifier.attestation.v1` profile before digesting or storage. The
+profile caps total canonical text at 4,096 characters and UTF-8 bytes at 16 KiB,
+depth at 8, object keys at 16, array length at 16, keys at 64 characters, and
+strings at 1,024 characters. Only `null`, booleans, finite numbers, strings,
+plain objects, and dense arrays are permitted. Symbols, accessors, hidden
+properties, custom or polluted prototypes, forbidden keys, sparse arrays, and
+cycles are rejected. Validation uses an explicit bounded work stack rather than
+recursive traversal, then builds a detached deeply frozen snapshot; the
+adapter-owned object is never retained as authoritative evidence and mutations
+after return cannot alter aggregation state.
+
+Attestation failures use the same typed resource/malformed boundary as the
+request contract. BitVM2 accepts only the exact versioned signature-attestation
+shape, with bounded identifiers and digest fields, after the detached snapshot
+has been checked. Direct-library and route failures collapse invalid or
+oversized proof identifiers to the fixed `unknown` sentinel; bounded summaries
+are used for all verifier/settlement logger fields and responses rather than
+echoing attacker-controlled identifiers.
+
+### 2.4 BitVM3 same-proof concurrency
+
+BitVM3 recursive verification uses a per-proof FIFO queue around the complete
+async adapter call and commit. An identical request digest, recursive height,
+and backend identity replay only returns a defensive copy of the committed
+state. A conflicting request for an initialized proof id returns a typed
+`malformed_request` without a second backend dispatch. Generation and state
+presence checks remain at commit, and queue cleanup is protected by `finally`,
+so deferred completion, adapter throws, and retries cannot leave returned state
+different from stored state or poison future operations.
+
+### 2.5 Bounded ZKCP retention and listing
+
+ZKCP publishes `conxian.zkcp.retention.v1`: at most 1,024 active intents and
+2,048 total retained intents, with terminal records retained for at most 15
+minutes by default. Capacity checks run after terminal cleanup but active or
+pending intents are never silently evicted; a full active/retained capacity is
+a typed `resource_limit_exceeded` response. Terminal eviction atomically removes
+the intent and all private proof, payment, key-release, generation, lock, and
+queue bookkeeping. The bridge accepts an injectable clock for deterministic
+cleanup tests.
+
+`conxian.zkcp.list.v1` requires deterministic creation-time/id ordering and a
+bounded page: default 50, maximum 100, and offset maximum 2,048. Invalid limits
+or offsets are typed malformed/resource failures, and list responses include
+the policy version, page metadata, and at most the requested bounded number of
+intents; the route never serializes the entire retained map.
+
 ## 3. Adapter and provenance model
 
 `UnavailableVerifier` and `UnavailablePaymentObserver` are production-safe

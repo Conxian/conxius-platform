@@ -1740,3 +1740,28 @@ AGENTS.md (this update)
 - PowerShell runtime execution remains unavailable in this devbox; lifecycle parity checks are static/self-test based.
 **Gotchas**:
 - The strict validator command is `pnpm dlx @fission-ai/openspec@1.6.0 validate <change> --type change --strict --no-interactive --json`.
+
+### 2026-07-22 — PR #1198 P2 Review Remediation
+**Trigger**: Formal review `4759182306` on PR #1198.
+**What was done**:
+- Collapsed oversized BitVM proof identifiers to the fixed `unknown` sentinel in direct-library and route failures; added oversized-response coverage.
+- Added versioned `conxian.verifier.attestation.v1` bounds, iterative hostile-graph validation, detached deeply frozen snapshots, exact attestation-shape checks, and adapter-mutation/cycle/accessor/prototype/size tests.
+- Added BitVM3 per-proof FIFO replay/conflict protection with generation/state commit checks, deterministic identical replays, deferred same-proof race tests, conflicting-request rejection, and queue cleanup after throws.
+- Added versioned ZKCP active/total quotas, injectable-clock terminal TTL cleanup, atomic private-evidence removal, deterministic bounded pagination, capacity/no-active-eviction/cleanup/pagination tests, and route limit validation.
+- Sanitized direct-library verifier/settlement logging and added a spy test proving oversized intent ids are never logged verbatim.
+- Updated the issue #1187 OpenSpec design/spec/tasks and production-boundary, risk, gap, debt, and session continuity documentation without selecting a production backend.
+- Passed focused and full dashboard Vitest, dashboard typecheck, lifecycle/control gates, contamination self-tests, BOS production-boundary verification, strict issue #1187 OpenSpec validation, and `git diff --check`.
+**Key discoveries**:
+- A bounded attestation snapshot must reject accessors, hidden/symbol properties, sparse arrays, custom/prototype-polluted objects, cycles, and non-finite numbers before canonical digesting; storing only the detached snapshot prevents post-return adapter mutation from changing aggregation state.
+- ZKCP cleanup must skip active/queued/locked intents and remove proof, payment, key-release, generation, lock, and queue records together; list pagination must be bounded independently of the retained-intent quota.
+- The current production construction remains unavailable-by-default; all concurrency, retention, and resource controls are orchestration hardening, not cryptographic backend readiness.
+**Files touched**:
+- `services/admin-dashboard/src/lib/support/{verifier-contract.ts,bitvm.ts,bitvm3.ts,zkcp.ts}` and `services/admin-dashboard/src/app/api/v1/settlement-engine/route.ts`
+- `services/admin-dashboard/src/tests/{bitvm.test.ts,bitvm3.test.ts,zkcp.test.ts,routeAuth.test.ts,verifierContract.test.ts}`
+- `openspec/changes/2026-07-22-issue-1187-fail-closed-verifier-boundaries/{design.md,tasks.md,specs/fail-closed-verifier-boundaries/spec.md}`
+- `docs/{PRODUCTION_BOUNDARY.md,PHASE_7_RISK_REGISTER.md,GAPS.md,DEBT_INVENTORY.md}` and `AGENTS.md`
+**Gaps identified**:
+- Hosted PR checks must be inspected after the focused commit is pushed; no merge or hosted-check wait is performed.
+- PowerShell runtime execution remains unavailable in this devbox; static parity/self-tests remain the available validation.
+**Gotchas**:
+- Strict OpenSpec validation uses the positional change identifier with `--type change`; rerun it and `git diff --check` after any final session-log edit.

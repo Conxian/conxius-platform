@@ -76,6 +76,118 @@ signature or recursive verifier adapter is invoked. A resource overage MUST retu
   malformed failure for invalid shape), performs no unbounded decode/hash, and
   does not invoke a verifier, observer, or settlement backend
 
+### Requirement: Bounded adapter attestations and detached evidence
+
+Adapter-owned attestation values MUST conform to the versioned
+`conxian.verifier.attestation.v1` profile before canonicalization, digesting, or
+storage. The profile MUST bound total encoded characters and bytes, traversal
+depth, object-key count, array length, key length, and string length. It MUST
+permit only JSON-like null, boolean, finite-number, string, plain-object, and
+dense-array values. Accessors, hidden properties, symbols, cycles, sparse
+arrays, custom/prototype-polluted objects, forbidden prototype keys, and
+non-finite numbers MUST be rejected. Validation MUST use bounded iterative work
+and MUST create a detached deeply immutable canonical snapshot; adapter-owned
+objects MUST NOT remain authoritative after return.
+
+#### Scenario: Hostile attestation graphs fail closed
+
+- **WHEN** a signature adapter returns an oversized, deep, cyclic, accessor,
+  sparse, custom-prototype, polluted, or mutable-after-return attestation
+- **THEN** the boundary returns a typed malformed/resource failure, performs no
+  digest or aggregation commit from the hostile graph, and any later mutation
+  of the adapter-owned object cannot change stored aggregation state
+
+#### Scenario: Attestation bounds are enforced before storage
+
+- **WHEN** an attestation exceeds the versioned total, depth, key, array, key
+  length, or string length quota
+- **THEN** the boundary returns `resource_limit_exceeded`, retains no private
+  evidence from that value, and leaves aggregation completeness unchanged
+
+### Requirement: Same-proof BitVM3 replay and concurrency protection
+
+BitVM3 recursive verification MUST serialize operations per proof id with a
+FIFO or equivalent compare-and-swap guard spanning the asynchronous backend
+call and state commit. An identical request digest, recursive height, and
+backend identity MUST be deterministic and read-only after initialization. A
+conflicting same-id request MUST fail closed without a second backend dispatch.
+Generation/state checks MUST prevent stale completions from making returned
+state disagree with stored state, and queue cleanup MUST occur after success,
+failure, and adapter throw.
+
+#### Scenario: Same-proof deferred requests are deterministic
+
+- **WHEN** identical BitVM3 requests overlap while the backend is deferred
+- **THEN** only one backend call occurs, both callers receive the same
+  committed state, and the replay cannot replace or mutate stored state
+
+#### Scenario: Conflicting same-proof requests fail closed
+
+- **WHEN** a request with the same proof id but a different digest, height, or
+  backend arrives before or after initialization
+- **THEN** the conflicting request returns `malformed_request`, no second
+  backend call occurs, and stored state remains bound to the first request
+
+#### Scenario: Adapter throws do not poison the proof queue
+
+- **WHEN** a BitVM3 backend throws or a deferred operation completes out of
+  order relative to a queued replay
+- **THEN** the thrown operation is typed `internal_error`, queue cleanup runs,
+  and subsequent deliberate operations cannot deadlock or commit stale state
+
+### Requirement: Bounded ZKCP retention and paginated listing
+
+ZKCP MUST publish the versioned `conxian.zkcp.retention.v1` policy with hard
+active and total retained-intent quotas and a terminal-record TTL. Capacity
+handling MUST never silently evict an active or pending intent; it MUST either
+clean expired terminal records or return a typed `resource_limit_exceeded`
+capacity response. Terminal cleanup MUST atomically remove the intent and all
+associated proof, payment, key-release, lock, generation, and queue evidence.
+The clock MUST be injectable for deterministic lifecycle tests.
+
+ZKCP list operations MUST publish `conxian.zkcp.list.v1`, validate positive
+integer `limit` and non-negative integer `offset`, order deterministically, and
+return at most the bounded page size with page metadata. The route MUST NOT
+serialize an unbounded retained-intent map.
+
+#### Scenario: Capacity never evicts active state
+
+- **WHEN** active or pending intents fill the active/total quota, including
+  after the terminal TTL has elapsed
+- **THEN** initialization fails with `resource_limit_exceeded` and all existing
+  active/pending intents remain available and unchanged
+
+#### Scenario: Expired terminal evidence is removed atomically
+
+- **WHEN** a terminal intent exceeds the configured retention TTL and is not
+  locked or queued
+- **THEN** the intent and every associated private evidence/lock bookkeeping
+  entry are removed together, while active intents are retained
+
+#### Scenario: ZKCP listing is bounded and deterministic
+
+- **WHEN** a caller requests a valid page, an invalid limit/offset, or a page
+  beyond the retained set
+- **THEN** the response contains only the requested bounded page in stable
+  order, invalid pagination returns a typed malformed/resource failure, and no
+  full unbounded set is returned
+
+### Requirement: Bounded untrusted identifiers in logs and failures
+
+Direct-library verifier and settlement failures MUST NOT interpolate raw
+attacker-controlled identifiers into logs or response fields. Invalid and
+oversized identifiers MUST use the fixed bounded sentinel or a summary whose
+size is checked without copying or hashing the entire input. The rule MUST
+apply consistently to BitVM2, BitVM3, ZKCP, and settlement-route failures.
+
+#### Scenario: Oversized identifiers are not echoed or logged
+
+- **WHEN** a direct-library or route request supplies an oversized proof or
+  intent id
+- **THEN** the typed failure contains only a bounded sentinel/summary, the
+  oversized value is absent from the response and logger arguments, and the
+  verifier/settlement adapter is not invoked
+
 ### Requirement: Versioned ZKCP statement and domain binding
 
 ZKCP MUST derive and validate a versioned deterministic statement/domain

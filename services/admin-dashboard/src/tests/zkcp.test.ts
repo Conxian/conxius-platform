@@ -1,8 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   UnavailableDecryptionKeyReleaser,
   UnavailableOnChainMonitor,
   UnavailableZKVerifier,
+  ZKCP_LIST_POLICY,
+  ZKCP_RETENTION_POLICY,
   ZKCPBridge,
   type DecryptionKeyReleaser,
   type OnChainMonitor,
@@ -798,5 +800,122 @@ describe("ZKCPBridge fail-closed boundary", () => {
     await bridge.verifyProof(input.id, request);
     expect(events).toContain("intent_failed");
     expect(bridge.getIntent(input.id)?.decryptionKey).toBeUndefined();
+  });
+
+  it("does not log an oversized direct-library intent id verbatim", async () => {
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const oversizedId = "i".repeat(VERIFIER_RESOURCE_LIMITS.maxIdentifierChars + 1);
+    const bridge = new ZKCPBridge(
+      new UnavailableZKVerifier(),
+      new UnavailableOnChainMonitor(),
+      new UnavailableDecryptionKeyReleaser(),
+    );
+
+    try {
+      const result = await bridge.verifyProof(oversizedId, {});
+      const logged = warning.mock.calls.flatMap((args) => args.map((value) => String(value))).join(" ");
+
+      expect(result.failure_code).toBe("resource_limit_exceeded");
+      expect(logged).toContain("unknown");
+      expect(logged).not.toContain(oversizedId);
+    } finally {
+      warning.mockRestore();
+    }
+  });
+
+  it("enforces active and retained-intent quotas without evicting active intents", async () => {
+    let now = 1_800_000_000_000;
+    const genericRequest = await makeVerifierRequest({
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production",
+    });
+    const firstInput = await makeIntentInput(genericRequest, "zkcp-capacity-1");
+    const secondInput = await makeIntentInput(genericRequest, "zkcp-capacity-2");
+    const thirdInput = await makeIntentInput(genericRequest, "zkcp-capacity-3");
+    const bridge = new ZKCPBridge(
+      new AuthoritativeFixtureVerifier(),
+      new UnavailableOnChainMonitor(),
+      new UnavailableDecryptionKeyReleaser(),
+      {
+        now: () => now,
+        maxActiveIntents: 2,
+        maxTotalIntents: 2,
+        terminalRetentionMs: 100,
+      },
+    );
+
+    bridge.initializeIntent(firstInput);
+    bridge.initializeIntent(secondInput);
+    now += ZKCP_RETENTION_POLICY.terminalRetentionMs + 1;
+
+    expect(() => bridge.initializeIntent(thirdInput)).toThrow("active-intent capacity is full");
+    expect(bridge.getIntent(firstInput.id)?.status).toBe("pending");
+    expect(bridge.getIntent(secondInput.id)?.status).toBe("pending");
+  });
+
+  it("evicts only expired terminal records and atomically removes their private evidence", async () => {
+    let now = 1_800_000_000_000;
+    const genericRequest = await makeVerifierRequest({
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production",
+    });
+    const input = await makeIntentInput(genericRequest, "zkcp-retention-terminal");
+    const request = await bindZKCPRequestToIntent(genericRequest, input);
+    const bridge = new ZKCPBridge(
+      new AuthoritativeFixtureVerifier(),
+      new AuthoritativeFixtureMonitor(),
+      new AuthoritativeFixtureKeyReleaser(),
+      { now: () => now, terminalRetentionMs: 1000 },
+    );
+    bridge.initializeIntent(input);
+    expect((await bridge.verifyProof(input.id, request)).status).toBe("valid");
+    expect((await bridge.watchForPayment(input.id)).status).toBe("observed");
+    expect((await bridge.finalizeSettlement(input.id)).finalized).toBe(true);
+
+    const internals = bridge as unknown as {
+      verificationEvidence: Map<string, unknown>;
+      paymentEvidence: Map<string, unknown>;
+      keyReleaseEvidence: Map<string, unknown>;
+    };
+    expect(internals.verificationEvidence.has(input.id)).toBe(true);
+    expect(internals.paymentEvidence.has(input.id)).toBe(true);
+    expect(internals.keyReleaseEvidence.has(input.id)).toBe(true);
+
+    now += 1001;
+    expect(bridge.purgeExpiredTerminalRecords()).toBe(1);
+    expect(bridge.getIntent(input.id)).toBeUndefined();
+    expect(internals.verificationEvidence.has(input.id)).toBe(false);
+    expect(internals.paymentEvidence.has(input.id)).toBe(false);
+    expect(internals.keyReleaseEvidence.has(input.id)).toBe(false);
+  });
+
+  it("returns deterministic bounded ZKCP pages and rejects invalid pagination", async () => {
+    const genericRequest = await makeVerifierRequest();
+    const bridge = new ZKCPBridge(
+      new UnavailableZKVerifier(),
+      new UnavailableOnChainMonitor(),
+      new UnavailableDecryptionKeyReleaser(),
+      { now: () => 1_800_000_000_000, maxActiveIntents: 4, maxTotalIntents: 4 },
+    );
+    for (const id of ["zkcp-page-3", "zkcp-page-1", "zkcp-page-2"]) {
+      bridge.initializeIntent(await makeIntentInput(genericRequest, id));
+    }
+
+    const firstPage = bridge.listIntentsPage(undefined, 2, 0);
+    const secondPage = bridge.listIntentsPage(undefined, 2, firstPage.next_offset);
+
+    expect(firstPage.policy_version).toBe(ZKCP_LIST_POLICY.version);
+    expect(firstPage.count).toBe(2);
+    expect(firstPage.total).toBe(3);
+    expect(firstPage.has_more).toBe(true);
+    expect(firstPage.intents.map((intent) => intent.id)).toEqual(["zkcp-page-1", "zkcp-page-2"]);
+    expect(secondPage.intents.map((intent) => intent.id)).toEqual(["zkcp-page-3"]);
+    expect(secondPage.has_more).toBe(false);
+
+    expect(() => bridge.listIntentsPage(undefined, 0, 0)).toThrow("limit");
+    expect(() => bridge.listIntentsPage(undefined, ZKCP_LIST_POLICY.maxPageSize + 1, 0))
+      .toThrow("limit");
+    expect(() => bridge.listIntentsPage(undefined, 1, ZKCP_LIST_POLICY.maxOffset + 1))
+      .toThrow("offset");
   });
 });

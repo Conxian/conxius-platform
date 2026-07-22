@@ -60,7 +60,7 @@ repository; it does not implement a proof backend.
 | **G-08** | ZK-Rollup T1 Adapters (Citrea/Strata) | [FULL_STACK_BITCOIN_RESEARCH.md#28](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#28) | `conxian-nexus/adapters` |
 | **G-09** | BIP-322 Signed Intents | [FULL_STACK_BITCOIN_RESEARCH.md#29](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#29) | 🟢 **Implemented**. CON-1266 bridge active. |
 | **G-10** | MuSig2 Aggregation | [FULL_STACK_BITCOIN_RESEARCH.md#31](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#31) | `lib-conxian-core/musig2` |
-| **G-11** | BitVM2 Multi-Party Aggregation | [FULL_STACK_BITCOIN_RESEARCH.md#31](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#31) | 🛡️ **Fail-closed scaffolding**. Aggregation requires authorized unique signers plus explicit backend attestations; default signature verification remains unavailable. |
+| **G-11** | BitVM2 Multi-Party Aggregation | [FULL_STACK_BITCOIN_RESEARCH.md#31](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#31) | 🛡️ **Fail-closed scaffolding**. Aggregation requires authorized unique signers, bounded detached versioned attestations, and explicit backend evidence; default signature verification remains unavailable. |
 | **G-12** | ERC-7683 Solver Selection | [FULL_STACK_BITCOIN_RESEARCH.md#32](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#32) | 🏗️ **Active Scaffolding**. CON-1307 initialized. |
 | **G-13** | MFE Federation | [SOVEREIGN_REPR_2026.md#3](./architecture/SOVEREIGN_REPR_2026.md#3) | Webpack Module Federation |
 | **G-14** | FROST Threshold Signatures | [FULL_STACK_BITCOIN_RESEARCH.md#34](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#34) | 🏗️ **Active Scaffolding**. TypeScript coordination types in `frost.ts`. Rust crypto target: `lib-conxian-core/frost`. |
@@ -69,7 +69,7 @@ repository; it does not implement a proof backend.
 | **G-17** | BIP-353 DNS Payments | [FULL_STACK_BITCOIN_RESEARCH.md#32](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#32) | 🟢 **Implemented**. Foundational bridge active. |
 | **G-18** | BIP-324 Transport | [FULL_STACK_BITCOIN_RESEARCH.md#38](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#38) | `conxian-nexus/transport` |
 | **G-19** | Spider Network Routing | [FULL_STACK_BITCOIN_RESEARCH.md#39](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#39) | `conxian-nexus/spider` |
-| **G-20** | BitVM3 Adaptive Proofs | [FULL_STACK_BITCOIN_RESEARCH.md#40](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#40) | 🛡️ **Fail-closed platform boundary** in `bitvm3.ts`; recursive backend and acceptance evidence pending |
+| **G-20** | BitVM3 Adaptive Proofs | [FULL_STACK_BITCOIN_RESEARCH.md#40](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#40) | 🛡️ **Fail-closed platform boundary** in `bitvm3.ts`; bounded same-proof FIFO replay/conflict protection is implemented, while recursive backend and acceptance evidence remain pending |
 | **G-21** | Sangria/Nova Proof Folding | [FULL_STACK_BITCOIN_RESEARCH.md#24](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#24) | `lib-conxian-core/sangria` |
 | **G-22** | ctUSD Stablecoin Logic | [FULL_STACK_BITCOIN_RESEARCH.md#26](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#26) | 🏗️ **Active Scaffolding**. TypeScript types in `lib/usi/stablecoin.ts`. OpenSpec proposal at `openspec/changes/2026-07-04-ctusd-dlc-stablecoin/`. |
 | **G-23** | Ark V-UTXO Protocol | [FULL_STACK_BITCOIN_RESEARCH.md#25](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#25) | `lib-conxian-core/ark` |
@@ -82,7 +82,7 @@ repository; it does not implement a proof backend.
 | **G-47** | BIP-119 (CTV) Vaults | [FULL_STACK_BITCOIN_RESEARCH.md#47](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#47) | `lib-conxian-core/covenants` |
 | **G-48** | BIP-324 V2 Transport | [FULL_STACK_BITCOIN_RESEARCH.md#48](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#48) | `conxian-nexus/transport` |
 | **G-49** | Decentralized USI Transport | [FULL_STACK_BITCOIN_RESEARCH.md#49](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#49) | `services/admin-dashboard/src/lib/support/event-bus.ts` |
-| **G-50** | ZK Contingent Payments | [FULL_STACK_BITCOIN_RESEARCH.md#50](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#50) | 🛡️ **Fail-closed platform boundary** in `zkcp.ts`; versioned intent statement/domain binding and immutable evidence lifecycle are enforced, while ZK verifier, payment observer, and key-release backends remain pending |
+| **G-50** | ZK Contingent Payments | [FULL_STACK_BITCOIN_RESEARCH.md#50](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#50) | 🛡️ **Fail-closed platform boundary** in `zkcp.ts`; versioned intent binding, bounded retention/pagination, and atomic immutable evidence lifecycle are enforced, while ZK verifier, payment observer, and key-release backends remain pending |
 | **G-51** | BitVM2 Optimized Verifier | [FULL_STACK_BITCOIN_RESEARCH.md#51](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#51) | 🏗️ **Research/scaffolding lane**; no pairing or optimized verifier is implemented here |
 | **G-52** | BRC-20 / Runes Integration | [FULL_STACK_BITCOIN_RESEARCH.md#52](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#52) | `conxian-nexus/adapters` |
 | **G-53** | Lightning Async Payments | [FULL_STACK_BITCOIN_RESEARCH.md#53](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#53) | `lib-conxian-core/lightning` |
@@ -101,9 +101,9 @@ repository; it does not implement a proof backend.
 - **G-09 (BIP-322 Intents)**: 🟢 **Implemented**.
 - **G-17 (BIP-353 DNS)**: 🟢 **Implemented**.
 - **G-01 (BitVM2 Floor)**: 🛡️ **Fail-closed boundary; backend unavailable by default**.
-- **G-11 (BitVM2 Multi-Party)**: 🛡️ **Fail-closed scaffolding**. Authorized unique signers and explicit signature attestations are required; the default verifier is unavailable.
-- **G-20 (BitVM3)**: 🛡️ **Fail-closed boundary; recursive backend pending**.
-- **G-50 (ZKCP)**: 🛡️ **Fail-closed boundary; versioned intent binding and immutable evidence revalidation are implemented, but verifier/payment/key-release backends remain pending**.
+- **G-11 (BitVM2 Multi-Party)**: 🛡️ **Fail-closed scaffolding**. Authorized unique signers and bounded detached signature attestations are required; the default verifier is unavailable.
+- **G-20 (BitVM3)**: 🛡️ **Fail-closed boundary; same-proof FIFO replay/conflict protection is implemented, recursive backend pending**.
+- **G-50 (ZKCP)**: 🛡️ **Fail-closed boundary; versioned intent binding, bounded retention/pagination, and immutable evidence revalidation are implemented, but verifier/payment/key-release backends remain pending**.
 - **G-51 (Optimized verifier)**: 🏗️ **Research only; no pairing implementation in this repository**.
 - **G-05 (Silent Payments)**: 🏗️ **Active Scaffolding**.
 - **G-44 (BitVMX Computation)**: 🏗️ **Active Scaffolding**.

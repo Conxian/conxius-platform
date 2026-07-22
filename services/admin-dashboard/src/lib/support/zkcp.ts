@@ -6,6 +6,7 @@ import {
   canonicalJson,
   createPaymentFailure,
   createVerificationFailure,
+  boundedIdentifier,
   digestCanonical,
   digestVerifierRequest,
   isAuthoritativeBackendIdentity,
@@ -19,6 +20,8 @@ import {
   normalizeBoundaryError,
   rejectNonProductionVerification,
   VERIFIER_RESOURCE_LIMITS,
+  VERIFIER_ZKCP_LIST_POLICY_VERSION,
+  VERIFIER_ZKCP_RETENTION_POLICY_VERSION,
   type BackendIdentity,
   type Digest,
   type PaymentNetwork,
@@ -84,6 +87,65 @@ export interface ZKCPBindingDigests {
   payment_condition_digest: Digest;
   statement_digest: Digest;
   domain_digest: Digest;
+}
+
+export const ZKCP_RETENTION_POLICY = Object.freeze({
+  version: VERIFIER_ZKCP_RETENTION_POLICY_VERSION,
+  maxActiveIntents: VERIFIER_RESOURCE_LIMITS.maxZkcpActiveIntents,
+  maxTotalIntents: VERIFIER_RESOURCE_LIMITS.maxZkcpTotalIntents,
+  terminalRetentionMs: VERIFIER_RESOURCE_LIMITS.maxZkcpTerminalRetentionMs,
+} as const);
+
+export const ZKCP_LIST_POLICY = Object.freeze({
+  version: VERIFIER_ZKCP_LIST_POLICY_VERSION,
+  defaultPageSize: 50,
+  maxPageSize: VERIFIER_RESOURCE_LIMITS.maxZkcpListPageSize,
+  maxOffset: VERIFIER_RESOURCE_LIMITS.maxZkcpListOffset,
+} as const);
+
+export interface ZKCPIntentPage {
+  policy_version: typeof VERIFIER_ZKCP_LIST_POLICY_VERSION;
+  intents: ReadonlyArray<Readonly<ZKCPIntent>>;
+  count: number;
+  total: number;
+  limit: number;
+  offset: number;
+  has_more: boolean;
+  next_offset?: number;
+}
+
+export interface ZKCPListPaginationValidationSuccess {
+  ok: true;
+  limit: number;
+  offset: number;
+}
+
+export interface ZKCPListPaginationValidationFailure {
+  ok: false;
+  failure_code: "malformed_request" | "resource_limit_exceeded";
+  error: string;
+}
+
+export type ZKCPListPaginationValidation =
+  | ZKCPListPaginationValidationSuccess
+  | ZKCPListPaginationValidationFailure;
+
+export function validateZKCPListPagination(limit: unknown, offset: unknown): ZKCPListPaginationValidation {
+  const normalizedLimit = limit === undefined ? ZKCP_LIST_POLICY.defaultPageSize : limit;
+  const normalizedOffset = offset === undefined ? 0 : offset;
+  if (typeof normalizedLimit !== "number" || !Number.isSafeInteger(normalizedLimit) || normalizedLimit < 1) {
+    return { ok: false, failure_code: "malformed_request", error: "ZKCP list limit must be a positive safe integer" };
+  }
+  if (normalizedLimit > ZKCP_LIST_POLICY.maxPageSize) {
+    return { ok: false, failure_code: "resource_limit_exceeded", error: "ZKCP list limit exceeds the v1 resource limit" };
+  }
+  if (typeof normalizedOffset !== "number" || !Number.isSafeInteger(normalizedOffset) || normalizedOffset < 0) {
+    return { ok: false, failure_code: "malformed_request", error: "ZKCP list offset must be a non-negative safe integer" };
+  }
+  if (normalizedOffset > ZKCP_LIST_POLICY.maxOffset) {
+    return { ok: false, failure_code: "resource_limit_exceeded", error: "ZKCP list offset exceeds the v1 resource limit" };
+  }
+  return { ok: true, limit: normalizedLimit, offset: normalizedOffset };
 }
 
 export interface ZKProofVerifier {
@@ -194,6 +256,31 @@ interface StoredPaymentEvidence {
   observation: PaymentObservation;
 }
 
+interface StoredKeyReleaseEvidence {
+  result: DecryptionKeyReleaseResult;
+  released_at: string;
+}
+
+export interface ZKCPBridgeOptions {
+  now?: () => number;
+  maxActiveIntents?: number;
+  maxTotalIntents?: number;
+  terminalRetentionMs?: number;
+}
+
+export class ZKCPBoundaryError extends Error {
+  public readonly failure_code: "malformed_request" | "resource_limit_exceeded";
+
+  public constructor(
+    failure_code: "malformed_request" | "resource_limit_exceeded",
+    message: string,
+  ) {
+    super(message);
+    this.name = "ZKCPBoundaryError";
+    this.failure_code = failure_code;
+  }
+}
+
 interface IntentOperation {
   intentId: string;
   intent: ZKCPIntent;
@@ -209,6 +296,28 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function validateIntentIdentifier(value: unknown):
+  | { ok: true; id: string }
+  | { ok: false; failure_code: "malformed_request" | "resource_limit_exceeded"; id: string; error: string } {
+  if (!isNonEmptyString(value)) {
+    return {
+      ok: false,
+      failure_code: "malformed_request",
+      id: boundedIdentifier(value),
+      error: "ZKCP intent id is required",
+    };
+  }
+  if (value.length > VERIFIER_RESOURCE_LIMITS.maxIdentifierChars) {
+    return {
+      ok: false,
+      failure_code: "resource_limit_exceeded",
+      id: boundedIdentifier(value),
+      error: "ZKCP intent id exceeds the v1 resource limit",
+    };
+  }
+  return { ok: true, id: value };
+}
+
 function isPaymentStatus(value: unknown): value is PaymentObservationResult["status"] {
   return value === "observed"
     || value === "not_observed"
@@ -220,6 +329,15 @@ function isPaymentStatus(value: unknown): value is PaymentObservationResult["sta
 
 function isZKProofSystem(value: unknown): value is ZKProofSystem {
   return value === "groth16" || value === "plonk" || value === "stark";
+}
+
+function isZKCPStatus(value: unknown): value is ZKCPStatus {
+  return value === "pending"
+    || value === "verified"
+    || value === "paid"
+    || value === "finalized"
+    || value === "failed"
+    || value === "unsupported";
 }
 
 function paymentRequestFor(intent: Pick<ZKCPIntent, "id" | "amount" | "sellerAddress" | "network">): PaymentObservationRequest {
@@ -385,7 +503,7 @@ function immutableCopy<T>(value: T): T {
 }
 
 function failedVerification(intentId: string, code: VerificationFailureCode, error: string): VerificationResult {
-  logger.warn(`Verification failed for intent ${intentId}: ${code}`);
+  logger.warn(`Verification failed for intent ${boundedIdentifier(intentId)}: ${code}`);
   return createVerificationFailure(code, error);
 }
 
@@ -502,16 +620,96 @@ export class ZKCPBridge {
   private readonly intents = new Map<string, ZKCPIntent>();
   private readonly verificationEvidence = new Map<string, StoredVerificationEvidence>();
   private readonly paymentEvidence = new Map<string, StoredPaymentEvidence>();
+  private readonly keyReleaseEvidence = new Map<string, StoredKeyReleaseEvidence>();
   private readonly finalizationLocks = new Set<string>();
   private readonly lifecycleQueues = new Map<string, Promise<void>>();
   private readonly lifecycleGenerations = new Map<string, number>();
   private readonly eventHandlers: ZKCPEventHandler[] = [];
+  private readonly now: () => number;
+  private readonly maxActiveIntents: number;
+  private readonly maxTotalIntents: number;
+  private readonly terminalRetentionMs: number;
 
   public constructor(
     private readonly verifier: ZKProofVerifier,
     private readonly onChainMonitor: OnChainMonitor,
     private readonly keyReleaser: DecryptionKeyReleaser,
-  ) {}
+    options: ZKCPBridgeOptions = {},
+  ) {
+    this.now = options.now ?? (() => Date.now());
+    this.maxActiveIntents = this.policyOption(
+      options.maxActiveIntents,
+      ZKCP_RETENTION_POLICY.maxActiveIntents,
+      "maxActiveIntents",
+    );
+    this.maxTotalIntents = this.policyOption(
+      options.maxTotalIntents,
+      ZKCP_RETENTION_POLICY.maxTotalIntents,
+      "maxTotalIntents",
+    );
+    this.terminalRetentionMs = this.policyOption(
+      options.terminalRetentionMs,
+      ZKCP_RETENTION_POLICY.terminalRetentionMs,
+      "terminalRetentionMs",
+      true,
+    );
+    if (this.maxActiveIntents > this.maxTotalIntents) {
+      throw new ZKCPBoundaryError("malformed_request", "ZKCP active-intent quota cannot exceed total quota");
+    }
+  }
+
+  private policyOption(value: number | undefined, fallback: number, name: string, allowZero = false): number {
+    if (value === undefined) return fallback;
+    if (!Number.isSafeInteger(value) || (allowZero ? value < 0 : value <= 0) || value > fallback) {
+      throw new ZKCPBoundaryError("malformed_request", `ZKCP ${name} option is outside the v1 policy`);
+    }
+    return value;
+  }
+
+  private nowIso(): string {
+    return new Date(this.now()).toISOString();
+  }
+
+  private isActiveIntent(intent: ZKCPIntent): boolean {
+    return intent.status === "pending" || intent.status === "verified" || intent.status === "paid";
+  }
+
+  private deleteIntentEvidence(intentId: string): void {
+    this.verificationEvidence.delete(intentId);
+    this.paymentEvidence.delete(intentId);
+    this.keyReleaseEvidence.delete(intentId);
+  }
+
+  private cleanupExpiredTerminalRecords(): number {
+    const cutoff = this.now() - this.terminalRetentionMs;
+    let removed = 0;
+    for (const [intentId, intent] of this.intents) {
+      if (this.isActiveIntent(intent)
+        || this.finalizationLocks.has(intentId)
+        || this.lifecycleQueues.has(intentId)) continue;
+      const updatedAt = Date.parse(intent.updatedAt);
+      if (!Number.isFinite(updatedAt) || updatedAt > cutoff) continue;
+      this.intents.delete(intentId);
+      this.deleteIntentEvidence(intentId);
+      this.lifecycleGenerations.delete(intentId);
+      this.finalizationLocks.delete(intentId);
+      this.lifecycleQueues.delete(intentId);
+      removed += 1;
+    }
+    return removed;
+  }
+
+  public purgeExpiredTerminalRecords(): number {
+    return this.cleanupExpiredTerminalRecords();
+  }
+
+  private activeIntentCount(): number {
+    let count = 0;
+    for (const intent of this.intents.values()) {
+      if (this.isActiveIntent(intent)) count += 1;
+    }
+    return count;
+  }
 
   private async withIntentLock<T>(intentId: string, operation: () => Promise<T>): Promise<T> {
     const previous = this.lifecycleQueues.get(intentId) ?? Promise.resolve();
@@ -585,8 +783,8 @@ export class ZKCPBridge {
     if (!this.commitOperation(operation, (intent) => {
       intent.status = result.status === "unavailable" || result.status === "unsupported" ? "unsupported" : "failed";
       intent.verification = immutableCopy(result);
-      intent.updatedAt = new Date().toISOString();
-      this.verificationEvidence.delete(intent.id);
+      intent.updatedAt = this.nowIso();
+      this.deleteIntentEvidence(intent.id);
       this.emit({ type: "intent_failed", intentId: intent.id, timestamp: intent.updatedAt, data: { failure_code: result.failure_code } });
     })) {
       return copyVerificationResult(failedVerification(operation.intentId, "internal_error", "ZKCP lifecycle operation became stale before failure commit"));
@@ -608,9 +806,16 @@ export class ZKCPBridge {
       || !/^sha256:[0-9a-f]{64}$/.test(params.proofHash)) {
       throw new Error("Malformed ZKCP intent bindings");
     }
+    this.cleanupExpiredTerminalRecords();
     if (this.intents.has(params.id)) throw new Error("ZKCP intent id already exists");
+    if (this.activeIntentCount() >= this.maxActiveIntents) {
+      throw new ZKCPBoundaryError("resource_limit_exceeded", "ZKCP active-intent capacity is full");
+    }
+    if (this.intents.size >= this.maxTotalIntents) {
+      throw new ZKCPBoundaryError("resource_limit_exceeded", "ZKCP retained-intent capacity is full");
+    }
 
-    const now = new Date().toISOString();
+    const now = this.nowIso();
     const intent: ZKCPIntent = {
       ...params,
       status: "pending",
@@ -621,12 +826,20 @@ export class ZKCPBridge {
     this.intents.set(intent.id, intent);
     this.lifecycleGenerations.set(intent.id, 0);
     this.emit({ type: "intent_created", intentId: intent.id, timestamp: now, data: { amount: intent.amount } });
-    logger.info(`Initialized intent ${intent.id}`);
+    logger.info(`Initialized intent ${boundedIdentifier(intent.id)}`);
     return immutableCopy(intent);
   }
 
   public async verifyProof(intentId: string, value: unknown): Promise<VerificationResult> {
-    return this.withIntentLock(intentId, async () => {
+    const intentValidation = validateIntentIdentifier(intentId);
+    if (!intentValidation.ok) {
+      return copyVerificationResult(failedVerification(
+        intentValidation.id,
+        intentValidation.failure_code,
+        intentValidation.error,
+      ));
+    }
+    return this.withIntentLock(intentValidation.id, async () => {
       const intent = this.intents.get(intentId);
       if (!intent) return copyVerificationResult(failedVerification(intentId, "malformed_request", "Intent not found"));
       if (intent.status !== "pending") {
@@ -718,7 +931,7 @@ export class ZKCPBridge {
       });
       if (!this.commitOperation(operation, (currentIntent) => {
         this.verificationEvidence.set(currentIntent.id, evidence);
-        currentIntent.updatedAt = new Date().toISOString();
+        currentIntent.updatedAt = this.nowIso();
         currentIntent.verification = immutableCopy(result);
         currentIntent.status = "verified";
         currentIntent.proofSystem = proofSystem;
@@ -791,7 +1004,11 @@ export class ZKCPBridge {
   }
 
   public async watchForPayment(intentId: string): Promise<PaymentObservationResult> {
-    return this.withIntentLock(intentId, async () => {
+    const intentValidation = validateIntentIdentifier(intentId);
+    if (!intentValidation.ok) {
+      return copyPaymentResult(createPaymentFailure(intentValidation.failure_code, intentValidation.error));
+    }
+    return this.withIntentLock(intentValidation.id, async () => {
       const intent = this.intents.get(intentId);
       if (!intent) return copyPaymentResult(createPaymentFailure("payment_not_observed", "Intent not found"));
 
@@ -844,7 +1061,7 @@ export class ZKCPBridge {
         currentIntent.paymentObservation = observation;
         currentIntent.paymentHash = observation.txid;
         currentIntent.status = "paid";
-        currentIntent.updatedAt = new Date().toISOString();
+        currentIntent.updatedAt = this.nowIso();
         this.emit({
           type: "payment_detected",
           intentId,
@@ -888,12 +1105,23 @@ export class ZKCPBridge {
   }
 
   public async finalizeSettlement(intentId: string): Promise<SettlementFinalizationResult> {
-    const initialIntent = this.intents.get(intentId);
+    const intentValidation = validateIntentIdentifier(intentId);
+    if (!intentValidation.ok) {
+      return {
+        finalized: false,
+        status: "rejected",
+        intentId: intentValidation.id,
+        failure_code: intentValidation.failure_code,
+        error: intentValidation.error,
+      };
+    }
+    const safeIntentId = intentValidation.id;
+    const initialIntent = this.intents.get(safeIntentId);
     if (!initialIntent) {
       return {
         finalized: false,
         status: "rejected",
-        intentId,
+        intentId: safeIntentId,
         failure_code: "payment_not_observed",
         error: "Intent not found",
       };
@@ -903,32 +1131,32 @@ export class ZKCPBridge {
       return {
         finalized: true,
         status: "finalized",
-        intentId,
+        intentId: safeIntentId,
         paymentHash: initialIntent.paymentHash,
         decryptionKey: initialIntent.decryptionKey,
       };
     }
 
-    if (this.finalizationLocks.has(intentId)) {
+    if (this.finalizationLocks.has(safeIntentId)) {
       return {
         finalized: false,
         status: "rejected",
-        intentId,
+        intentId: safeIntentId,
         paymentHash: initialIntent.paymentHash,
         failure_code: "internal_error",
         error: "Settlement finalization is already in progress",
       };
     }
 
-    this.finalizationLocks.add(intentId);
+    this.finalizationLocks.add(safeIntentId);
     try {
-      return await this.withIntentLock(intentId, async () => {
-        const intent = this.intents.get(intentId);
+      return await this.withIntentLock(safeIntentId, async () => {
+        const intent = this.intents.get(safeIntentId);
         if (!intent) {
           return {
             finalized: false,
             status: "rejected",
-            intentId,
+            intentId: safeIntentId,
             failure_code: "payment_not_observed",
             error: "Intent not found",
           };
@@ -937,25 +1165,25 @@ export class ZKCPBridge {
           return {
             finalized: true,
             status: "finalized",
-            intentId,
+            intentId: safeIntentId,
             paymentHash: intent.paymentHash,
             decryptionKey: intent.decryptionKey,
           };
         }
-        const operation = this.beginOperation(intentId, ["pending", "verified", "paid", "failed", "unsupported"]);
+        const operation = this.beginOperation(safeIntentId, ["pending", "verified", "paid", "failed", "unsupported"]);
         if (!operation) {
           return {
             finalized: false,
             status: "rejected",
-            intentId,
+            intentId: safeIntentId,
             failure_code: "internal_error",
             error: "Unable to start ZKCP finalization operation",
           };
         }
-        return this.finalizeSettlementInternal(intentId, intent, operation);
+        return this.finalizeSettlementInternal(safeIntentId, intent, operation);
       });
     } finally {
-      this.finalizationLocks.delete(intentId);
+      this.finalizationLocks.delete(safeIntentId);
     }
   }
 
@@ -1086,9 +1314,21 @@ export class ZKCPBridge {
     }
 
     if (!this.commitOperation(operation, (currentIntent) => {
+      const releasedAt = this.nowIso();
+      this.keyReleaseEvidence.set(currentIntent.id, immutableCopy({
+        result: {
+          status: release.status,
+          backend: { ...release.backend },
+          provenance: release.provenance,
+          decryptionKey: release.decryptionKey,
+          failure_code: release.failure_code,
+          error: release.error,
+        },
+        released_at: releasedAt,
+      }));
       currentIntent.status = "finalized";
       currentIntent.decryptionKey = release.decryptionKey;
-      currentIntent.updatedAt = new Date().toISOString();
+      currentIntent.updatedAt = releasedAt;
       this.emit({
         type: "settlement_finalized",
         intentId,
@@ -1116,20 +1356,50 @@ export class ZKCPBridge {
   }
 
   public getIntent(id: string): Readonly<ZKCPIntent> | undefined {
-    const intent = this.intents.get(id);
+    const validation = validateIntentIdentifier(id);
+    if (!validation.ok) return undefined;
+    const intent = this.intents.get(validation.id);
     return intent ? immutableCopy(intent) : undefined;
   }
 
-  public listIntents(): ReadonlyArray<Readonly<ZKCPIntent>> {
-    return this.listSnapshots(this.intents.values());
+  public listIntentsPage(
+    status?: ZKCPStatus,
+    limit?: number,
+    offset?: number,
+  ): ZKCPIntentPage {
+    if (status !== undefined && !isZKCPStatus(status)) {
+      throw new ZKCPBoundaryError("malformed_request", "Unknown ZKCP status filter");
+    }
+    const pagination = validateZKCPListPagination(limit, offset);
+    if (!pagination.ok) throw new ZKCPBoundaryError(pagination.failure_code, pagination.error);
+    this.cleanupExpiredTerminalRecords();
+    const ordered = Array.from(this.intents.values())
+      .filter((intent) => status === undefined || intent.status === status)
+      .sort((left, right) => left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id));
+    const page = ordered.slice(pagination.offset, pagination.offset + pagination.limit);
+    const hasMore = pagination.offset + page.length < ordered.length;
+    return immutableCopy({
+      policy_version: ZKCP_LIST_POLICY.version,
+      intents: page,
+      count: page.length,
+      total: ordered.length,
+      limit: pagination.limit,
+      offset: pagination.offset,
+      has_more: hasMore,
+      next_offset: hasMore ? pagination.offset + page.length : undefined,
+    }) as ZKCPIntentPage;
   }
 
-  public listIntentsByStatus(status: ZKCPStatus): ReadonlyArray<Readonly<ZKCPIntent>> {
-    return this.listSnapshots(Array.from(this.intents.values()).filter((intent) => intent.status === status));
+  public listIntents(limit = ZKCP_LIST_POLICY.defaultPageSize, offset = 0): ReadonlyArray<Readonly<ZKCPIntent>> {
+    return this.listIntentsPage(undefined, limit, offset).intents;
   }
 
-  private listSnapshots(intents: Iterable<ZKCPIntent>): ReadonlyArray<Readonly<ZKCPIntent>> {
-    return immutableCopy(Array.from(intents));
+  public listIntentsByStatus(
+    status: ZKCPStatus,
+    limit = ZKCP_LIST_POLICY.defaultPageSize,
+    offset = 0,
+  ): ReadonlyArray<Readonly<ZKCPIntent>> {
+    return this.listIntentsPage(status, limit, offset).intents;
   }
 }
 

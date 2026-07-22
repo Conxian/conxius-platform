@@ -3,10 +3,12 @@ import {
   VERIFIER_CONTRACT_VERSION,
   UNAVAILABLE_BACKEND,
   backendIdentityEquals,
+  boundedIdentifier,
   canonicalJson,
   createVerificationFailure,
   digestCanonical,
   digestVerifierRequest,
+  isDigest,
   isCanonicalSignatureHex,
   isAuthoritativeBackendIdentity,
   isBackendIdentity,
@@ -16,6 +18,7 @@ import {
   isUnavailableBackend,
   normalizeBoundaryError,
   rejectNonProductionVerification,
+  snapshotBoundedJson,
   VERIFIER_RESOURCE_LIMITS,
   VERIFIER_SIGNATURE_ENCODING,
   VERIFIER_SIGNATURE_ENCODING_VERSION,
@@ -196,13 +199,22 @@ export async function createSignatureAttestation(input: {
     || input.signature.length > VERIFIER_RESOURCE_LIMITS.maxSignatureChars) {
     throw new Error("Verifier resource limit exceeded: signature attestation");
   }
+  const backendSnapshot = snapshotBoundedJson(input.backend);
+  if (!backendSnapshot.ok || !isCanonicalBackendIdentity(backendSnapshot.snapshot)) {
+    throw new Error(
+      backendSnapshot.ok
+        ? "Malformed signature attestation backend identity"
+        : backendSnapshot.error,
+    );
+  }
+  const backend = backendSnapshot.snapshot;
   const signature_digest = await digestCanonical({ signature: input.signature });
   const attestationWithoutDigest = {
     proof_id: input.proofId,
     verifier_id: input.verifierId,
     encoding_version: VERIFIER_SIGNATURE_ENCODING_VERSION,
     signature_digest,
-    backend: input.backend,
+    backend,
     provenance: input.provenance,
   };
   return {
@@ -263,6 +275,51 @@ function isSignatureVerification(value: unknown): value is BitVMSignatureVerific
   return true;
 }
 
+function hasExactKeys(value: unknown, expected: readonly string[]): boolean {
+  if (!isRecord(value)) return false;
+  const actual = Object.keys(value).sort();
+  const sortedExpected = [...expected].sort();
+  return actual.length === sortedExpected.length
+    && actual.every((key, index) => key === sortedExpected[index]);
+}
+
+function isCanonicalBackendIdentity(value: unknown): value is BackendIdentity {
+  return hasExactKeys(value, ["artifact_digest", "authority", "id", "version"])
+    && isBackendIdentity(value);
+}
+
+function isCanonicalSignatureAttestation(
+  value: unknown,
+  proofId: string,
+  verifierId: string,
+  backend: BackendIdentity,
+  provenance: Provenance,
+): value is SignatureAttestation {
+  if (!hasExactKeys(value, [
+    "attestation_digest",
+    "backend",
+    "encoding_version",
+    "proof_id",
+    "provenance",
+    "signature_digest",
+    "verifier_id",
+  ]) || !isRecord(value)) {
+    return false;
+  }
+  return isNonEmptyString(value.proof_id)
+    && value.proof_id === proofId
+    && value.proof_id.length <= VERIFIER_RESOURCE_LIMITS.maxIdentifierChars
+    && isNonEmptyString(value.verifier_id)
+    && value.verifier_id === verifierId
+    && value.verifier_id.length <= VERIFIER_RESOURCE_LIMITS.maxIdentifierChars
+    && value.encoding_version === VERIFIER_SIGNATURE_ENCODING_VERSION
+    && isDigest(value.signature_digest)
+    && isCanonicalBackendIdentity(value.backend)
+    && backendIdentityEquals(value.backend, backend)
+    && value.provenance === provenance
+    && isDigest(value.attestation_digest);
+}
+
 function validateTapProfile(value: unknown): value is BitVMTapProfile {
   if (!isRecord(value)
     || !isNonEmptyString(value.id)
@@ -315,7 +372,7 @@ async function validateFloorRequest(value: unknown): Promise<FloorValidation> {
   if (value.proof_id.length > VERIFIER_RESOURCE_LIMITS.maxIdentifierChars) {
     return {
       ok: false,
-      proof_id: value.proof_id,
+      proof_id: boundedIdentifier(value.proof_id),
       tap_count: 0,
       failure_code: "resource_limit_exceeded",
       error: "BitVM proof id exceeds the v1 resource limit",
@@ -390,7 +447,7 @@ function makeFloorResult(
   return {
     verified: isProductionVerified(verification, authority),
     taps_generated: tapCount,
-    proof_id: proofId,
+    proof_id: boundedIdentifier(proofId),
     status: resultStatus(verification, authority),
     timestamp: new Date().toISOString(),
     verification,
@@ -536,7 +593,7 @@ export class BitVMBridge {
         );
       }
 
-      logger.info(`Received verification request for proof ${validation.request.proof_id}`);
+      logger.info(`Received verification request for proof ${boundedIdentifier(validation.request.proof_id)}`);
       let verification: VerificationResult;
       try {
         verification = await this.verifier.verify(validation.request.verifier_request);
@@ -748,8 +805,7 @@ export class BitVMBridge {
           || !backendIdentityEquals(signatureVerification.backend, signatureBackend)
           || !backendIdentityEquals(signatureVerification.backend, aggregation.verifier_backend)
           || (signatureVerification.provenance !== "test" && signatureVerification.provenance !== "production")
-          || (signatureVerification.provenance === "production" && !isAuthoritativeBackendIdentity(signatureVerification.backend))
-          || !isRecord(signatureVerification.attestation)) {
+          || (signatureVerification.provenance === "production" && !isAuthoritativeBackendIdentity(signatureVerification.backend))) {
           return {
             accepted: false,
             failure_code: signatureVerification.provenance === "simulated"
@@ -760,7 +816,29 @@ export class BitVMBridge {
         }
 
         let attestationMatches = false;
+        let attestationSnapshot: SignatureAttestation | undefined;
         try {
+          const snapshot = snapshotBoundedJson(signatureVerification.attestation);
+          if (!snapshot.ok) {
+            return {
+              accepted: false,
+              failure_code: snapshot.failure_code,
+              error: snapshot.error,
+            };
+          }
+          if (!isCanonicalSignatureAttestation(
+            snapshot.snapshot,
+            proofId,
+            verifierId,
+            signatureVerification.backend,
+            signatureVerification.provenance,
+          )) {
+            return {
+              accepted: false,
+              failure_code: "attestation_mismatch",
+              error: "Signature attestation shape is outside the v1 contract",
+            };
+          }
           const expectedAttestation = await createSignatureAttestation({
             proofId,
             verifierId,
@@ -768,7 +846,8 @@ export class BitVMBridge {
             backend: signatureVerification.backend,
             provenance: signatureVerification.provenance,
           });
-          attestationMatches = canonicalJson(signatureVerification.attestation) === canonicalJson(expectedAttestation);
+          attestationSnapshot = snapshot.snapshot;
+          attestationMatches = canonicalJson(attestationSnapshot) === canonicalJson(expectedAttestation);
         } catch {
           attestationMatches = false;
         }
@@ -777,6 +856,13 @@ export class BitVMBridge {
             accepted: false,
             failure_code: "attestation_mismatch",
             error: "Signature attestation does not bind the submitted signature",
+          };
+        }
+        if (!attestationSnapshot) {
+          return {
+            accepted: false,
+            failure_code: "attestation_mismatch",
+            error: "Signature attestation snapshot is unavailable",
           };
         }
 
@@ -809,7 +895,7 @@ export class BitVMBridge {
           verifier_id: verifierId,
           signature,
           timestamp: new Date().toISOString(),
-          attestation: signatureVerification.attestation,
+          attestation: attestationSnapshot,
         });
         aggregation.is_complete = aggregation.signatures.length >= aggregation.required;
         return { accepted: true, aggregation: copyAggregation(aggregation) };
@@ -838,7 +924,7 @@ export class BitVMBridge {
       };
     }
 
-    logger.warn(`Challenge requested for tap ${tapIndex} on proof ${proofId}`);
+    logger.warn(`Challenge requested for tap ${tapIndex} on proof ${boundedIdentifier(proofId)}`);
     state.status = "challenged";
     state.activeChallenges.push(tapIndex);
     state.lastUpdate = new Date().toISOString();

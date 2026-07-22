@@ -78,6 +78,18 @@ signatures and invalid recursive metadata are rejected before backend dispatch.
 Oversized fields and normalized over-limit adapter errors return
 `resource_limit_exceeded`; the settlement route returns HTTP 413.
 
+Adapter attestations use the versioned `conxian.verifier.attestation.v1`
+profile: total canonical text is capped at 4,096 characters and 16 KiB UTF-8,
+depth at 8, objects at 16 keys, arrays at 16 entries, keys at 64 characters,
+and strings at 1,024 characters. Only JSON-like primitives, plain objects, and
+dense arrays are accepted. Cycles, accessors, hidden/symbol properties,
+custom or polluted prototypes, forbidden prototype keys, sparse arrays, and
+non-finite numbers fail closed. The boundary traverses with bounded iterative
+work, then stores only a detached deeply frozen snapshot; adapter-owned
+attestation objects cannot mutate authoritative aggregation state after return.
+Invalid or oversized proof/intent identifiers use the fixed `unknown` sentinel
+in direct-library failures, route responses, and logs rather than raw input.
+
 ZKCP lifecycle operations are FIFO-serialized per intent and use generation /
 object-identity compare-and-swap checks before every asynchronous evidence or
 terminal-state commit. BitVM2 submissions reserve signer ids under a per-proof
@@ -86,6 +98,20 @@ commit. Adapter and route-catch errors are normalized without invoking arbitrary
 thrown-value stringification. These controls prevent stale adapter completions
 and concurrent duplicate signers from regressing or duplicating authoritative
 state.
+
+BitVM3 uses the same per-proof FIFO discipline around the full asynchronous
+backend call and commit. Identical request-digest/height/backend replays are
+read-only, conflicting same-id requests fail closed, and generation/state checks
+prevent returned and stored state from diverging. Queue cleanup runs on success,
+failure, and adapter throw.
+
+ZKCP publishes `conxian.zkcp.retention.v1` with 1,024 active and 2,048 total
+retained-intent limits plus a default 15-minute terminal TTL. Capacity handling
+never silently evicts active or pending intents. Expired terminal cleanup
+atomically removes the intent and proof/payment/key-release evidence plus
+generation, lock, and queue bookkeeping. `conxian.zkcp.list.v1` exposes only a
+deterministically ordered bounded page (default 50, maximum 100, offset maximum
+2,048); invalid pagination is typed and the route never returns the full map.
 
 Production construction explicitly injects verifier, payment-observer, and
 key-release dependencies. The checked-in construction uses unavailable

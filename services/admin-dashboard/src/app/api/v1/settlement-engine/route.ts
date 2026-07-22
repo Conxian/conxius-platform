@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { bitvmBridge } from "@/lib/support/bitvm";
-import { zkcpBridge, type ZKCPStatus } from "@/lib/support/zkcp";
+import {
+  validateZKCPListPagination,
+  zkcpBridge,
+  ZKCPBoundaryError,
+  type ZKCPStatus,
+} from "@/lib/support/zkcp";
 import { validateAdminAuth } from "@/lib/support/auth";
 import { isDigest, normalizeBoundaryError, VERIFIER_RESOURCE_LIMITS } from "@/lib/support/verifier-contract";
 
@@ -302,10 +307,10 @@ export async function POST(req: Request) {
       if (payload.status !== undefined && !isZKCPStatus(payload.status)) {
         return failureResponse("malformed_request", "Unknown ZKCP status filter");
       }
-      const intents = payload.status
-        ? zkcpBridge.listIntentsByStatus(payload.status)
-        : zkcpBridge.listIntents();
-      return NextResponse.json({ intents, count: intents.length });
+      const pagination = validateZKCPListPagination(payload.limit, payload.offset);
+      if (!pagination.ok) return failureResponse(pagination.failure_code, pagination.error);
+      const page = zkcpBridge.listIntentsPage(payload.status, pagination.limit, pagination.offset);
+      return NextResponse.json(page);
     }
 
     if (action === "zkcp-get") {
@@ -322,6 +327,9 @@ export async function POST(req: Request) {
 
     return failureResponse("unknown_action", `Unsupported settlement action: ${action}`);
   } catch (error: unknown) {
+    if (error instanceof ZKCPBoundaryError) {
+      return failureResponse(error.failure_code, error.message);
+    }
     return failureResponse("internal_error", error);
   }
 }

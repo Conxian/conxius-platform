@@ -7,7 +7,10 @@ FROM base AS deps
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY services/admin-dashboard/package.json ./services/admin-dashboard/package.json
-RUN pnpm --version && pnpm install --frozen-lockfile --filter admin-dashboard...
+COPY services/admin-pulse-bos/package.json ./services/admin-pulse-bos/package.json
+COPY services/elizaos-plugin-conxian/package.json ./services/elizaos-plugin-conxian/package.json
+COPY scripts/check-dependency-consistency.mjs ./scripts/check-dependency-consistency.mjs
+RUN node scripts/check-dependency-consistency.mjs && pnpm --version && pnpm install --frozen-lockfile --filter admin-dashboard...
 
 FROM base AS builder
 WORKDIR /app

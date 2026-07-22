@@ -249,7 +249,7 @@ function isAbsolutePath(value: string): boolean {
   return normalizedValue.startsWith('/') || /^[A-Za-z]:\//.test(normalizedValue);
 }
 
-export function isContainedRelativePath(targetRelative: string): boolean {
+export function isRelativePathWithinRoot(targetRelative: string): boolean {
   const normalizedRelative = normalizePathSeparators(targetRelative);
   if (normalizedRelative === '') {
     return true;
@@ -262,8 +262,12 @@ export function isContainedRelativePath(targetRelative: string): boolean {
   return !segments.some((segment) => segment.length === 0 || segment === '.' || segment === '..');
 }
 
+export function isContainedRelativePath(targetRelative: string): boolean {
+  return isRelativePathWithinRoot(targetRelative);
+}
+
 function isWithin(rootDirectory: string, targetPath: string): boolean {
-  return isContainedRelativePath(relative(rootDirectory, targetPath));
+  return isRelativePathWithinRoot(relative(rootDirectory, targetPath));
 }
 
 function tryLstat(targetPath: string): ReturnType<typeof lstatSync> | undefined {

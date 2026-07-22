@@ -3,20 +3,22 @@
 
 set -e
 
+REPOSITORY_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 echo "📊 Starting Conxian Performance Benchmarks..."
 echo "------------------------------------------"
 
 # 1. Platform Service Build Performance
 echo "Measuring Admin Dashboard Build Time..."
 if command -v pnpm >/dev/null 2>&1; then
-    cd services/admin-dashboard
+    cd "$REPOSITORY_ROOT"
     START_TIME=$(date +%s)
-    pnpm install > /dev/null 2>&1
-    pnpm build > /dev/null 2>&1
+    pnpm run check:dependency-consistency
+    pnpm install --frozen-lockfile > /dev/null 2>&1
+    pnpm --filter admin-dashboard build > /dev/null 2>&1
     END_TIME=$(date +%s)
     ELAPSED=$((END_TIME - START_TIME))
     echo "✅ Admin Dashboard Build: ${ELAPSED}s"
-    cd - > /dev/null
 else
     echo "⚠️  pnpm not found on host, skipping build benchmark."
 fi

@@ -28,6 +28,7 @@ import {
   discoverRepository,
   executeCli,
   isContainedRelativePath,
+  isRelativePathWithinRoot,
 } from './agent-discovery';
 
 const repositoryRoot = resolve(process.cwd());
@@ -278,6 +279,13 @@ test('rejects absolute and traversal paths', () => {
     };
   });
   expectDiscoveryError(() => discoverRepository(traversalPath), 'unsafe-path');
+});
+
+test('keeps relative containment separator-independent', () => {
+  assert.equal(isRelativePathWithinRoot('..\\outside'), false);
+  assert.equal(isRelativePathWithinRoot('..\\outside\\secret.md'), false);
+  assert.equal(isRelativePathWithinRoot('inside\\child\\context.md'), true);
+  assert.equal(isRelativePathWithinRoot('inside/child/context.md'), true);
 });
 
 test('rejects symlinks that escape the repository root', () => {

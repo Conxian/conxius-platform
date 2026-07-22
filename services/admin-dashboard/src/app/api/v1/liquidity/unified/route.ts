@@ -2,7 +2,7 @@ import { validateAdminAuth } from "@/lib/support/auth";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
-  const authError = validateAdminAuth(req);
+  const authError = await validateAdminAuth(req);
   if (authError) return authError;
   // Unified Cross-Chain Balance API (Phase 7 BFF)
   // Consolidates liquidity visibility across Bitcoin L1, L2 (Lightning/RGB), and Stacks (sBTC)

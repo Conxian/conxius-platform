@@ -32,7 +32,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
   // CON-353: Harden SIDL auth (Checkout remains public for 402 challenge but requires key for payment processing)
   // Actually, standard SIDL requires auth for any non-frame entry.
-  const authError = validateAdminAuth(req);
+  const authError = await validateAdminAuth(req, "write:treasury");
   if (authError) {
     observeSidlResponse({
       endpoint: ENDPOINT,

@@ -3,7 +3,7 @@ import { UsageValidator, UsageEvent } from "../../../../lib/sidl/usageValidation
 import { validateAdminAuth } from "@/lib/support/auth";
 
 export async function POST(req: Request) {
-  const authError = validateAdminAuth(req);
+  const authError = await validateAdminAuth(req, "write:admin");
   if (authError) return authError;
 
   // Usage Validation Instrumentation (CON-1263)

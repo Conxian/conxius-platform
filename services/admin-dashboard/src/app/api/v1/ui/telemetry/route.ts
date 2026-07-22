@@ -2,7 +2,7 @@ import { validateAdminAuth } from "@/lib/support/auth";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
-  const authError = validateAdminAuth(req);
+  const authError = await validateAdminAuth(req);
   if (authError) return authError;
   // UI-BFF Telemetry: Status monitoring for Stacks (L2), Bisq (P2P), RGB, BitVM, and Lightning Network
   // Updated for Phase 7: Includes USI, Nexus OS, and MFE readiness signals.

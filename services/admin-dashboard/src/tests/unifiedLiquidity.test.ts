@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
+
+vi.mock("server-only", () => ({}));
+
 import { GET } from "../app/api/v1/liquidity/unified/route";
 
 const MOCK_API_KEY = "test-api-key-unified";

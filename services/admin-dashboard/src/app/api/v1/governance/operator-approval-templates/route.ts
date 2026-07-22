@@ -23,7 +23,7 @@ interface OperatorApprovalTemplatesResponse {
 }
 
 export async function GET(req: Request) {
-  const authError = validateAdminAuth(req);
+  const authError = await validateAdminAuth(req);
   if (authError) return authError;
 
   try {

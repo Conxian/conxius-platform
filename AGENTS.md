@@ -1399,3 +1399,23 @@ AGENTS.md (this update)
 - Hosted checks must be re-evaluated on the final pushed PR head.
 **Gotchas**:
 - The synthetic discovery fixture intentionally uses `.github/REPOSITORY_TAXONOMY.md` for an isolated optional-file test; the corrected production documentation path is `docs/REPOSITORY_TAXONOMY.md`.
+### 2026-07-22 — Issue #1160 Server-side M2M JWT Authentication
+**Trigger**: Approved OpenSpec implementation for GitHub issue #1160 on `feat/1160-m2m-jwt-auth`.
+**What was done**:
+- Added server-only `jose` HS256 issuance and verification with strict header/claim/lifetime validation, bounded secret/TTL/skew policy, fresh `jti`, service identity checks, and issuance/verification scope ceilings.
+- Added strict Bearer precedence, async M2M/admin guards with explicit route scopes, legacy API/service/external-key compatibility, and Gateway `legacy`/`dual`/`jwt` header modes with process-local pre-expiry cache re-issuance.
+- Added focused security and Gateway migration tests, updated all production async guard callsites, documented environment/operator behavior, and updated the OpenSpec task checklist without claiming Rust Gateway verification.
+- Reconciled the stale root Next.js override with the existing `16.2.11` dashboard lock resolution while adding the `jose` lock entries; this keeps frozen installs reproducible for the current workspace dependency state.
+**Key discoveries**:
+- The dated OpenSpec change validates strictly with the temporary `@fission-ai/openspec` CLI invocation; no repository-installed CLI binary was available.
+- Normal `next build` remains blocked by the pre-existing Next.js `16.2.11` / TypeScript `7.0.2` compiler-discovery incompatibility; workspace typecheck and tests pass, and a temporary typecheck-disabled compile-only build completed successfully.
+- The current Rust Gateway JWT verifier and shared-secret rotation remain outside this repository; deployment must stay on `legacy` until coordinated evidence exists. Issue #1161 owns rotation, overlap, `kid`, and/or JWKS work.
+**Files touched**:
+- `services/admin-dashboard/src/lib/support/m2m.ts`, `services/admin-dashboard/src/lib/support/auth.ts`, `services/admin-dashboard/src/lib/sidl/gateway.ts`
+- All admin-dashboard API route callsites of `validateAdminAuth`, plus `services/admin-dashboard/src/tests/m2m.test.ts`, `services/admin-dashboard/src/tests/gatewayAuth.test.ts`, and server-only test mocks
+- `services/admin-dashboard/package.json`, `package.json`, `pnpm-lock.yaml`, environment schemas/examples, `docs/M2M_AUTHENTICATION.md`, and the issue-1160 OpenSpec tasks
+**Gaps identified**:
+- Coordinate and evidence Rust Gateway JWT verification before enabling `dual` or `jwt` in deployment.
+- Implement multi-key rotation/revocation/JWKS only under issue #1161.
+**Gotchas**:
+- Next build auto-rewrites `tsconfig.json` when its TypeScript dependency check fails; restore the repository's `jsx: preserve` setting after build diagnostics.

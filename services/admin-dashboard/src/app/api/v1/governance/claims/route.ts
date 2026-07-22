@@ -3,7 +3,7 @@ import { validateAdminAuth } from "@/lib/support/auth";
 import { loadClaimsState, proposeClaim } from "@/lib/governance/claims";
 
 export async function GET(req: Request) {
-  const authError = validateAdminAuth(req);
+  const authError = await validateAdminAuth(req);
   if (authError) return authError;
 
   const state = loadClaimsState();
@@ -22,7 +22,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const authError = validateAdminAuth(req);
+  const authError = await validateAdminAuth(req, "write:governance");
   if (authError) return authError;
 
   try {

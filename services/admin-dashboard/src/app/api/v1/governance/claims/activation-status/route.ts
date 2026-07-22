@@ -3,7 +3,7 @@ import { validateAdminAuth } from "@/lib/support/auth";
 import { evaluateActivationGates } from "@/lib/governance/claims";
 
 export async function GET(req: Request) {
-  const authError = validateAdminAuth(req);
+  const authError = await validateAdminAuth(req);
   if (authError) return authError;
 
   const gates = evaluateActivationGates();

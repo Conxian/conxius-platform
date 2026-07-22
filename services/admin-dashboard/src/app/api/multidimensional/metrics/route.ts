@@ -2,7 +2,7 @@ import { validateAdminAuth } from "@/lib/support/auth";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
-  const authError = validateAdminAuth(req);
+  const authError = await validateAdminAuth(req);
   if (authError) return authError;
   // Multidimensional Metrics: Bitcoin Standard Business Intelligence
   // Updated for CON-776: Standardized naming (Markets instead of Corridors)

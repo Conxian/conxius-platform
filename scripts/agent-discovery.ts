@@ -271,22 +271,34 @@ function validateRelativePath(value: unknown, label: string): string {
   return candidate;
 }
 
-function isWithin(rootDirectory: string, targetPath: string): boolean {
-  const targetRelative = relative(rootDirectory, targetPath);
-  return (
-    targetRelative === '' ||
-    (!targetRelative.startsWith(`..${requirePathSeparator()}`) &&
-      targetRelative !== '..' &&
-      !isAbsolutePath(targetRelative))
-  );
-}
-
-function requirePathSeparator(): string {
-  return '/';
+function normalizePathSeparators(value: string): string {
+  return value.replaceAll('\\', '/');
 }
 
 function isAbsolutePath(value: string): boolean {
-  return value.startsWith('/') || /^[A-Za-z]:[\\/]/.test(value);
+  const normalizedValue = normalizePathSeparators(value);
+  return normalizedValue.startsWith('/') || /^[A-Za-z]:\//.test(normalizedValue);
+}
+
+export function isRelativePathWithinRoot(targetRelative: string): boolean {
+  const normalizedRelative = normalizePathSeparators(targetRelative);
+  if (normalizedRelative === '') {
+    return true;
+  }
+  if (isAbsolutePath(normalizedRelative)) {
+    return false;
+  }
+
+  const segments = normalizedRelative.split('/');
+  return !segments.some((segment) => segment.length === 0 || segment === '.' || segment === '..');
+}
+
+export function isContainedRelativePath(targetRelative: string): boolean {
+  return isRelativePathWithinRoot(targetRelative);
+}
+
+function isWithin(rootDirectory: string, targetPath: string): boolean {
+  return isRelativePathWithinRoot(relative(rootDirectory, targetPath));
 }
 
 function tryLstat(targetPath: string): ReturnType<typeof lstatSync> | undefined {
@@ -396,10 +408,12 @@ function parseContextEntries(
   value: unknown,
   label: string,
   seenPaths: Set<string>,
+  seenPriorities: Set<number>,
+  minimumPriority = 0,
 ): ContextEntry[] {
   const entries = requireArray(value, label);
   const parsed: ContextEntry[] = [];
-  let previousPriority = 0;
+  let previousPriority = minimumPriority;
 
   for (const [index, entryValue] of entries.entries()) {
     const entry = requireRecord(entryValue, `${label}[${index}]`);
@@ -410,9 +424,13 @@ function parseContextEntries(
     }
     seenPaths.add(pathValue);
     const priority = requireInteger(entry.priority, `${label}[${index}].priority`);
+    if (seenPriorities.has(priority)) {
+      throw new DiscoveryError('duplicate-entry', `${label} contains duplicate priority '${priority}'.`);
+    }
     if (priority <= previousPriority) {
       throw new DiscoveryError('invalid-priority', `${label} priorities must ascend strictly.`);
     }
+    seenPriorities.add(priority);
     previousPriority = priority;
     parsed.push({
       path: pathValue,
@@ -444,8 +462,20 @@ function parseManifest(value: unknown): AgentManifest {
   const context = requireRecord(manifest.context, 'manifest.context');
   assertKeys(context, ['required', 'optional'], 'manifest.context');
   const seenPaths = new Set<string>();
-  const required = parseContextEntries(context.required, 'manifest.context.required', seenPaths);
-  const optional = parseContextEntries(context.optional, 'manifest.context.optional', seenPaths);
+  const seenPriorities = new Set<number>();
+  const required = parseContextEntries(
+    context.required,
+    'manifest.context.required',
+    seenPaths,
+    seenPriorities,
+  );
+  const optional = parseContextEntries(
+    context.optional,
+    'manifest.context.optional',
+    seenPaths,
+    seenPriorities,
+    required[required.length - 1]?.priority ?? 0,
+  );
   const requiredPaths = new Set(required.map((entry) => entry.path));
   for (const requiredPath of REQUIRED_CONTEXT_PATHS) {
     if (!requiredPaths.has(requiredPath)) {

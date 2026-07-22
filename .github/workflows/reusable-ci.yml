@@ -46,6 +46,9 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
 
+      - name: Validate dependency consistency
+        run: pnpm run check:dependency-consistency
+
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 

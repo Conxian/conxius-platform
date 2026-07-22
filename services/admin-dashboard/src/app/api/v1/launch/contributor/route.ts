@@ -64,7 +64,7 @@ function buildEmptyContributorProfile(address: string): ContributorProfile {
 }
 
 export async function GET(request: Request) {
-  const authError = validateAdminAuth(request);
+  const authError = await validateAdminAuth(request);
   if (authError) return authError;
 
   const { searchParams } = new URL(request.url);

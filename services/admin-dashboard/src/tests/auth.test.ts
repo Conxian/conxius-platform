@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('server-only', () => ({}));
+
 import { POST as postSecrets } from '../app/api/secrets/route';
 import { GET as getMetrics } from '../app/api/metrics/route';
 

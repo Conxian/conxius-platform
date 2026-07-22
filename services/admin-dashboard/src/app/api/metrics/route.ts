@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: Request): Promise<Response> {
   // CON-353: Harden Metrics endpoint
-  const authError = validateAdminAuth(req);
+  const authError = await validateAdminAuth(req);
   if (authError) return authError;
 
   const payload = await sidlMetricsSnapshot();

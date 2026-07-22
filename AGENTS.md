@@ -81,7 +81,9 @@ Based on comprehensive external research + org repo analysis (repos are **far ah
 **Repo**: `Conxian/Conxian` — 218 Clarity contracts, 76+ test files, mainnet deployed
 
 **Key Revenue System (CXIP-013)**:
-- **100 bps (1%)** mandatory protocol fee via `revenue-automation.clar`
+- **Current observed 100 bps / 1% implementation baseline** via
+  `revenue-automation.clar`; incomplete flow hardening remains tracked in
+  `Conxian/Conxian#538`, and rate changes remain protocol governance decisions.
 - **6-Way Fiscal Dam Split** (cxd-treasury.clar):
   - Treasury (SAB Operations): 45%
   - Bounties (Community): 30%
@@ -93,7 +95,9 @@ Based on comprehensive external research + org repo analysis (repos are **far ah
 - Bootstrap wallet via `founder-cut-beneficiary` in `operational-treasury.clar`
 
 **Key Contracts**:
-- `revenue-automation.clar` — enforces 100 bps fee
+- `revenue-automation.clar` — records the current observed 100 bps / 1%
+  implementation baseline; incomplete flow hardening remains tracked in
+  `Conxian/Conxian#538`, and rate changes remain protocol governance decisions.
 - `revenue-distributor.clar` — token buy-backs and burns
 - `founder-vault.clar` — founder allocations and vesting
 - `dimensional-core.clar` — multidimensional DeFi engine
@@ -171,8 +175,8 @@ All services use multi-layered M2M auth per `docs/M2M_AUTHENTICATION.md`:
 - **Gateway clients**: `services/admin-dashboard/src/lib/sidl/gateway.ts`, `services/elizaos-plugin-conxian/src/conxianClient.ts` now include M2M auth headers
 
 ### Key Gaps Still Open
-- **`revenue-automation.clar`** — referenced in `docs/runbooks/MAINTAINER_BOUNTY_RUNBOOK.md` but does not exist in the repo (#1164)
-- **JWT-based M2M token auth** — M2M module supports keys/scopes, but JWT tokens not implemented (#1160)
+- **Revenue automation handoff** — the protocol-owned `Conxian/Conxian` repository contains `contracts/treasury/revenue-automation.clar` with a current observed 100 bps / 1% baseline; platform specification and handoff are tracked in #1164/#1167, while protocol hardening and integration remain tracked in `Conxian/Conxian#538`
+- **JWT-based M2M token auth** — platform-side JWT issuance/verification is implemented; coordinated Rust Gateway verification remains open (#1160)
 - **Key rotation mechanism** — M2M keys are static, no rotation API (#1161)
 - **Swarm runtime transports/scheduling** — The transport-neutral `conxian.swarm` v1 protocol, validators, and tests are implemented for #1163; provider transports, authentication, and runtime scheduling remain out of scope.
 - **"Harvest Sovereign Yield"** — both SFO implementations use `Math.random()` stubs
@@ -404,13 +408,13 @@ See `docs/SELF_EVOLVING_KB.md` for full architecture.
 | Local-first UI Wasm | In progress | — |
 | MFE Federation | Scaffolded | — |
 | Contributor Claim Ledger | **Implemented** | #1159 |
-| M2M Authentication | **Implemented (keys/scopes)** | #1160, #1161 |
 | Agent Onboarding & Discovery | **Implemented (manifest/registry/CLI/tests)** | #1162 |
-| Swarm Coordination | **Implemented (transport-neutral protocol/validation/tests)** | #1163 |
+| M2M Authentication | **Implemented (keys/scopes + platform JWT)** | #1160, #1161 |
+| Swarm Coordination | **Implemented (transport-neutral protocol/validation/tests; patterns documented)** | #1163 |
 | **Self-Evolving KB** | **Implemented (scaffolded)** | #1165 |
 | Proof-carrying treasury analytics | Spec-only | — |
 | SFO yield harvesting | Math.random() stubs | — |
-| revenue-automation.clar | Not implemented | #1164 |
+| Revenue automation ownership/hardening | Platform handoff/spec complete; upstream hardening and integration remain | Conxian #538 / platform #1164 |
 
 ### Cross-Repo Dependencies (Conxian Org — 14 repos total)
 
@@ -444,7 +448,7 @@ Governance: 4 files/~40 tests. SIDL: 3/~25. Support: 5/~30. Bitcoin stack: 5/~35
 | `ADMIN_DASHBOARD_API_KEY` | Primary admin API authentication |
 | `SERVICE_KEY_*` | M2M service keys for internal auth (SERVICE_KEY_GATEWAY, SERVICE_KEY_ELIZAOS, etc.) |
 | `EXTERNAL_API_KEYS` | JSON map of external API keys to scopes |
-| `GATEWAY_JWT_SECRET` | For future JWT-based M2M auth |
+| `GATEWAY_JWT_SECRET` | Server-only platform JWT issuance/verification; Rust Gateway verification remains a coordinated follow-up |
 
 See `docs/M2M_AUTHENTICATION.md` for full M2M auth configuration.
 
@@ -1372,3 +1376,118 @@ AGENTS.md (this update)
 - Independent external review/approval remains unchecked; provider transports, authentication integration, and runtime scheduling remain outside this pure library.
 **Gotchas**:
 - Never accept `trusted_discovery_anchor` from an untrusted swarm payload or describe the pure coordination library as authenticating its origin.
+
+### 2026-07-22 — Post-merge PR #1188 Discovery and CI Remediation
+**Trigger**: Formal post-merge review `4754509039` for PR #1188.
+**What was done**:
+- Restored the OpenSpec-authorized Next.js `15.5.18` / TypeScript `6.0.3` graph across the root override, dashboard manifest, all workspace TypeScript manifests, and `pnpm-lock.yaml`.
+- Declared root-owned TypeScript `6.0.3` for the strict discovery compiler contract and added `check:dependency-consistency` before frozen CI, cross-repo, Docker, and benchmark installs.
+- Normalized both path separators in discovery containment and added Windows-style escape/descendant regression coverage.
+- Replaced the remaining cross-repo and benchmark unlocked install paths with root frozen workspace installs.
+- Updated the active CI-reliability and agent-discovery OpenSpec task notes with current-main regression context and validation evidence.
+**Key discoveries**:
+- PRs #1178, #1179, #1185, and #1186 landed after the earlier dependency repair evidence and reintroduced Next.js `16.2.11` / TypeScript `7.0.2`, leaving the root override and lockfile inconsistent on merged main.
+- The root assertion must run before dependency installation to provide a useful mismatch diagnostic; the Docker stage copies all workspace manifests needed by that assertion.
+**Files touched**:
+- `package.json`, `pnpm-lock.yaml`, `services/admin-dashboard/package.json`, `services/admin-pulse-bos/package.json`, `services/elizaos-plugin-conxian/package.json`
+- `scripts/check-dependency-consistency.mjs`, `scripts/agent-discovery.ts`, `scripts/agent-discovery.test.ts`, `scripts/run-benchmarks.sh`
+- `services/admin-dashboard/Dockerfile`, `.github/workflows/reusable-ci.yml`, `.github/workflows/cross-repo-integration-mvp.yml`
+- `openspec/changes/2026-07-21-ci-dependency-and-kb-reliability/tasks.md`, `openspec/changes/2026-07-22-issue-1162-agent-discovery/tasks.md`
+**Gaps identified**:
+- Direct Docker and Compose validation remains blocked in this devbox because the `docker` command is not installed; hosted checks are pending on the remediation PR head.
+**Gotchas**:
+- The earlier PR #1188 validation note correctly described a pre-existing frozen-install blocker, but its OpenSpec evidence was stale after later Dependabot merges; current-head claims must use the remediation head only.
+
+### 2026-07-22 — Revenue Automation Protocol Handoff
+**Trigger**: Platform issue #1164 approval comment; aligned with platform issue #1167.
+**What was done**:
+- Confirmed that the protocol-owned `Conxian/Conxian` repository already contains `contracts/treasury/revenue-automation.clar`, registered in `Clarinet.toml` and the mainnet manifest, with a current observed 100 bps / 1% implementation baseline.
+- Created the durable protocol handoff issue [Conxian/Conxian#538](https://github.com/Conxian/Conxian/issues/538) for future Clarity implementation, tests, deployment policy, and economic-policy decisions.
+- Added the canonical revenue automation policy spec and dated OpenSpec artifacts defining the protocol/platform boundary, flow-registration requirements, exactly-once and fail-closed invariants, and Given/When/Then acceptance scenarios.
+- Clarified the maintainer bounty runbook so Gateway and `BOUNTY_PAYOUT_ACTIVE` remain operational controls while protocol state remains authoritative and Clarity changes stay in the protocol repository.
+- Corrected the active gap/status claims in this file without rewriting prior historical session logs.
+**Key discoveries**:
+- The original #1164 premise was repository-scoped: the contract is not missing organization-wide; it is upstream and protocol-owned.
+- Protocol issue #488 proposes an unresolved alternative fee schedule and must not be adopted by the platform; protocol issue #469 records no-op fee paths that remain upstream follow-up.
+- The upstream README documents an `initialize` signature that requires reconciliation with the actual contract interface and initialization behavior; this is tracked in the handoff issue rather than treated as completed hardening.
+**Files touched**:
+- `openspec/changes/2026-07-22-revenue-automation-handoff/`
+- `openspec/specs/revenue-automation-policy.spec.md`
+- `docs/runbooks/MAINTAINER_BOUNTY_RUNBOOK.md`
+- `AGENTS.md`
+**Gaps identified**:
+- Upstream trigger coverage, replay semantics, caller authorization, pause/fail-closed behavior, atomic accounting/transfers, events, rounding, zero-fee behavior, README initialization documentation, and no-op fee paths remain protocol-owned work in #538.
+- This platform PR does not claim upstream Clarity implementation or audit completion.
+**Gotchas**:
+- Keep the 100 bps / 1% value labeled as an observed implementation baseline, not an immutable policy; any rate change requires protocol governance.
+- Do not “fix” the historical #1164 session claims in place; preserve the append-only knowledge-base record and update only active status sections.
+
+### 2026-07-22 — PR #1191 Mainline Merge Verification
+**Trigger**: PR #1191 request to merge the current `origin/main` into `charlie/1164-revenue-automation-handoff`.
+**What was done**:
+- Fetched `origin/main` at `452834b4a81de32ed6338a22ad283358004e448f`, checked out the PR head at `a9b81c345348eb19020a98378588c37463400411`, and ran the required non-rebase merge; Git reported `Already up to date`.
+- Confirmed that the current PR head is directly based on the fetched mainline, so no content conflicts required manual resolution.
+**Key discoveries**:
+- The merge session is limited to preserving the existing protocol-owned revenue automation handoff and platform routing boundary; it does not add Clarity implementation or economic-policy changes.
+**Files touched**:
+- `AGENTS.md`
+**Gaps identified**:
+- Hosted checks remain the final PR validation gate after the branch update.
+**Gotchas**:
+- Keep the existing OpenSpec handoff scope intact and do not rewrite prior session-log entries.
+
+### 2026-07-22 — PR #1189 Mainline Merge Resolution
+**Trigger**: PR #1189 request to fetch `origin/main`, resolve all merge conflicts, validate, and update the PR head branch.
+**What was done**:
+- Fetched `origin/main` at `0117d55a59155e36ec6e6fd1efcf487aef632268`, checked out `fix/1162-agent-discovery-hardening` at `2bf3f0505cee57bfeb4830913f22a110b8740e7f`, and merged `origin/main` without rebasing.
+- Resolved the two content conflicts in `scripts/agent-discovery.ts` and `scripts/agent-discovery.test.ts` by retaining mainline's cross-platform helper contract while preserving the PR's stricter empty/current/traversal-segment containment checks, priority validation, and regression coverage.
+- Preserved all non-conflicting mainline changes, including the revenue-automation handoff and dependency-consistency updates.
+- Passed focused discovery tests and strict typecheck, plus the root test and typecheck suites.
+**Key discoveries**:
+- The devbox checkout is shallow at the mainline remediation boundary; deepening the fetched main history was required for Git to identify the valid merge base `f8a231baa8131398b27139a1fbbc22b2d0a3a290` instead of treating the histories as unrelated.
+- The final containment implementation exposes the mainline `isRelativePathWithinRoot` seam and keeps the PR's `isContainedRelativePath` seam as a compatibility alias over the same hardened predicate.
+**Files touched**:
+- `scripts/agent-discovery.ts`
+- `scripts/agent-discovery.test.ts`
+- `AGENTS.md`
+- Mainline files brought into the merge from `origin/main`.
+**Gaps identified**:
+- Hosted checks must be re-evaluated on the pushed merge commit.
+**Gotchas**:
+- Do not use `--allow-unrelated-histories` for this repository; the initial refusal came from the shallow clone, and history deepening restored the normal merge base.
+
+### 2026-07-22 — PR #1189 CI/Rebase Remediation Follow-up
+**Trigger**: PR #1189 formal review after CI repair PR #1190 and a concurrent remote PR-branch merge.
+**What was done**:
+- Preserved the remote PR merge resolution against current `origin/main` rather than overwriting its newer work, then corrected the canonical taxonomy reference in `docs/AGENT_ONBOARDING.md`.
+- Confirmed the follow-up changed no dependency manifests or lockfiles and kept the synthetic discovery fixture path unchanged.
+**Key discoveries**:
+- PR #1190 fixed the base mismatch on main by restoring the Next.js `15.5.18` / TypeScript `6.0.3` dependency graph; PR #1189 needed no additional dependency policy change.
+**Files touched**:
+- `docs/AGENT_ONBOARDING.md`
+- `AGENTS.md`
+**Gaps identified**:
+- Hosted checks must be re-evaluated on the final pushed PR head.
+**Gotchas**:
+- The synthetic discovery fixture intentionally uses `.github/REPOSITORY_TAXONOMY.md` for an isolated optional-file test; the corrected production documentation path is `docs/REPOSITORY_TAXONOMY.md`.
+### 2026-07-22 — Issue #1160 Server-side M2M JWT Authentication
+**Trigger**: Approved OpenSpec implementation for GitHub issue #1160 on `feat/1160-m2m-jwt-auth`.
+**What was done**:
+- Added server-only `jose` HS256 issuance and verification with strict header/claim/lifetime validation, bounded secret/TTL/skew policy, fresh `jti`, service identity checks, and issuance/verification scope ceilings.
+- Added strict Bearer precedence, async M2M/admin guards with explicit route scopes, legacy API/service/external-key compatibility, and Gateway `legacy`/`dual`/`jwt` header modes with process-local pre-expiry cache re-issuance.
+- Added focused security and Gateway migration tests, updated all production async guard callsites, documented environment/operator behavior, and updated the OpenSpec task checklist without claiming Rust Gateway verification.
+- Added exported-handler route authorization coverage for `admin:secrets`, `admin:deploy`, `write:treasury`, and `write:governance`, plus adversarial JWT boundary tests and cache invalidation coverage for audience, issuer, and secret changes.
+- Reconciled the branch with current `origin/main`'s repaired Next.js `15.5.18` / TypeScript `6.0.3` dependency graph while retaining the `jose` lock entries; frozen installation and both workspace builds pass after the rebase without changing JWT runtime semantics.
+**Key discoveries**:
+- The dated OpenSpec change validates strictly with the temporary `@fission-ai/openspec` CLI invocation; no repository-installed CLI binary was available.
+- The original pre-rebase branch reproduced the pre-existing Next.js `16.2.11` / TypeScript `7.0.2` compiler-discovery failure (`The "id" argument must be of type string. Received undefined`). Current `origin/main` carries the repaired Next.js `15.5.18` / TypeScript `6.0.3` graph, and both dashboard and workspace builds now pass after rebasing.
+- The current Rust Gateway JWT verifier and shared-secret rotation remain outside this repository; deployment must stay on `legacy` until coordinated evidence exists. Issue #1161 owns rotation, overlap, `kid`, and/or JWKS work.
+**Files touched**:
+- `services/admin-dashboard/src/lib/support/m2m.ts`, `services/admin-dashboard/src/lib/support/auth.ts`, `services/admin-dashboard/src/lib/sidl/gateway.ts`
+- All admin-dashboard API route callsites of `validateAdminAuth`, plus `services/admin-dashboard/src/tests/m2m.test.ts`, `services/admin-dashboard/src/tests/gatewayAuth.test.ts`, `services/admin-dashboard/src/tests/routeAuth.test.ts`, and server-only test mocks
+- `services/admin-dashboard/package.json`, `package.json`, `pnpm-lock.yaml`, environment schemas/examples, `docs/M2M_AUTHENTICATION.md`, and the issue-1160 OpenSpec tasks/evidence
+**Gaps identified**:
+- Coordinate and evidence Rust Gateway JWT verification before enabling `dual` or `jwt` in deployment.
+- Implement multi-key rotation/revocation/JWKS only under issue #1161.
+**Gotchas**:
+- Next build auto-rewrites `tsconfig.json` to `jsx: react-jsx`; restore the repository's intentional `jsx: preserve` setting after each build diagnostic. The final worktree keeps the original setting.

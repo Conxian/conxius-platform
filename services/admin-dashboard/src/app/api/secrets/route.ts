@@ -51,7 +51,7 @@ function escapeEnvValue(rawValue: unknown) {
 }
 
 export async function POST(req: Request) {
-  const authError = validateAdminAuth(req);
+  const authError = await validateAdminAuth(req, "admin:secrets");
   if (authError) return authError;
 
   try {

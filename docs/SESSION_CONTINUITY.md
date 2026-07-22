@@ -117,6 +117,21 @@ When transitioning between agents:
 [`general-purpose` / `code-explorer` / `bash-runner`]
 ```
 
+### Machine-readable handover (`conxian.swarm` `handover.v1`)
+
+The Markdown handover remains the human-readable compatibility format. For automated resumption, create a `handover.v1` document with the exported `createHandover()` helper and validate it with `validateHandover()` or `assessHandoverResumability()`. When both formats are present, the machine-readable record is authoritative for lifecycle state, task status, digests, conflicts, risks, blockers, and resume actions; Markdown may explain those fields but must not override them.
+
+The machine contract is defined in [`schemas/agent-swarm.schema.json`](../schemas/agent-swarm.schema.json) and implemented in [`scripts/agent-coordination.ts`](../scripts/agent-coordination.ts). A valid handover includes:
+
+- **Linkage:** `handover_id`, `correlation_id`, `graph_id`, optional source/target identities, and `links` to the graph, artifacts, or prior messages.
+- **State:** `captured_at`, `expires_at`, `lifecycle_state`, and disjoint `completed_tasks`, `active_tasks`, `blocked_tasks`, and `pending_tasks`.
+- **Integrity:** `integrity.digest`, artifact `digest` values, context `allowlist_digest`, and each context entry's `provenance_digest`.
+- **Risks and blockers:** `risks_and_blockers`, `blocked_tasks`, and `unresolved_conflicts` with stable IDs and evidence digests.
+- **Next steps:** ordered `resume_instructions` containing `instruction_id`, `sequence`, `task_id`, `action`, `depends_on`, and an explicit `acceptance` condition.
+- **Context:** a bounded `context_snapshot`; missing, stale, expired, or unverifiable mandatory context makes the handover non-resumable rather than silently usable.
+
+Migration from Markdown is direct: map **Context** to `correlation_id`/`graph_id` and the context snapshot, **What Was Done** to completed/active task references, **What Remains** to blocked/pending tasks and resume instructions, **Key Discoveries** to decisions/artifacts, and **Open Questions** to risks/blockers or unresolved conflicts. Do not put secrets or provider transcripts in either format.
+
 ---
 
 ## Context Preservation
@@ -131,6 +146,16 @@ When transitioning between agents:
 | Key decisions | Yes | For alignment |
 | Next steps | Yes | For continuity |
 | Session log | Yes | In AGENTS.md |
+
+### Machine-readable context snapshots
+
+Use `packageContext()` to build a snapshot from caller-supplied values and the #1162 discovery allowlist, `resolveContextSnapshot()` to re-check freshness at resume time, and `mergeContextSnapshots()` to combine snapshots deterministically. `redactSensitiveFields()` is available when preparing non-sensitive task data. These helpers are pure and do not read the filesystem, environment, network, or provider transcript.
+
+Allowed sources are explicit current-task inputs, governance/canonical sources, #1162-declared repository paths, validated artifact references, and explicitly marked assumptions. The precedence tiers are, from highest to lowest: task input; governance/canonical; architectural; operational; evidence; historical; assumption. Historical context is reference-only and assumptions are never authoritative. Conflicts retain selected and discarded context IDs with a machine-readable reason; they are not resolved by arrival order.
+
+Each entry records classification, sensitivity, redaction, provenance, `captured_at`, optional `stale_after`/`expires_at`, precedence, byte length, depth, and truncation metadata. Required context that is missing, stale, or expired cannot silently satisfy a current requirement; `allow_stale` only preserves stale evidence for explicit review, and `resolveContextSnapshot()` reports it as invalid. Sensitive values become typed redaction markers, including nested keys that resemble secrets or credentials.
+
+Every snapshot enforces `max_items`, `max_total_bytes`, `max_entry_bytes`, and `max_depth`. Bounds fail closed unless the caller explicitly enables truncation, in which case a truncation marker and original digest are retained. The complete machine contract is in [`schemas/agent-swarm.schema.json`](../schemas/agent-swarm.schema.json); keep this guide to usage and migration rules rather than duplicating the schema.
 
 ### Session Log Search
 

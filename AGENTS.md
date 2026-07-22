@@ -174,12 +174,18 @@ All services use multi-layered M2M auth per `docs/M2M_AUTHENTICATION.md`:
 - **`revenue-automation.clar`** — referenced in `docs/runbooks/MAINTAINER_BOUNTY_RUNBOOK.md` but does not exist in the repo (#1164)
 - **JWT-based M2M token auth** — M2M module supports keys/scopes, but JWT tokens not implemented (#1160)
 - **Key rotation mechanism** — M2M keys are static, no rotation API (#1161)
-- **Swarm coordination** — Multi-agent patterns not implemented (#1163)
+- **Swarm runtime transports/scheduling** — The transport-neutral `conxian.swarm` v1 protocol, validators, and tests are implemented for #1163; provider transports, authentication, and runtime scheduling remain out of scope.
 - **"Harvest Sovereign Yield"** — both SFO implementations use `Math.random()` stubs
 - **Yield sources** defined in scoring matrix (Babylon Staking G-43, ctUSD G-22, Lightning Async Payments G-53) have no UI integration
 - **Proof-carrying treasury analytics** (`openspec/changes/2026-05-12-proof-carrying-analytics-treasury-oracle/`) — defined but not implemented
 
 > **Note**: Contributor Claim Ledger implemented (#1159). Self-evolving KB scaffolded, TAVILY secret set (#1165). Key Gaps list updated 2026-07-15.
+
+### Swarm Coordination Protocol (#1163)
+- **Contract**: `conxian.swarm` v1 is defined by `schemas/agent-swarm.schema.json` and the reviewed OpenSpec change under `openspec/changes/2026-07-22-issue-1163-swarm-coordination/`.
+- **Implementation**: `scripts/agent-coordination.ts` provides strict envelope/lifecycle validation, canonical JSON and domain-separated digests, DAG ordering, capability matching, duplicate/conflict handling, deterministic aggregation, handover validation, and bounded context packaging/merging.
+- **Boundary**: The module is zero-network and side-effect free. It does not schedule agents, broker messages, execute skills, select providers, or provide transport/authentication; those remain consumer responsibilities.
+- **Dependency**: Context packaging consumes only explicit task data, validated artifact references, marked assumptions, or the repository-relative allowlist supplied by #1162 discovery.
 
 ### Reward Source Breakdown (Merged in #1115)
 - API: `GET /api/v1/rewards/sources` → 4 revenue sources (Protocol Fees 38%, Staking Yield 28%, Treasury Yield 20%, Service Revenue 14%) mapped to 4 allocation categories (Community 40%, Governance 25%, Operations 20%, Reserve 15%), each tagged with SFO operational units
@@ -400,7 +406,7 @@ See `docs/SELF_EVOLVING_KB.md` for full architecture.
 | Contributor Claim Ledger | **Implemented** | #1159 |
 | M2M Authentication | **Implemented (keys/scopes)** | #1160, #1161 |
 | Agent Onboarding & Discovery | **Implemented (manifest/registry/CLI/tests)** | #1162 |
-| Swarm Coordination | **Patterns documented** | #1163 |
+| Swarm Coordination | **Implemented (transport-neutral protocol/validation/tests)** | #1163 |
 | **Self-Evolving KB** | **Implemented (scaffolded)** | #1165 |
 | Proof-carrying treasury analytics | Spec-only | — |
 | SFO yield harvesting | Math.random() stubs | — |
@@ -1305,3 +1311,29 @@ AGENTS.md (this update)
 - Hosted checks remain to be evaluated after the feature branch is pushed.
 **Gotchas**:
 - The current `origin/main` dependency lockfile predates the root Next.js override update; this issue-1162 change intentionally avoids unrelated dependency graph repairs.
+
+### 2026-07-22 — Swarm Coordination Phase 3 Documentation and CI (#1163)
+**Trigger**: Issue #1163 — complete protocol documentation, CI integration, OpenSpec evidence, and session continuity on `feat/1163-swarm-coordination`.
+**What was done**:
+- Documented the implemented `conxian.swarm` v1 envelope/lifecycle, DAG and capability matching, idempotent delivery, deterministic aggregation/conflict semantics, and transport-neutral ownership boundary in `docs/AGENT_ONBOARDING.md`.
+- Documented the `handover.v1` machine contract, Markdown migration relationship, linkage/digest/risk/blocker/next-step fields, bounded context packaging, precedence, staleness, redaction, and size behavior in `docs/SESSION_CONTINUITY.md`.
+- Added focused swarm tests and typecheck steps to `.github/workflows/reusable-ci.yml` beside the existing #1162 discovery checks.
+- Updated the #1163 OpenSpec checklist with implementation, test, CI, documentation, acceptance-criteria, and validation evidence; preserved the missing standalone spec and independent-review items as outstanding.
+- Corrected current swarm status and recorded the implementation boundary in `AGENTS.md` without rewriting prior session history.
+**Key discoveries**:
+- The current implementation is intentionally concentrated in `scripts/agent-coordination.ts` with `schemas/agent-swarm.schema.json`; the originally proposed `src/swarm/*` module split and standalone `openspec/specs/swarm-coordination-v1.spec.md` do not exist on this branch.
+- Root package scripts already use the requested `test:agent-coordination` and `typecheck:agent-coordination` names, so `package.json` required no change.
+- The protocol validates and preserves evidence but does not provide transport delivery, authentication, provider selection, scheduling, broker behavior, or skill execution.
+**Files touched**:
+- `docs/AGENT_ONBOARDING.md`
+- `docs/SESSION_CONTINUITY.md`
+- `.github/workflows/reusable-ci.yml`
+- `openspec/changes/2026-07-22-issue-1163-swarm-coordination/tasks.md`
+- `AGENTS.md`
+**Gaps identified**:
+- Standalone canonical spec publication and independent review/approval remain outstanding.
+- The focused suite does not yet include a dedicated timestamp-normalization vector; existing validators and fixtures exercise RFC 3339 normalization.
+- Provider transports, authentication integration, and runtime scheduling are intentionally out of scope for #1163.
+**Gotchas**:
+- Do not describe `conxian.swarm` as a scheduler, queue, broker, or provider runtime; it is a transport-neutral validation/interchange layer.
+- Do not mark the standalone spec or review gate complete based only on the implementation/schema and focused tests.

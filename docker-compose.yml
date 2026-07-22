@@ -35,6 +35,20 @@ services:
     environment:
       - NEXT_PUBLIC_CORE_API_URL=${NEXT_PUBLIC_CORE_API_URL}
       - ADMIN_DASHBOARD_API_KEY=${ADMIN_DASHBOARD_API_KEY}
+      - SERVICE_KEY_GATEWAY=${SERVICE_KEY_GATEWAY}
+      - SERVICE_KEY_ELIZAOS=${SERVICE_KEY_ELIZAOS}
+      - SERVICE_KEY_NEXUS=${SERVICE_KEY_NEXUS}
+      - SERVICE_KEY_ORBIT=${SERVICE_KEY_ORBIT}
+      - SERVICE_KEY_WALLET=${SERVICE_KEY_WALLET}
+      - SERVICE_KEY_UI=${SERVICE_KEY_UI}
+      - SERVICE_KEY_ADMIN_DASHBOARD=${SERVICE_KEY_ADMIN_DASHBOARD}
+      - SERVICE_KEY_PULSE_BOS=${SERVICE_KEY_PULSE_BOS}
+      - M2M_SERVICE_KEY_REGISTRY_PATH=/var/lib/conxian/m2m/service-key-registry.json
+      - PROMETHEUS_SCRAPE_PASSWORD_FILE=/run/secrets/prometheus_scrape_password
+    volumes:
+      - m2m_registry_data:/var/lib/conxian/m2m
+    secrets:
+      - prometheus_scrape_password
     networks:
       - conxian-network
     healthcheck:
@@ -155,6 +169,8 @@ services:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus-alerts.yml:/etc/prometheus/prometheus-alerts.yml:ro
       - prometheus_data:/prometheus
+    secrets:
+      - prometheus_scrape_password
     networks:
       - conxian-network
     depends_on:
@@ -192,5 +208,10 @@ networks:
 
 volumes:
   postgres_data:
+  m2m_registry_data:
   prometheus_data:
   grafana_data:
+
+secrets:
+  prometheus_scrape_password:
+    file: ${PROMETHEUS_SCRAPE_PASSWORD_FILE:-.secrets/prometheus-scrape.password}

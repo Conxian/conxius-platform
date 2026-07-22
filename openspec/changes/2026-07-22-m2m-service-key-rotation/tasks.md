@@ -60,13 +60,22 @@
     and wrong-version fail-closed behavior, route validation/redaction, marker
     idempotency, marker-qualified recovery, and inter-process same-generation
     races.
-- [ ] **T9 — Document deployment and compatibility operations.** Record the
+
+  - [x] Phase 3B coverage: protected metrics scrape success, invalid scrape
+    credentials, missing scrape configuration, and continued admin-key access.
+- [x] **T9 — Document deployment and compatibility operations.** Record the
   persistent-volume/single-writer requirement, consumer update sequence, admin
   dashboard self-key procedure, distinction between service and admin API keys,
   rollback runbook, registry path/lock settings, and secret redaction rules.
 - [ ] **T10 — Validate the implementation.** Run the repository's applicable
   typecheck, lint, unit/integration tests, OpenSpec checks if available,
   `git diff --check`, and a deployment-specific persistence/lock validation.
+  - [x] Phase 3B local validation: focused M2M tests, metrics/auth tests,
+    admin-dashboard typecheck, full admin-dashboard tests, configuration
+    structure checks, and `git diff --check`.
+  - [ ] Docker/Compose persistence, named-volume restart, and live Prometheus
+    scrape validation — **blocked in this devbox because Docker and promtool
+    are unavailable; rerun in Docker-enabled CI or an operations environment**.
 
 ## Acceptance criteria
 

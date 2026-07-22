@@ -91,6 +91,40 @@ uri_has_placeholder_secret() {
   [[ "$value" == *":secret@"* || "$value" == *":password@"* || "$value" == *":changeme@"* ]]
 }
 
+provision_scrape_password_file() {
+  local password_file="$1"
+  local password_directory
+
+  if [[ -z "$password_file" ]]; then
+    echo "❌ PROMETHEUS_SCRAPE_PASSWORD_FILE must be configured."
+    exit 1
+  fi
+
+  if [[ -d "$password_file" ]]; then
+    echo "❌ PROMETHEUS_SCRAPE_PASSWORD_FILE points to a directory."
+    exit 1
+  fi
+
+  password_directory=$(dirname -- "$password_file")
+  mkdir -p -- "$password_directory"
+  chmod 700 -- "$password_directory"
+
+  if [[ ! -e "$password_file" ]]; then
+    echo "Provisioning Prometheus scrape password file..."
+    umask 077
+    openssl rand -hex 32 | tr -d '\n' > "$password_file"
+  elif [[ ! -f "$password_file" ]]; then
+    echo "❌ PROMETHEUS_SCRAPE_PASSWORD_FILE is not a regular file."
+    exit 1
+  fi
+
+  chmod 600 -- "$password_file"
+  if [[ ! -s "$password_file" ]]; then
+    echo "❌ Prometheus scrape password file is empty."
+    exit 1
+  fi
+}
+
 # 3. Process each variable from schema
 echo "Step 3: Processing environment variables..."
 
@@ -116,6 +150,17 @@ while read -r key; do
     esac
   fi
 done < "$KEYS_TMP"
+
+PROMETHEUS_SCRAPE_PASSWORD_FILE_VAL=$(get_env_value PROMETHEUS_SCRAPE_PASSWORD_FILE)
+if [[ -z "$PROMETHEUS_SCRAPE_PASSWORD_FILE_VAL" ]]; then
+  if [[ "$PROFILE" == "production" ]]; then
+    PROMETHEUS_SCRAPE_PASSWORD_FILE_VAL="/var/lib/conxian/secrets/prometheus-scrape.password"
+  else
+    PROMETHEUS_SCRAPE_PASSWORD_FILE_VAL=".secrets/prometheus-scrape.password"
+  fi
+  set_env_value PROMETHEUS_SCRAPE_PASSWORD_FILE "$PROMETHEUS_SCRAPE_PASSWORD_FILE_VAL"
+fi
+provision_scrape_password_file "$PROMETHEUS_SCRAPE_PASSWORD_FILE_VAL"
 
 POSTGRES_USER_VAL=$(get_env_value POSTGRES_USER)
 POSTGRES_PASSWORD_VAL=$(get_env_value POSTGRES_PASSWORD)

@@ -1276,3 +1276,34 @@ AGENTS.md (this update)
 - Hosted checks must be re-evaluated on the pushed merge commit.
 **Gotchas**:
 - Do not treat the initial shallow-clone `refusing to merge unrelated histories` message as a repository divergence; after local history deepening, the normal merge completed with three content conflicts.
+
+### 2026-07-22 — M2M Rotation Phase 3B Operations (#1161)
+**Trigger**: Issue #1161 Phase 3B request for production/deployment wiring, secure Prometheus scrape authentication, alerting, operator documentation, OpenSpec closure, and session continuity.
+**What was done**:
+- Added fail-closed Prometheus Basic Auth for `GET /api/metrics` using a provisioned password file, timing-safe password comparison, `503 metrics_scrape_auth_unavailable` for missing/unreadable configuration, and continued `X-Admin-API-Key` access for operators.
+- Added Compose wiring for all eight `SERVICE_KEY_*` variables, the dashboard-owned registry path, a named persistent registry volume, and a shared Compose secret for Prometheus and `admin-dashboard`.
+- Added mutually exclusive expiry-window, expired-key, authentication-failure, rotation/rollback, registry-write/unavailable, and missing-revision Prometheus rules using the implemented bounded metric names.
+- Added the M2M operations documentation and runbook covering endpoint contracts, one-time secret handling, manual consumer rollout, lost-response rollback, single-writer persistence, recovery, and scrape verification.
+- Closed the completed T9 documentation work and recorded Phase 3B test/config validation evidence in the OpenSpec task checklist while leaving Docker/Compose persistence validation blocked.
+- Added the Unreleased changelog entry and this session log entry; no secrets were committed and no cross-repository consumer mutation was added.
+**Key discoveries**:
+- `/api/metrics` is already a protected route, so the secure scrape path can be additive: valid admin-key requests retain operator compatibility while Basic Auth is used by Prometheus.
+- The repository's provisioner is the approved place to create the scrape password file; the password is shared through a Compose secret and only the file path is present in environment/configuration.
+- The file-backed M2M registry derives lock/candidate/journal/marker artifacts beside the registry and requires one writer on persistent storage; the devbox has no Docker daemon or `promtool`.
+**Files touched**:
+- `services/admin-dashboard/src/lib/support/metricsAuth.ts`
+- `services/admin-dashboard/src/app/api/metrics/route.ts`
+- `services/admin-dashboard/src/tests/auth.test.ts`
+- `.env.example`, `.env.schema`, `.env.production.schema`, `.gitignore`
+- `docker-compose.yml`, `prometheus.yml`, `prometheus-alerts.yml`
+- `scripts/provision-secrets.sh`
+- `docs/M2M_AUTHENTICATION.md`, `docs/runbooks/M2M_KEY_ROTATION_RUNBOOK.md`
+- `openspec/changes/2026-07-22-m2m-service-key-rotation/tasks.md`
+- `CHANGELOG.md`
+- `AGENTS.md`
+**Gaps identified**:
+- Live Docker Compose persistence/restart validation and Prometheus `promtool` validation require a Docker-enabled operations or CI environment.
+- The runbook intentionally leaves the consumer secret-manager command deployment-specific; the platform does not mutate other repositories or consumers automatically.
+**Gotchas**:
+- Missing scrape configuration intentionally returns `503` for scrape-auth attempts, while a valid admin API key still reaches the protected metrics payload.
+- `SERVICE_KEY_ADMIN_DASHBOARD` must remain distinct from `ADMIN_DASHBOARD_API_KEY`; rotating the former requires a manual dashboard secret update and restart.

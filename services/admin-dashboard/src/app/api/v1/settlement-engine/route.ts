@@ -117,7 +117,8 @@ export async function POST(req: Request) {
     if (action === "zkcp-initialize") {
       if (!isNonEmptyString(payload.id)
         || typeof payload.amount !== "number"
-        || !Number.isInteger(payload.amount)
+        || !Number.isSafeInteger(payload.amount)
+        || payload.amount <= 0
         || !isNonEmptyString(payload.encryptedDataHash)
         || !isNonEmptyString(payload.proofHash)
         || !isNonEmptyString(payload.sellerAddress)

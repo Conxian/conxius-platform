@@ -1,10 +1,143 @@
 import { describe, expect, it } from "vitest";
-import { BitVMBridge, UnavailableBitVMVerifier } from "../lib/support/bitvm";
+import {
+  BitVMBridge,
+  createSignatureAttestation,
+  UnavailableBitVMVerifier,
+  type BitVMSignatureVerifier,
+  type BitVMVerifier,
+} from "../lib/support/bitvm";
+import {
+  createVerificationResult,
+  digestVerifierRequest,
+  type BackendIdentity,
+  type VerifierRequest,
+} from "../lib/support/verifier-contract";
 import {
   DeterministicFixtureVerifier,
   makeFloorRequest,
   makeVerifierRequest,
 } from "./fixtures/verifierFixtures";
+
+const AUTHORITATIVE_TEST_BACKEND: BackendIdentity = {
+  id: "bitvm-explicit-test-authority",
+  version: "test-authority-v1",
+  artifact_digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  authority: "authoritative",
+};
+
+class AuthoritativeFixtureVerifier implements BitVMVerifier {
+  public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
+
+  public async verify(request: VerifierRequest) {
+    return createVerificationResult({
+      status: "valid",
+      request_digest: await digestVerifierRequest(request),
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production",
+    });
+  }
+}
+
+class ContradictoryFixtureVerifier extends AuthoritativeFixtureVerifier {
+  public override async verify(request: VerifierRequest) {
+    return createVerificationResult({
+      status: "valid",
+      request_digest: await digestVerifierRequest(request),
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production",
+      failure_code: "internal_error",
+    });
+  }
+}
+
+class ExplicitSignatureVerifier implements BitVMSignatureVerifier {
+  public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
+
+  public async verify(input: Parameters<BitVMSignatureVerifier["verify"]>[0]) {
+    const attestation = await createSignatureAttestation({
+      proofId: input.proofId,
+      verifierId: input.verifierId,
+      signature: input.signature,
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "test",
+    });
+    return {
+      status: "valid" as const,
+      verified: true,
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "test" as const,
+      attestation,
+    };
+  }
+}
+
+class InvalidSignatureVerifier implements BitVMSignatureVerifier {
+  public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
+
+  public async verify() {
+    return {
+      status: "invalid" as const,
+      verified: false,
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "test" as const,
+      failure_code: "invalid_signature" as const,
+      error: "Fixture rejected the signature",
+    };
+  }
+}
+
+class MalformedSignatureVerifier implements BitVMSignatureVerifier {
+  public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
+
+  public async verify() {
+    return {
+      status: "valid" as const,
+      verified: true,
+      backend: null,
+      provenance: "test" as const,
+    } as never;
+  }
+}
+
+class ThrowingVerifier implements BitVMVerifier {
+  public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
+
+  public async verify(): Promise<never> {
+    throw new Error("fixture BitVM verifier failure");
+  }
+}
+
+class SimulatedSignatureVerifier implements BitVMSignatureVerifier {
+  public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
+
+  public async verify(input: Parameters<BitVMSignatureVerifier["verify"]>[0]) {
+    const attestation = await createSignatureAttestation({
+      proofId: input.proofId,
+      verifierId: input.verifierId,
+      signature: input.signature,
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "simulated",
+    });
+    return {
+      status: "valid" as const,
+      verified: true,
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "simulated" as const,
+      attestation,
+    };
+  }
+}
+
+async function makeAuthoritativeBridge(signatureVerifier?: BitVMSignatureVerifier): Promise<BitVMBridge> {
+  const bridge = new BitVMBridge(new AuthoritativeFixtureVerifier(), signatureVerifier);
+  const request = await makeVerifierRequest({
+    backend: AUTHORITATIVE_TEST_BACKEND,
+    provenance: "production",
+  });
+  const result = await bridge.verifyFloor(makeFloorRequest(request));
+  expect(result.verified).toBe(true);
+  return bridge;
+}
 
 describe("BitVMBridge fail-closed boundary", () => {
   it("returns a typed unavailable result and never creates floor state", async () => {
@@ -30,6 +163,46 @@ describe("BitVMBridge fail-closed boundary", () => {
     expect(result.failure_code).toBe("simulated_result");
     expect(result.verification.provenance).toBe("simulated");
     expect(bridge.getState(request.proof_id)).toBeUndefined();
+  });
+
+  it("requires the request backend to match the adapter-owned identity", async () => {
+    const bridge = new BitVMBridge(new AuthoritativeFixtureVerifier());
+    const result = await bridge.verifyFloor(makeFloorRequest(await makeVerifierRequest()));
+
+    expect(result.verified).toBe(false);
+    expect(result.failure_code).toBe("backend_mismatch");
+    expect(bridge.getState("fixture-floor-1")).toBeUndefined();
+  });
+
+  it("normalizes a contradictory valid result with a failure code", async () => {
+    const bridge = new BitVMBridge(new ContradictoryFixtureVerifier());
+    const request = await makeVerifierRequest({
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production",
+    });
+
+    const result = await bridge.verifyFloor(makeFloorRequest(request));
+
+    expect(result.verified).toBe(false);
+    expect(result.status).toBe("failed");
+    expect(result.failure_code).toBe("malformed_request");
+    expect(result.verification.status).toBe("malformed");
+    expect(bridge.getState("fixture-floor-1")).toBeUndefined();
+  });
+
+  it("normalizes verifier adapter exceptions into typed non-success", async () => {
+    const bridge = new BitVMBridge(new ThrowingVerifier());
+    const request = await makeVerifierRequest({
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production",
+    });
+
+    const result = await bridge.verifyFloor(makeFloorRequest(request));
+
+    expect(result.verified).toBe(false);
+    expect(result.status).toBe("failed");
+    expect(result.failure_code).toBe("internal_error");
+    expect(bridge.getState("fixture-floor-1")).toBeUndefined();
   });
 
   it("rejects a mutated proof whose original digest is retained", async () => {
@@ -92,6 +265,47 @@ describe("BitVMBridge fail-closed boundary", () => {
       circuit: { ...base.circuit, digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
     }));
     expect(wrongCircuit.failure_code).toBe("circuit_mismatch");
+  });
+
+  it("requires explicit signature verification evidence and rejects duplicate signers", async () => {
+    const bridge = await makeAuthoritativeBridge(new ExplicitSignatureVerifier());
+    const first = await bridge.submitSignature("fixture-floor-1", "verifier-1", "ab".repeat(64));
+    expect(first.accepted).toBe(true);
+    expect(first.aggregation?.is_complete).toBe(false);
+
+    const duplicate = await bridge.submitSignature("fixture-floor-1", "verifier-1", "cd".repeat(64));
+    expect(duplicate.accepted).toBe(false);
+    expect(duplicate.failure_code).toBe("duplicate_signer");
+    expect(bridge.getAggregation("fixture-floor-1")?.signatures).toHaveLength(1);
+
+    const second = await bridge.submitSignature("fixture-floor-1", "verifier-2", "cd".repeat(64));
+    expect(second.accepted).toBe(true);
+    expect(second.aggregation?.is_complete).toBe(true);
+  });
+
+  it("fails closed for unavailable and format-only signature verifiers", async () => {
+    const unavailable = await makeAuthoritativeBridge();
+    const unavailableResult = await unavailable.submitSignature("fixture-floor-1", "verifier-1", "ab".repeat(64));
+    expect(unavailableResult.accepted).toBe(false);
+    expect(unavailableResult.failure_code).toBe("unsupported_backend");
+
+    const rejected = await makeAuthoritativeBridge(new InvalidSignatureVerifier());
+    const rejectedResult = await rejected.submitSignature("fixture-floor-1", "verifier-1", "ab".repeat(64));
+    expect(rejectedResult.accepted).toBe(false);
+    expect(rejectedResult.failure_code).toBe("invalid_signature");
+    expect(rejected.getAggregation("fixture-floor-1")?.signatures).toHaveLength(0);
+
+    const malformed = await makeAuthoritativeBridge(new MalformedSignatureVerifier());
+    const malformedResult = await malformed.submitSignature("fixture-floor-1", "verifier-1", "ab".repeat(64));
+    expect(malformedResult.accepted).toBe(false);
+    expect(malformedResult.failure_code).toBe("attestation_mismatch");
+    expect(malformed.getAggregation("fixture-floor-1")?.signatures).toHaveLength(0);
+
+    const simulated = await makeAuthoritativeBridge(new SimulatedSignatureVerifier());
+    const simulatedResult = await simulated.submitSignature("fixture-floor-1", "verifier-1", "ab".repeat(64));
+    expect(simulatedResult.accepted).toBe(false);
+    expect(simulatedResult.failure_code).toBe("simulated_result");
+    expect(simulated.getAggregation("fixture-floor-1")?.signatures).toHaveLength(0);
   });
 
   it("rejects invalid tap challenges and signatures", async () => {

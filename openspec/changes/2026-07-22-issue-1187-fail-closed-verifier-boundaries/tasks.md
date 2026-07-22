@@ -35,3 +35,26 @@
   to `main` resolving issue #1187.
 - [x] Record residual Gateway/Core/Nexus backend dependencies without claiming
   production cryptographic verification.
+
+## Phase 5 — Formal review remediation (PR #1196)
+
+- [x] Require adapter-owned authoritative backend identity matching for
+  production verification, payment observation, and key release; reject the
+  unavailable/non-authoritative sentinel.
+- [x] Add versioned deterministic ZKCP intent statement/domain binding for
+  encrypted data, payment condition, parties, amount, network, proof, and
+  ordered public inputs.
+- [x] Return immutable intent snapshots, retain authoritative evidence
+  internally, reject duplicate ids, and revalidate exact evidence at
+  finalization.
+- [x] Gate BitVM2 aggregation on authorized unique signers and explicit
+  injected signature attestations; keep the default verifier unavailable.
+- [x] Normalize contradictory verifier/payment outcomes before user-visible
+  status/state transitions.
+- [x] Totalize throwing/malformed adapters, bound settlement amounts to safe
+  integers, return defensive BitVM3 state copies, and make terminal ZKCP
+  finalization idempotent/serialized.
+- [x] Make Python and PowerShell contamination scans full-content/multiline
+  aware, add alias/fixture-import detection, and add Python guard self-tests.
+- [x] Update the change-local design/spec and truthful production-boundary
+  documentation without adding or claiming a cryptographic backend.

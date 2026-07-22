@@ -1666,3 +1666,29 @@ AGENTS.md (this update)
 **Gotchas**:
 - `364` is a research/profile-specific tap layout and must not be used as a universal verification predicate.
 - `Web Crypto` is used only for contract digest binding; it is not a proof verifier.
+
+### 2026-07-22 — PR #1196 Formal Review Remediation
+**Trigger**: Formal review `4758534682` on PR #1196.
+**What was done**:
+- Required adapter-owned authoritative backend identities for production verification, payment observation, and key release; the unavailable sentinel and non-authoritative placeholders remain fail closed.
+- Added versioned deterministic ZKCP statement/domain binding across encrypted data, payment terms, parties, amount, network, proof metadata, and ordered public inputs.
+- Returned deep immutable intent snapshots, retained authoritative proof/payment evidence privately, rejected duplicate intent IDs, and revalidated exact evidence before finalization.
+- Reworked BitVM2 aggregation to require unique authorized signers and explicit injected signature attestations; malformed, duplicate, unavailable, and format-only submissions cannot complete aggregation.
+- Normalized contradictory verifier/payment responses and expanded Python/PowerShell contamination scanning to full-content multiline constructs, aliases, fixture imports, and bridge construction, with Python self-tests.
+- Totalized throwing/null adapter responses, bounded settlement amounts to safe integers, returned defensive BitVM3 state copies, and made terminal ZKCP finalization idempotent/serialized so payment watches cannot regress state or trigger duplicate key release.
+- Updated the issue #1187 OpenSpec design/spec/tasks and truthful production-boundary, gap, debt, and risk documentation without adding a cryptographic backend.
+**Key discoveries**:
+- Production authority must be an adapter-owned identity predicate rather than a caller-controlled request field or provenance label.
+- ZKCP proof binding and later payment evidence are separate versioned checks: the proof statement reserves a null pre-payment hash slot, while the observed transaction ID is retained and revalidated as payment evidence before release.
+- The checked-in production construction still uses unavailable adapters; explicit authoritative fixtures are test-only validation adapters and do not represent production cryptographic readiness.
+**Files touched**:
+- `services/admin-dashboard/src/lib/support/{verifier-contract.ts,bitvm.ts,bitvm3.ts,zkcp.ts}` and focused verifier tests/fixtures
+- `scripts/verify_contamination_guard.py`, `scripts/verify_contamination_guard.ps1`, `scripts/test_contamination_guard.py`
+- Issue #1187 OpenSpec proposal/design/spec/tasks and `docs/{PRODUCTION_BOUNDARY.md,GAPS.md,DEBT_INVENTORY.md,PHASE_7_RISK_REGISTER.md}`
+- `AGENTS.md`
+**Gaps identified**:
+- Gateway/Core/Nexus still need independently accepted production verifier, payment-observer, and key-release adapters; this remediation intentionally does not select or implement them.
+- PowerShell execution could not be run because `pwsh` is not installed in the verification devbox; the full-content parity update and Python source fixtures were validated.
+**Gotchas**:
+- A valid-looking result with `verified: true` is still rejected when it carries a failure code, non-authoritative backend, unavailable sentinel, or mismatched adapter identity.
+- `git diff --check` and the strict issue #1187 OpenSpec validator must be rerun after session-log edits.

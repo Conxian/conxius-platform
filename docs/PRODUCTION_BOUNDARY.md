@@ -45,6 +45,22 @@ statement/domain digests, backend identity/version/artifact digest, payment
 observations, provenance, and typed failures. They do not implement proof
 arithmetic, chain observation, or key-release cryptography.
 
+Production authority is adapter-owned, not caller- or provenance-owned. Backend
+identity includes explicit authority and every production-valid verification,
+payment, and key-release result must match the configured adapter identity. The
+unavailable sentinel and non-authoritative placeholders cannot authorize state.
+ZKCP additionally binds encrypted data, payment condition, parties, amount,
+network, proof terms, and ordered public inputs through the versioned
+`conxian.zkcp.statement.v1` statement/domain digests.
+
+ZKCP getters/list methods return defensive immutable snapshots. Authoritative
+proof/payment evidence remains private to the bridge and is revalidated against
+the exact stored bindings immediately before key release. BitVM2 aggregation is
+also gated by authorized unique signers and explicit injected signature
+attestations; hex formatting alone is not evidence. Terminal finalization is
+idempotent/serialized, payment watches cannot regress paid/finalized state, and
+throwing or malformed injected adapters become typed non-success results.
+
 Production construction explicitly injects verifier, payment-observer, and
 key-release dependencies. The checked-in construction uses unavailable
 adapters, so missing Gateway/Core/Nexus backends return typed non-success

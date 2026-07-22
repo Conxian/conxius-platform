@@ -19,11 +19,13 @@ export type ProofSystem =
 export type Curve = "secp256k1" | "bn254" | "bls12-381" | "none";
 export type Encoding = "hex" | "base64" | "base64url";
 export type Provenance = "production" | "test" | "simulated" | "unknown";
+export type BackendAuthority = "authoritative" | "non_authoritative";
 
 export interface BackendIdentity {
   id: string;
   version: string;
   artifact_digest: Digest;
+  authority: BackendAuthority;
 }
 
 export interface CircuitBinding {
@@ -87,6 +89,9 @@ export type VerificationFailureCode =
   | "curve_mismatch"
   | "circuit_mismatch"
   | "backend_mismatch"
+  | "duplicate_signer"
+  | "unauthorized_signer"
+  | "attestation_mismatch"
   | "invalid_challenge"
   | "invalid_signature"
   | "aggregation_not_found"
@@ -128,6 +133,7 @@ export const UNAVAILABLE_BACKEND: BackendIdentity = Object.freeze({
   id: "unavailable",
   version: "0",
   artifact_digest: `sha256:${"0".repeat(64)}` as Digest,
+  authority: "non_authoritative",
 });
 
 export interface VerifierValidationSuccess {
@@ -232,7 +238,7 @@ function isEncoding(value: unknown): value is Encoding {
   return value === "hex" || value === "base64" || value === "base64url";
 }
 
-function isProvenance(value: unknown): value is Provenance {
+export function isProvenance(value: unknown): value is Provenance {
   return value === "production" || value === "test" || value === "simulated" || value === "unknown";
 }
 
@@ -248,7 +254,7 @@ function isCurve(value: unknown): value is Curve {
   return value === "secp256k1" || value === "bn254" || value === "bls12-381" || value === "none";
 }
 
-function isPaymentNetwork(value: unknown): value is PaymentNetwork {
+export function isPaymentNetwork(value: unknown): value is PaymentNetwork {
   return value === "bitcoin-mainnet"
     || value === "bitcoin-testnet"
     || value === "bitcoin-signet"
@@ -270,6 +276,9 @@ export function isVerificationFailureCode(value: unknown): value is Verification
     || value === "curve_mismatch"
     || value === "circuit_mismatch"
     || value === "backend_mismatch"
+    || value === "duplicate_signer"
+    || value === "unauthorized_signer"
+    || value === "attestation_mismatch"
     || value === "invalid_challenge"
     || value === "invalid_signature"
     || value === "aggregation_not_found"
@@ -283,11 +292,29 @@ export function isVerificationFailureCode(value: unknown): value is Verification
     || value === "unknown_action";
 }
 
-function isBackendIdentity(value: unknown): value is BackendIdentity {
+export function isBackendIdentity(value: unknown): value is BackendIdentity {
   if (!isRecord(value)) return false;
   return isNonEmptyString(value.id)
     && isNonEmptyString(value.version)
-    && isDigest(value.artifact_digest);
+    && isDigest(value.artifact_digest)
+    && (value.authority === "authoritative" || value.authority === "non_authoritative");
+}
+
+export function backendIdentityEquals(left: BackendIdentity, right: BackendIdentity): boolean {
+  return left.id === right.id
+    && left.version === right.version
+    && left.artifact_digest === right.artifact_digest
+    && left.authority === right.authority;
+}
+
+export function isUnavailableBackend(value: unknown): value is BackendIdentity {
+  return isBackendIdentity(value) && backendIdentityEquals(value, UNAVAILABLE_BACKEND);
+}
+
+export function isAuthoritativeBackendIdentity(value: unknown): value is BackendIdentity {
+  return isBackendIdentity(value)
+    && value.authority === "authoritative"
+    && !isUnavailableBackend(value);
 }
 
 function isCircuitBinding(value: unknown): value is CircuitBinding {
@@ -301,7 +328,7 @@ function isVerificationKeyBinding(value: unknown): value is VerificationKeyBindi
 }
 
 function isFiniteInteger(value: unknown): value is number {
-  return typeof value === "number" && Number.isInteger(value) && Number.isFinite(value);
+  return typeof value === "number" && Number.isSafeInteger(value);
 }
 
 function decodeEncodedBytes(value: string, encoding: Encoding): Uint8Array | undefined {
@@ -576,16 +603,11 @@ export async function validateVerifierRequest(value: unknown): Promise<VerifierV
   }
 }
 
-function backendEquals(left: BackendIdentity, right: BackendIdentity): boolean {
-  return left.id === right.id
-    && left.version === right.version
-    && left.artifact_digest === right.artifact_digest;
-}
-
 export async function validateVerificationResult(
   value: unknown,
   request: VerifierRequest,
   request_digest: Digest,
+  authority?: BackendIdentity,
 ): Promise<VerificationResultValidation> {
   if (!isRecord(value)
     || value.contract_version !== VERIFIER_CONTRACT_VERSION
@@ -607,9 +629,24 @@ export async function validateVerificationResult(
     return { ok: false, failure_code: "malformed_request", error: "Verifier result status and verified flag disagree" };
   }
 
+  if (value.status === "valid" && value.failure_code !== undefined) {
+    return { ok: false, failure_code: "malformed_request", error: "A valid verifier result cannot carry a failure code" };
+  }
+
   if (value.status === "valid" || value.status === "invalid") {
-    if (!backendEquals(value.backend, request.backend)) {
+    if (!backendIdentityEquals(value.backend, request.backend)) {
       return { ok: false, failure_code: "backend_mismatch", error: "Verifier result backend does not match the request" };
+    }
+  }
+
+  if (value.status === "valid" && value.provenance === "production") {
+    if (!isAuthoritativeBackendIdentity(value.backend)) {
+      return { ok: false, failure_code: "backend_mismatch", error: "Only an authoritative backend can report a production-valid result" };
+    }
+    if (authority === undefined
+      || !isAuthoritativeBackendIdentity(authority)
+      || !backendIdentityEquals(value.backend, authority)) {
+      return { ok: false, failure_code: "backend_mismatch", error: "Production-valid result is not bound to the configured verifier backend" };
     }
   }
 
@@ -636,16 +673,41 @@ export async function validateVerificationResult(
   return { ok: true, result };
 }
 
-export function isProductionVerified(result: VerificationResult): boolean {
+export function isProductionVerified(result: VerificationResult, authority?: BackendIdentity): boolean {
   return result.status === "valid"
     && result.verified
     && result.provenance === "production"
-    && result.failure_code === undefined;
+    && result.failure_code === undefined
+    && isAuthoritativeBackendIdentity(result.backend)
+    && authority !== undefined
+    && isAuthoritativeBackendIdentity(authority)
+    && backendIdentityEquals(result.backend, authority);
 }
 
-export function rejectNonProductionVerification(result: VerificationResult): VerificationResult {
+export function rejectNonProductionVerification(
+  result: VerificationResult,
+  authority?: BackendIdentity,
+): VerificationResult {
+  if (result.status === "valid" && isUnavailableBackend(result.backend)) {
+    return createVerificationFailure("backend_unavailable", "Unavailable verifier backend cannot authorize verification", {
+      request_digest: result.request_digest,
+      backend: result.backend,
+      provenance: result.provenance,
+    });
+  }
   if (result.status === "valid" && result.provenance !== "production") {
     return createVerificationFailure("simulated_result", "Non-production verification cannot authorize settlement", {
+      request_digest: result.request_digest,
+      backend: result.backend,
+      provenance: result.provenance,
+    });
+  }
+  if (result.status === "valid"
+    && (authority === undefined
+      || !isAuthoritativeBackendIdentity(authority)
+      || !isAuthoritativeBackendIdentity(result.backend)
+      || !backendIdentityEquals(result.backend, authority))) {
+    return createVerificationFailure("backend_mismatch", "Verifier result is not bound to an authoritative configured backend", {
       request_digest: result.request_digest,
       backend: result.backend,
       provenance: result.provenance,
@@ -690,11 +752,13 @@ export async function validatePaymentObservation(
     || value.contract_version !== VERIFIER_CONTRACT_VERSION
     || value.intent_id !== request.intent_id
     || value.address !== request.address
+    || !isFiniteInteger(request.expected_amount)
+    || request.expected_amount <= 0
     || value.expected_amount !== request.expected_amount
     || value.network !== request.network
     || !isNonEmptyString(value.txid)
-    || typeof value.amount !== "number"
-    || !Number.isFinite(value.amount)
+    || !isFiniteInteger(value.amount)
+    || value.amount <= 0
     || value.amount !== request.expected_amount
     || !isFiniteInteger(value.confirmations)
     || value.confirmations < 0
@@ -762,10 +826,18 @@ export function createPaymentFailure(
   };
 }
 
-export function isProductionPayment(result: PaymentObservationResult): result is PaymentObservationResult & { observation: PaymentObservation } {
+export function isProductionPayment(
+  result: PaymentObservationResult,
+  authority?: BackendIdentity,
+): result is PaymentObservationResult & { observation: PaymentObservation } {
   return result.status === "observed"
     && result.detected
+    && result.failure_code === undefined
     && result.provenance === "production"
     && result.observation !== undefined
-    && result.observation.provenance === "production";
+    && result.observation.provenance === "production"
+    && isAuthoritativeBackendIdentity(result.observation.observer)
+    && authority !== undefined
+    && isAuthoritativeBackendIdentity(authority)
+    && backendIdentityEquals(result.observation.observer, authority);
 }

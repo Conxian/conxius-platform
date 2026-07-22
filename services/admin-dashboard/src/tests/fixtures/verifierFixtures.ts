@@ -12,7 +12,12 @@ import {
 } from "../../lib/support/verifier-contract";
 import type { BitVMFloorRequest, BitVMVerifier } from "../../lib/support/bitvm";
 import type { BitVM3VerificationRequest, BitVM3Verifier } from "../../lib/support/bitvm3";
-import type { ZKCPIntentInput, ZKProofVerifier } from "../../lib/support/zkcp";
+import {
+  deriveZKCPBinding,
+  expectedZKCPPublicInputs,
+  type ZKCPIntentInput,
+  type ZKProofVerifier,
+} from "../../lib/support/zkcp";
 
 /**
 * Test-only deterministic fixture. It deliberately reports simulated
@@ -23,6 +28,7 @@ export const TEST_BACKEND: BackendIdentity = {
   id: "fixture-verifier",
   version: "test-v1",
   artifact_digest: "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  authority: "non_authoritative",
 };
 
 export const TEST_CIRCUIT = {
@@ -47,6 +53,7 @@ export interface FixtureRequestOverrides {
   statement_digest?: Digest;
   domain_digest?: Digest;
   backend?: BackendIdentity;
+  provenance?: CreateVerifierRequestInput["provenance"];
   proof_bytes?: string;
   proof_encoding?: CreateVerifierRequestInput["proof"]["encoding"];
   public_inputs?: CreateVerifierRequestInput["public_inputs"];
@@ -69,7 +76,7 @@ export async function makeVerifierRequest(overrides: FixtureRequestOverrides = {
     statement_digest: overrides.statement_digest ?? TEST_STATEMENT_DIGEST,
     domain_digest: overrides.domain_digest ?? TEST_DOMAIN_DIGEST,
     backend: overrides.backend ?? TEST_BACKEND,
-    provenance: "test",
+    provenance: overrides.provenance ?? "test",
   });
 }
 
@@ -78,7 +85,12 @@ export function makeFloorRequest(request: VerifierRequest): BitVMFloorRequest {
     contract_version: VERIFIER_CONTRACT_VERSION,
     proof_id: "fixture-floor-1",
     verifier_request: request,
-    tap_profile: { id: "profile-bitvm2-test", tap_count: 12, required_signatures: 2 },
+    tap_profile: {
+      id: "profile-bitvm2-test",
+      tap_count: 12,
+      required_signatures: 2,
+      authorized_signers: ["verifier-1", "verifier-2"],
+    },
   };
 }
 
@@ -103,7 +115,36 @@ export async function makeIntentInput(request: VerifierRequest, id = "zkcp-fixtu
   };
 }
 
+export async function bindZKCPRequestToIntent(
+  request: VerifierRequest,
+  intent: ZKCPIntentInput,
+): Promise<VerifierRequest> {
+  const boundRequest = await createVerifierRequest({
+    proof_system: request.proof_system,
+    curve: request.curve,
+    circuit: request.circuit,
+    verification_key: request.verification_key,
+    public_inputs: expectedZKCPPublicInputs(intent),
+    proof: {
+      bytes: request.proof.bytes,
+      encoding: request.proof.encoding,
+    },
+    statement_digest: request.statement_digest,
+    domain_digest: request.domain_digest,
+    backend: request.backend,
+    provenance: request.provenance,
+  });
+  const binding = await deriveZKCPBinding(intent, boundRequest);
+  return {
+    ...boundRequest,
+    statement_digest: binding.statement_digest,
+    domain_digest: binding.domain_digest,
+  };
+}
+
 export class DeterministicFixtureVerifier implements BitVMVerifier, BitVM3Verifier, ZKProofVerifier {
+  public readonly backendIdentity = TEST_BACKEND;
+
   public constructor(private readonly expectedCurve: Curve = "bn254") {}
 
   public async verify(request: VerifierRequest) {
@@ -129,14 +170,6 @@ export class DeterministicFixtureVerifier implements BitVMVerifier, BitVM3Verifi
         provenance: "simulated",
       });
     }
-    if (request.statement_digest !== TEST_STATEMENT_DIGEST) {
-      return createVerificationFailure("statement_mismatch", "Fixture policy rejected the statement binding", {
-        request_digest,
-        backend: request.backend,
-        provenance: "simulated",
-      });
-    }
-
     return createVerificationResult({
       status: "valid",
       request_digest,

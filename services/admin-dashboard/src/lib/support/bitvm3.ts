@@ -2,10 +2,14 @@ import { createLogger } from "./logger";
 import {
   VERIFIER_CONTRACT_VERSION,
   UNAVAILABLE_BACKEND,
+  backendIdentityEquals,
   createVerificationFailure,
   digestVerifierRequest,
+  isBackendIdentity,
   isProductionVerified,
+  isUnavailableBackend,
   rejectNonProductionVerification,
+  type BackendIdentity,
   type VerificationFailureCode,
   type VerificationResult,
   type VerifierRequest,
@@ -41,10 +45,13 @@ export interface BitVM3State {
 }
 
 export interface BitVM3Verifier {
+  readonly backendIdentity: BackendIdentity;
   verify(request: VerifierRequest): Promise<VerificationResult>;
 }
 
 export class UnavailableBitVM3Verifier implements BitVM3Verifier {
+  public readonly backendIdentity = UNAVAILABLE_BACKEND;
+
   public async verify(request: VerifierRequest): Promise<VerificationResult> {
     return createVerificationFailure(
       "backend_unavailable",
@@ -121,8 +128,8 @@ async function validateRecursiveRequest(value: unknown): Promise<RecursiveValida
   };
 }
 
-function statusForVerification(result: VerificationResult): BitVM3Status {
-  if (result.status === "valid" && result.provenance === "production") return "verified";
+function statusForVerification(result: VerificationResult, authority: BackendIdentity): BitVM3Status {
+  if (isProductionVerified(result, authority)) return "verified";
   if (result.status === "unavailable" || result.status === "unsupported") return "unsupported";
   return "failed";
 }
@@ -131,16 +138,27 @@ function stateFor(
   proofId: string,
   recursiveHeight: number,
   verification: VerificationResult,
+  authority: BackendIdentity,
 ): BitVM3State {
   return {
     id: proofId,
     recursiveHeight,
-    isVerified: isProductionVerified(verification),
-    status: statusForVerification(verification),
+    isVerified: isProductionVerified(verification, authority),
+    status: statusForVerification(verification, authority),
     verification,
     timestamp: new Date().toISOString(),
     failure_code: verification.failure_code,
     error: verification.error,
+  };
+}
+
+function copyState(state: BitVM3State): BitVM3State {
+  return {
+    ...state,
+    verification: {
+      ...state.verification,
+      backend: { ...state.verification.backend },
+    },
   };
 }
 
@@ -160,36 +178,87 @@ export class BitVM3Orchestrator {
         validation.proof_id,
         validation.recursive_height,
         createVerificationFailure(validation.failure_code, validation.error),
+        UNAVAILABLE_BACKEND,
+      );
+    }
+
+    const verifierBackend = this.verifier.backendIdentity;
+    if (!isBackendIdentity(verifierBackend)) {
+      return stateFor(
+        validation.request.proof_id,
+        validation.request.recursive_height,
+        createVerificationFailure("backend_mismatch", "Verifier adapter has no valid configured backend identity"),
+        UNAVAILABLE_BACKEND,
+      );
+    }
+    if (!isUnavailableBackend(verifierBackend)
+      && !backendIdentityEquals(validation.request.verifier_request.backend, verifierBackend)) {
+      return stateFor(
+        validation.request.proof_id,
+        validation.request.recursive_height,
+        createVerificationFailure("backend_mismatch", "Verifier request is not bound to the configured adapter backend", {
+          request_digest: validation.verifier_request_digest,
+          backend: verifierBackend,
+          provenance: validation.request.verifier_request.provenance,
+        }),
+        verifierBackend,
       );
     }
 
     logger.info(`Received recursive verification request for proof ${validation.request.proof_id}`);
-    let verification = await this.verifier.verify(validation.request.verifier_request);
+    let verification: VerificationResult;
+    try {
+      verification = await this.verifier.verify(validation.request.verifier_request);
+    } catch (error: unknown) {
+      verification = createVerificationFailure(
+        "internal_error",
+        error instanceof Error ? error.message : "Recursive verifier adapter failed",
+        {
+          request_digest: validation.verifier_request_digest,
+          backend: verifierBackend,
+          provenance: validation.request.verifier_request.provenance,
+        },
+      );
+    }
     const resultValidation = await validateVerificationResult(
       verification,
       validation.request.verifier_request,
       validation.verifier_request_digest,
+      verifierBackend,
     );
 
     if (!resultValidation.ok) {
       verification = createVerificationFailure(resultValidation.failure_code, resultValidation.error, {
         request_digest: validation.verifier_request_digest,
+        backend: verifierBackend,
+        provenance: validation.request.verifier_request.provenance,
       });
     } else {
-      verification = rejectNonProductionVerification(resultValidation.result);
+      verification = rejectNonProductionVerification(resultValidation.result, verifierBackend);
     }
 
-    if (isProductionVerified(verification)) {
-      const state = stateFor(validation.request.proof_id, validation.request.recursive_height, verification);
+    if (isProductionVerified(verification, verifierBackend)) {
+      const state = stateFor(
+        validation.request.proof_id,
+        validation.request.recursive_height,
+        verification,
+        verifierBackend,
+      );
       this.states.set(validation.request.proof_id, state);
-      return state;
+      return copyState(state);
     }
 
-    return stateFor(validation.request.proof_id, validation.request.recursive_height, verification);
+    return stateFor(
+      validation.request.proof_id,
+      validation.request.recursive_height,
+      verification,
+      verifierBackend,
+    );
   }
 
   public getState(id: string): BitVM3State | undefined {
-    return this.states.get(id);
+    const state = this.states.get(id);
+    return state ? copyState(state) : undefined;
   }
 }
 

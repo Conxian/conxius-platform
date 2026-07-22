@@ -4,34 +4,205 @@ import {
   UnavailableOnChainMonitor,
   UnavailableZKVerifier,
   ZKCPBridge,
+  type DecryptionKeyReleaser,
+  type OnChainMonitor,
+  type ZKProofVerifier,
 } from "../lib/support/zkcp";
 import {
+  createPaymentObservation,
+  createVerificationResult,
+  digestVerifierRequest,
+  UNAVAILABLE_BACKEND,
+  type BackendIdentity,
+  type PaymentObservationResult,
+  type VerifierRequest,
+} from "../lib/support/verifier-contract";
+import {
+  bindZKCPRequestToIntent,
   DeterministicFixtureVerifier,
   makeIntentInput,
   makeVerifierRequest,
 } from "./fixtures/verifierFixtures";
 
-async function setup(verifier = new DeterministicFixtureVerifier()) {
-  const request = await makeVerifierRequest();
+const AUTHORITATIVE_TEST_BACKEND: BackendIdentity = {
+  id: "explicit-test-authority",
+  version: "test-authority-v1",
+  artifact_digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  authority: "authoritative",
+};
+
+async function setup(verifier: ZKProofVerifier = new DeterministicFixtureVerifier()) {
+  const genericRequest = await makeVerifierRequest();
+  const input = await makeIntentInput(genericRequest);
+  const request = await bindZKCPRequestToIntent(genericRequest, input);
   const bridge = new ZKCPBridge(
     verifier,
     new UnavailableOnChainMonitor(),
     new UnavailableDecryptionKeyReleaser(),
   );
-  const input = await makeIntentInput(request);
   bridge.initializeIntent(input);
   return { bridge, request, input };
 }
 
+class AuthoritativeFixtureVerifier implements ZKProofVerifier {
+  public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
+
+  public async verify(request: VerifierRequest) {
+    return createVerificationResult({
+      status: "valid",
+      request_digest: await digestVerifierRequest(request),
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production",
+    });
+  }
+}
+
+class AuthoritativeFixtureMonitor implements OnChainMonitor {
+  public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
+
+  public async watchForPayment(request: Parameters<OnChainMonitor["watchForPayment"]>[0]): Promise<PaymentObservationResult> {
+    const observation = await createPaymentObservation({
+      request,
+      txid: "tx-authoritative-fixture",
+      amount: request.expected_amount,
+      confirmations: 6,
+      observer: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production",
+    });
+    return {
+      contract_version: "conxian.verifier.v1",
+      status: "observed",
+      detected: true,
+      provenance: "production",
+      observation,
+    };
+  }
+}
+
+class AuthoritativeFixtureKeyReleaser implements DecryptionKeyReleaser {
+  public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
+  public releaseCount = 0;
+
+  public async release() {
+    this.releaseCount += 1;
+    return {
+      status: "released" as const,
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production" as const,
+      decryptionKey: "fixture-release-key",
+    };
+  }
+}
+
+class ThrowingZKVerifier implements ZKProofVerifier {
+  public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
+
+  public async verify(): Promise<never> {
+    throw new Error("fixture verifier failure");
+  }
+}
+
+class ThrowingPaymentMonitor implements OnChainMonitor {
+  public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
+
+  public async watchForPayment(): Promise<never> {
+    throw new Error("fixture observer failure");
+  }
+}
+
+class NullKeyReleaser implements DecryptionKeyReleaser {
+  public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
+
+  public async release(): Promise<never> {
+    return null as never;
+  }
+}
+
+class BlockingKeyReleaser extends AuthoritativeFixtureKeyReleaser {
+  private resolveReleaseStarted!: () => void;
+  private resolveReleaseGate!: () => void;
+  public readonly releaseStarted = new Promise<void>((resolve) => {
+    this.resolveReleaseStarted = resolve;
+  });
+  private readonly releaseGate = new Promise<void>((resolve) => {
+    this.resolveReleaseGate = resolve;
+  });
+
+  public override async release() {
+    this.releaseCount += 1;
+    this.resolveReleaseStarted();
+    await this.releaseGate;
+    return {
+      status: "released" as const,
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production" as const,
+      decryptionKey: "fixture-release-key",
+    };
+  }
+
+  public unblock(): void {
+    this.resolveReleaseGate();
+  }
+}
+
+class SentinelProductionVerifier implements ZKProofVerifier {
+  public readonly backendIdentity = UNAVAILABLE_BACKEND;
+
+  public async verify(request: VerifierRequest) {
+    return createVerificationResult({
+      status: "valid",
+      request_digest: await digestVerifierRequest(request),
+      backend: UNAVAILABLE_BACKEND,
+      provenance: "production",
+    });
+  }
+}
+
+class SentinelProductionMonitor implements OnChainMonitor {
+  public readonly backendIdentity = UNAVAILABLE_BACKEND;
+
+  public async watchForPayment(request: Parameters<OnChainMonitor["watchForPayment"]>[0]): Promise<PaymentObservationResult> {
+    const observation = await createPaymentObservation({
+      request,
+      txid: "tx-unavailable-sentinel",
+      amount: request.expected_amount,
+      confirmations: 6,
+      observer: UNAVAILABLE_BACKEND,
+      provenance: "production",
+    });
+    return {
+      contract_version: "conxian.verifier.v1",
+      status: "observed",
+      detected: true,
+      provenance: "production",
+      observation,
+    };
+  }
+}
+
+class SentinelProductionKeyReleaser implements DecryptionKeyReleaser {
+  public readonly backendIdentity = UNAVAILABLE_BACKEND;
+
+  public async release() {
+    return {
+      status: "released" as const,
+      backend: UNAVAILABLE_BACKEND,
+      provenance: "production" as const,
+      decryptionKey: "sentinel-must-not-release",
+    };
+  }
+}
+
 describe("ZKCPBridge fail-closed boundary", () => {
   it("requires an explicitly injected backend and returns unavailable", async () => {
-    const request = await makeVerifierRequest();
+    const genericRequest = await makeVerifierRequest();
+    const input = await makeIntentInput(genericRequest, "zkcp-unavailable");
+    const request = await bindZKCPRequestToIntent(genericRequest, input);
     const bridge = new ZKCPBridge(
       new UnavailableZKVerifier(),
       new UnavailableOnChainMonitor(),
       new UnavailableDecryptionKeyReleaser(),
     );
-    const input = await makeIntentInput(request, "zkcp-unavailable");
     bridge.initializeIntent(input);
 
     const result = await bridge.verifyProof(input.id, request);
@@ -42,7 +213,7 @@ describe("ZKCPBridge fail-closed boundary", () => {
     expect(bridge.getIntent(input.id)?.status).toBe("unsupported");
   });
 
-  it("rejects a simulated valid-looking verifier result", async () => {
+  it("rejects a deterministic simulated valid-looking verifier result", async () => {
     const { bridge, request, input } = await setup();
 
     const result = await bridge.verifyProof(input.id, request);
@@ -53,55 +224,106 @@ describe("ZKCPBridge fail-closed boundary", () => {
     expect(bridge.getIntent(input.id)?.status).toBe("failed");
   });
 
-  it("rejects wrong keys, curves, and circuits through the injected policy fixture", async () => {
-    const base = await makeVerifierRequest();
+  it("rejects a production-looking result from a non-authoritative placeholder backend", async () => {
+    class PlaceholderVerifier extends DeterministicFixtureVerifier {
+      public async verify(request: VerifierRequest) {
+        return createVerificationResult({
+          status: "valid",
+          request_digest: await digestVerifierRequest(request),
+          backend: this.backendIdentity,
+          provenance: "production",
+        });
+      }
+    }
 
-    const wrongKeyRequest = {
-      ...base,
+    const { bridge, request, input } = await setup(new PlaceholderVerifier());
+    const result = await bridge.verifyProof(input.id, request);
+
+    expect(result.verified).toBe(false);
+    expect(result.failure_code).toBe("backend_mismatch");
+    expect(bridge.getIntent(input.id)?.status).toBe("failed");
+  });
+
+  it("rejects production-looking results from the unavailable sentinel", async () => {
+    const genericRequest = await makeVerifierRequest({ backend: UNAVAILABLE_BACKEND, provenance: "production" });
+    const input = await makeIntentInput(genericRequest, "zkcp-unavailable-sentinel");
+    const request = await bindZKCPRequestToIntent(genericRequest, input);
+    const bridge = new ZKCPBridge(
+      new SentinelProductionVerifier(),
+      new UnavailableOnChainMonitor(),
+      new UnavailableDecryptionKeyReleaser(),
+    );
+    bridge.initializeIntent(input);
+
+    const result = await bridge.verifyProof(input.id, request);
+
+    expect(result.verified).toBe(false);
+    expect(result.failure_code).toBe("backend_mismatch");
+    expect(bridge.getIntent(input.id)?.status).toBe("failed");
+  });
+
+  it("rejects wrong keys, curves, and circuits through the bound policy fixture", async () => {
+    const wrongKeyCase = await setup();
+    const wrongKeyRequest = await bindZKCPRequestToIntent({
+      ...wrongKeyCase.request,
       verification_key: {
-        ...base.verification_key,
-        digest: "sha256:9999999999999999999999999999999999999999999999999999999999999999" as typeof base.verification_key.digest,
+        ...wrongKeyCase.request.verification_key,
+        digest: "sha256:9999999999999999999999999999999999999999999999999999999999999999",
       },
-    };
-    const wrongKey = await setup();
-    expect((await wrongKey.bridge.verifyProof(wrongKey.input.id, wrongKeyRequest)).failure_code)
+    }, wrongKeyCase.input);
+    expect((await wrongKeyCase.bridge.verifyProof(wrongKeyCase.input.id, wrongKeyRequest)).failure_code)
       .toBe("verification_key_mismatch");
 
-    const wrongCurve = await setup(new DeterministicFixtureVerifier("bn254"));
-    const wrongCurveRequest = await makeVerifierRequest({ curve: "secp256k1" });
-    const wrongCurveInput = await makeIntentInput(wrongCurveRequest, "zkcp-wrong-curve");
-    wrongCurve.bridge.initializeIntent(wrongCurveInput);
-    expect((await wrongCurve.bridge.verifyProof(wrongCurveInput.id, wrongCurveRequest)).failure_code)
+    const genericWrongCurve = await makeVerifierRequest({ curve: "secp256k1" });
+    const wrongCurveInput = await makeIntentInput(genericWrongCurve, "zkcp-wrong-curve");
+    const wrongCurveRequest = await bindZKCPRequestToIntent(genericWrongCurve, wrongCurveInput);
+    const wrongCurveBridge = new ZKCPBridge(
+      new DeterministicFixtureVerifier("bn254"),
+      new UnavailableOnChainMonitor(),
+      new UnavailableDecryptionKeyReleaser(),
+    );
+    wrongCurveBridge.initializeIntent(wrongCurveInput);
+    expect((await wrongCurveBridge.verifyProof(wrongCurveInput.id, wrongCurveRequest)).failure_code)
       .toBe("curve_mismatch");
 
-    const wrongCircuitRequest = {
-      ...base,
+    const wrongCircuitCase = await setup();
+    const wrongCircuitRequest = await bindZKCPRequestToIntent({
+      ...wrongCircuitCase.request,
       circuit: {
-        ...base.circuit,
-        digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as typeof base.circuit.digest,
+        ...wrongCircuitCase.request.circuit,
+        digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       },
-    };
-    const wrongCircuit = await setup();
-    expect((await wrongCircuit.bridge.verifyProof(wrongCircuit.input.id, wrongCircuitRequest)).failure_code)
+    }, wrongCircuitCase.input);
+    expect((await wrongCircuitCase.bridge.verifyProof(wrongCircuitCase.input.id, wrongCircuitRequest)).failure_code)
       .toBe("circuit_mismatch");
   });
 
-  it("rejects mutated proofs and public-input ordering", async () => {
+  it("rejects mutated statement, domain, public-input, and proof bindings", async () => {
+    const statementCase = await setup();
+    expect((await statementCase.bridge.verifyProof(statementCase.input.id, {
+      ...statementCase.request,
+      statement_digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    })).failure_code).toBe("statement_mismatch");
+
+    const domainCase = await setup();
+    expect((await domainCase.bridge.verifyProof(domainCase.input.id, {
+      ...domainCase.request,
+      domain_digest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    })).failure_code).toBe("domain_mismatch");
+
+    const publicInputCase = await setup();
+    expect((await publicInputCase.bridge.verifyProof(publicInputCase.input.id, {
+      ...publicInputCase.request,
+      public_inputs: [...publicInputCase.request.public_inputs].map((input, index) => index === 1
+        ? { ...input, name: "buyer_address" }
+        : input),
+    })).failure_code).toBe("public_input_mismatch");
+
     const proofCase = await setup();
-    const mutatedProof = {
+    expect((await proofCase.bridge.verifyProof(proofCase.input.id, {
       ...proofCase.request,
       proof: { ...proofCase.request.proof, bytes: "cd".repeat(64) },
-    };
-    expect((await proofCase.bridge.verifyProof(proofCase.input.id, mutatedProof)).failure_code)
-      .toBe("proof_digest_mismatch");
-
-    const inputCase = await setup();
-    const mutatedInputs = {
-      ...inputCase.request,
-      public_inputs: [...inputCase.request.public_inputs].reverse(),
-    };
-    expect((await inputCase.bridge.verifyProof(inputCase.input.id, mutatedInputs)).failure_code)
-      .toBe("public_input_mismatch");
+    })).failure_code).toBe("proof_digest_mismatch");
   });
 
   it("rejects malformed encodings before an adapter can run", async () => {
@@ -115,6 +337,174 @@ describe("ZKCPBridge fail-closed boundary", () => {
 
     expect(result.failure_code).toBe("malformed_encoding");
     expect(result.verified).toBe(false);
+  });
+
+  it("returns immutable snapshots and keeps authoritative evidence internal", async () => {
+    const bridge = new ZKCPBridge(
+      new AuthoritativeFixtureVerifier(),
+      new AuthoritativeFixtureMonitor(),
+      new AuthoritativeFixtureKeyReleaser(),
+    );
+    const genericRequest = await makeVerifierRequest({ backend: AUTHORITATIVE_TEST_BACKEND, provenance: "production" });
+    const input = await makeIntentInput(genericRequest, "zkcp-immutable");
+    const request = await bindZKCPRequestToIntent(genericRequest, input);
+    bridge.initializeIntent(input);
+
+    await bridge.verifyProof(input.id, request);
+    await bridge.watchForPayment(input.id);
+    const snapshot = bridge.getIntent(input.id) as Record<string, unknown>;
+    expect(() => {
+      snapshot.status = "failed";
+      (snapshot.paymentObservation as Record<string, unknown>).txid = "attacker-txid";
+    }).toThrow();
+
+    const finalized = await bridge.finalizeSettlement(input.id);
+    expect(finalized.finalized).toBe(true);
+    expect(finalized.paymentHash).toBe("tx-authoritative-fixture");
+    expect(finalized.decryptionKey).toBe("fixture-release-key");
+  });
+
+  it("rejects unavailable sentinel payment and key-release authority", async () => {
+    const genericRequest = await makeVerifierRequest({ backend: AUTHORITATIVE_TEST_BACKEND, provenance: "production" });
+    const input = await makeIntentInput(genericRequest, "zkcp-sentinel-payment");
+    const request = await bindZKCPRequestToIntent(genericRequest, input);
+    const paymentBridge = new ZKCPBridge(
+      new AuthoritativeFixtureVerifier(),
+      new SentinelProductionMonitor(),
+      new UnavailableDecryptionKeyReleaser(),
+    );
+    paymentBridge.initializeIntent(input);
+    await paymentBridge.verifyProof(input.id, request);
+
+    const observed = await paymentBridge.watchForPayment(input.id);
+    expect(observed.detected).toBe(false);
+    expect(observed.status).toBe("mismatch");
+    expect(observed.failure_code).toBe("payment_mismatch");
+    expect(paymentBridge.getIntent(input.id)?.status).toBe("verified");
+
+    const keyBridge = new ZKCPBridge(
+      new AuthoritativeFixtureVerifier(),
+      new AuthoritativeFixtureMonitor(),
+      new SentinelProductionKeyReleaser(),
+    );
+    keyBridge.initializeIntent(input);
+    await keyBridge.verifyProof(input.id, request);
+    await keyBridge.watchForPayment(input.id);
+
+    const finalized = await keyBridge.finalizeSettlement(input.id);
+    expect(finalized.finalized).toBe(false);
+    expect(finalized.status).toBe("unavailable");
+    expect(finalized.failure_code).toBe("decryption_key_unavailable");
+    expect(keyBridge.getIntent(input.id)?.status).toBe("paid");
+  });
+
+  it("normalizes throwing and malformed adapters without advancing state", async () => {
+    const genericRequest = await makeVerifierRequest({ backend: AUTHORITATIVE_TEST_BACKEND, provenance: "production" });
+    const input = await makeIntentInput(genericRequest, "zkcp-adapter-failures");
+    const request = await bindZKCPRequestToIntent(genericRequest, input);
+
+    const verifierBridge = new ZKCPBridge(
+      new ThrowingZKVerifier(),
+      new UnavailableOnChainMonitor(),
+      new UnavailableDecryptionKeyReleaser(),
+    );
+    verifierBridge.initializeIntent(input);
+    const verification = await verifierBridge.verifyProof(input.id, request);
+    expect(verification.failure_code).toBe("internal_error");
+    expect(verifierBridge.getIntent(input.id)?.status).toBe("failed");
+
+    const observerBridge = new ZKCPBridge(
+      new AuthoritativeFixtureVerifier(),
+      new ThrowingPaymentMonitor(),
+      new UnavailableDecryptionKeyReleaser(),
+    );
+    const observerInput = { ...input, id: "zkcp-observer-failure" };
+    const observerRequest = await bindZKCPRequestToIntent(genericRequest, observerInput);
+    observerBridge.initializeIntent(observerInput);
+    await observerBridge.verifyProof(observerInput.id, observerRequest);
+    const observed = await observerBridge.watchForPayment(observerInput.id);
+    expect(observed.failure_code).toBe("internal_error");
+    expect(observerBridge.getIntent(observerInput.id)?.status).toBe("verified");
+
+    const keyBridge = new ZKCPBridge(
+      new AuthoritativeFixtureVerifier(),
+      new AuthoritativeFixtureMonitor(),
+      new NullKeyReleaser(),
+    );
+    const keyInput = { ...input, id: "zkcp-key-failure" };
+    const keyRequest = await bindZKCPRequestToIntent(genericRequest, keyInput);
+    keyBridge.initializeIntent(keyInput);
+    await keyBridge.verifyProof(keyInput.id, keyRequest);
+    await keyBridge.watchForPayment(keyInput.id);
+    const finalized = await keyBridge.finalizeSettlement(keyInput.id);
+    expect(finalized.failure_code).toBe("internal_error");
+    expect(keyBridge.getIntent(keyInput.id)?.status).toBe("paid");
+  });
+
+  it("rejects unsafe integer amounts before canonical settlement binding", async () => {
+    const { bridge, input } = await setup();
+    expect(() => bridge.initializeIntent({
+      ...input,
+      id: "zkcp-unsafe-amount",
+      amount: Number.MAX_SAFE_INTEGER + 1,
+    })).toThrow("Malformed ZKCP intent bindings");
+  });
+
+  it("does not replay payment observation or key release after finalization", async () => {
+    const keyReleaser = new AuthoritativeFixtureKeyReleaser();
+    const bridge = new ZKCPBridge(
+      new AuthoritativeFixtureVerifier(),
+      new AuthoritativeFixtureMonitor(),
+      keyReleaser,
+    );
+    const genericRequest = await makeVerifierRequest({ backend: AUTHORITATIVE_TEST_BACKEND, provenance: "production" });
+    const input = await makeIntentInput(genericRequest, "zkcp-replay");
+    const request = await bindZKCPRequestToIntent(genericRequest, input);
+    bridge.initializeIntent(input);
+    await bridge.verifyProof(input.id, request);
+    await bridge.watchForPayment(input.id);
+
+    const first = await bridge.finalizeSettlement(input.id);
+    const repeatedPayment = await bridge.watchForPayment(input.id);
+    const second = await bridge.finalizeSettlement(input.id);
+
+    expect(first.finalized).toBe(true);
+    expect(repeatedPayment.status).toBe("observed");
+    expect(repeatedPayment.observation?.txid).toBe("tx-authoritative-fixture");
+    expect(second.finalized).toBe(true);
+    expect(keyReleaser.releaseCount).toBe(1);
+    expect(bridge.getIntent(input.id)?.status).toBe("finalized");
+  });
+
+  it("rejects concurrent finalization while one key release is in flight", async () => {
+    const keyReleaser = new BlockingKeyReleaser();
+    const bridge = new ZKCPBridge(
+      new AuthoritativeFixtureVerifier(),
+      new AuthoritativeFixtureMonitor(),
+      keyReleaser,
+    );
+    const genericRequest = await makeVerifierRequest({ backend: AUTHORITATIVE_TEST_BACKEND, provenance: "production" });
+    const input = await makeIntentInput(genericRequest, "zkcp-concurrent-finalize");
+    const request = await bindZKCPRequestToIntent(genericRequest, input);
+    bridge.initializeIntent(input);
+    await bridge.verifyProof(input.id, request);
+    await bridge.watchForPayment(input.id);
+
+    const first = bridge.finalizeSettlement(input.id);
+    await keyReleaser.releaseStarted;
+    const second = await bridge.finalizeSettlement(input.id);
+    keyReleaser.unblock();
+    const firstResult = await first;
+
+    expect(second.finalized).toBe(false);
+    expect(second.failure_code).toBe("internal_error");
+    expect(firstResult.finalized).toBe(true);
+    expect(keyReleaser.releaseCount).toBe(1);
+  });
+
+  it("rejects duplicate intent ids instead of overwriting authoritative state", async () => {
+    const { bridge, input } = await setup();
+    expect(() => bridge.initializeIntent(input)).toThrow("already exists");
   });
 
   it("does not observe or finalize payment without production proof and payment evidence", async () => {

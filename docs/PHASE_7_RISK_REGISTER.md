@@ -10,7 +10,7 @@ This document proactively manages delivery, dependency, security, and adoption r
 | **R-7-02** | FDC3 bridge requires non-native Desktop Agent overhead | Interop | Medium | Medium | **MEDIUM** | @ui-lead | Leverage @finos/fdc3-agent-proxy; provide reference simulator. | 2026-07-15 |
 | **R-7-03** | Local-first Wasm execution latency degrades UX | Performance | Medium | High | **HIGH** | @platform-lead | Optimize lib-conxian-core (Wasm); implement proof folding (Nova). | 2026-08-15 |
 | **R-7-04** | Nostr relay fragmentation affects P&L delivery reliability | Infrastructure | High | Medium | **HIGH** | @ops-team | Implement multi-relay proxy in Wallet-BFF; use persistent storage. | 2026-07-31 |
-| **R-7-06** | Verifier scaffolding can be mistaken for cryptographic settlement authorization | Security / Correctness | High | Critical | **CRITICAL** | @platform-lead | Issue #1187 quarantines simulation and length-only success, requires typed backend/provenance bindings, and rejects caller-only payment evidence. | Before Phase 7 launch |
+| **R-7-06** | Verifier scaffolding can be mistaken for cryptographic settlement authorization | Security / Correctness | High | Critical | **CRITICAL** | @platform-lead | Issue #1187 quarantines simulation and length-only/contradictory success, requires adapter-owned authoritative backend bindings, versioned ZKCP intent terms, immutable lifecycle evidence, attested unique aggregation, and rejects caller-only payment evidence. | Before Phase 7 launch |
 
 ## 2. Mitigation Backlog
 

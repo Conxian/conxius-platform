@@ -15,7 +15,7 @@
   "dependencies": {
     "imapflow": "^1.4.8",
     "mailparser": "^3.9.14",
-    "next": "15.5.18",
+    "next": "16.2.11",
     "nodemailer": "^9.0.3",
     "nostr-tools": "^2.24.1",
     "react": "19.2.8",
@@ -28,7 +28,7 @@
     "@types/nodemailer": "^8.0.1",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.2",
     "vitest": "^4.1.10"
   }
 }

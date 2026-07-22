@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getM2MAuthenticator, type Scope } from "./m2m";
+import { timingSafeStringEqual } from "./m2mKeyHttp";
 
 /**
  * Validates the X-Admin-API-Key header against the configured ADMIN_DASHBOARD_API_KEY environment variable.
@@ -27,7 +28,7 @@ export async function validateAdminAuth(req: Request, requiredScope: Scope = "re
     return NextResponse.json({ error: "Configuration Error" }, { status: 500 });
   }
 
-  if (authHeader !== expectedKey) {
+  if (!authHeader || !timingSafeStringEqual(authHeader, expectedKey)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

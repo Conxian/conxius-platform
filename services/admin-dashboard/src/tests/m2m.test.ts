@@ -1,3 +1,7 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { decodeJwt, decodeProtectedHeader, SignJWT, type JWTPayload, type JWTHeaderParameters } from "jose";
 
@@ -14,11 +18,12 @@ import {
   parseBearerToken,
   SERVICE_PERMISSIONS,
   type JwtServiceId,
-  type Scope,
   validateAdminAuth,
   validateM2MAuth,
   validateM2MAuthWithScope,
 } from "../lib/support/m2m";
+import { resetM2MKeyStoreForTests } from "../lib/support/m2mKeyStore";
+import { timingSafeStringEqual } from "../lib/support/m2mKeyHttp";
 import { validateAdminAuth as validateRouteAdminAuth } from "../lib/support/auth";
 
 const NOW_SECONDS = 1_800_000_000;
@@ -35,6 +40,7 @@ const M2M_ENV_KEYS = [
   "M2M_JWT_TTL_SECONDS",
   "M2M_JWT_CLOCK_SKEW_SECONDS",
   "M2M_GATEWAY_AUTH_MODE",
+  "M2M_SERVICE_KEY_REGISTRY_PATH",
   "EXTERNAL_API_KEYS",
   "CORE_API_URL",
   "NEXT_PUBLIC_CORE_API_URL",
@@ -60,12 +66,16 @@ const baseEnvironment: Record<string, string> = {
   }),
 };
 
+let registryDirectory: string;
+let registryPath: string;
+
 function setEnvironment(overrides: Partial<Record<string, string | undefined>> = {}): void {
   for (const key of M2M_ENV_KEYS) delete process.env[key];
   const values = { ...baseEnvironment, ...overrides };
   for (const [key, value] of Object.entries(values)) {
     if (value !== undefined) process.env[key] = value;
   }
+  process.env.M2M_SERVICE_KEY_REGISTRY_PATH = registryPath;
   M2MConfig.resetInstance();
 }
 
@@ -99,11 +109,13 @@ async function signRawToken(payloadOverrides: Record<string, unknown> = {}, head
     .sign(new TextEncoder().encode(process.env.GATEWAY_JWT_SECRET ?? ""));
 }
 
-function tamperJwtSignature(token: string): string {
-  const signatureOffset = token.lastIndexOf(".") + 1;
-  const signatureCharacter = token[signatureOffset];
-  // Mutate a significant Base64URL character; the final character may only change unused padding bits.
-  return `${token.slice(0, signatureOffset)}${signatureCharacter === "a" ? "b" : "a"}${token.slice(signatureOffset + 1)}`;
+function tamperSignature(token: string): string {
+  const segments = token.split(".");
+  const signature = segments[2];
+  if (!signature) throw new Error("Expected a compact JWT signature");
+
+  segments[2] = `${signature[0] === "a" ? "b" : "a"}${signature.slice(1)}`;
+  return segments.join(".");
 }
 
 describe("M2M authentication", () => {
@@ -112,16 +124,26 @@ describe("M2M authentication", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(NOW_SECONDS * 1000);
+    registryDirectory = mkdtempSync(join(tmpdir(), "conxian-m2m-auth-"));
+    registryPath = join(registryDirectory, "registry.json");
     setEnvironment();
     authenticator = new M2MAuthenticator();
   });
 
   afterEach(() => {
     vi.useRealTimers();
+    resetM2MKeyStoreForTests();
+    rmSync(registryDirectory, { recursive: true, force: true });
     restoreEnvironment();
   });
 
   describe("legacy credential compatibility", () => {
+    it("compares legacy API keys in constant time across length differences", () => {
+      expect(timingSafeStringEqual("test-admin-key", "test-admin-key")).toBe(true);
+      expect(timingSafeStringEqual("test-admin-key", "test-admin-key-extra")).toBe(false);
+      expect(timingSafeStringEqual("wrong-admin-key", "test-admin-key")).toBe(false);
+    });
+
     it("validates the configured admin API key", () => {
       const result = authenticator.validateApiKey("test-admin-key");
       expect(result).toMatchObject({ valid: true, source: "api-key" });
@@ -229,7 +251,7 @@ describe("M2M authentication", () => {
 
     it("rejects signature tampering, alternate algorithms, wrong headers, and kid", async () => {
       const valid = await authenticator.issueJwt("gateway", ["read:admin", "m2m:internal"], { nowSeconds: NOW_SECONDS });
-      const tampered = tamperJwtSignature(valid);
+      const tampered = tamperSignature(valid);
       expect((await authenticator.verifyJwt(tampered, { nowSeconds: NOW_SECONDS })).valid).toBe(false);
 
       const alternateAlgorithm = await signRawToken({}, { alg: "HS384" });
@@ -406,7 +428,7 @@ describe("M2M authentication", () => {
 
     it("returns generic authentication failures without token or secret material", async () => {
       const rawToken = await authenticator.issueJwt("gateway", ["read:admin", "m2m:internal"], { nowSeconds: NOW_SECONDS });
-      const tamperedToken = tamperJwtSignature(rawToken);
+      const tamperedToken = tamperSignature(rawToken);
       const result = await authenticator.verifyJwt(tamperedToken, { nowSeconds: NOW_SECONDS });
 
       expect(result).toEqual({ valid: false, error: "Invalid bearer token" });

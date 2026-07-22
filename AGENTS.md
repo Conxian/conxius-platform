@@ -1286,6 +1286,62 @@ AGENTS.md (this update)
 **Gotchas**:
 - Do not treat the initial shallow-clone `refusing to merge unrelated histories` message as a repository divergence; after local history deepening, the normal merge completed with three content conflicts.
 
+### 2026-07-22 — M2M Rotation Phase 3B Operations (#1161)
+**Trigger**: Issue #1161 Phase 3B request for production/deployment wiring, secure Prometheus scrape authentication, alerting, operator documentation, OpenSpec closure, and session continuity.
+**What was done**:
+- Added fail-closed Prometheus Basic Auth for `GET /api/metrics` using a provisioned password file, timing-safe password comparison, `503 metrics_scrape_auth_unavailable` for missing/unreadable configuration, and continued `X-Admin-API-Key` access for operators.
+- Added Compose wiring for all eight `SERVICE_KEY_*` variables, the dashboard-owned registry path, a named persistent registry volume, and a shared Compose secret for Prometheus and `admin-dashboard`.
+- Added mutually exclusive expiry-window, expired-key, authentication-failure, rotation/rollback, registry-write/unavailable, and missing-revision Prometheus rules using the implemented bounded metric names.
+- Added the M2M operations documentation and runbook covering endpoint contracts, one-time secret handling, manual consumer rollout, lost-response rollback, single-writer persistence, recovery, and scrape verification.
+- Closed the completed T9 documentation work and recorded Phase 3B test/config validation evidence in the OpenSpec task checklist while leaving Docker/Compose persistence validation blocked.
+- Added the Unreleased changelog entry and this session log entry; no secrets were committed and no cross-repository consumer mutation was added.
+**Key discoveries**:
+- `/api/metrics` is already a protected route, so the secure scrape path can be additive: valid admin-key requests retain operator compatibility while Basic Auth is used by Prometheus.
+- The repository's provisioner is the approved place to create the scrape password file; the password is shared through a Compose secret and only the file path is present in environment/configuration.
+- The file-backed M2M registry derives lock/candidate/journal/marker artifacts beside the registry and requires one writer on persistent storage; the devbox has no Docker daemon or `promtool`.
+**Files touched**:
+- `services/admin-dashboard/src/lib/support/metricsAuth.ts`
+- `services/admin-dashboard/src/app/api/metrics/route.ts`
+- `services/admin-dashboard/src/tests/auth.test.ts`
+- `.env.example`, `.env.schema`, `.env.production.schema`, `.gitignore`
+- `docker-compose.yml`, `prometheus.yml`, `prometheus-alerts.yml`
+- `scripts/provision-secrets.sh`
+- `docs/M2M_AUTHENTICATION.md`, `docs/runbooks/M2M_KEY_ROTATION_RUNBOOK.md`
+- `openspec/changes/2026-07-22-m2m-service-key-rotation/tasks.md`
+- `CHANGELOG.md`
+- `AGENTS.md`
+**Gaps identified**:
+- Live Docker Compose persistence/restart validation and Prometheus `promtool` validation require a Docker-enabled operations or CI environment.
+- The runbook intentionally leaves the consumer secret-manager command deployment-specific; the platform does not mutate other repositories or consumers automatically.
+**Gotchas**:
+- Missing scrape configuration intentionally returns `503` for scrape-auth attempts, while a valid admin API key still reaches the protected metrics payload.
+- `SERVICE_KEY_ADMIN_DASHBOARD` must remain distinct from `ADMIN_DASHBOARD_API_KEY`; rotating the former requires a manual dashboard secret update and restart.
+
+### 2026-07-22 — M2M Rotation Phase 3C Review Fixes (#1161)
+**Trigger**: Bounded pre-PR security/correctness review for issue #1161.
+**What was done**:
+- Hardened marker recovery to require matching journal, predecessor metadata, and original mutation audit evidence; recovery failures now latch fail-closed and preserve evidence.
+- Added regression coverage for missing/mismatched recovery artifacts, unrelated audit evidence, initial bootstrap, valid post-rename recovery, idempotent recovery events, readiness, and metrics state.
+- Added generic registry readiness health, ready-aware metrics/alerts, an explicit Compose single-replica constraint, and atomic strict-format scrape-password provisioning.
+- Recorded Phase 3C review-fix validation in the existing OpenSpec task checklist.
+**Key discoveries**:
+- The active-marker/rename-completed path still requires its durable journal; recovery evidence must reference the original mutation event rather than `SERVICE_KEY_REGISTRY_RECOVERED`.
+- The registry revision metric is intentionally omitted until readiness is established and is cleared on unavailable or recovery-latched failure.
+**Files touched**:
+- `services/admin-dashboard/src/lib/support/m2mKeyStore.ts`
+- `services/admin-dashboard/src/lib/sidl/observability.ts`
+- `services/admin-dashboard/src/app/api/health/route.ts`
+- `services/admin-dashboard/src/tests/m2mKeyRotation.test.ts`
+- `services/admin-dashboard/src/tests/health.test.ts`
+- `services/admin-dashboard/src/tests/auth.test.ts`
+- `services/admin-dashboard/src/lib/support/m2mKeyTypes.ts`
+- `docker-compose.yml`, `prometheus-alerts.yml`, `scripts/provision-secrets.sh`
+- `docs/M2M_AUTHENTICATION.md`, `openspec/changes/2026-07-22-m2m-service-key-rotation/tasks.md`, `AGENTS.md`
+**Gaps identified**:
+- Docker/Compose persistence and restart validation and Prometheus `promtool` rule validation remain environment-blocked.
+**Gotchas**:
+- Do not treat a generic healthy HTTP response as registry readiness; `/api/health` must remain `503` for unavailable or recovery-latched state while valid-empty remains healthy.
+
 ### 2026-07-22 — Automatic Agent Discovery Protocol
 **Trigger**: Issue #1162 — implement automatic agent discovery for repository onboarding.
 **What was done**:
@@ -1531,3 +1587,60 @@ AGENTS.md (this update)
 - No canonical OpenSpec or JSON Schema correction was needed; both already state authentication normalization and per-entry byte/depth bounds.
 **Gotchas**:
 - A self-consistent forged snapshot must recompute both its context integrity digest and declared limits to exercise the authoritative-boundary bypass; changing only the limits is sufficient because entry provenance remains valid.
+
+### 2026-07-22 — PR #1194 Mainline Merge Resolution
+**Trigger**: PR #1194 request to fetch `origin/main`, resolve all conflicts, validate, and update `feature/1161-m2m-key-rotation`.
+**What was done**:
+- Fetched `origin/main` at `a9148512b5ac36298868e1a075a4969fe69d792f`, deepened the shallow checkout to recover merge base `987bbf7a8e691febb82c2dc03edb8aebfeb7742f`, and performed a normal merge without rebasing or unrelated-history overrides.
+- Resolved conflicts in the M2M implementation, route guard, metrics authentication, focused tests, M2M operations documentation, and this session log by preserving mainline JWT behavior plus the PR's atomic service-key rotation and fail-closed scrape-auth behavior.
+- Corrected the JWT tampering fixture to mutate a meaningful signature byte rather than unused base64url padding bits.
+- Installed the frozen workspace dependencies and passed the focused M2M/auth/route test set (68 tests), dashboard typecheck, and staged conflict/whitespace checks.
+**Key discoveries**:
+- The initial normal merge refusal was caused by the shallow clone hiding the valid merge base; history deepening restored the repository's normal merge workflow. Do not use `--allow-unrelated-histories`.
+- The PR's original last-character JWT tampering fixture could leave the decoded signature unchanged because of base64url padding bits; the corrected fixture now tests actual signature tampering.
+**Files touched**:
+- `AGENTS.md`, `docs/M2M_AUTHENTICATION.md`
+- `services/admin-dashboard/src/app/api/metrics/route.ts`
+- `services/admin-dashboard/src/lib/support/auth.ts`, `services/admin-dashboard/src/lib/support/m2m.ts`
+- `services/admin-dashboard/src/tests/auth.test.ts`, `services/admin-dashboard/src/tests/m2m.test.ts`
+- Mainline files brought into the merge from `origin/main`.
+**Gaps identified**:
+- Hosted PR checks and GitHub mergeability remain to be re-evaluated after the merge commit is pushed.
+**Gotchas**:
+- The dashboard Prettier executable was not usable in this devbox, so formatting was not claimed as verified; TypeScript, Vitest, conflict-marker, and whitespace checks were used instead.
+
+### 2026-07-22 — PR #1194 Prometheus Secret Workflow Repair
+**Trigger**: Formal review `4756445434` and follow-up request on PR #1194.
+**What was done**:
+- Re-checked the remote PR head after it advanced from the diagnosed `b03be061ed3641529ff12abc6ef78edca98ff08b` to `f51bc26042ad5051547a43845b3d58cde7e89785`, preserving the newer provisioning commit.
+- Extended `synergy-test` and `multi-env-test` so the repository-owned provisioner is followed by a regular-file and mode-600 assertion for `.secrets/prometheus-scrape.password` before Compose startup.
+- Recorded the workflow repair in the existing M2M rotation OpenSpec validation checklist without creating a new proposal.
+**Key discoveries**:
+- The current PR head already invoked `scripts/provision-secrets.sh`; the missing hardening was an explicit CI assertion that the host-side Compose secret exists with the required permissions.
+- The isolated provisioner smoke test created a 65-byte newline-terminated secret file with mode 600 without exposing its contents.
+**Files touched**:
+- `.github/workflows/synergy-test.yml`
+- `.github/workflows/multi-env-test.yml`
+- `openspec/changes/2026-07-22-m2m-service-key-rotation/tasks.md`
+- `AGENTS.md`
+**Gaps identified**:
+- Hosted Docker/Compose checks remain the final validation gate after the repaired branch is pushed.
+**Gotchas**:
+- Keep the Compose secret declaration fail-closed and validate only file type and mode; never print the secret value.
+
+### 2026-07-22 — PR #1195 Mainline Merge Conflict Resolution
+**Trigger**: PR #1195 request to fetch `origin/main`, resolve all merge conflicts, validate, and update `feat/1163-swarm-coordination`.
+**What was done**:
+- Fetched `origin/main` at `c007cc80fa7e718a104b18fe37e661bd5306a0c4` and the PR head at `23ca3c2cf8c876af966f9aa205126c1be9c2783e`, then performed a normal non-rebase merge.
+- Resolved the two content conflicts in `AGENTS.md` and `services/admin-dashboard/src/tests/m2m.test.ts` by retaining all #1163 swarm-coordination entries, mainline #1194 entries, M2M rotation test setup, and deterministic first-signature JWT tampering coverage.
+- Verified the merged branch with the full test, typecheck, lint, and build suites, strict #1163 OpenSpec validation, dependency consistency, whitespace, and conflict-marker checks.
+**Key discoveries**:
+- The repository's remote fetch refspec tracks `main`; the PR ref was fetched and checked out explicitly from `refs/remotes/origin/feat/1163-swarm-coordination`.
+- The mainline M2M rotation change still uses the older delta layout and remains outside this focused conflict resolution; strict validation of that unrelated artifact reports no `specs/` deltas.
+**Files touched**:
+- `AGENTS.md`
+- `services/admin-dashboard/src/tests/m2m.test.ts`
+**Gaps identified**:
+- Hosted PR checks and GitHub mergeability remain to be re-evaluated after the merge commit is pushed.
+**Gotchas**:
+- Do not rewrite the existing mainline or #1163 session-log entries; this entry is appended after both histories are preserved.

@@ -34,6 +34,151 @@ groups:
           summary: "Invalid SIDL checkout payment signatures increased"
           description: "Invalid payment-signature headers reached {{ $value }} in the last 10 minutes."
 
+  - name: m2m-service-key-alerts
+    rules:
+      - alert: M2MActiveServiceKeyExpired
+        expr: m2m_service_key_expiry_timestamp_seconds{key_role="active"} <= time()
+        for: 5m
+        labels:
+          severity: critical
+          service: admin-dashboard
+          component: m2m-key-rotation
+        annotations:
+          summary: "Active M2M service key has expired"
+          description: "The active {{ $labels.service_id }} service key generation has passed its expiry boundary."
+
+      - alert: M2MPreviousServiceKeyExpired
+        expr: m2m_service_key_expiry_timestamp_seconds{key_role="previous"} <= time()
+        for: 5m
+        labels:
+          severity: warning
+          service: admin-dashboard
+          component: m2m-key-rotation
+        annotations:
+          summary: "Previous M2M service key grace period has ended"
+          description: "The previous {{ $labels.service_id }} service key is no longer valid for grace-period authentication."
+
+      - alert: M2MServiceKeyExpiry30d
+        expr: (m2m_service_key_expiry_timestamp_seconds - time() > 7 * 24 * 60 * 60) and (m2m_service_key_expiry_timestamp_seconds - time() <= 30 * 24 * 60 * 60)
+        for: 10m
+        labels:
+          severity: warning
+          service: admin-dashboard
+          component: m2m-key-rotation
+        annotations:
+          summary: "M2M service key expires within 30 days"
+          description: "The {{ $labels.service_id }} {{ $labels.key_role }} service-key deadline is within 30 days."
+
+      - alert: M2MServiceKeyExpiry7d
+        expr: (m2m_service_key_expiry_timestamp_seconds - time() > 24 * 60 * 60) and (m2m_service_key_expiry_timestamp_seconds - time() <= 7 * 24 * 60 * 60)
+        for: 10m
+        labels:
+          severity: warning
+          service: admin-dashboard
+          component: m2m-key-rotation
+        annotations:
+          summary: "M2M service key expires within 7 days"
+          description: "The {{ $labels.service_id }} {{ $labels.key_role }} service-key deadline is within 7 days."
+
+      - alert: M2MServiceKeyExpiry24h
+        expr: (m2m_service_key_expiry_timestamp_seconds - time() > 60 * 60) and (m2m_service_key_expiry_timestamp_seconds - time() <= 24 * 60 * 60)
+        for: 10m
+        labels:
+          severity: critical
+          service: admin-dashboard
+          component: m2m-key-rotation
+        annotations:
+          summary: "M2M service key expires within 24 hours"
+          description: "The {{ $labels.service_id }} {{ $labels.key_role }} service-key deadline is within 24 hours."
+
+      - alert: M2MServiceKeyExpiry1h
+        expr: (m2m_service_key_expiry_timestamp_seconds - time() > 0) and (m2m_service_key_expiry_timestamp_seconds - time() <= 60 * 60)
+        for: 5m
+        labels:
+          severity: critical
+          service: admin-dashboard
+          component: m2m-key-rotation
+        annotations:
+          summary: "M2M service key expires within 1 hour"
+          description: "The {{ $labels.service_id }} {{ $labels.key_role }} service-key deadline is within 1 hour."
+
+      - alert: M2MServiceKeyAuthFailureBurst
+        expr: sum by (service_id) (increase(m2m_service_key_validation_total{outcome=~"invalid|expired"}[10m])) >= 5
+        for: 5m
+        labels:
+          severity: warning
+          service: admin-dashboard
+          component: m2m-authentication
+        annotations:
+          summary: "M2M authentication failures are spiking"
+          description: "{{ $labels.service_id }} recorded {{ $value }} invalid or expired service-key validations in the last 10 minutes."
+
+      - alert: M2MServiceKeyRotationFailure
+        expr: sum by (service_id) (increase(m2m_service_key_rotation_total{outcome=~"failure|conflict|rejected|unavailable"}[10m])) > 0
+        for: 5m
+        labels:
+          severity: warning
+          service: admin-dashboard
+          component: m2m-key-rotation
+        annotations:
+          summary: "M2M service-key rotation requires operator attention"
+          description: "{{ $labels.service_id }} has a rotation failure, conflict, rejection, or unavailable-registry outcome."
+
+      - alert: M2MServiceKeyRollbackFailure
+        expr: sum by (service_id) (increase(m2m_service_key_rollback_total{outcome=~"failure|conflict|rejected|unavailable"}[10m])) > 0
+        for: 5m
+        labels:
+          severity: critical
+          service: admin-dashboard
+          component: m2m-key-rotation
+        annotations:
+          summary: "M2M service-key rollback requires operator attention"
+          description: "{{ $labels.service_id }} has a rollback failure, conflict, rejection, or unavailable-registry outcome."
+
+      - alert: M2MServiceKeyRegistryWriteFailure
+        expr: sum(increase(m2m_service_key_registry_write_failures_total[10m])) > 0
+        for: 5m
+        labels:
+          severity: critical
+          service: admin-dashboard
+          component: m2m-key-rotation
+        annotations:
+          summary: "M2M service-key registry writes are failing"
+          description: "The M2M registry has recorded {{ $value }} write or recovery failures in the last 10 minutes."
+
+      - alert: M2MServiceKeyRegistryUnavailable
+        expr: (sum(increase(m2m_service_key_validation_total{outcome="unavailable"}[10m])) + sum(increase(m2m_service_key_rotation_total{outcome="unavailable"}[10m])) + sum(increase(m2m_service_key_rollback_total{outcome="unavailable"}[10m]))) > 0
+        for: 5m
+        labels:
+          severity: critical
+          service: admin-dashboard
+          component: m2m-key-rotation
+        annotations:
+          summary: "M2M service-key registry is unavailable"
+          description: "M2M validation or mutation has observed an unavailable registry; service-key operations are fail-closed."
+
+      - alert: M2MServiceKeyRegistryNotReady
+        expr: absent(m2m_service_key_registry_ready) or m2m_service_key_registry_ready == 0
+        for: 10m
+        labels:
+          severity: critical
+          service: admin-dashboard
+          component: m2m-key-rotation
+        annotations:
+          summary: "M2M service-key registry is not ready"
+          description: "The dashboard has not completed a validated M2M registry load or has latched registry recovery."
+
+      - alert: M2MServiceKeyRegistryRevisionMissing
+        expr: m2m_service_key_registry_ready == 1 unless m2m_service_key_registry_revision
+        for: 10m
+        labels:
+          severity: critical
+          service: admin-dashboard
+          component: m2m-key-rotation
+        annotations:
+          summary: "M2M registry revision metric is missing"
+          description: "Prometheus has not observed the dashboard-owned M2M registry revision metric. Check scrape authentication and registry initialization."
+
   - name: infrastructure-alerts
     rules:
       - alert: HighCPUUsage

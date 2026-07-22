@@ -10,6 +10,9 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { decodeProtectedHeader, jwtVerify, SignJWT, type JWTPayload } from "jose";
 import { NextResponse } from "next/server";
+import { getM2MKeyStore, parseM2MServiceKeyHeader } from "./m2mKeyStore";
+import { timingSafeStringEqual } from "./m2mKeyHttp";
+import { isRotatableServiceId, type RotatableServiceId } from "./m2mKeyTypes";
 
 // Service identifiers for the platform.
 export const SERVICE_IDS = [
@@ -137,8 +140,10 @@ export interface IssuedM2MJwt {
 export interface AuthResult {
   valid: boolean;
   serviceId?: ServiceId;
+  generation?: number;
   scopes?: Scope[];
   error?: string;
+  unavailable?: boolean;
   source?: "api-key" | "service-key" | "jwt" | "external-key";
 }
 
@@ -268,6 +273,13 @@ function unauthorizedResponse(): NextResponse {
 
 function forbiddenResponse(requiredScope: Scope): NextResponse {
   return NextResponse.json({ error: "Forbidden", message: `Missing required scope: ${requiredScope}` }, { status: 403 });
+}
+
+function unavailableResponse(): NextResponse {
+  return NextResponse.json(
+    { error: "m2m_registry_unavailable", message: "M2M registry is unavailable" },
+    { status: 503 },
+  );
 }
 
 function getNowSeconds(nowSeconds?: number): number {
@@ -497,7 +509,7 @@ export class M2MAuthenticator {
       return { valid: false, error: "Missing API key" };
     }
 
-    if (headerValue !== expectedKey) {
+    if (!timingSafeStringEqual(headerValue, expectedKey)) {
       return { valid: false, error: "Invalid API key" };
     }
 
@@ -508,35 +520,42 @@ export class M2MAuthenticator {
     };
   }
 
-  /** Validate service-to-service key from X-Service-Key: <service-id>:<key>. */
-  validateServiceKey(headerValue: string | null): AuthResult {
+  /** Validate a registry-backed service key from X-Service-Key: <service-id>:<secret>. */
+  validateServiceKey(headerValue: string | null, expectedServiceId?: RotatableServiceId): AuthResult {
     if (!headerValue) {
       return { valid: false, error: "Missing service key" };
     }
 
-    const parts = headerValue.split(":");
-    if (parts.length < 2) {
+    const separatorIndex = headerValue.indexOf(":");
+    if (separatorIndex <= 0) {
       return { valid: false, error: "Invalid service key format" };
     }
 
-    const [serviceIdValue, key] = parts;
-    if (!isServiceId(serviceIdValue)) {
-      return { valid: false, error: "Unknown service ID" };
+    const parsed = parseM2MServiceKeyHeader(headerValue, expectedServiceId);
+    if (!parsed) {
+      const serviceId = headerValue.slice(0, separatorIndex);
+      if (!isRotatableServiceId(serviceId)) {
+        return { valid: false, error: "Unknown service ID" };
+      }
+      return { valid: false, error: "Invalid service key format" };
     }
 
-    const expectedKey = this.config.getServiceKey(serviceIdValue);
-    if (!expectedKey) {
-      return { valid: false, error: "Service key not configured" };
+    let validation: ReturnType<ReturnType<typeof getM2MKeyStore>["validateServiceSecret"]>;
+    try {
+      validation = getM2MKeyStore().validateServiceSecret(parsed.serviceId, parsed.secret);
+    } catch {
+      return { valid: false, error: "Service key registry unavailable", unavailable: true };
     }
 
-    if (key !== expectedKey) {
+    if (!validation.valid) {
       return { valid: false, error: "Invalid service key" };
     }
 
     return {
       valid: true,
-      serviceId: serviceIdValue,
-      scopes: this.config.getServiceScopes(serviceIdValue),
+      serviceId: parsed.serviceId,
+      generation: validation.generation,
+      scopes: this.config.getServiceScopes(parsed.serviceId),
       source: "service-key",
     };
   }
@@ -732,7 +751,8 @@ export async function verifyM2MJwt(token: string, options?: JwtVerifyOptions): P
 /** Validate M2M authentication for API routes. */
 export async function validateM2MAuth(request: Request): Promise<NextResponse | null> {
   const result = await getM2MAuthenticator().authenticate(request);
-  return result.valid ? null : unauthorizedResponse();
+  if (result.valid) return null;
+  return result.unavailable ? unavailableResponse() : unauthorizedResponse();
 }
 
 /** Validate M2M authentication with a scope check, distinguishing 401 from 403. */
@@ -741,7 +761,7 @@ export async function validateM2MAuthWithScope(request: Request, requiredScope: 
   const result = await authenticatorInstance.authenticate(request);
 
   if (!result.valid) {
-    return { response: unauthorizedResponse(), auth: result };
+    return { response: result.unavailable ? unavailableResponse() : unauthorizedResponse(), auth: result };
   }
 
   if (!authenticatorInstance.hasScope(result, requiredScope)) {

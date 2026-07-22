@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **M2M Service-Key Rotation Operations**: Added persistent dashboard-owned
+  service-key rotation/rollback deployment wiring, fail-closed Prometheus
+  scrape authentication, bounded rotation and registry alerts, and operator
+  runbooks for issue #1161.
 - **Control-Plane Boundary & Deployment Promotion Model**: Defined the three-tier boundary between repo CI, release orchestration, and deployment promotion. Added `docs/DEPLOYMENT_PROMOTION_MODEL.md` with environment promotion ladder, gating rules, and cross-repo coordination patterns.
 - **Cross-Repo Deployment Schemas**: Added `schemas/deployment-manifest.schema.json` and `schemas/verification-result.schema.json` as standardized artifacts for cross-repo deployment metadata and promotion gating (per #966, #975).
 - **BitVMX High-Efficiency Computation (G-44)**: Transitioned to Active Scaffolding with foundational state machine and adaptive challenge logic.

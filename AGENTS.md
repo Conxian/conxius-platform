@@ -1307,3 +1307,28 @@ AGENTS.md (this update)
 **Gotchas**:
 - Missing scrape configuration intentionally returns `503` for scrape-auth attempts, while a valid admin API key still reaches the protected metrics payload.
 - `SERVICE_KEY_ADMIN_DASHBOARD` must remain distinct from `ADMIN_DASHBOARD_API_KEY`; rotating the former requires a manual dashboard secret update and restart.
+
+### 2026-07-22 — M2M Rotation Phase 3C Review Fixes (#1161)
+**Trigger**: Bounded pre-PR security/correctness review for issue #1161.
+**What was done**:
+- Hardened marker recovery to require matching journal, predecessor metadata, and original mutation audit evidence; recovery failures now latch fail-closed and preserve evidence.
+- Added regression coverage for missing/mismatched recovery artifacts, unrelated audit evidence, initial bootstrap, valid post-rename recovery, idempotent recovery events, readiness, and metrics state.
+- Added generic registry readiness health, ready-aware metrics/alerts, an explicit Compose single-replica constraint, and atomic strict-format scrape-password provisioning.
+- Recorded Phase 3C review-fix validation in the existing OpenSpec task checklist.
+**Key discoveries**:
+- The active-marker/rename-completed path still requires its durable journal; recovery evidence must reference the original mutation event rather than `SERVICE_KEY_REGISTRY_RECOVERED`.
+- The registry revision metric is intentionally omitted until readiness is established and is cleared on unavailable or recovery-latched failure.
+**Files touched**:
+- `services/admin-dashboard/src/lib/support/m2mKeyStore.ts`
+- `services/admin-dashboard/src/lib/sidl/observability.ts`
+- `services/admin-dashboard/src/app/api/health/route.ts`
+- `services/admin-dashboard/src/tests/m2mKeyRotation.test.ts`
+- `services/admin-dashboard/src/tests/health.test.ts`
+- `services/admin-dashboard/src/tests/auth.test.ts`
+- `services/admin-dashboard/src/lib/support/m2mKeyTypes.ts`
+- `docker-compose.yml`, `prometheus-alerts.yml`, `scripts/provision-secrets.sh`
+- `docs/M2M_AUTHENTICATION.md`, `openspec/changes/2026-07-22-m2m-service-key-rotation/tasks.md`, `AGENTS.md`
+**Gaps identified**:
+- Docker/Compose persistence and restart validation and Prometheus `promtool` rule validation remain environment-blocked.
+**Gotchas**:
+- Do not treat a generic healthy HTTP response as registry readiness; `/api/health` must remain `503` for unavailable or recovery-latched state while valid-empty remains healthy.

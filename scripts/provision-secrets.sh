@@ -94,6 +94,31 @@ uri_has_placeholder_secret() {
 provision_scrape_password_file() {
   local password_file="$1"
   local password_directory
+  local temp_file
+  local byte_count
+  local mode
+
+  is_valid_scrape_password_file() {
+    local file="$1"
+    local size
+
+    [[ -f "$file" && ! -L "$file" ]] || return 1
+    size=$(wc -c < "$file")
+    [[ "$size" -eq 64 || "$size" -eq 65 ]] || return 1
+    if [[ "$size" -eq 65 ]]; then
+      [[ "$(tail -c 1 -- "$file" | od -An -t x1 | tr -d '[:space:]')" == "0a" ]] || return 1
+    fi
+    head -c 64 -- "$file" | LC_ALL=C grep -Eq '^[0-9a-f]{64}$' || return 1
+    mode=$(stat -c '%a' -- "$file")
+    [[ "$mode" == "600" ]]
+  }
+
+  sync_path() {
+    local sync_target="$1"
+    if command -v sync >/dev/null 2>&1; then
+      sync -d -- "$sync_target" 2>/dev/null || sync -- "$sync_target" 2>/dev/null || sync
+    fi
+  }
 
   if [[ -z "$password_file" ]]; then
     echo "❌ PROMETHEUS_SCRAPE_PASSWORD_FILE must be configured."
@@ -112,13 +137,41 @@ provision_scrape_password_file() {
   if [[ ! -e "$password_file" ]]; then
     echo "Provisioning Prometheus scrape password file..."
     umask 077
-    openssl rand -hex 32 | tr -d '\n' > "$password_file"
+    temp_file=$(mktemp --tmpdir="$password_directory" ".$(basename -- "$password_file").tmp.XXXXXX")
+    chmod 600 -- "$temp_file"
+    if ! openssl rand -hex 32 > "$temp_file"; then
+      rm -f -- "$temp_file"
+      echo "❌ Failed to generate Prometheus scrape password."
+      exit 1
+    fi
+    chmod 600 -- "$temp_file"
+    if ! is_valid_scrape_password_file "$temp_file"; then
+      rm -f -- "$temp_file"
+      echo "❌ Generated Prometheus scrape password has an invalid format."
+      exit 1
+    fi
+    sync_path "$temp_file"
+    if ! mv -f -- "$temp_file" "$password_file"; then
+      rm -f -- "$temp_file"
+      echo "❌ Failed to atomically install Prometheus scrape password."
+      exit 1
+    fi
+    sync_path "$password_directory"
   elif [[ ! -f "$password_file" ]]; then
     echo "❌ PROMETHEUS_SCRAPE_PASSWORD_FILE is not a regular file."
+    exit 1
+  elif [[ -L "$password_file" ]]; then
+    echo "❌ PROMETHEUS_SCRAPE_PASSWORD_FILE must not be a symbolic link."
     exit 1
   fi
 
   chmod 600 -- "$password_file"
+  if ! is_valid_scrape_password_file "$password_file"; then
+    byte_count=$(wc -c < "$password_file" 2>/dev/null || echo "unknown")
+    mode=$(stat -c '%a' -- "$password_file" 2>/dev/null || echo "unknown")
+    echo "❌ Prometheus scrape password file has invalid format, length, or mode (bytes=$byte_count mode=$mode)."
+    exit 1
+  fi
   if [[ ! -s "$password_file" ]]; then
     echo "❌ Prometheus scrape password file is empty."
     exit 1

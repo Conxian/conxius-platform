@@ -11,12 +11,14 @@ import * as path from "node:path";
 import {
   recordM2MExpiryThresholdCrossed,
   recordM2MRegistryState,
+  recordM2MRegistryUnavailable,
   recordM2MRegistryWriteFailure,
   recordM2MRotationOutcome,
   recordM2MRollbackOutcome,
   recordM2MValidationOutcome,
   type M2MMetricOutcome,
   type M2MMetricServiceState,
+  type M2MRegistryFailureCategory,
   type M2MRegistryFailureStage,
 } from "../sidl/observability";
 import {
@@ -36,6 +38,7 @@ import {
   type M2MRegistryCommitMarker,
   type M2MRegistryDocument,
   type M2MRegistryMetadataResponse,
+  type M2MRegistryReadiness,
   type M2MRotationResult,
   type M2MRollbackResult,
   type M2MServiceMetadata,
@@ -75,6 +78,7 @@ export interface M2MRollbackInput {
 export interface M2MKeyStoreBackend {
   validateServiceSecret(serviceId: RotatableServiceId, secret: string): M2MServiceValidationResult;
   listMetadata(requestId?: string): M2MRegistryMetadataResponse;
+  readiness(): M2MRegistryReadiness;
   rotate(input: M2MRotateInput): M2MRotationResult;
   rollback(input: M2MRollbackInput): M2MRollbackResult;
 }
@@ -492,12 +496,105 @@ function parseServiceKeyHeader(
   return { serviceId, secret };
 }
 
-function hasRecoveryEvent(document: M2MRegistryDocument, recoveredCommitId: string): boolean {
+function hasRecoveryCommitEvent(
+  document: M2MRegistryDocument,
+  commitId: string,
+  revision: number,
+): boolean {
   return document.auditEvents.some(
     (event) =>
       event.eventType === "SERVICE_KEY_REGISTRY_RECOVERED" &&
-      event.recoveredCommitId === recoveredCommitId,
+      event.commitId === commitId &&
+      event.registryRevision === revision &&
+      event.recoveredCommitId !== undefined &&
+      event.recoveredCommitId !== commitId,
   );
+}
+
+function isOriginalMutationEvent(event: M2MAuditEvent): boolean {
+  return (
+    event.eventType === "SERVICE_KEY_BOOTSTRAPPED" ||
+    event.eventType === "SERVICE_KEY_ROTATED" ||
+    event.eventType === "SERVICE_KEY_ROLLED_BACK" ||
+    event.eventType === "SERVICE_KEY_EXPIRY_THRESHOLD_CROSSED"
+  );
+}
+
+function isAppropriateMutationEvent(
+  document: M2MRegistryDocument,
+  event: M2MAuditEvent,
+): boolean {
+  if (!isOriginalMutationEvent(event)) return false;
+
+  if (event.eventType === "SERVICE_KEY_BOOTSTRAPPED" && event.serviceId === null) {
+    return (
+      Object.keys(document.services).length === 0 &&
+      document.revision === event.registryRevision &&
+      event.generation === null &&
+      event.previousGeneration === null
+    );
+  }
+
+  if (!event.serviceId) return false;
+  const service = document.services[event.serviceId];
+  if (!service) return false;
+
+  switch (event.eventType) {
+    case "SERVICE_KEY_BOOTSTRAPPED":
+      return (
+        service.source === "bootstrap" &&
+        service.generation === 1 &&
+        event.generation === 1 &&
+        event.previousGeneration === null
+      );
+    case "SERVICE_KEY_ROTATED":
+      return (
+        service.source === "registry" &&
+        event.generation === service.generation &&
+        event.previousGeneration === (service.previous?.generation ?? null) &&
+        event.graceUntil === service.previous?.graceUntil &&
+        event.expiresAt === service.active.expiresAt
+      );
+    case "SERVICE_KEY_ROLLED_BACK":
+      return (
+        service.source === "rollback" &&
+        event.generation === service.generation &&
+        event.previousGeneration !== null &&
+        event.rollbackOfGeneration === service.rollbackOfGeneration &&
+        event.rollbackTargetGeneration === service.rollbackTargetGeneration &&
+        event.expiresAt === service.active.expiresAt &&
+        event.effectiveUntil === service.active.expiresAt
+      );
+    case "SERVICE_KEY_EXPIRY_THRESHOLD_CROSSED": {
+      if (!event.keyRole || !event.threshold || event.generation === null) return false;
+      const markerKey = `${event.serviceId}:${event.generation}:${event.keyRole}:${event.threshold}`;
+      if (!document.notificationState[markerKey]) return false;
+      return event.keyRole === "active"
+        ? event.generation === service.generation && event.previousGeneration === null
+        : event.generation === service.previous?.generation &&
+            event.previousGeneration === service.previous?.generation;
+    }
+    default:
+      return false;
+  }
+}
+
+function hasMatchingMutationAuditEvent(
+  document: M2MRegistryDocument,
+  commitId: string,
+  expectedRevision?: number,
+): boolean {
+  return document.auditEvents.some(
+    (event) =>
+      event.commitId === commitId &&
+      (expectedRevision === undefined || event.registryRevision === expectedRevision) &&
+      isOriginalMutationEvent(event) &&
+      isAppropriateMutationEvent(document, event),
+  );
+}
+
+function documentsMatch(left: M2MRegistryDocument, right: M2MRegistryDocument): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
 }
 
 function affectedServicesForCommit(
@@ -596,8 +693,34 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
     return this.registryPath;
   }
 
+  readiness(): M2MRegistryReadiness {
+    if (this.recoveryRequired) {
+      recordM2MRegistryUnavailable();
+      return { status: "unavailable", state: "recovery-latched" };
+    }
+
+    try {
+      const document = this.ensureReady();
+      recordM2MRegistryState(document.revision, metricServicesForDocument(document));
+      return {
+        status: "healthy",
+        state: Object.keys(document.services).length === 0 ? "valid-empty" : "ready",
+      };
+    } catch {
+      recordM2MRegistryUnavailable();
+      return {
+        status: "unavailable",
+        state: this.recoveryRequired ? "recovery-latched" : "unavailable",
+      };
+    }
+  }
+
   private ensureReady(): M2MRegistryDocument {
-    if (this.recoveryRequired || this.fileExists(this.markerPath)) {
+    if (this.recoveryRequired) {
+      throw new M2MKeyStoreError("m2m_registry_unavailable", "M2M registry recovery is required");
+    }
+
+    if (this.fileExists(this.markerPath)) {
       return this.withWriterLock(() => {
         const recovered = this.recoverMarkerUnderLock();
         if (!recovered) {
@@ -647,6 +770,17 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
     });
   }
 
+  private loadReadyDocument(): M2MRegistryDocument {
+    try {
+      const document = this.ensureReady();
+      recordM2MRegistryState(document.revision, metricServicesForDocument(document));
+      return document;
+    } catch (error) {
+      recordM2MRegistryUnavailable();
+      throw error;
+    }
+  }
+
   validateServiceSecret(
     serviceId: RotatableServiceId,
     secret: string,
@@ -655,6 +789,7 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
     try {
       document = this.ensureReady();
     } catch (error) {
+      recordM2MRegistryUnavailable();
       recordM2MValidationOutcome(serviceId, "unavailable");
       throw error;
     }
@@ -697,21 +832,29 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
   }
 
   listMetadata(requestId = newSystemRequestId()): M2MRegistryMetadataResponse {
-    const document = this.ensureReady();
-    const evaluated = this.persistExpiryThresholds(document, requestId);
-    recordM2MRegistryState(evaluated.revision, metricServicesForDocument(evaluated));
-    const currentTime = this.now();
-    const services = ROTATABLE_SERVICE_IDS
-      .filter((serviceId) => evaluated.services[serviceId])
-      .map((serviceId) => this.toServiceMetadata(serviceId, evaluated.services[serviceId]!, currentTime));
+    try {
+      const document = this.loadReadyDocument();
+      const evaluated = this.persistExpiryThresholds(document, requestId);
+      recordM2MRegistryState(evaluated.revision, metricServicesForDocument(evaluated));
+      const currentTime = this.now();
+      const services = ROTATABLE_SERVICE_IDS
+        .filter((serviceId) => evaluated.services[serviceId])
+        .map((serviceId) => this.toServiceMetadata(serviceId, evaluated.services[serviceId]!, currentTime));
 
-    return { revision: evaluated.revision, services };
+      return { revision: evaluated.revision, services };
+    } catch (error) {
+      recordM2MRegistryUnavailable();
+      throw error;
+    }
   }
 
   rotate(input: M2MRotateInput): M2MRotationResult {
     try {
       return this.rotateInternal(input);
     } catch (error) {
+      if (error instanceof M2MKeyStoreError && error.code === "m2m_registry_unavailable") {
+        recordM2MRegistryUnavailable();
+      }
       if (isRotatableServiceId(input.serviceId)) {
         recordM2MRotationOutcome(input.serviceId, mutationOutcomeForError(error));
       }
@@ -825,6 +968,9 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
     try {
       return this.rollbackInternal(input);
     } catch (error) {
+      if (error instanceof M2MKeyStoreError && error.code === "m2m_registry_unavailable") {
+        recordM2MRegistryUnavailable();
+      }
       if (isRotatableServiceId(input.serviceId)) {
         recordM2MRollbackOutcome(input.serviceId, mutationOutcomeForError(error));
       }
@@ -960,6 +1106,21 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
         commitId,
         serviceId,
         generation: 1,
+        previousGeneration: null,
+        registryRevision: 1,
+        actor: "system",
+        requestId,
+        occurredAt: createdAt,
+      });
+    }
+
+    if (auditEvents.length === 0) {
+      auditEvents.push({
+        eventId: `event_${randomUUID()}`,
+        eventType: "SERVICE_KEY_BOOTSTRAPPED",
+        commitId,
+        serviceId: null,
+        generation: null,
         previousGeneration: null,
         registryRevision: 1,
         actor: "system",
@@ -1129,36 +1290,55 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
   private recoverMarkerUnderLock(): M2MRegistryDocument | null {
     const marker = this.readCommitMarker();
     if (!marker) {
-      this.cleanupOrphanArtifactsUnderLock();
       return this.readActiveDocument();
     }
 
-    const active = this.readActiveDocument();
+    const expectedCandidateFile = `${this.registryBaseName}.${marker.commitId}.candidate`;
+    const expectedJournalFile = `${this.registryBaseName}.${marker.commitId}.journal`;
     if (
+      marker.candidateFile !== expectedCandidateFile ||
+      marker.journalFile !== expectedJournalFile
+    ) {
+      return this.failRecovery("invariant");
+    }
+
+    let active: M2MRegistryDocument | null;
+    try {
+      active = this.readActiveDocument();
+    } catch {
+      return this.failRecovery("malformed");
+    }
+
+    const candidatePath = path.join(this.directoryPath, marker.candidateFile);
+    const journalPath = path.join(this.directoryPath, marker.journalFile);
+    let journal: M2MRegistryDocument | null;
+    try {
+      journal = this.readArtifactDocument(journalPath);
+    } catch {
+      return this.failRecovery("malformed");
+    }
+    if (!journal) return this.failRecovery("read");
+    this.validateRecoveryDocument(journal, marker);
+
+    const activeMatchesMarker = Boolean(
       active &&
       active.revision === marker.revision &&
-      active.lastCommitId === marker.commitId &&
-      active.auditEvents.some(
-        (event) =>
-          event.eventType === "SERVICE_KEY_REGISTRY_RECOVERED" &&
-          event.commitId === marker.commitId,
-      )
-    ) {
-      this.cleanupMarkerArtifactsUnderLock(marker);
-      this.cleanupOrphanArtifactsUnderLock();
-      return active;
-    }
-    if (
-      active &&
-      active.revision === marker.revision + 1 &&
-      hasRecoveryEvent(active, marker.commitId)
-    ) {
-      this.cleanupMarkerArtifactsUnderLock(marker);
-      this.cleanupOrphanArtifactsUnderLock();
-      return active;
-    }
-    if (active && active.revision === marker.revision && active.lastCommitId === marker.commitId) {
-      if (hasRecoveryEvent(active, marker.commitId)) {
+      active.lastCommitId === marker.commitId,
+    );
+
+    if (activeMatchesMarker && active) {
+      let candidate: M2MRegistryDocument | null;
+      try {
+        candidate = this.readArtifactDocument(candidatePath);
+      } catch {
+        return this.failRecovery("malformed");
+      }
+      if (candidate && (!documentsMatch(candidate, journal) || !documentsMatch(journal, active))) {
+        return this.failRecovery("invariant");
+      }
+      if (!documentsMatch(journal, active)) return this.failRecovery("invariant");
+
+      if (hasRecoveryCommitEvent(active, marker.commitId, marker.revision)) {
         this.cleanupMarkerArtifactsUnderLock(marker);
         this.cleanupOrphanArtifactsUnderLock();
         return active;
@@ -1171,36 +1351,80 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
       ? active.revision === marker.predecessorRevision &&
         active.lastCommitId === marker.predecessorLastCommitId
       : marker.predecessorRevision === 0 && marker.predecessorLastCommitId === null;
-    if (!predecessorMatches) {
-      throw new M2MKeyStoreError("m2m_registry_unavailable", "M2M registry commit marker does not match active state");
-    }
+    if (!predecessorMatches) return this.failRecovery("invariant");
 
-    const candidatePath = path.join(this.directoryPath, marker.candidateFile);
-    const journalPath = path.join(this.directoryPath, marker.journalFile);
-    const candidate = this.readArtifactDocument(candidatePath);
-    const journal = this.readArtifactDocument(journalPath);
-    if (!candidate || !journal || JSON.stringify(candidate) !== JSON.stringify(journal)) {
-      throw new M2MKeyStoreError("m2m_registry_unavailable", "M2M registry recovery journal is incomplete");
+    let candidate: M2MRegistryDocument | null;
+    try {
+      candidate = this.readArtifactDocument(candidatePath);
+    } catch {
+      return this.failRecovery("malformed");
     }
-    if (candidate.revision !== marker.revision || candidate.lastCommitId !== marker.commitId) {
-      throw new M2MKeyStoreError("m2m_registry_unavailable", "M2M registry recovery candidate does not match marker");
-    }
+    if (!candidate || !documentsMatch(candidate, journal)) return this.failRecovery("read");
 
     try {
       fs.renameSync(candidatePath, this.registryPath);
       this.fsyncDirectory();
     } catch {
-      this.recoveryRequired = true;
-      throw new M2MKeyStoreError("m2m_registry_unavailable", "M2M registry recovery could not promote committed state");
+      return this.failRecovery("write");
     }
 
-    const promoted = this.readActiveDocument();
-    if (!promoted || promoted.revision !== marker.revision || promoted.lastCommitId !== marker.commitId) {
-      this.recoveryRequired = true;
-      throw new M2MKeyStoreError("m2m_registry_unavailable", "M2M registry recovery produced invalid state");
+    let promoted: M2MRegistryDocument | null;
+    try {
+      promoted = this.readActiveDocument();
+    } catch {
+      return this.failRecovery("malformed");
     }
+    if (!promoted) return this.failRecovery("read");
+    this.validateRecoveryDocument(promoted, marker);
 
     return this.commitRecoveryEventUnderLock(promoted, marker);
+  }
+
+  private validateRecoveryDocument(
+    document: M2MRegistryDocument,
+    marker: M2MRegistryCommitMarker,
+  ): void {
+    if (
+      document.revision !== marker.revision ||
+      document.lastCommitId !== marker.commitId
+    ) {
+      this.failRecovery("invariant");
+    }
+
+    if (marker.predecessorRevision === 0) {
+      if (marker.predecessorLastCommitId !== null) this.failRecovery("invariant");
+    } else {
+      const predecessorCommitIds = new Set(
+        document.auditEvents
+          .filter((event) => event.registryRevision === marker.predecessorRevision)
+          .map((event) => event.commitId),
+      );
+      if (
+        predecessorCommitIds.size !== 1 ||
+        !predecessorCommitIds.has(marker.predecessorLastCommitId ?? "")
+      ) {
+        this.failRecovery("invariant");
+      }
+    }
+
+    if (hasMatchingMutationAuditEvent(document, marker.commitId, marker.revision)) return;
+
+    const recoveryEvidence = document.auditEvents.some(
+      (event) =>
+        event.eventType === "SERVICE_KEY_REGISTRY_RECOVERED" &&
+        event.commitId === marker.commitId &&
+        event.registryRevision === marker.revision &&
+        event.recoveredCommitId !== undefined &&
+        hasMatchingMutationAuditEvent(document, event.recoveredCommitId),
+    );
+    if (!recoveryEvidence) this.failRecovery("invariant");
+  }
+
+  private failRecovery(category: M2MRegistryFailureCategory): never {
+    this.recoveryRequired = true;
+    recordM2MRegistryUnavailable();
+    recordM2MRegistryWriteFailure("recovery", category);
+    throw new M2MKeyStoreError("m2m_registry_unavailable", "M2M registry recovery is required");
   }
 
   private commitRecoveryEventUnderLock(
@@ -1348,14 +1572,17 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
   }
 
   private readCommitMarker(): M2MRegistryCommitMarker | null {
-    if (this.fileExists(this.markerPath)) this.assertPrivateFile(this.markerPath, false);
-    const parsed = this.readJsonFile(this.markerPath);
-    if (parsed === null) return null;
     try {
+      if (this.fileExists(this.markerPath)) this.assertPrivateFile(this.markerPath, false);
+      const parsed = this.readJsonFile(this.markerPath);
+      if (parsed === null) return null;
       return validateCommitMarker(parsed, this.registryBaseName);
     } catch (error) {
+      this.recoveryRequired = true;
+      recordM2MRegistryUnavailable();
       recordM2MRegistryWriteFailure("recovery", "malformed");
-      throw error;
+      if (error instanceof M2MKeyStoreError) throw error;
+      throw new M2MKeyStoreError("m2m_registry_unavailable", "M2M registry commit marker is unavailable");
     }
   }
 
@@ -1627,6 +1854,15 @@ export function getM2MKeyStore(): M2MKeyStoreBackend {
   const store = new FileM2MKeyStore();
   storeInstances.set(registryPath, store);
   return store;
+}
+
+export function getM2MKeyStoreReadiness(): M2MRegistryReadiness {
+  try {
+    return getM2MKeyStore().readiness();
+  } catch {
+    recordM2MRegistryUnavailable();
+    return { status: "unavailable", state: "unavailable" };
+  }
 }
 
 export function resetM2MKeyStoreForTests(): void {

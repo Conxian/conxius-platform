@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -12,8 +12,14 @@ import {
   FileM2MKeyStore,
   resetM2MKeyStoreForTests,
 } from "../lib/support/m2mKeyStore";
-import { M2MKeyStoreError } from "../lib/support/m2mKeyTypes";
 import {
+  M2MKeyStoreError,
+  type M2MRegistryCommitMarker,
+  type M2MRegistryDocument,
+} from "../lib/support/m2mKeyTypes";
+import {
+  recordM2MRegistryState,
+  recordM2MRegistryUnavailable,
   resetSidlMetricsForTests,
   sidlMetricsSnapshot,
 } from "../lib/sidl/observability";
@@ -47,6 +53,47 @@ function makeStoreWithClock(
     environment: { ...process.env, NODE_ENV: "test", ...environment },
     now: () => new Date(clock.current),
   });
+}
+
+function readRegistry(store: FileM2MKeyStore): M2MRegistryDocument {
+  return JSON.parse(readFileSync(store.getPath(), "utf8")) as M2MRegistryDocument;
+}
+
+function writePrivateJson(filePath: string, value: unknown): void {
+  writeFileSync(filePath, `${JSON.stringify(value)}\n`, { mode: 0o600 });
+  chmodSync(filePath, 0o600);
+}
+
+function markerFor(
+  store: FileM2MKeyStore,
+  document: M2MRegistryDocument,
+  predecessor: M2MRegistryDocument | null,
+): M2MRegistryCommitMarker {
+  const registryName = basename(store.getPath());
+  return {
+    schemaVersion: 1,
+    commitId: document.lastCommitId,
+    revision: document.revision,
+    predecessorRevision: predecessor?.revision ?? 0,
+    predecessorLastCommitId: predecessor?.lastCommitId ?? null,
+    candidateFile: `${registryName}.${document.lastCommitId}.candidate`,
+    journalFile: `${registryName}.${document.lastCommitId}.journal`,
+  };
+}
+
+function writeMarker(
+  store: FileM2MKeyStore,
+  marker: M2MRegistryCommitMarker,
+): void {
+  writePrivateJson(`${store.getPath()}.marker`, marker);
+}
+
+function writeRecoveryArtifact(
+  store: FileM2MKeyStore,
+  fileName: string,
+  document: M2MRegistryDocument,
+): void {
+  writePrivateJson(join(dirname(store.getPath()), fileName), document);
 }
 
 type ChildRotationResult = {
@@ -501,6 +548,240 @@ describe("M2M service-key rotation runtime", () => {
     expect((caught as M2MKeyStoreError).code).toBe("m2m_registry_unavailable");
   });
 
+  it("does not publish a registry revision before readiness and clears it on failure", async () => {
+    let snapshot = await sidlMetricsSnapshot();
+    expect(snapshot).toMatch(/m2m_service_key_registry_ready 0/);
+    expect(snapshot).not.toContain("m2m_service_key_registry_revision");
+
+    recordM2MRegistryState(1, []);
+    snapshot = await sidlMetricsSnapshot();
+    expect(snapshot).toMatch(/m2m_service_key_registry_ready 1/);
+    expect(snapshot).toMatch(/m2m_service_key_registry_revision 1/);
+
+    recordM2MRegistryUnavailable();
+    snapshot = await sidlMetricsSnapshot();
+    expect(snapshot).toMatch(/m2m_service_key_registry_ready 0/);
+    expect(snapshot).not.toContain("m2m_service_key_registry_revision");
+  });
+
+  it("latches when active marker state has no matching journal", () => {
+    const store = makeStore({ SERVICE_KEY_GATEWAY: "active-marker-bootstrap" });
+    store.listMetadata("req_active_marker_bootstrap");
+    const predecessor = readRegistry(store);
+    store.rotate({
+      serviceId: "gateway",
+      expectedGeneration: 1,
+      context: { requestId: "req_active_marker_rotate" },
+    });
+    const committed = readRegistry(store);
+    const marker = markerFor(store, committed, predecessor);
+    writeMarker(store, marker);
+
+    const restarted = new FileM2MKeyStore({
+      registryPath: store.getPath(),
+      environment: { ...process.env, NODE_ENV: "test", SERVICE_KEY_GATEWAY: "must-not-fallback" },
+      now: () => new Date(fixedNow),
+    });
+
+    expect(() => restarted.listMetadata("req_active_marker_recovery")).toThrow(M2MKeyStoreError);
+    expect(restarted.readiness()).toEqual({ status: "unavailable", state: "recovery-latched" });
+    expect(readFileSync(`${store.getPath()}.marker`, "utf8")).toContain(marker.commitId);
+  });
+
+  it("latches when the recovery journal does not match the marker document", () => {
+    const store = makeStore({ SERVICE_KEY_GATEWAY: "mismatched-journal-bootstrap" });
+    store.listMetadata("req_mismatched_journal_bootstrap");
+    const predecessor = readRegistry(store);
+    store.rotate({
+      serviceId: "gateway",
+      expectedGeneration: 1,
+      context: { requestId: "req_mismatched_journal_rotate" },
+    });
+    const committed = readRegistry(store);
+    const marker = markerFor(store, committed, predecessor);
+    writeMarker(store, marker);
+    writeRecoveryArtifact(store, marker.journalFile, predecessor);
+
+    const restarted = new FileM2MKeyStore({
+      registryPath: store.getPath(),
+      environment: { ...process.env, NODE_ENV: "test", SERVICE_KEY_GATEWAY: "must-not-fallback" },
+      now: () => new Date(fixedNow),
+    });
+
+    expect(() => restarted.listMetadata("req_mismatched_journal_recovery")).toThrow(M2MKeyStoreError);
+    expect(restarted.readiness()).toEqual({ status: "unavailable", state: "recovery-latched" });
+    expect(readFileSync(join(dirname(store.getPath()), marker.journalFile), "utf8")).not.toContain(
+      committed.lastCommitId,
+    );
+  });
+
+  it("latches when a predecessor-qualified marker has no candidate artifact", () => {
+    const store = makeStore({ SERVICE_KEY_GATEWAY: "missing-candidate-bootstrap" });
+    store.listMetadata("req_missing_candidate_bootstrap");
+    const predecessor = readRegistry(store);
+    store.rotate({
+      serviceId: "gateway",
+      expectedGeneration: 1,
+      context: { requestId: "req_missing_candidate_rotate" },
+    });
+    const committed = readRegistry(store);
+    const marker = markerFor(store, committed, predecessor);
+    writeMarker(store, marker);
+    writeRecoveryArtifact(store, marker.journalFile, committed);
+    writePrivateJson(store.getPath(), predecessor);
+
+    const restarted = new FileM2MKeyStore({
+      registryPath: store.getPath(),
+      environment: { ...process.env, NODE_ENV: "test", SERVICE_KEY_GATEWAY: "must-not-fallback" },
+      now: () => new Date(fixedNow),
+    });
+
+    expect(() => restarted.listMetadata("req_missing_candidate_recovery")).toThrow(M2MKeyStoreError);
+    expect(restarted.readiness()).toEqual({ status: "unavailable", state: "recovery-latched" });
+    expect(readFileSync(`${store.getPath()}.marker`, "utf8")).toContain(marker.commitId);
+  });
+
+  it("latches when candidate and journal lack the marker mutation audit evidence", () => {
+    const store = makeStore({ SERVICE_KEY_GATEWAY: "unrelated-audit-bootstrap" });
+    store.listMetadata("req_unrelated_audit_bootstrap");
+    const predecessor = readRegistry(store);
+    store.rotate({
+      serviceId: "gateway",
+      expectedGeneration: 1,
+      context: { requestId: "req_unrelated_audit_rotate" },
+    });
+    const committed = readRegistry(store);
+    const marker = markerFor(store, committed, predecessor);
+    const unrelated = JSON.parse(JSON.stringify(committed)) as M2MRegistryDocument;
+    unrelated.auditEvents = unrelated.auditEvents.map((event) =>
+      event.commitId === committed.lastCommitId && event.eventType === "SERVICE_KEY_ROTATED"
+        ? { ...event, commitId: predecessor.lastCommitId }
+        : event,
+    );
+    writeMarker(store, marker);
+    writeRecoveryArtifact(store, marker.candidateFile, unrelated);
+    writeRecoveryArtifact(store, marker.journalFile, unrelated);
+
+    const restarted = new FileM2MKeyStore({
+      registryPath: store.getPath(),
+      environment: { ...process.env, NODE_ENV: "test", SERVICE_KEY_GATEWAY: "must-not-fallback" },
+      now: () => new Date(fixedNow),
+    });
+
+    expect(() => restarted.listMetadata("req_unrelated_audit_recovery")).toThrow(M2MKeyStoreError);
+    expect(restarted.readiness()).toEqual({ status: "unavailable", state: "recovery-latched" });
+    expect(readFileSync(join(dirname(store.getPath()), marker.candidateFile), "utf8")).toContain(
+      marker.commitId,
+    );
+  });
+
+  it("recovers initial bootstrap documents with multiple matching bootstrap events", () => {
+    const store = makeStore({
+      SERVICE_KEY_GATEWAY: "initial-recovery-gateway",
+      SERVICE_KEY_ADMIN_DASHBOARD: "initial-recovery-dashboard",
+    });
+    store.listMetadata("req_initial_recovery_bootstrap");
+    const initial = readRegistry(store);
+    const marker = markerFor(store, initial, null);
+    rmSync(store.getPath(), { force: true });
+    writeMarker(store, marker);
+    writeRecoveryArtifact(store, marker.candidateFile, initial);
+    writeRecoveryArtifact(store, marker.journalFile, initial);
+
+    const restarted = new FileM2MKeyStore({
+      registryPath: store.getPath(),
+      environment: { ...process.env, NODE_ENV: "test", SERVICE_KEY_GATEWAY: "must-not-fallback" },
+      now: () => new Date(fixedNow),
+    });
+
+    expect(restarted.listMetadata("req_initial_recovery_complete").revision).toBe(2);
+    const recovered = readRegistry(restarted);
+    expect(recovered.auditEvents.some(
+      (event) =>
+        event.eventType === "SERVICE_KEY_REGISTRY_RECOVERED" &&
+        event.recoveredCommitId === initial.lastCommitId,
+    )).toBe(true);
+  });
+
+  it("completes valid post-rename recovery with a mandatory journal", () => {
+    const store = makeStore({ SERVICE_KEY_GATEWAY: "post-rename-bootstrap" });
+    store.listMetadata("req_post_rename_bootstrap");
+    const predecessor = readRegistry(store);
+    store.rotate({
+      serviceId: "gateway",
+      expectedGeneration: 1,
+      context: { requestId: "req_post_rename_rotate" },
+    });
+    const committed = readRegistry(store);
+    const marker = markerFor(store, committed, predecessor);
+    writeMarker(store, marker);
+    writeRecoveryArtifact(store, marker.journalFile, committed);
+
+    const restarted = new FileM2MKeyStore({
+      registryPath: store.getPath(),
+      environment: { ...process.env, NODE_ENV: "test", SERVICE_KEY_GATEWAY: "must-not-fallback" },
+      now: () => new Date(fixedNow),
+    });
+
+    expect(restarted.readiness()).toEqual({ status: "healthy", state: "ready" });
+    const recovered = readRegistry(restarted);
+    expect(recovered.revision).toBe(3);
+    expect(recovered.auditEvents.some(
+      (event) =>
+        event.eventType === "SERVICE_KEY_REGISTRY_RECOVERED" &&
+        event.recoveredCommitId === committed.lastCommitId,
+    )).toBe(true);
+    expect(() => readFileSync(`${store.getPath()}.marker`)).toThrow();
+  });
+
+  it("cleans a marker left after the recovery event without appending again", () => {
+    const store = makeStore({ SERVICE_KEY_GATEWAY: "recovery-event-bootstrap" });
+    store.listMetadata("req_recovery_event_bootstrap");
+    const predecessor = readRegistry(store);
+    store.rotate({
+      serviceId: "gateway",
+      expectedGeneration: 1,
+      context: { requestId: "req_recovery_event_rotate" },
+    });
+    const committed = readRegistry(store);
+    const recoveryCommitId = "commit_00000000-0000-0000-0000-000000000001";
+    const service = committed.services.gateway!;
+    const recoveryDocument = JSON.parse(JSON.stringify(committed)) as M2MRegistryDocument;
+    recoveryDocument.revision = 3;
+    recoveryDocument.lastCommitId = recoveryCommitId;
+    recoveryDocument.auditEvents.push({
+      eventId: "event_recovery_marker",
+      eventType: "SERVICE_KEY_REGISTRY_RECOVERED",
+      commitId: recoveryCommitId,
+      recoveredCommitId: committed.lastCommitId,
+      serviceId: "gateway",
+      generation: service.generation,
+      previousGeneration: service.previous?.generation ?? null,
+      registryRevision: 3,
+      actor: "system",
+      requestId: "req_recovery_event_commit",
+      occurredAt: fixedNow.toISOString(),
+    });
+    writePrivateJson(store.getPath(), recoveryDocument);
+    const marker = markerFor(store, recoveryDocument, committed);
+    writeMarker(store, marker);
+    writeRecoveryArtifact(store, marker.journalFile, recoveryDocument);
+
+    const restarted = new FileM2MKeyStore({
+      registryPath: store.getPath(),
+      environment: { ...process.env, NODE_ENV: "test", SERVICE_KEY_GATEWAY: "must-not-fallback" },
+      now: () => new Date(fixedNow),
+    });
+
+    expect(restarted.readiness()).toEqual({ status: "healthy", state: "ready" });
+    const persisted = readRegistry(restarted);
+    expect(persisted.revision).toBe(3);
+    expect(persisted.auditEvents.filter(
+      (event) => event.eventType === "SERVICE_KEY_REGISTRY_RECOVERED",
+    )).toHaveLength(1);
+    expect(() => readFileSync(`${store.getPath()}.marker`)).toThrow();
+  });
+
   it("returns sanitized rotation route errors with no-store and request identity", async () => {
     const directory = mkdtempSync(join(tmpdir(), "conxian-m2m-route-errors-"));
     tempDirectories.push(directory);
@@ -685,6 +966,7 @@ describe("M2M service-key rotation runtime", () => {
     expect(snapshot).toMatch(/m2m_service_key_validation_total\{outcome="success",service_id="gateway"\} 1/);
     expect(snapshot).toMatch(/m2m_service_key_validation_total\{outcome="invalid",service_id="gateway"\} 1/);
     expect(snapshot).toMatch(/m2m_service_key_generation\{service_id="gateway"\} 2/);
+    expect(snapshot).toMatch(/m2m_service_key_registry_ready 1/);
     expect(snapshot).toMatch(/m2m_service_key_registry_revision 3/);
     expect(snapshot).toMatch(/m2m_service_key_expiry_threshold_total\{key_role="active",service_id="gateway",threshold="expired"\} 1/);
     expect(snapshot).not.toContain(rotation.secret);

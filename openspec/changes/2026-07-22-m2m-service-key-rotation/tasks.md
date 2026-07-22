@@ -63,6 +63,10 @@
 
   - [x] Phase 3B coverage: protected metrics scrape success, invalid scrape
     credentials, missing scrape configuration, and continued admin-key access.
+  - [x] Phase 3C coverage: marker recovery journal/predecessor/audit evidence,
+    initial-bootstrap and post-rename recovery, recovery-event idempotence,
+    health/readiness failure states, readiness-aware metrics, and production
+    health redaction.
 - [x] **T9 — Document deployment and compatibility operations.** Record the
   persistent-volume/single-writer requirement, consumer update sequence, admin
   dashboard self-key procedure, distinction between service and admin API keys,
@@ -76,6 +80,9 @@
   - [ ] Docker/Compose persistence, named-volume restart, and live Prometheus
     scrape validation — **blocked in this devbox because Docker and promtool
     are unavailable; rerun in Docker-enabled CI or an operations environment**.
+  - [x] Phase 3C local review-fix validation: provisioning shell syntax and
+    smoke checks, YAML structure checks, focused/full dashboard tests,
+    readiness/metrics/auth coverage, typecheck, and diff hygiene.
 
 ## Acceptance criteria
 

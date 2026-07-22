@@ -157,8 +157,19 @@ groups:
           summary: "M2M service-key registry is unavailable"
           description: "M2M validation or mutation has observed an unavailable registry; service-key operations are fail-closed."
 
+      - alert: M2MServiceKeyRegistryNotReady
+        expr: absent(m2m_service_key_registry_ready) or m2m_service_key_registry_ready == 0
+        for: 10m
+        labels:
+          severity: critical
+          service: admin-dashboard
+          component: m2m-key-rotation
+        annotations:
+          summary: "M2M service-key registry is not ready"
+          description: "The dashboard has not completed a validated M2M registry load or has latched registry recovery."
+
       - alert: M2MServiceKeyRegistryRevisionMissing
-        expr: absent(m2m_service_key_registry_revision)
+        expr: absent(m2m_service_key_registry_revision) and m2m_service_key_registry_ready == 1
         for: 10m
         labels:
           severity: critical

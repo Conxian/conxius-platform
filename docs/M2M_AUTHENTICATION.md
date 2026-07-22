@@ -399,14 +399,23 @@ The dashboard exports bounded M2M metrics through the existing protected
 - `m2m_service_key_rollback_total{service_id,outcome}`
 - `m2m_service_key_validation_total{service_id,outcome}`
 - `m2m_service_key_generation{service_id}`
+- `m2m_service_key_registry_ready`
 - `m2m_service_key_registry_revision`
 - `m2m_service_key_expiry_threshold_total{service_id,key_role,threshold}`
 - `m2m_service_key_registry_write_failures_total{stage,category}`
 
+The readiness gauge is initialized to `0` and becomes `1` only after a
+validated registry load or initialization. The revision gauge is omitted until
+that point, and is cleared again when registry access becomes unavailable or
+recovery-latched. The checked-in Prometheus rules alert on a missing/zero
+readiness gauge and only treat a missing revision as an error after readiness
+has been established.
+
 The checked-in Prometheus rules cover active and previous expiry, mutually
 exclusive 30-day/7-day/24-hour/1-hour windows, invalid/expired authentication
 bursts, rotation and rollback failures/conflicts, registry write failures,
-unavailable registry observations, and an absent registry revision metric.
+unavailable registry observations, registry-not-ready state, and an absent
+ready-state revision metric.
 Threshold state is persisted by generation and role so repeated evaluations do
 not create duplicate crossing events.
 

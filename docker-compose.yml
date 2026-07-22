@@ -30,6 +30,9 @@ services:
       context: .
       dockerfile: services/admin-dashboard/Dockerfile
     restart: unless-stopped
+    # The file-backed M2M registry has one writer; non-Compose orchestrators must enforce the same constraint.
+    deploy:
+      replicas: 1
     ports:
       - "3002:3001"
     environment:

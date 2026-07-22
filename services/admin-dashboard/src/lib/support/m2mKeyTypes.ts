@@ -138,6 +138,17 @@ export interface M2MRegistryMetadataResponse {
   services: M2MServiceMetadata[];
 }
 
+export type M2MRegistryReadinessState =
+  | "ready"
+  | "valid-empty"
+  | "unavailable"
+  | "recovery-latched";
+
+export interface M2MRegistryReadiness {
+  status: "healthy" | "unavailable";
+  state: M2MRegistryReadinessState;
+}
+
 export interface M2MRotationResult {
   serviceId: RotatableServiceId;
   generation: number;

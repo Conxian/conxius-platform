@@ -84,7 +84,8 @@ type SidlMetricsStore = {
   m2mServiceKeyGeneration: Map<string, GaugeSeries>;
   m2mServiceKeyExpiryThresholdTotal: Map<string, CounterSeries>;
   m2mServiceKeyRegistryWriteFailuresTotal: Map<string, CounterSeries>;
-  m2mServiceKeyRegistryRevision: number;
+  m2mServiceKeyRegistryReady: number;
+  m2mServiceKeyRegistryRevision: number | null;
 };
 
 const STORE_KEY = "__conxianSidlMetricsStore" as const;
@@ -104,7 +105,14 @@ function getMetricsStore(): SidlMetricsStore {
     store.m2mServiceKeyGeneration ??= new Map<string, GaugeSeries>();
     store.m2mServiceKeyExpiryThresholdTotal ??= new Map<string, CounterSeries>();
     store.m2mServiceKeyRegistryWriteFailuresTotal ??= new Map<string, CounterSeries>();
-    store.m2mServiceKeyRegistryRevision ??= 0;
+    store.m2mServiceKeyRegistryReady = store.m2mServiceKeyRegistryReady === 1 ? 1 : 0;
+    if (
+      store.m2mServiceKeyRegistryReady === 0 ||
+      typeof store.m2mServiceKeyRegistryRevision !== "number" ||
+      store.m2mServiceKeyRegistryRevision < 1
+    ) {
+      store.m2mServiceKeyRegistryRevision = null;
+    }
     return store as SidlMetricsStore;
   }
 
@@ -120,7 +128,8 @@ function getMetricsStore(): SidlMetricsStore {
     m2mServiceKeyGeneration: new Map<string, GaugeSeries>(),
     m2mServiceKeyExpiryThresholdTotal: new Map<string, CounterSeries>(),
     m2mServiceKeyRegistryWriteFailuresTotal: new Map<string, CounterSeries>(),
-    m2mServiceKeyRegistryRevision: 0,
+    m2mServiceKeyRegistryReady: 0,
+    m2mServiceKeyRegistryRevision: null,
   };
 
   scope[STORE_KEY] = initialized;
@@ -427,9 +436,10 @@ export function recordM2MRegistryState(
   revision: number,
   services: readonly M2MMetricServiceState[],
 ): void {
-  if (!Number.isSafeInteger(revision) || revision < 0) return;
+  if (!Number.isSafeInteger(revision) || revision < 1) return;
 
   const store = getMetricsStore();
+  store.m2mServiceKeyRegistryReady = 1;
   store.m2mServiceKeyRegistryRevision = revision;
 
   for (const service of services) {
@@ -467,6 +477,14 @@ export function recordM2MRegistryState(
       deleteGauge(store.m2mServiceKeyExpiryTimestampSeconds, previousLabels);
     }
   }
+}
+
+export function recordM2MRegistryUnavailable(): void {
+  const store = getMetricsStore();
+  store.m2mServiceKeyRegistryReady = 0;
+  store.m2mServiceKeyRegistryRevision = null;
+  store.m2mServiceKeyGeneration.clear();
+  store.m2mServiceKeyExpiryTimestampSeconds.clear();
 }
 
 export function recordM2MRotationOutcome(
@@ -579,9 +597,9 @@ export function sidlMetricsSnapshot(): Promise<string> {
       store.m2mServiceKeyGeneration,
     ),
     renderScalarGaugeMetric(
-      "m2m_service_key_registry_revision",
-      "Current M2M service-key registry revision.",
-      store.m2mServiceKeyRegistryRevision,
+      "m2m_service_key_registry_ready",
+      "Whether the M2M service-key registry is ready for authenticated operations.",
+      store.m2mServiceKeyRegistryReady,
     ),
     renderCounterMetric(
       "m2m_service_key_expiry_threshold_total",
@@ -594,6 +612,18 @@ export function sidlMetricsSnapshot(): Promise<string> {
       store.m2mServiceKeyRegistryWriteFailuresTotal,
     ),
   ];
+
+  if (store.m2mServiceKeyRegistryRevision !== null) {
+    metrics.splice(
+      9,
+      0,
+      renderScalarGaugeMetric(
+        "m2m_service_key_registry_revision",
+        "Current M2M service-key registry revision.",
+        store.m2mServiceKeyRegistryRevision,
+      ),
+    );
+  }
 
   return Promise.resolve(`${metrics.join("\n\n")}\n`);
 }

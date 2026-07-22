@@ -75,7 +75,8 @@ describe('Admin API Auth (CON-353)', () => {
       expect(response.headers.get('Content-Type')).toContain('text/plain');
       const payload = await response.text();
       expect(payload).toContain('admin_dashboard_sidl_requests_total');
-      expect(payload).toContain('m2m_service_key_registry_revision');
+      expect(payload).toContain('m2m_service_key_registry_ready');
+      expect(payload).not.toContain('m2m_service_key_registry_revision');
     });
 
     it('should return 200 for Prometheus Basic Auth from the provisioned password file', async () => {

@@ -5,12 +5,10 @@ import { validatePrometheusScrapeAuth } from "@/lib/support/metricsAuth";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request): Promise<Response> {
-  // CON-353: Harden Metrics endpoint. Operators retain admin-key access;
-  // Prometheus uses the dedicated file-backed Basic Auth path.
-  if (req.headers.get("X-Admin-API-Key")) {
-    const adminAuthError = validateAdminAuth(req);
-    if (!adminAuthError) return renderMetrics();
-  }
+  // CON-353: Operators retain M2M/admin-key access; Prometheus uses the
+  // dedicated file-backed Basic Auth path.
+  const adminAuthError = await validateAdminAuth(req);
+  if (!adminAuthError) return renderMetrics();
 
   const scrapeAuthError = validatePrometheusScrapeAuth(req);
   if (scrapeAuthError) return scrapeAuthError;

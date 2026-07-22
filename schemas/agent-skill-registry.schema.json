@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Conxian/conxius-platform/schemas/agent-skill-registry.schema.json",
+  "title": "Conxian Agent Skill Registry",
+  "description": "Metadata-only registry of repository skills. Registry entries never define automatic execution.",
+  "$comment": "This schema validates structural shape and local field constraints. Runtime discovery additionally enforces unique skill IDs and paths, active defaults, at least one active default, frontmatter identity, and filesystem/symlink containment.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "registryVersion",
+    "protocol",
+    "skills"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "registryVersion": {
+      "type": "string",
+      "description": "Semantic version of the registry contract.",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "protocol": {
+      "const": "conxian-agent-discovery"
+    },
+    "skills": {
+      "type": "array",
+      "description": "Skill metadata entries. Runtime requires unique IDs and paths and at least one active default skill.",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/skill"
+      }
+    }
+  },
+  "$defs": {
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "description": "POSIX repository-relative path without traversal, backslashes, or empty segments.",
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!\\\\)(?!.*\\\\)(?!.*(^|/)\\.\\.(/|$))(?!.*(^|/)\\.(/|$))(?!.*//)(?!.*\\/$)[^\\u0000]+$"
+    },
+    "skillId": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "skill": {
+      "type": "object",
+      "additionalProperties": false,
+      "$comment": "Runtime rejects duplicate IDs or paths across entries and rejects default=true unless status=active.",
+      "required": [
+        "id",
+        "name",
+        "description",
+        "path",
+        "status",
+        "default",
+        "activation",
+        "loadPolicy",
+        "contentFormat",
+        "capabilities",
+        "metadata"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/skillId"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "$ref": "#/$defs/relativePath"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "inactive", "deprecated"]
+        },
+        "default": {
+          "type": "boolean",
+          "description": "Whether this active skill is selected by default. Runtime rejects default=true for inactive or deprecated skills."
+        },
+        "activation": {
+          "const": "manual"
+        },
+        "loadPolicy": {
+          "const": "content-only"
+        },
+        "contentFormat": {
+          "const": "markdown-with-frontmatter"
+        },
+        "capabilities": {
+          "type": "array",
+          "description": "Capability identifiers. Duplicate capability values are rejected by both schema and runtime.",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["version", "owner"],
+          "properties": {
+            "version": {
+              "type": "string",
+              "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+            },
+            "owner": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    }
+  }
+}

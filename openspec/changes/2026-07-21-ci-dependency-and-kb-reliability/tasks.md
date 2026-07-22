@@ -111,3 +111,16 @@
 - [ ] Container owners confirm root-context Docker/Compose behavior on local and hosted runners.
 - [ ] KB owners confirm runner choice, network-dependent test strategy, and artifact retention behavior.
 - [ ] Repository administrators confirm any required-check or branch-protection follow-up separately from this source change.
+
+## Post-merge remediation for PR #1188 — 2026-07-22
+
+The dependency state described by the earlier evidence was later regressed by merged Dependabot updates: PR #1178 restored dashboard Next.js `16.2.11`, and PRs #1179, #1185, and #1186 restored TypeScript `7.0.2` in the workspaces. The `origin/main` merge commit used by PR #1188 therefore had a root `pnpm.overrides.next` value of `15.5.18` but a lockfile override and dashboard importer at `16.2.11`; the clean frozen install failed before discovery validation.
+
+- [x] Restore the OpenSpec-authorized compatible graph: exact Next.js `15.5.18` in the root override, dashboard manifest, and lockfile; TypeScript `6.0.3` in all direct workspace manifests and lockfile importers.
+  - Local evidence on 2026-07-22: `pnpm install --frozen-lockfile` passed after removing all workspace `node_modules` directories; `pnpm exec tsc --version` reported `6.0.3`.
+- [x] Declare root-owned TypeScript `6.0.3` so `typecheck:agent-discovery` resolves `tsc` from the root dependency contract rather than workspace/PATH leakage.
+- [x] Add `pnpm run check:dependency-consistency` and run it before the reusable CI, cross-repo, Docker, and benchmark frozen installs; the assertion reports direct manifest, root override, and lockfile importer mismatches with targeted diagnostics.
+- [x] Replace the remaining CI `--no-frozen-lockfile` install in `cross-repo-integration-mvp.yml` with the same assertion plus `--frozen-lockfile`.
+- [x] Validate the root and filtered workspace paths locally: dependency assertion, clean frozen install, root lint/typecheck/test/build, discovery tests/typecheck, dashboard production build, deterministic CLI output, lifecycle gates, benchmark path, and `git diff --check` passed on 2026-07-22.
+- [ ] Run the direct Docker and Compose commands when a Docker daemon is available. **Blocked locally on 2026-07-22:** `docker` is not installed (`bash: docker: command not found`), so `docker compose config`, `docker build -f services/admin-dashboard/Dockerfile .`, and `docker compose build admin-dashboard` could not execute.
+- [ ] Inspect hosted checks on the remediation PR head and record any repository-code, provider-owned, or admin-only outcomes without changing rulesets or branch protection.

@@ -3,7 +3,7 @@ import { ImapWorker } from '@/lib/support/imap-worker';
 import { validateAdminAuth } from '@/lib/support/auth';
 
 export async function POST(request: Request) {
-  const authError = validateAdminAuth(request);
+  const authError = await validateAdminAuth(request, "write:admin");
   if (authError) return authError;
 
   try {

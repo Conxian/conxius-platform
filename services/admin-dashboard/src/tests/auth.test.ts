@@ -3,6 +3,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+vi.mock('server-only', () => ({}));
+
 import { POST as postSecrets } from '../app/api/secrets/route';
 import { GET as getMetrics } from '../app/api/metrics/route';
 

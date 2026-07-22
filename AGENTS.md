@@ -1517,12 +1517,15 @@ AGENTS.md (this update)
 **What was done**:
 - Normalized envelope authentication assertions before integrity digest construction, preserving RFC 3339 offset normalization and the strict 0–3 fractional-second profile.
 - Enforced canonical per-entry context byte/depth limits in authoritative snapshot validation and added forged-snapshot regressions across direct, merge, handover, and envelope paths, including exact-boundary acceptance.
+- Replaced both HS256 tampering-test final-character mutations with a shared deterministic first-signature-character mutation; production authentication behavior is unchanged.
 **Key discoveries**:
 - `createEnvelope()` already normalized the envelope core before hashing; authentication was the only digest-bearing subobject still hashed in caller form.
 - `normalizeContextEntry()` recomputes canonical byte/depth accounting, so authoritative validation can safely apply the declared snapshot limits to the normalized value without trusting self-reported metrics.
+- The final Base64URL signature character can contain unused padding bits, so mutating it may leave the decoded HS256 signature unchanged; tampering tests must change a significant signature character.
 **Files touched**:
 - `scripts/agent-coordination.ts`
 - `scripts/agent-coordination.test.ts`
+- `services/admin-dashboard/src/tests/m2m.test.ts`
 - `AGENTS.md`
 **Gaps identified**:
 - No canonical OpenSpec or JSON Schema correction was needed; both already state authentication normalization and per-entry byte/depth bounds.

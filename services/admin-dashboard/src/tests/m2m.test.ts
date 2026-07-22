@@ -99,6 +99,13 @@ async function signRawToken(payloadOverrides: Record<string, unknown> = {}, head
     .sign(new TextEncoder().encode(process.env.GATEWAY_JWT_SECRET ?? ""));
 }
 
+function tamperJwtSignature(token: string): string {
+  const signatureOffset = token.lastIndexOf(".") + 1;
+  const signatureCharacter = token[signatureOffset];
+  // Mutate a significant Base64URL character; the final character may only change unused padding bits.
+  return `${token.slice(0, signatureOffset)}${signatureCharacter === "a" ? "b" : "a"}${token.slice(signatureOffset + 1)}`;
+}
+
 describe("M2M authentication", () => {
   let authenticator: M2MAuthenticator;
 
@@ -222,7 +229,7 @@ describe("M2M authentication", () => {
 
     it("rejects signature tampering, alternate algorithms, wrong headers, and kid", async () => {
       const valid = await authenticator.issueJwt("gateway", ["read:admin", "m2m:internal"], { nowSeconds: NOW_SECONDS });
-      const tampered = `${valid.slice(0, -1)}${valid.endsWith("a") ? "b" : "a"}`;
+      const tampered = tamperJwtSignature(valid);
       expect((await authenticator.verifyJwt(tampered, { nowSeconds: NOW_SECONDS })).valid).toBe(false);
 
       const alternateAlgorithm = await signRawToken({}, { alg: "HS384" });
@@ -399,7 +406,7 @@ describe("M2M authentication", () => {
 
     it("returns generic authentication failures without token or secret material", async () => {
       const rawToken = await authenticator.issueJwt("gateway", ["read:admin", "m2m:internal"], { nowSeconds: NOW_SECONDS });
-      const tamperedToken = `${rawToken.slice(0, -1)}${rawToken.endsWith("a") ? "b" : "a"}`;
+      const tamperedToken = tamperJwtSignature(rawToken);
       const result = await authenticator.verifyJwt(tamperedToken, { nowSeconds: NOW_SECONDS });
 
       expect(result).toEqual({ valid: false, error: "Invalid bearer token" });

@@ -79,6 +79,10 @@ This document tracks the resolution of gaps and identifies new technical require
 | **G-53** | Lightning Async Payments | [FULL_STACK_BITCOIN_RESEARCH.md#53](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#53) | `lib-conxian-core/lightning` |
 | **G-54** | OP_VAULT (BIP-345) | [FULL_STACK_BITCOIN_RESEARCH.md#54](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#54) | `lib-conxian-core/covenants` |
 | **G-55** | Enterprise ERP Simulation & Programmable Mock Engines | [ENTERPRISE_ERP_SIMULATION_RESEARCH.md](./architecture/ENTERPRISE_ERP_SIMULATION_RESEARCH.md) | 🏗️ **Active Scaffolding**. CON-1320 initialized. |
+| **G-56** | Founder-rights decision and evidence boundary | [Founder-rights observation report](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md) | 🟡 **Observation contract implemented**. Protocol ratification and beneficiary decision remain unresolved. |
+| **G-57** | Cross-repository revenue model drift | [Founder-rights observation report](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#contradictions-and-safe-interpretation) | 🟡 **Active gap**. Protocol, Gateway, core, and platform models require owner-level reconciliation; this platform change selects no rate. |
+| **G-58** | Deployment evidence and live-interface verification | [Founder-rights observation report](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#verified-evidence-matrix) | 🟡 **Stage gate implemented**. No broadcast, confirmation, or live-interface deployment is asserted by this repository. |
+| **G-59** | Gateway/Nexus read-only observation integration | [Founder-rights observation report](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#phase-plan) | ⚪ **Not implemented**. Requires a separate OpenSpec adapter using canonical protocol evidence. |
 
 ---
 *Updated by Jules (Sovereign Engineering Agent) - June 2026*
@@ -95,3 +99,15 @@ This document tracks the resolution of gaps and identifies new technical require
 - **G-11 (BitVM2 Multi-Party)**: 🏗️ **Active Scaffolding**.
 - **G-05 (Silent Payments)**: 🏗️ **Active Scaffolding**.
 - **G-44 (BitVMX Computation)**: 🏗️ **Active Scaffolding**.
+
+## 6. Phase 4 Observation Contract Update (2026-07-22)
+
+- **G-56**: 🟢 **Observation contract implemented** in the Phase 4 candidate
+  for #1168. The validator prevents source/proposal evidence from becoming
+  active founder rights or payout authority; protocol governance remains open.
+- **G-57**: 🟡 **Active unresolved drift** across protocol, Gateway, core, and
+  platform economic descriptions. No fee or allocation was selected here.
+- **G-58**: 🟢 **Fail-closed evidence gate implemented** for staged deployment,
+  confirmation, and live-interface evidence. No deployment fact is asserted.
+- **G-59**: ⚪ **Not implemented**. A Gateway/Nexus read-only adapter requires a
+  separate change and canonical protocol evidence.

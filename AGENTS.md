@@ -1644,3 +1644,28 @@ AGENTS.md (this update)
 - Hosted PR checks and GitHub mergeability remain to be re-evaluated after the merge commit is pushed.
 **Gotchas**:
 - Do not rewrite the existing mainline or #1163 session-log entries; this entry is appended after both histories are preserved.
+
+### 2026-07-22 — Founder-Rights Revenue Observation Contract (#1168)
+**Trigger**: Selected safe Phase 4 candidate from [conxius-platform#1168](https://github.com/Conxian/conxius-platform/issues/1168) comment `5050732992`.
+**What was done**:
+- Added the OpenSpec-governed protocol revenue/founder-rights observation contract, Draft 2020-12 schema, pure TypeScript validator, focused tests, and CI/package test wiring.
+- Added the active research/evidence report, G-56 through G-59 gap/scoring entries, and fail-closed authority, unit, deployment, routing, freshness, schedule, payout, and custody boundaries.
+- Corrected the illustrative sustainability arithmetic: a 2.5% share of a 1% fee requires $336M annual gross volume for $84K, not $3.4M gross volume.
+**Key discoveries**:
+- Protocol sources currently expose conflicting observed/proposed fee and allocation models; issue #538 remains the protocol handoff and issue #488 remains unresolved.
+- Mainnet manifests/plans and founder-vault source are not sufficient evidence of confirmed deployment, live interface, complete vesting, or payout authorization.
+- Gateway treasury values include synthetic/stub proxies, so the new contract records evidence without treating Gateway fallbacks as protocol authority.
+**Files touched**:
+- `openspec/changes/2026-07-22-founder-rights-revenue-observation/`
+- `openspec/specs/protocol-revenue-observation-v1.spec.md`
+- `schemas/protocol-revenue-observation.schema.json`
+- `scripts/protocol-revenue-observation.ts`, `scripts/protocol-revenue-observation.test.ts`
+- `package.json`, `.github/workflows/reusable-ci.yml`
+- `docs/architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md`
+- `docs/GAPS.md`, `docs/SCORING_MATRIX.md`
+**Gaps identified**:
+- Protocol governance must decide any founder/economic policy and provide canonical tests and deployment evidence; no such decision is made here.
+- A Gateway/Nexus read-only adapter, qualified legal/compliance review, and any payout operation remain future work.
+**Gotchas**:
+- The fully evidenced active fixture is synthetic test data only; it must not be described as a mainnet or beneficiary assertion.
+- Keep historical AGENTS entries and evidence documents immutable; future integrations require a separate OpenSpec change and must remain protocol-owned.

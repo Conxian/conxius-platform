@@ -64,6 +64,12 @@ jobs:
       - name: Typecheck Agent Coordination
         run: pnpm run typecheck:agent-coordination
 
+      - name: Run Protocol Revenue Observation Tests
+        run: pnpm run test:protocol-revenue-observation
+
+      - name: Typecheck Protocol Revenue Observation
+        run: pnpm run typecheck:protocol-revenue-observation
+
       - name: Run Lint
         if: ${{ inputs.run-lint }}
         run: |

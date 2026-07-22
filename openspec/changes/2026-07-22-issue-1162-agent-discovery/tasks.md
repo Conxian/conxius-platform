@@ -40,4 +40,4 @@
 - [x] Add regression coverage for Windows-style `..\\outside` and `..\\outside\\secret.md` escapes, while retaining acceptance for valid Windows-style descendants such as `inside\\child\\context.md`.
 - [x] Re-run discovery tests and strict discovery typecheck after adding the focused helper seam and root-owned compiler dependency.
 - [x] Local clean-install evidence now supersedes the prior pre-remediation note: `pnpm install --frozen-lockfile`, `pnpm run test:agent-discovery`, `pnpm run typecheck:agent-discovery`, root `pnpm test`, and root `pnpm typecheck` passed on 2026-07-22.
-- [ ] Inspect hosted discovery/CI checks on the remediation PR head; do not infer current-head results from PR #1188's pre-remediation failures.
+- [x] Inspect hosted discovery/CI checks on remediation PR [#1190](https://github.com/Conxian/conxius-platform/pull/1190) head `70d2e2d0db7feab6a21881ed7d1574d38716a851`: CI, cross-repo, multi-environment, synergy, CodeQL, dependency review, and security checks passed on 2026-07-22; results were read from the remediation head rather than inferred from PR #1188.

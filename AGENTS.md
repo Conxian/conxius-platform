@@ -1323,6 +1323,6 @@ AGENTS.md (this update)
 - `services/admin-dashboard/Dockerfile`, `.github/workflows/reusable-ci.yml`, `.github/workflows/cross-repo-integration-mvp.yml`
 - `openspec/changes/2026-07-21-ci-dependency-and-kb-reliability/tasks.md`, `openspec/changes/2026-07-22-issue-1162-agent-discovery/tasks.md`
 **Gaps identified**:
-- Direct Docker and Compose validation remains blocked in this devbox because the `docker` command is not installed; hosted checks are pending on the remediation PR head.
+- Direct Docker and Compose validation remains blocked in this devbox because the `docker` command is not installed; hosted checks on remediation PR #1190 passed, while ruleset/branch-protection follow-up remains admin-owned.
 **Gotchas**:
 - The earlier PR #1188 validation note correctly described a pre-existing frozen-install blocker, but its OpenSpec evidence was stale after later Dependabot merges; current-head claims must use the remediation head only.

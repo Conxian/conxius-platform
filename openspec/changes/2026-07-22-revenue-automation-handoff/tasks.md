@@ -11,17 +11,19 @@
   tasks, and spec-delta artifacts.
 - [x] Add the canonical
   `openspec/specs/revenue-automation-policy.spec.md`.
-- [x] Update `docs/runbooks/MAINTAINER_BOUNTY_RUNBOOK.md` with protocol
-  ownership and implementation-reference boundaries while preserving Gateway
-  and `BOUNTY_PAYOUT_ACTIVE` operations.
+- [x] Update `docs/runbooks/MAINTAINER_BOUNTY_RUNBOOK.md` with the layered
+  authority boundary, fail-closed evidence gates before enabling
+  `BOUNTY_PAYOUT_ACTIVE`, and Gateway route-disablement-only rollback behavior.
 - [x] Correct active `AGENTS.md` gap/status claims without rewriting historical
   session logs, then append the 2026-07-22 session entry.
 
 ## Normative acceptance criteria
 
-- [x] **AC-1 (ownership):** The canonical spec MUST assign Clarity,
-  deployment, tests, and economic-policy ownership to `Conxian/Conxian` and
-  routing, flags, and runbooks to `conxius-platform`.
+- [x] **AC-1 (ownership):** The canonical spec MUST assign Clarity semantics,
+  deployment, canonical on-chain state, contract-generated outcomes, tests, and
+  economic-policy ownership to `Conxian/Conxian`; it MUST preserve the Gateway's
+  platform-facing authority for observed protocol state and routing/business
+  logic while assigning routing controls, flags, and runbooks to the platform.
 - [x] **AC-2 (baseline):** The canonical spec MUST identify 100 bps / 1% as a
   current observed implementation baseline, not an immutable policy, and MUST
   defer rate changes to protocol governance and issue #488.
@@ -33,13 +35,20 @@
   authorization, pause/fail-closed behavior, atomic effects, events/audit
   fields, and deterministic failure semantics.
 - [x] **AC-5 (platform boundary):** The canonical spec MUST prohibit a
-  conflicting platform fee calculation and custody claim while allowing
-  operational payout disablement.
+  conflicting platform fee calculation and custody claim, require Gateway fee
+  outcomes to derive from canonical contract state and registered flow metadata,
+  and allow operational payout disablement.
 - [x] **AC-6 (acceptance scenarios):** The canonical spec MUST include Given /
   When / Then scenarios that distinguish normative requirements from current
   upstream implementation gaps.
 - [x] **AC-7 (non-goals):** The change MUST NOT add or modify Clarity code or
   change the fee rate.
+- [x] **AC-8 (payout enablement):** The runbook MUST keep payouts disabled unless
+  registered-flow evidence, a Gateway-to-canonical-output match, and required
+  authorization/replay controls or explicit upstream acceptance evidence are
+  verified; rollback MUST disable `BOUNTY_PAYOUT_ACTIVE` before any route
+  maintenance, and Gateway admin actions MUST NOT be described as protocol-state
+  mutation.
 
 ## Upstream follow-up (not completed by this PR)
 

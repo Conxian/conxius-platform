@@ -21,25 +21,35 @@ The terms **MUST**, **MUST NOT**, **SHOULD**, and **MAY** are normative.
 
 `Conxian/Conxian` owns:
 
-- Clarity contract source and protocol tests;
+- Clarity contract source, semantics, and protocol tests;
 - deployment manifests, deployment policy, and release evidence;
 - registration and semantics of fee-bearing protocol flows;
-- authoritative fee calculations, accounting, transfers, events, and state; and
+- canonical on-chain contract state and contract-generated fee outcomes,
+  including fee calculations, accounting, transfers, and events; and
 - economic policy, including any fee-rate or allocation change approved through
   protocol governance.
 
-The protocol repository is the authoritative source for protocol state and
-protocol-generated fee outputs.
+The protocol repository is canonical for deployed Clarity semantics, canonical
+on-chain contract state, and contract-generated outcomes. It does not replace the
+Conxian Gateway as the platform-facing authority for observed protocol state or
+routing/business logic.
 
 ### 2.2 Platform repository ownership
 
 `conxius-platform` owns only:
 
-- operational routing of protocol-authoritative instructions and outputs;
+- operational routing through the Conxian Gateway of observed protocol state,
+  registered flow metadata, and contract-generated outputs;
 - feature flags and operator runbooks;
 - observability and reporting of protocol/routing outcomes; and
 - the ability to disable platform payout operations when a safety condition is
   not satisfied.
+
+The Conxian Gateway remains the platform-facing authoritative interface/source
+for observed protocol state and routing/business logic. Gateway MUST derive and
+report fee outcomes from canonical on-chain contract state and registered flow
+metadata. Gateway MUST NOT invent a conflicting fee calculation, override a
+protocol-owned collector/distributor, or claim custody.
 
 The platform MUST NOT:
 
@@ -82,7 +92,7 @@ Each registered flow MUST define all of the following:
 | `flowId` | Stable, versioned identifier for the fee-bearing flow. |
 | `feeBase` | Integer quantity from which the fee is calculated, including units. |
 | `asset` | Exact asset/contract identity and applicable integer decimal rules. |
-| `collectorOrDistributor` | Protocol-authoritative destination for the fee. |
+| `collectorOrDistributor` | Protocol-owned destination recorded in the registered flow. |
 | `trigger` | Protocol event or state transition that makes the fee due. |
 | `authorizedCallers` | Permitted principals or caller classes. |
 | `replayKey` | Deterministic key used to enforce exactly-once behavior. |
@@ -131,7 +141,7 @@ When deterministic integer rounding produces a zero fee:
 Only callers listed by the registered flow may trigger fee automation. Principal
 checks MUST bind the caller, payer, asset, and collector/distributor to the
 registered flow. A caller MUST NOT provide an arbitrary destination that
-overrides the protocol-authoritative collector/distributor.
+overrides the registered protocol-owned collector/distributor.
 
 Unauthorized callers, invalid principal relationships, unsupported assets, and
 malformed flow inputs MUST fail without partial accounting or transfer effects.
@@ -194,10 +204,11 @@ convert a rejected, paused, or unverified operation into success.
 
 ## 6. Platform/Gateway routing contract
 
-The platform and Gateway MUST route using protocol-authoritative flow
-registrations, fee outputs, and settlement results. They MUST NOT calculate a
-conflicting canonical fee, maintain a shadow fee ledger that disagrees with the
-protocol, or claim custody of the asset or fee.
+The platform and Gateway MUST route using registered flow metadata, canonical
+on-chain contract state, and contract-generated fee/settlement outcomes as
+observed through Gateway. They MUST NOT calculate a conflicting canonical fee,
+maintain a shadow fee ledger that disagrees with the protocol, or claim custody
+of the asset or fee.
 
 If protocol output is missing, stale, inconsistent, or unavailable, the
 platform MUST fail closed or disable the affected payout operation. Operators
@@ -230,8 +241,9 @@ evidence, and deployment-policy decisions in
 - **Given** a protocol-owned flow has a complete versioned registration with fee
   base, asset, collector/distributor, trigger, authorized callers, and replay
   key definition.
-- **When** the Gateway receives a protocol-authoritative fee output for that
-  flow and the platform payout flag is enabled.
+- **When** the Gateway receives a contract-generated fee output derived from
+  canonical on-chain contract state and registered flow metadata, and the
+  platform payout flag is enabled.
 - **Then** the platform routes the output without recalculating a competing
   fee, without changing the collector, and without claiming custody.
 

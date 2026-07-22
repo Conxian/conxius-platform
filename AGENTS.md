@@ -81,7 +81,9 @@ Based on comprehensive external research + org repo analysis (repos are **far ah
 **Repo**: `Conxian/Conxian` — 218 Clarity contracts, 76+ test files, mainnet deployed
 
 **Key Revenue System (CXIP-013)**:
-- **100 bps (1%)** mandatory protocol fee via `revenue-automation.clar`
+- **Current observed 100 bps / 1% implementation baseline** via
+  `revenue-automation.clar`; incomplete flow hardening remains tracked in
+  `Conxian/Conxian#538`, and rate changes remain protocol governance decisions.
 - **6-Way Fiscal Dam Split** (cxd-treasury.clar):
   - Treasury (SAB Operations): 45%
   - Bounties (Community): 30%
@@ -93,7 +95,9 @@ Based on comprehensive external research + org repo analysis (repos are **far ah
 - Bootstrap wallet via `founder-cut-beneficiary` in `operational-treasury.clar`
 
 **Key Contracts**:
-- `revenue-automation.clar` — enforces 100 bps fee
+- `revenue-automation.clar` — records the current observed 100 bps / 1%
+  implementation baseline; incomplete flow hardening remains tracked in
+  `Conxian/Conxian#538`, and rate changes remain protocol governance decisions.
 - `revenue-distributor.clar` — token buy-backs and burns
 - `founder-vault.clar` — founder allocations and vesting
 - `dimensional-core.clar` — multidimensional DeFi engine

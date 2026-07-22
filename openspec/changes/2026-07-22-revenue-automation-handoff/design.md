@@ -2,28 +2,34 @@
 
 ## 1. Ownership boundary
 
-The system is split into an authoritative protocol lane and a non-authoritative
-platform lane:
+The system has two coordinated authority layers: the protocol repository owns
+Clarity semantics and canonical on-chain outcomes, while the Gateway remains the
+platform-facing authority for observed state and routing/business logic:
 
 ```text
 Conxian/Conxian protocol repository
   ├─ Clarity contract and protocol tests
   ├─ deployment manifests and deployment policy
   ├─ fee-bearing flow registration
-  └─ economic policy and governance
-              │ authoritative outputs/state
+  └─ canonical on-chain contract state and contract-generated outcomes
+              │ Gateway observes and derives platform-facing outputs
               ▼
 conxius-platform / Gateway control plane
-  ├─ route protocol-authoritative fee/payout instructions
+  ├─ authoritative interface for observed protocol state and routing/business logic
+  ├─ derive/report fee outcomes from canonical contract state and registered flow metadata
   ├─ expose operational feature flags and runbooks
   ├─ disable platform payout operations when unsafe
   └─ observe and report outcomes without custody
 ```
 
+The protocol repository owns Clarity contract semantics, deployment policy,
+canonical on-chain contract state, and contract-generated fee outcomes. The
+Conxian Gateway remains the platform-facing authoritative interface/source for
+observed protocol state and routing/business logic. Gateway MUST derive/report
+fee outcomes from canonical on-chain contract state and registered flow
+metadata; it MUST NOT invent a conflicting fee calculation or claim custody.
 The platform MUST NOT add a local Clarity contract, deploy or modify the
-protocol contract, calculate a competing canonical fee, or represent routed
-assets as platform custody. Protocol state and protocol-authoritative outputs
-remain the source of truth.
+protocol contract, or represent routed assets as platform custody.
 
 ## 2. Observed baseline versus normative policy
 
@@ -53,7 +59,8 @@ flow definition containing:
 - `feeBase`: the integer quantity from which the fee is calculated and its
   units;
 - `asset`: the exact asset/contract identity and decimal rules;
-- `collectorOrDistributor`: the protocol-authoritative destination;
+- `collectorOrDistributor`: the protocol-owned destination recorded in the
+  registered flow;
 - `trigger`: the protocol event or state transition that makes the fee due;
 - `authorizedCallers`: permitted principals or caller classes; and
 - `replayKey`: deterministic key used for exactly-once evaluation.
@@ -81,7 +88,7 @@ the following behavior explicit:
 4. **Authorization**: only registered authorized callers may trigger a flow.
    Principal checks MUST bind the caller, payer, asset, and collector rules to
    the registered flow; arbitrary caller-supplied destinations MUST NOT replace
-   the protocol-authoritative collector/distributor.
+   the registered protocol-owned collector/distributor.
 5. **Pause and fail-closed**: a paused flow, missing registration, invalid
    principal, unavailable dependency, or unverifiable protocol result MUST
    reject the operation. The platform MAY disable payout operations with its
@@ -104,8 +111,8 @@ the following behavior explicit:
 
 The platform and Gateway:
 
-- MUST route using protocol-authoritative flow definitions, fee outputs, and
-  settlement results;
+- MUST route using registered flow metadata, canonical on-chain contract state,
+  and contract-generated fee/settlement outcomes as observed through Gateway;
 - MUST NOT calculate or persist a conflicting canonical fee;
 - MUST NOT claim custody of the payer asset, fee, or collector balance;
 - MUST preserve protocol error/failure outcomes rather than converting them to

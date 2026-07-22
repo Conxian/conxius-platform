@@ -171,7 +171,7 @@ All services use multi-layered M2M auth per `docs/M2M_AUTHENTICATION.md`:
 - **Gateway clients**: `services/admin-dashboard/src/lib/sidl/gateway.ts`, `services/elizaos-plugin-conxian/src/conxianClient.ts` now include M2M auth headers
 
 ### Key Gaps Still Open
-- **`revenue-automation.clar`** — referenced in `docs/runbooks/MAINTAINER_BOUNTY_RUNBOOK.md` but does not exist in the repo (#1164)
+- **Revenue automation handoff** — the protocol-owned `Conxian/Conxian` repository contains `contracts/treasury/revenue-automation.clar` with a current observed 100 bps / 1% baseline; platform specification and handoff are tracked in #1164/#1167, while protocol hardening and integration remain tracked in `Conxian/Conxian#538`
 - **JWT-based M2M token auth** — M2M module supports keys/scopes, but JWT tokens not implemented (#1160)
 - **Key rotation mechanism** — M2M keys are static, no rotation API (#1161)
 - **Swarm coordination** — Multi-agent patterns not implemented (#1163)
@@ -404,7 +404,7 @@ See `docs/SELF_EVOLVING_KB.md` for full architecture.
 | **Self-Evolving KB** | **Implemented (scaffolded)** | #1165 |
 | Proof-carrying treasury analytics | Spec-only | — |
 | SFO yield harvesting | Math.random() stubs | — |
-| revenue-automation.clar | Not implemented | #1164 |
+| Revenue automation ownership/hardening | Platform handoff/spec complete; upstream hardening and integration remain | Conxian #538 / platform #1164 |
 
 ### Cross-Repo Dependencies (Conxian Org — 14 repos total)
 
@@ -1326,3 +1326,41 @@ AGENTS.md (this update)
 - Direct Docker and Compose validation remains blocked in this devbox because the `docker` command is not installed; hosted checks are pending on the remediation PR head.
 **Gotchas**:
 - The earlier PR #1188 validation note correctly described a pre-existing frozen-install blocker, but its OpenSpec evidence was stale after later Dependabot merges; current-head claims must use the remediation head only.
+
+### 2026-07-22 — Revenue Automation Protocol Handoff
+**Trigger**: Platform issue #1164 approval comment; aligned with platform issue #1167.
+**What was done**:
+- Confirmed that the protocol-owned `Conxian/Conxian` repository already contains `contracts/treasury/revenue-automation.clar`, registered in `Clarinet.toml` and the mainnet manifest, with a current observed 100 bps / 1% implementation baseline.
+- Created the durable protocol handoff issue [Conxian/Conxian#538](https://github.com/Conxian/Conxian/issues/538) for future Clarity implementation, tests, deployment policy, and economic-policy decisions.
+- Added the canonical revenue automation policy spec and dated OpenSpec artifacts defining the protocol/platform boundary, flow-registration requirements, exactly-once and fail-closed invariants, and Given/When/Then acceptance scenarios.
+- Clarified the maintainer bounty runbook so Gateway and `BOUNTY_PAYOUT_ACTIVE` remain operational controls while protocol state remains authoritative and Clarity changes stay in the protocol repository.
+- Corrected the active gap/status claims in this file without rewriting prior historical session logs.
+**Key discoveries**:
+- The original #1164 premise was repository-scoped: the contract is not missing organization-wide; it is upstream and protocol-owned.
+- Protocol issue #488 proposes an unresolved alternative fee schedule and must not be adopted by the platform; protocol issue #469 records no-op fee paths that remain upstream follow-up.
+- The upstream README documents an `initialize` signature that requires reconciliation with the actual contract interface and initialization behavior; this is tracked in the handoff issue rather than treated as completed hardening.
+**Files touched**:
+- `openspec/changes/2026-07-22-revenue-automation-handoff/`
+- `openspec/specs/revenue-automation-policy.spec.md`
+- `docs/runbooks/MAINTAINER_BOUNTY_RUNBOOK.md`
+- `AGENTS.md`
+**Gaps identified**:
+- Upstream trigger coverage, replay semantics, caller authorization, pause/fail-closed behavior, atomic accounting/transfers, events, rounding, zero-fee behavior, README initialization documentation, and no-op fee paths remain protocol-owned work in #538.
+- This platform PR does not claim upstream Clarity implementation or audit completion.
+**Gotchas**:
+- Keep the 100 bps / 1% value labeled as an observed implementation baseline, not an immutable policy; any rate change requires protocol governance.
+- Do not “fix” the historical #1164 session claims in place; preserve the append-only knowledge-base record and update only active status sections.
+
+### 2026-07-22 — PR #1191 Mainline Merge Verification
+**Trigger**: PR #1191 request to merge the current `origin/main` into `charlie/1164-revenue-automation-handoff`.
+**What was done**:
+- Fetched `origin/main` at `452834b4a81de32ed6338a22ad283358004e448f`, checked out the PR head at `a9b81c345348eb19020a98378588c37463400411`, and ran the required non-rebase merge; Git reported `Already up to date`.
+- Confirmed that the current PR head is directly based on the fetched mainline, so no content conflicts required manual resolution.
+**Key discoveries**:
+- The merge session is limited to preserving the existing protocol-owned revenue automation handoff and platform routing boundary; it does not add Clarity implementation or economic-policy changes.
+**Files touched**:
+- `AGENTS.md`
+**Gaps identified**:
+- Hosted checks remain the final PR validation gate after the branch update.
+**Gotchas**:
+- Keep the existing OpenSpec handoff scope intact and do not rewrite prior session-log entries.

@@ -438,7 +438,7 @@ Governance: 4 files/~40 tests. SIDL: 3/~25. Support: 5/~30. Bitcoin stack: 5/~35
 | `ADMIN_DASHBOARD_API_KEY` | Primary admin API authentication |
 | `SERVICE_KEY_*` | M2M service keys for internal auth (SERVICE_KEY_GATEWAY, SERVICE_KEY_ELIZAOS, etc.) |
 | `EXTERNAL_API_KEYS` | JSON map of external API keys to scopes |
-| `GATEWAY_JWT_SECRET` | For future JWT-based M2M auth |
+| `GATEWAY_JWT_SECRET` | Server-only platform JWT issuance/verification; Rust Gateway verification remains a coordinated follow-up |
 
 See `docs/M2M_AUTHENTICATION.md` for full M2M auth configuration.
 
@@ -1406,10 +1406,10 @@ AGENTS.md (this update)
 - Added strict Bearer precedence, async M2M/admin guards with explicit route scopes, legacy API/service/external-key compatibility, and Gateway `legacy`/`dual`/`jwt` header modes with process-local pre-expiry cache re-issuance.
 - Added focused security and Gateway migration tests, updated all production async guard callsites, documented environment/operator behavior, and updated the OpenSpec task checklist without claiming Rust Gateway verification.
 - Added exported-handler route authorization coverage for `admin:secrets`, `admin:deploy`, `write:treasury`, and `write:governance`, plus adversarial JWT boundary tests and cache invalidation coverage for audience, issuer, and secret changes.
-- Pinned the admin-dashboard-only TypeScript compiler to `6.0.3`, which is compatible with the existing `ignoreDeprecations: "6.0"` setting and makes the production build pass. Removed the unnecessary global Next override; the dashboard's direct `16.2.11` dependency and repaired lock entries remain the pre-existing frozen-install consistency prerequisite, not JWT logic.
+- Reconciled the branch with current `origin/main`'s repaired Next.js `15.5.18` / TypeScript `6.0.3` dependency graph while retaining the `jose` lock entries; frozen installation and both workspace builds pass after the rebase without changing JWT runtime semantics.
 **Key discoveries**:
 - The dated OpenSpec change validates strictly with the temporary `@fission-ai/openspec` CLI invocation; no repository-installed CLI binary was available.
-- The initial `next build` reproduced the pre-existing Next.js `16.2.11` / TypeScript `7.0.2` compiler-discovery failure (`The "id" argument must be of type string. Received undefined`). A local exact `typescript@6.0.3` pin repaired the dashboard without changing runtime semantics; both dashboard and workspace builds now pass. TypeScript `7.0.2` remains in the independent admin-pulse-bos and ElizaOS workspaces.
+- The original pre-rebase branch reproduced the pre-existing Next.js `16.2.11` / TypeScript `7.0.2` compiler-discovery failure (`The "id" argument must be of type string. Received undefined`). Current `origin/main` carries the repaired Next.js `15.5.18` / TypeScript `6.0.3` graph, and both dashboard and workspace builds now pass after rebasing.
 - The current Rust Gateway JWT verifier and shared-secret rotation remain outside this repository; deployment must stay on `legacy` until coordinated evidence exists. Issue #1161 owns rotation, overlap, `kid`, and/or JWKS work.
 **Files touched**:
 - `services/admin-dashboard/src/lib/support/m2m.ts`, `services/admin-dashboard/src/lib/support/auth.ts`, `services/admin-dashboard/src/lib/sidl/gateway.ts`

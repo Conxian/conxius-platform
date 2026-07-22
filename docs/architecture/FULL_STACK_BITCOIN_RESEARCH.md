@@ -153,11 +153,12 @@ Research into secondary settlement layers to ensure multidimensional redundancy.
 *Updated by Jules (Sovereign Engineering Agent) - June 20, 2026*
 
 ## 21. Technical Deep Dive: BitVM2 Verification Floor (v1.9.2)
-- **Groth16 Chunking**: Verification is split into **364 independent taps**.
+- **Groth16 Chunking (research profile)**: One described layout splits verification into **364 independent taps**; this is profile-specific, not a universal protocol constant.
   - **VALIDATING_TAPS (1)**: Core arithmetic verification logic.
   - **HASHING_TAPS (363)**: Hash chain verification for intermediate state transitions.
 - **On-Chain Execution**: Utilizing `bitvm::groth16::verifier::Verifier::hinted_verify` to generate scripts and hints.
 - **Optimistic Bridge**: Provers commit to state; verifiers can challenge any of the 364 chunks if fraud is detected.
+- **Platform readiness**: `conxius-platform` provides only a typed, fail-closed orchestration boundary. The profile description and a tap count do not constitute proof verification; Gateway/Core/Nexus backend implementation and acceptance remain required.
 
 ## 22. Institutional Bridge: FDC3 Native Resolver (v1.9.2)
 - **Standard**: FINOS FDC3 v2.0 Desktop Agent.
@@ -375,11 +376,13 @@ Research into secondary settlement layers to ensure multidimensional redundancy.
 ## 50. Zero-Knowledge Contingent Payments (ZKCP)
 - **Concept**: A protocol that allows for the trustless exchange of information for Bitcoin, where the buyer only pays if the information is valid according to a ZK-proof.
 - **Strategic Impact**: Foundation for decentralized data markets and trustless "pay-for-proof" services in the Nexus network.
+- **Platform readiness**: The dashboard exposes only canonical request/result/payment contracts with unavailable defaults. It has no pairing verifier, chain observer, or production key-release backend; simulated fixtures are test-only and settlement-rejected.
 
 ## 51. BitVM2 Optimized Snark Verifier (v1.9.4)
 - **Concept**: Optimizing the Groth16 SNARK verifier specifically for Bitcoin Script limits, focusing on reduction of script size and stack depth.
 - **Research**: Investigating the use of "chunked" pairings and optimized field arithmetic to fit within the 4MB block limit while maintaining security.
 - **Benefit**: Increases the efficiency of G-01 (Verification Floor) and reduces the cost of settlement.
+- **Platform readiness**: No pairing arithmetic or optimized verifier is implemented in this repository, and no production backend is selected by the #1187 remediation.
 
 ## 52. BRC-20 & Runes USI Integration
 - **Concept**: Providing native support for Bitcoin-based meta-protocols (BRC-20, Runes) within the Universal Settlement Interface (USI).

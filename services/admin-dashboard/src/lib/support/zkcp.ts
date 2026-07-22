@@ -1,249 +1,443 @@
 import { createLogger } from "./logger";
+import {
+  VERIFIER_CONTRACT_VERSION,
+  UNAVAILABLE_BACKEND,
+  createPaymentFailure,
+  createVerificationFailure,
+  digestVerifierRequest,
+  isProductionPayment,
+  isProductionVerified,
+  isVerificationFailureCode,
+  rejectNonProductionVerification,
+  type Digest,
+  type PaymentNetwork,
+  type PaymentObservation,
+  type PaymentObservationRequest,
+  type PaymentObservationResult,
+  type Provenance,
+  type VerificationFailureCode,
+  type VerificationResult,
+  type VerifierRequest,
+  validatePaymentObservation,
+  validateVerificationResult,
+  validateVerifierRequest,
+} from "./verifier-contract";
+
 /**
- * ZKCP (Zero-Knowledge Contingent Payments) Bridge (G-50)
- *
- * Coordinates trustless exchange of information for Bitcoin value.
- * Follows the USI (Universal Settlement Interface) pattern for Intent signing.
- *
- * Next steps for real ZK-proof integration:
- * - Replace `DefaultZKVerifier` with `lib-conxian-core` Wasm verifier
- * - Wire `onChainMonitor` to a real Bitcoin RPC / Esplora endpoint
- */
-export type ZKCPStatus = 'pending' | 'verified' | 'paid' | 'finalized' | 'failed';
+* ZKCP (Zero-Knowledge Contingent Payments) coordination boundary. The
+* dashboard does not implement a proof system, chain monitor, or key-release
+* primitive. Each dependency is explicit and unavailable by default.
+*/
+
+const logger = createLogger("ZKCP");
+
+export type ZKCPStatus = "pending" | "verified" | "paid" | "finalized" | "failed" | "unsupported";
+export type ZKProofSystem = "groth16" | "plonk" | "stark";
 
 export interface ZKCPIntent {
   id: string;
-  amount: number; // in sats
-  encryptedDataHash: string;
-  proofHash: string;
+  amount: number;
+  encryptedDataHash: Digest;
+  proofHash: Digest;
   sellerAddress: string;
   buyerAddress: string;
+  network: PaymentNetwork;
   status: ZKCPStatus;
   round: number;
   paymentHash?: string;
   decryptionKey?: string;
   proofSystem?: ZKProofSystem;
+  verification?: VerificationResult;
+  paymentObservation?: PaymentObservation;
   createdAt: string;
   updatedAt: string;
 }
 
-export type ZKProofSystem = 'groth16' | 'plonk' | 'stark';
+export interface ZKCPIntentInput {
+  id: string;
+  amount: number;
+  encryptedDataHash: Digest;
+  proofHash: Digest;
+  sellerAddress: string;
+  buyerAddress: string;
+  network: PaymentNetwork;
+}
 
-export interface ZKVerificationResult {
-  valid: boolean;
-  proofSystem: ZKProofSystem;
-  verifiedAt: string;
+export type ZKVerificationResult = VerificationResult;
+
+export interface ZKProofVerifier {
+  verify(request: VerifierRequest): Promise<VerificationResult>;
+}
+
+export class UnavailableZKVerifier implements ZKProofVerifier {
+  public async verify(request: VerifierRequest): Promise<VerificationResult> {
+    return createVerificationFailure(
+      "backend_unavailable",
+      "ZK proof verification backend is not configured",
+      {
+        request_digest: await digestVerifierRequest(request),
+        backend: UNAVAILABLE_BACKEND,
+        provenance: "unknown",
+      },
+    );
+  }
+}
+
+export interface OnChainMonitor {
+  watchForPayment(request: PaymentObservationRequest): Promise<PaymentObservationResult>;
+}
+
+export class UnavailableOnChainMonitor implements OnChainMonitor {
+  public async watchForPayment(_request: PaymentObservationRequest): Promise<PaymentObservationResult> {
+    return createPaymentFailure(
+      "observer_unavailable",
+      "Bitcoin payment observer is not configured",
+    );
+  }
+}
+
+export interface DecryptionKeyReleaseResult {
+  status: "released" | "unavailable" | "rejected";
+  provenance: Provenance;
+  decryptionKey?: string;
+  failure_code?: VerificationFailureCode;
   error?: string;
 }
 
-export interface PaymentWatchResult {
-  detected: boolean;
-  txid?: string;
-  confirmations?: number;
-  amount?: number;
+export interface DecryptionKeyReleaser {
+  release(intent: ZKCPIntent, payment: PaymentObservation): Promise<DecryptionKeyReleaseResult>;
 }
 
-/**
- * ZK-proof verifier interface.
- * Implementations include the current simulated verifier and a future
- * `lib-conxian-core` Wasm-based verifier for Groth16/PLONK proofs.
- */
-export interface ZKProofVerifier {
-  verify(proof: string, publicInputs: string[]): Promise<ZKVerificationResult>;
-}
-
-/**
- * On-chain payment monitor interface.
- * Implementations watch the Bitcoin chain for payment confirmations.
- */
-export interface OnChainMonitor {
-  watchForPayment(address: string, expectedAmount: number): Promise<PaymentWatchResult>;
-  getConfirmations(txid: string): Promise<number>;
-}
-
-/**
- * Simulated ZK-proof verifier (development scaffolding).
- * Accepts any proof with length >= 128 characters.
- * Replace with lib-conxian-core Wasm verifier for production.
- */
-export class DefaultZKVerifier implements ZKProofVerifier {
-  async verify(proof: string, _publicInputs: string[]): Promise<ZKVerificationResult> {
-    console.log('[ZKCP] Verifying ZK-proof (simulated verifier)');
-    const valid = proof.length >= 128;
-
+export class UnavailableDecryptionKeyReleaser implements DecryptionKeyReleaser {
+  public async release(_intent: ZKCPIntent, _payment: PaymentObservation): Promise<DecryptionKeyReleaseResult> {
     return {
-      valid,
-      proofSystem: 'groth16',
-      verifiedAt: new Date().toISOString(),
-      error: valid ? undefined : 'Proof under minimum length threshold'
+      status: "unavailable",
+      provenance: "unknown",
+      failure_code: "decryption_key_unavailable",
+      error: "Decryption-key release backend is not configured",
     };
   }
 }
 
-/**
- * Simulated on-chain payment monitor.
- * In production, this connects to a Bitcoin RPC node or Esplora API.
- */
-export class DefaultOnChainMonitor implements OnChainMonitor {
-  async watchForPayment(address: string, expectedAmount: number): Promise<PaymentWatchResult> {
-    console.log(`[ZKCP] Watching for payment to ${address} (${expectedAmount} sats)`);
-    // Simulated detection — in production, polls Bitcoin RPC / Esplora
-    return { detected: false };
-  }
-
-  async getConfirmations(_txid: string): Promise<number> {
-    return 0;
-  }
+export interface SettlementFinalizationResult {
+  finalized: boolean;
+  status: "finalized" | "rejected" | "unavailable";
+  intentId: string;
+  paymentHash?: string;
+  decryptionKey?: string;
+  failure_code?: VerificationFailureCode;
+  error?: string;
 }
 
 export type ZKCPEventHandler = (event: ZKCPEvent) => void;
 
 export interface ZKCPEvent {
-  type: 'intent_created' | 'proof_verified' | 'payment_detected' | 'settlement_finalized' | 'intent_failed';
+  type: "intent_created" | "proof_verified" | "payment_detected" | "settlement_finalized" | "intent_failed";
   intentId: string;
   timestamp: string;
   data?: Record<string, unknown>;
 }
 
-export class ZKCPBridge {
-  private intents: Map<string, ZKCPIntent> = new Map();
-  private verifier: ZKProofVerifier;
-  private onChainMonitor: OnChainMonitor;
-  private eventHandlers: ZKCPEventHandler[] = [];
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
-  constructor(
-    verifier?: ZKProofVerifier,
-    onChainMonitor?: OnChainMonitor
-  ) {
-    this.verifier = verifier ?? new DefaultZKVerifier();
-    this.onChainMonitor = onChainMonitor ?? new DefaultOnChainMonitor();
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isPaymentStatus(value: unknown): value is PaymentObservationResult["status"] {
+  return value === "observed"
+    || value === "not_observed"
+    || value === "unavailable"
+    || value === "malformed"
+    || value === "mismatch"
+    || value === "rejected";
+}
+
+function isProvenance(value: unknown): value is Provenance {
+  return value === "production" || value === "test" || value === "simulated" || value === "unknown";
+}
+
+function isZKProofSystem(value: unknown): value is ZKProofSystem {
+  return value === "groth16" || value === "plonk" || value === "stark";
+}
+
+function paymentRequestFor(intent: ZKCPIntent): PaymentObservationRequest {
+  return {
+    intent_id: intent.id,
+    address: intent.sellerAddress,
+    expected_amount: intent.amount,
+    network: intent.network,
+  };
+}
+
+function failedVerification(intentId: string, code: VerificationFailureCode, error: string): VerificationResult {
+  logger.warn(`Verification failed for intent ${intentId}: ${code}`);
+  return createVerificationFailure(code, error);
+}
+
+async function normalizePaymentResult(
+  value: unknown,
+  request: PaymentObservationRequest,
+): Promise<PaymentObservationResult> {
+  if (!isRecord(value)
+    || value.contract_version !== VERIFIER_CONTRACT_VERSION
+    || !isPaymentStatus(value.status)
+    || typeof value.detected !== "boolean"
+    || !isProvenance(value.provenance)) {
+    return createPaymentFailure("payment_mismatch", "Payment observer returned a malformed result");
   }
 
-  /**
-   * Registers an event handler for ZKCP lifecycle events.
-   */
+  if (value.status !== "observed") {
+    if (value.detected) return createPaymentFailure("payment_mismatch", "A non-observed payment result cannot be detected");
+    if (!isVerificationFailureCode(value.failure_code)) {
+      return createPaymentFailure("payment_mismatch", "Non-observed payment results require a typed failure code");
+    }
+    return {
+      contract_version: VERIFIER_CONTRACT_VERSION,
+      status: value.status,
+      detected: false,
+      provenance: value.provenance,
+      failure_code: value.failure_code,
+      error: typeof value.error === "string" ? value.error : undefined,
+    };
+  }
+
+  if (!value.detected || value.observation === undefined) {
+    return createPaymentFailure("payment_not_observed", "Observed payment result is missing payment evidence");
+  }
+
+  const validation = await validatePaymentObservation(value.observation, request);
+  if (!validation.ok) return createPaymentFailure(validation.failure_code, validation.error);
+  const observation = validation.observation;
+
+  const result: PaymentObservationResult = {
+    contract_version: VERIFIER_CONTRACT_VERSION,
+    status: "observed",
+    detected: true,
+    provenance: value.provenance,
+    observation,
+  };
+
+  if (result.provenance === "simulated" || observation.provenance === "simulated") {
+    return createPaymentFailure("simulated_result", "Simulated payment evidence cannot authorize settlement", "simulated");
+  }
+
+  return result;
+}
+
+export class ZKCPBridge {
+  private readonly intents = new Map<string, ZKCPIntent>();
+  private readonly eventHandlers: ZKCPEventHandler[] = [];
+
+  public constructor(
+    private readonly verifier: ZKProofVerifier,
+    private readonly onChainMonitor: OnChainMonitor,
+    private readonly keyReleaser: DecryptionKeyReleaser,
+  ) {}
+
   public onEvent(handler: ZKCPEventHandler): void {
     this.eventHandlers.push(handler);
   }
 
   private emit(event: ZKCPEvent): void {
     for (const handler of this.eventHandlers) {
-      try { handler(event); } catch { /* swallow handler errors */ }
+      try {
+        handler(event);
+      } catch {
+        // Event subscribers cannot alter settlement state.
+      }
     }
   }
 
-  /**
-   * Initializes a new ZKCP Intent.
-   */
-  public initializeIntent(params: Omit<ZKCPIntent, 'status' | 'round' | 'createdAt' | 'updatedAt'>): ZKCPIntent {
+  public initializeIntent(params: ZKCPIntentInput): ZKCPIntent {
+    if (!isNonEmptyString(params.id)
+      || !Number.isInteger(params.amount)
+      || params.amount <= 0
+      || !isNonEmptyString(params.sellerAddress)
+      || !isNonEmptyString(params.buyerAddress)
+      || !isPaymentNetwork(params.network)
+      || !/^sha256:[0-9a-f]{64}$/.test(params.encryptedDataHash)
+      || !/^sha256:[0-9a-f]{64}$/.test(params.proofHash)) {
+      throw new Error("Malformed ZKCP intent bindings");
+    }
+
     const now = new Date().toISOString();
     const intent: ZKCPIntent = {
       ...params,
-      status: 'pending',
+      status: "pending",
       round: 0,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
     };
     this.intents.set(intent.id, intent);
-    this.emit({ type: 'intent_created', intentId: intent.id, timestamp: now, data: { amount: intent.amount } });
-    console.log(`[ZKCP] Initialized intent: ${intent.id}`);
+    this.emit({ type: "intent_created", intentId: intent.id, timestamp: now, data: { amount: intent.amount } });
+    logger.info(`Initialized intent ${intent.id}`);
     return intent;
   }
 
-  /**
-   * Verifies the ZK-proof associated with the encrypted data.
-   * Uses the configured ZKProofVerifier instance.
-   */
-  public async verifyProof(intentId: string, proof: string, publicInputs: string[] = []): Promise<boolean> {
+  public async verifyProof(intentId: string, value: unknown): Promise<VerificationResult> {
     const intent = this.intents.get(intentId);
-    if (!intent) throw new Error(`Intent not found: ${intentId}`);
-
-    if (intent.status !== 'pending') {
-      throw new Error(`Intent ${intentId} is not in pending state (current: ${intent.status})`);
+    if (!intent) return failedVerification(intentId, "malformed_request", "Intent not found");
+    if (intent.status !== "pending") {
+      return failedVerification(intentId, "malformed_request", `Intent is not pending (current: ${intent.status})`);
     }
 
-    console.log(`[ZKCP] Verifying proof for intent: ${intentId}`);
-
-    const result = await this.verifier.verify(proof, publicInputs);
-    const now = new Date().toISOString();
-    intent.updatedAt = now;
-
-    if (result.valid) {
-      intent.status = 'verified';
-      intent.proofSystem = result.proofSystem;
-      this.emit({ type: 'proof_verified', intentId, timestamp: now, data: { proofSystem: result.proofSystem } });
-    } else {
-      intent.status = 'failed';
-      this.emit({ type: 'intent_failed', intentId, timestamp: now, data: { error: result.error } });
-    }
-
-    return result.valid;
-  }
-
-  /**
-   * Watches for on-chain Bitcoin payment to the seller address.
-   * Once detected, transitions from 'verified' to 'paid'.
-   */
-  public async watchForPayment(intentId: string): Promise<PaymentWatchResult> {
-    const intent = this.intents.get(intentId);
-    if (!intent) throw new Error(`Intent not found: ${intentId}`);
-
-    if (intent.status !== 'verified') {
-      throw new Error(`Intent ${intentId} must be verified before watching for payment (current: ${intent.status})`);
-    }
-
-    console.log(`[ZKCP] Monitoring on-chain payment for intent: ${intentId}`);
-
-    const result = await this.onChainMonitor.watchForPayment(intent.sellerAddress, intent.amount);
-
-    if (result.detected && result.txid) {
-      intent.status = 'paid';
-      intent.paymentHash = result.txid;
+    const requestValidation = await validateVerifierRequest(value);
+    if (!requestValidation.ok) {
+      const result = failedVerification(intentId, requestValidation.failure_code, requestValidation.error);
+      intent.status = "failed";
+      intent.verification = result;
       intent.updatedAt = new Date().toISOString();
-      this.emit({
-        type: 'payment_detected',
-        intentId,
-        timestamp: new Date().toISOString(),
-        data: { txid: result.txid, confirmations: result.confirmations }
+      this.emit({ type: "intent_failed", intentId, timestamp: intent.updatedAt, data: { failure_code: result.failure_code } });
+      return result;
+    }
+
+    if (requestValidation.request.proof.digest !== intent.proofHash) {
+      const result = failedVerification(intentId, "proof_digest_mismatch", "Proof is not bound to the initialized intent");
+      intent.status = "failed";
+      intent.verification = result;
+      intent.updatedAt = new Date().toISOString();
+      this.emit({ type: "intent_failed", intentId, timestamp: intent.updatedAt, data: { failure_code: result.failure_code } });
+      return result;
+    }
+
+    let result = await this.verifier.verify(requestValidation.request);
+    const resultValidation = await validateVerificationResult(
+      result,
+      requestValidation.request,
+      requestValidation.request_digest,
+    );
+
+    if (!resultValidation.ok) {
+      result = createVerificationFailure(resultValidation.failure_code, resultValidation.error, {
+        request_digest: requestValidation.request_digest,
       });
+    } else {
+      result = rejectNonProductionVerification(resultValidation.result);
+    }
+
+    intent.updatedAt = new Date().toISOString();
+    intent.verification = result;
+    if (isProductionVerified(result)) {
+      if (!isZKProofSystem(requestValidation.request.proof_system)) {
+        const failure = failedVerification(intentId, "unsupported_backend", "The selected proof system is not a ZKCP proof system");
+        intent.status = "failed";
+        intent.verification = failure;
+        return failure;
+      }
+      intent.status = "verified";
+      intent.proofSystem = requestValidation.request.proof_system;
+      this.emit({
+        type: "proof_verified",
+        intentId,
+        timestamp: intent.updatedAt,
+        data: { proofSystem: intent.proofSystem, backend: result.backend.id },
+      });
+    } else {
+      intent.status = result.status === "unavailable" || result.status === "unsupported" ? "unsupported" : "failed";
+      this.emit({ type: "intent_failed", intentId, timestamp: intent.updatedAt, data: { failure_code: result.failure_code } });
     }
 
     return result;
   }
 
-  /**
-   * Finalizes the settlement by revealing the decryption key.
-   * Triggered after Bitcoin payment is confirmed on-chain.
-   */
-  public finalizeSettlement(intentId: string, paymentHash?: string): string {
+  public async watchForPayment(intentId: string): Promise<PaymentObservationResult> {
     const intent = this.intents.get(intentId);
-    if (!intent) throw new Error(`Intent not found: ${intentId}`);
-
-    const hash = paymentHash ?? intent.paymentHash;
-    if (!hash && intent.status !== 'paid') {
-      throw new Error('Intent not ready for settlement: requires payment confirmation or paymentHash');
+    if (!intent) return createPaymentFailure("payment_not_observed", "Intent not found");
+    if (intent.status !== "verified" || !intent.verification || !isProductionVerified(intent.verification)) {
+      return createPaymentFailure("payment_not_observed", "A production-valid proof is required before payment observation");
     }
 
-    if (intent.status !== 'verified' && intent.status !== 'paid') {
-      throw new Error(`Intent not ready for settlement (current: ${intent.status})`);
-    }
+    const request = paymentRequestFor(intent);
+    const observed = await this.onChainMonitor.watchForPayment(request);
+    const result = await normalizePaymentResult(observed, request);
+    if (!isProductionPayment(result)) return result;
+    const observation = result.observation;
 
-    console.log(`[ZKCP] Finalizing settlement for intent: ${intentId} with payment: ${hash}`);
-
-    const key = `key-${intentId}-decrypted`;
-    intent.status = 'finalized';
-    intent.decryptionKey = key;
-    intent.paymentHash = hash;
+    intent.paymentObservation = observation;
+    intent.paymentHash = observation.txid;
+    intent.status = "paid";
     intent.updatedAt = new Date().toISOString();
-
     this.emit({
-      type: 'settlement_finalized',
+      type: "payment_detected",
       intentId,
-      timestamp: new Date().toISOString(),
-      data: { decryptionKey: key, paymentHash: hash }
+      timestamp: intent.updatedAt,
+      data: { txid: observation.txid, confirmations: observation.confirmations },
+    });
+    return result;
+  }
+
+  public async finalizeSettlement(intentId: string): Promise<SettlementFinalizationResult> {
+    const intent = this.intents.get(intentId);
+    if (!intent) {
+      return {
+        finalized: false,
+        status: "rejected",
+        intentId,
+        failure_code: "payment_not_observed",
+        error: "Intent not found",
+      };
+    }
+
+    if (intent.status !== "paid" || !intent.paymentObservation) {
+      return {
+        finalized: false,
+        status: "rejected",
+        intentId,
+        failure_code: "payment_not_observed",
+        error: "Independent production payment observation is required",
+      };
+    }
+
+    const paymentResult: PaymentObservationResult = {
+      contract_version: VERIFIER_CONTRACT_VERSION,
+      status: "observed",
+      detected: true,
+      provenance: intent.paymentObservation.provenance,
+      observation: intent.paymentObservation,
+    };
+    if (!isProductionPayment(paymentResult)) {
+      return {
+        finalized: false,
+        status: "rejected",
+        intentId,
+        paymentHash: intent.paymentObservation.txid,
+        failure_code: "simulated_result",
+        error: "Non-production payment evidence cannot finalize settlement",
+      };
+    }
+
+    const release = await this.keyReleaser.release(intent, intent.paymentObservation);
+    if (release.status !== "released" || release.provenance !== "production" || !isNonEmptyString(release.decryptionKey)) {
+      return {
+        finalized: false,
+        status: release.status === "unavailable" ? "unavailable" : "rejected",
+        intentId,
+        paymentHash: intent.paymentObservation.txid,
+        failure_code: release.failure_code ?? "decryption_key_unavailable",
+        error: release.error ?? "Production decryption-key release was not accepted",
+      };
+    }
+
+    intent.status = "finalized";
+    intent.decryptionKey = release.decryptionKey;
+    intent.updatedAt = new Date().toISOString();
+    this.emit({
+      type: "settlement_finalized",
+      intentId,
+      timestamp: intent.updatedAt,
+      data: { paymentHash: intent.paymentObservation.txid },
     });
 
-    return key;
+    return {
+      finalized: true,
+      status: "finalized",
+      intentId,
+      paymentHash: intent.paymentObservation.txid,
+      decryptionKey: release.decryptionKey,
+    };
   }
 
   public getIntent(id: string): ZKCPIntent | undefined {
@@ -255,8 +449,19 @@ export class ZKCPBridge {
   }
 
   public listIntentsByStatus(status: ZKCPStatus): ZKCPIntent[] {
-    return Array.from(this.intents.values()).filter(i => i.status === status);
+    return Array.from(this.intents.values()).filter((intent) => intent.status === status);
   }
 }
 
-export const zkcpBridge = new ZKCPBridge();
+function isPaymentNetwork(value: unknown): value is PaymentNetwork {
+  return value === "bitcoin-mainnet"
+    || value === "bitcoin-testnet"
+    || value === "bitcoin-signet"
+    || value === "bitcoin-regtest";
+}
+
+export const zkcpBridge = new ZKCPBridge(
+  new UnavailableZKVerifier(),
+  new UnavailableOnChainMonitor(),
+  new UnavailableDecryptionKeyReleaser(),
+);

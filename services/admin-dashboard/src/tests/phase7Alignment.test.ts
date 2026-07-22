@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { FDC3Resolver, CJCSJob } from '../lib/fdc3/resolver';
 import { UsageValidator, UsageEvent } from '../lib/sidl/usageValidation';
-import { BitVMBridge } from '../lib/support/bitvm';
+import { BitVMBridge, UnavailableBitVMVerifier } from '../lib/support/bitvm';
 import { Bip322Bridge } from '../lib/support/bip322';
+import { makeFloorRequest, makeVerifierRequest } from './fixtures/verifierFixtures';
 
 describe('Phase 7 Alignment: FDC3 Resolver', () => {
   it('should map DEX_SWAP to fdc3.instrument', () => {
@@ -53,35 +54,36 @@ describe('Phase 7 Alignment: Usage Validation', () => {
 });
 
 describe('Phase 7 Alignment: BitVM2 Floor Manager', () => {
-  it('should initialize verification floor and generate 364 taps', async () => {
-    const proof = 'a'.repeat(64);
-    const proofId = 'proof-123';
-    const result = await BitVMBridge.verifyFloor(proof, proofId);
+  it('keeps the floor unavailable until a verifier backend is injected', async () => {
+    const bridge = new BitVMBridge(new UnavailableBitVMVerifier());
+    const result = await bridge.verifyFloor(makeFloorRequest(await makeVerifierRequest()));
 
-    expect(result.verified).toBe(true);
-    expect(result.taps_generated).toBe(364);
-    expect(result.status).toBe('verified');
-
-    const state = BitVMBridge.getState(proofId);
-    expect(state).toBeDefined();
-    expect(state?.status).toBe('verified');
-  });
-
-  it('should handle invalid proofs', async () => {
-    const result = await BitVMBridge.verifyFloor('short', 'proof-456');
     expect(result.verified).toBe(false);
-    expect(result.error).toBeDefined();
+    expect(result.failure_code).toBe('backend_unavailable');
+    expect(result.status).toBe('unsupported');
   });
 
-  it('should support challenging a tap', async () => {
-    const proofId = 'proof-789';
-    await BitVMBridge.verifyFloor('a'.repeat(64), proofId);
-    const challenged = await BitVMBridge.challengeTap(proofId, 42);
+  it('rejects malformed proof bytes before backend dispatch', async () => {
+    const verifierRequest = await makeVerifierRequest();
+    const bridge = new BitVMBridge(new UnavailableBitVMVerifier());
+    const result = await bridge.verifyFloor({
+      ...makeFloorRequest(verifierRequest),
+      verifier_request: {
+        ...verifierRequest,
+        proof: { ...verifierRequest.proof, bytes: 'short' },
+      },
+    });
 
-    expect(challenged).toBe(true);
-    const state = BitVMBridge.getState(proofId);
-    expect(state?.status).toBe('challenged');
-    expect(state?.activeChallenges).toContain(42);
+    expect(result.verified).toBe(false);
+    expect(result.failure_code).toBe('malformed_encoding');
+  });
+
+  it('rejects challenges without a verified floor', async () => {
+    const bridge = new BitVMBridge(new UnavailableBitVMVerifier());
+    const challenged = await bridge.challengeTap('proof-789', 42);
+
+    expect(challenged.accepted).toBe(false);
+    expect(challenged.failure_code).toBe('invalid_challenge');
   });
 });
 
@@ -104,22 +106,18 @@ describe('Phase 7 Alignment: BIP-322 USI Intents', () => {
 });
 
 describe('Phase 7 Alignment: BitVM2 Multi-Party Aggregation (G-11)', () => {
-  it('should collect and aggregate partial signatures', async () => {
-    const proofId = 'proof-agg-123';
-    await BitVMBridge.verifyFloor('a'.repeat(64), proofId);
+  it('does not aggregate signatures without a verified backend result', async () => {
+    const bridge = new BitVMBridge(new UnavailableBitVMVerifier());
+    const result = await bridge.submitSignature('proof-agg-123', 'verifier-1', 'ab'.repeat(64));
 
-    const agg1 = await BitVMBridge.submitSignature(proofId, 'verifier-1', 'sig-1');
-    expect(agg1).toBeDefined();
-    expect(agg1?.signatures.length).toBe(1);
-    expect(agg1?.is_complete).toBe(true); // Since required defaults to 1
-
-    const state = BitVMBridge.getAggregation(proofId);
-    expect(state?.is_complete).toBe(true);
-    expect(state?.signatures[0].verifier_id).toBe('verifier-1');
+    expect(result.accepted).toBe(false);
+    expect(result.failure_code).toBe('aggregation_not_found');
   });
 
-  it('should handle missing aggregation requests', async () => {
-    const result = await BitVMBridge.submitSignature('non-existent', 'v', 's');
-    expect(result).toBeUndefined();
+  it('rejects malformed signature encodings', async () => {
+    const result = await new BitVMBridge(new UnavailableBitVMVerifier())
+      .submitSignature('non-existent', 'v', 's');
+    expect(result.accepted).toBe(false);
+    expect(result.failure_code).toBe('invalid_signature');
   });
 });

@@ -23,8 +23,24 @@ must reject simulated, malformed, invalid, unknown, or caller-only evidence.
 
 - Define a versioned, typed verifier contract covering proof system, curve,
   encoding, circuit and verification-key identities/digests, ordered/named
-  public inputs, proof bytes/digest, statement/domain digest, backend identity
-  and artifact digest, provenance, and typed failure codes.
+  public inputs, proof bytes/digest, statement/domain digest, adapter-owned
+  backend identity/authority and artifact digest, provenance, and typed failure
+  codes.
+- Bind ZKCP verification to a versioned deterministic intent statement/domain
+  digest covering encrypted data, payment condition, parties, amount, network,
+  proof, and public-input terms before any lifecycle transition.
+- Keep authoritative proof/payment evidence internal, expose only immutable
+  intent snapshots, and revalidate retained bindings immediately before
+  key-release finalization.
+- Gate BitVM2 aggregation on authorized unique signers plus explicit injected
+  signature-verification attestations; unavailable/default signature checking
+  remains unsupported.
+- Normalize contradictory adapter responses so no user-visible status can be
+  `verified`/success-shaped when `verified` is false or a failure code exists.
+- Totalize injected adapter boundaries, reject unsafe settlement amounts, and
+  make terminal finalization idempotent/serialized so exceptions, malformed
+  responses, replayed watches, and concurrent key releases cannot advance or
+  regress state.
 - Replace production-facing simulator/default-verifier construction with
   explicitly injected unavailable adapters.
 - Keep deterministic cryptographic-looking fixtures only in test/evaluation
@@ -53,14 +69,25 @@ those cross-repository backends are available and independently accepted.
 1. Production-facing verifier defaults cannot return authoritative-looking
    success from proof length or unconditional assignments.
 2. A verifier request and result are versioned and bind all security-relevant
-   proof, key, input, statement, backend, and provenance fields.
+   proof, key, input, statement, adapter-owned backend authority, and
+   provenance fields; the unavailable or non-authoritative sentinel cannot
+   satisfy production authority.
 3. Missing, unavailable, unsupported, malformed, invalid, simulated, and
    mismatched evidence return typed non-success outcomes.
-4. Payment observation is explicitly injected; a caller-supplied payment hash
-   alone cannot finalize settlement and no synthetic key is emitted.
-5. Unknown settlement actions and all rejected outcomes leave settlement state
+4. ZKCP verification rejects mutated intent terms, statement/domain digests, or
+   public-input order/value bindings before state transition.
+5. Payment observation is explicitly injected; a caller-supplied payment hash
+   alone cannot finalize settlement and no synthetic key is emitted. Returned
+   intent/lifecycle objects are immutable snapshots, and finalization
+   revalidates retained proof/payment evidence rather than mutable labels;
+   terminal finalization is idempotent and concurrent release is serialized.
+6. Unknown settlement actions and all rejected outcomes leave settlement state
    unchanged and return non-success HTTP responses.
-6. Production-boundary guards and focused tests cover the listed threat classes
+7. BitVM2 aggregation rejects duplicate/unauthorized signers, arbitrary
+   format-only signatures, unavailable verifiers, simulated/unknown provenance,
+   and malformed attestations;
+   only an explicit injected test/production adapter can accept evidence.
+8. Production-boundary guards and focused tests cover the listed threat classes
    in both repository-supported script dialects.
-7. Documentation separates strategic alignment/scaffolding from production
+9. Documentation separates strategic alignment/scaffolding from production
    cryptographic readiness and records the remaining cross-repo work.

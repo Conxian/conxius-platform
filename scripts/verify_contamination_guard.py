@@ -7,6 +7,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Iterable
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -67,9 +68,17 @@ VERIFIER_RULES: list[tuple[str, re.Pattern[str]]] = [
     (
         "production-simulator-construction",
         re.compile(
-            r"\b(?:class\s+Default\w*(?:Verifier|Monitor)|new\s+Default\w*(?:Verifier|Monitor)|"
-            r"new\s+\w*(?:Simulator|Simulation)\s*\(|new\s+(?:BitVMBridge|BitVM3Orchestrator|ZKCPBridge)\s*\(\s*\))"
+            r"\b(?:class\s+Default\w*(?:Verifier|Monitor|Releaser|Backend)"
+            r"|new\s+Default\w*(?:Verifier|Monitor|Releaser|Backend)"
+            r"|new\s+\w*(?:Simulator|Simulation|Fixture|Mock|Fake|Dummy)\w*\s*\()"
+            r"|\b(?:const|let|var)\s+\w*(?:Verifier|Monitor|Releaser|Backend)\w*\s*=\s*"
+            r"(?:new\s+)?(?:Default\w*(?:Verifier|Monitor|Releaser|Backend)|\w*(?:Simulator|Simulation|Fixture|Mock|Fake|Dummy)\w*)"
+            r"|\b(?:const|let|var)\s+Default\w*(?:Verifier|Monitor|Releaser|Backend)\w*\s*=\s*\w+"
         ),
+    ),
+    (
+        "production-fixture-import",
+        re.compile(r"(?:from\s*|import\s*)[\"'][^\"']*(?:src/tests|tests/fixtures)[^\"']*[\"']"),
     ),
     (
         "synthetic-decryption-key",
@@ -87,33 +96,97 @@ SETTLEMENT_RULES: list[tuple[str, re.Pattern[str]]] = [
 ]
 
 
+def _line_number(content: str, index: int) -> int:
+    return content.count("\n", 0, index) + 1
+
+
+def _snippet(content: str, start: int, end: int) -> str:
+    value = " ".join(content[start:end].strip().split())
+    return value[:200]
+
+
+def _bridge_construction_findings(rel_path: str, content: str) -> Iterable[Finding]:
+    if not VERIFIER_PATH.fullmatch(rel_path):
+        return []
+
+    allowed = {
+        "BitVMBridge": re.compile(r"new\s+UnavailableBitVMVerifier\s*\(\s*\)\s*"),
+        "BitVM3Orchestrator": re.compile(r"new\s+UnavailableBitVM3Verifier\s*\(\s*\)\s*"),
+        "ZKCPBridge": re.compile(
+            r"new\s+UnavailableZKVerifier\s*\(\s*\)\s*,\s*"
+            r"new\s+UnavailableOnChainMonitor\s*\(\s*\)\s*,\s*"
+            r"new\s+UnavailableDecryptionKeyReleaser\s*\(\s*\)\s*,?\s*"
+        ),
+    }
+    construction = re.compile(r"new\s+(BitVMBridge|BitVM3Orchestrator|ZKCPBridge)\s*\(", re.DOTALL)
+    for match in construction.finditer(content):
+        class_name = match.group(1)
+        open_index = content.find("(", match.start(), match.end())
+        depth = 0
+        quote: str | None = None
+        escaped = False
+        close_index = len(content)
+        for index in range(open_index, len(content)):
+            char = content[index]
+            if quote is not None:
+                if escaped:
+                    escaped = False
+                elif char == "\\":
+                    escaped = True
+                elif char == quote:
+                    quote = None
+                continue
+            if char in ("'", '"', "`"):
+                quote = char
+                continue
+            if char == "(":
+                depth += 1
+            elif char == ")":
+                depth -= 1
+                if depth == 0:
+                    close_index = index
+                    break
+
+        body = content[open_index + 1:close_index]
+        normalized = re.sub(r"\s+", " ", body).strip()
+        if not allowed[class_name].fullmatch(normalized):
+            yield Finding(
+                path=rel_path,
+                rule="production-bridge-construction",
+                line=_line_number(content, match.start()),
+                snippet=_snippet(content, match.start(), min(close_index + 1, match.start() + 240)),
+            )
+
+
+def scan_content(rel_path: str, content: str) -> list[Finding]:
+    rules = list(RULES)
+    if VERIFIER_PATH.fullmatch(rel_path):
+        rules.extend(VERIFIER_RULES)
+    if SETTLEMENT_PATH.fullmatch(rel_path):
+        rules.extend(SETTLEMENT_RULES)
+
+    findings: list[Finding] = []
+    for rule_id, pattern in rules:
+        for match in pattern.finditer(content):
+            findings.append(
+                Finding(
+                    path=rel_path,
+                    rule=rule_id,
+                    line=_line_number(content, match.start()),
+                    snippet=_snippet(content, match.start(), match.end()),
+                )
+            )
+    findings.extend(_bridge_construction_findings(rel_path, content))
+    return findings
+
+
 def scan_file(rel_path: str) -> list[Finding]:
     abs_path = REPO_ROOT / rel_path
     try:
         content = abs_path.read_text("utf-8")
     except UnicodeDecodeError:
         return []
-
-    findings: list[Finding] = []
-    for idx, line in enumerate(content.splitlines(), start=1):
-        rules = list(RULES)
-        if VERIFIER_PATH.fullmatch(rel_path):
-            rules.extend(VERIFIER_RULES)
-        if SETTLEMENT_PATH.fullmatch(rel_path):
-            rules.extend(SETTLEMENT_RULES)
-
-        for rule_id, pattern in rules:
-            if pattern.search(line):
-                findings.append(
-                    Finding(
-                        path=rel_path,
-                        rule=rule_id,
-                        line=idx,
-                        snippet=line.strip()[:200],
-                    )
-                )
-
-    return findings
+    return scan_content(rel_path, content)
 
 
 def main() -> int:

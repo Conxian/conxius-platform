@@ -69,8 +69,8 @@ Last updated: 2026-07-22.
 
 | ID | Item | Risk Class | Status |
 |----|------|-----------|--------|
-| D-20 | BitVM2/BitVM3/ZKCP production verifier, payment-observer, and key-release backends are not available in this repository | Security / Correctness | 🛡️ **Quarantined by issue #1187** — typed contracts and unavailable adapters fail closed; Gateway/Core/Nexus implementation and independent acceptance remain pending |
-| D-21 | Historical BitVM2/ZKCP helper behavior could present simulation as authoritative success | Security / Correctness | ✅ **Remediated in #1187** — proof-length checks, unconditional success, caller-only payment hashes, and synthetic keys are rejected or removed |
+| D-20 | BitVM2/BitVM3/ZKCP production verifier, payment-observer, and key-release backends are not available in this repository | Security / Correctness | 🛡️ **Quarantined by issue #1187** — adapter-owned authority, versioned ZKCP intent binding, immutable evidence revalidation, and unavailable defaults fail closed; Gateway/Core/Nexus implementation and independent acceptance remain pending |
+| D-21 | Historical BitVM2/ZKCP helper behavior could present simulation as authoritative success | Security / Correctness | ✅ **Remediated in #1187 follow-up** — proof-length checks, unconditional/contradictory success, unavailable or placeholder backend authority, duplicate/format-only aggregation, mutable lifecycle snapshots, caller-only payment hashes, and synthetic keys are rejected or removed |
 
 ## Burn-Down Priority
 

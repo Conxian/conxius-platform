@@ -1,5 +1,6 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
 import type { Scope } from "../support/m2m";
 import { getM2MAuthenticator, M2MConfig } from "../support/m2m";
 import type { YieldSnapshot } from "./types";
@@ -12,6 +13,7 @@ interface GatewayJwtCacheEntry {
   readonly expiresAt: number;
   readonly issuer: string;
   readonly audience: string;
+  readonly secretFingerprint: string;
 }
 
 const gatewayJwtCache = new Map<string, GatewayJwtCacheEntry>();
@@ -45,8 +47,12 @@ function getLegacyGatewayAuthHeaders(): Record<string, string> {
   return headers;
 }
 
-function gatewayJwtCacheKey(audience: string): string {
-  return `${audience}|${GATEWAY_JWT_SERVICE_ID}|${[...GATEWAY_JWT_SCOPES].sort().join(" ")}`;
+function gatewayJwtSecretFingerprint(secret: string): string {
+  return createHash("sha256").update(secret).digest("hex");
+}
+
+function gatewayJwtCacheKey(audience: string, issuer: string, secretFingerprint: string): string {
+  return `${issuer}|${audience}|${secretFingerprint}|${GATEWAY_JWT_SERVICE_ID}|${[...GATEWAY_JWT_SCOPES].sort().join(" ")}`;
 }
 
 async function getCachedGatewayJwt(): Promise<string> {
@@ -57,13 +63,15 @@ async function getCachedGatewayJwt(): Promise<string> {
   }
 
   const jwtConfig = jwtConfigResult.config;
-  const cacheKey = gatewayJwtCacheKey(jwtConfig.audience);
+  const secretFingerprint = gatewayJwtSecretFingerprint(jwtConfig.secret);
+  const cacheKey = gatewayJwtCacheKey(jwtConfig.audience, jwtConfig.issuer, secretFingerprint);
   const nowSeconds = Math.floor(Date.now() / 1000);
   const cached = gatewayJwtCache.get(cacheKey);
   if (
     cached &&
     cached.issuer === jwtConfig.issuer &&
     cached.audience === jwtConfig.audience &&
+    cached.secretFingerprint === secretFingerprint &&
     cached.expiresAt - nowSeconds > jwtConfig.clockSkewSeconds
   ) {
     return cached.token;
@@ -77,6 +85,7 @@ async function getCachedGatewayJwt(): Promise<string> {
     expiresAt: issued.claims.exp,
     issuer: jwtConfig.issuer,
     audience: jwtConfig.audience,
+    secretFingerprint,
   });
   return issued.token;
 }

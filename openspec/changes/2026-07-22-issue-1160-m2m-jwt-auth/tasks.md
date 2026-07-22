@@ -68,3 +68,12 @@
 - [x] 8.9 **AC-5 — Compatibility:** Legacy API/service/external-key flows remain available when no Bearer header is present, while invalid Bearer credentials do not fall through.
 - [x] 8.10 **AC-6 — Server-only transport:** Issuance, verification, refresh, and Gateway caching never enter browser code, persistent storage, logs, URLs, or response bodies.
 - [x] 8.11 **AC-7 — Honest Gateway boundary:** Platform tests and docs distinguish local JWT support from true Rust Gateway JWT verification, which remains a coordinated follow-up.
+
+## Follow-up verification evidence — 2026-07-22
+
+- Added `services/admin-dashboard/src/tests/routeAuth.test.ts` with runtime coverage through the exported Next route handlers for `admin:secrets`, `admin:deploy`, `write:treasury`, and `write:governance`, including JWT success, missing-scope `403`, malformed-token `401`, legacy-key compatibility without JWT configuration, and invalid-Bearer precedence over a valid legacy key.
+- Extended JWT adversarial coverage for the exact/max bearer-token boundary, unusual Bearer spacing, audience arrays, non-integer/string NumericDate claims, far-future expiration with controlled `iat`, and generic failures that do not expose token or secret material.
+- Extended Gateway cache coverage for audience, issuer, and secret changes. Cache entries now include a non-reversible secret fingerprint so a reloaded configuration cannot reuse a token signed by an old secret.
+- Reproduced the original dashboard build failure with `typescript@7.0.2` after successful compilation: `The "id" argument must be of type string. Received undefined`. Pinning only `services/admin-dashboard` to exact `typescript@6.0.3` makes `pnpm --filter admin-dashboard build` and the workspace build pass without changing runtime code. The global Next override was removed after verifying the dashboard's direct `next@16.2.11` dependency remains frozen-install compatible; `baseline-browser-mapping` remains as the required Next 16 lock entry.
+- Validation passed with `pnpm install --frozen-lockfile --ignore-scripts`, `pnpm --filter admin-dashboard test`, `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm build`, `git diff --check`, and `pnpm dlx @fission-ai/openspec validate 2026-07-22-issue-1160-m2m-jwt-auth --strict --no-interactive --json`.
+- Rust Gateway JWT verification and multi-key rotation remain out of scope; deployment must remain on `legacy` until coordinated evidence exists.

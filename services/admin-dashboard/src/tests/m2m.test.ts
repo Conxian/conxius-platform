@@ -6,10 +6,12 @@ vi.mock("server-only", () => ({}));
 import {
   DEFAULT_JWT_CLOCK_SKEW_SECONDS,
   DEFAULT_JWT_TTL_SECONDS,
+  MAX_BEARER_TOKEN_BYTES,
   MAX_JWT_TTL_SECONDS,
   MIN_JWT_TTL_SECONDS,
   M2MAuthenticator,
   M2MConfig,
+  parseBearerToken,
   SERVICE_PERMISSIONS,
   type JwtServiceId,
   type Scope,
@@ -75,7 +77,7 @@ function restoreEnvironment(): void {
   M2MConfig.resetInstance();
 }
 
-async function signRawToken(payloadOverrides: Partial<JWTPayload> = {}, headerOverrides: Partial<JWTHeaderParameters> = {}): Promise<string> {
+async function signRawToken(payloadOverrides: Record<string, unknown> = {}, headerOverrides: Partial<JWTHeaderParameters> = {}): Promise<string> {
   const payload: JWTPayload = {
     iss: process.env.GATEWAY_JWT_ISSUER,
     aud: process.env.GATEWAY_JWT_AUDIENCE,
@@ -88,11 +90,8 @@ async function signRawToken(payloadOverrides: Partial<JWTPayload> = {}, headerOv
   };
 
   for (const [key, value] of Object.entries(payloadOverrides)) {
-    if (value === undefined) {
-      delete payload[key];
-    } else {
-      payload[key] = value;
-    }
+    if (value === undefined) delete payload[key];
+    else payload[key] = value;
   }
 
   return new SignJWT(payload)
@@ -348,6 +347,64 @@ describe("M2M authentication", () => {
 
       expect((await validateRouteAdminAuth(readOnlyRequest, "write:admin"))?.status).toBe(403);
       expect(await validateRouteAdminAuth(adminRequest, "write:admin")).toBeNull();
+    });
+  });
+
+  describe("adversarial JWT input handling", () => {
+    it("accepts the exact maximum token size and rejects one byte over the limit", () => {
+      const tokenAtLimit = `${"a".repeat(MAX_BEARER_TOKEN_BYTES - 4)}.b.c`;
+      const tokenOverLimit = `${"a".repeat(MAX_BEARER_TOKEN_BYTES - 3)}.b.c`;
+
+      expect(parseBearerToken(`Bearer ${tokenAtLimit}`)).toMatchObject({ valid: true, token: tokenAtLimit });
+      expect(parseBearerToken(`Bearer ${tokenOverLimit}`).valid).toBe(false);
+    });
+
+    it("requires exactly one Bearer separator and rejects unusual surrounding whitespace", () => {
+      const validToken = "a.b.c";
+
+      expect(parseBearerToken(`bearer ${validToken}`)).toMatchObject({ valid: true, token: validToken });
+      for (const header of [
+        ` Bearer ${validToken}`,
+        `Bearer ${validToken} `,
+        `Bearer  ${validToken}`,
+        `Bearer\t${validToken}`,
+        `Bearer ${validToken}\t`,
+      ]) {
+        expect(parseBearerToken(header).valid).toBe(false);
+      }
+    });
+
+    it("rejects audience arrays and non-integer or string NumericDate claims", async () => {
+      const invalidTokens = [
+        await signRawToken({ aud: [process.env.GATEWAY_JWT_AUDIENCE ?? ""] }),
+        await signRawToken({ iat: String(NOW_SECONDS) }),
+        await signRawToken({ nbf: NOW_SECONDS + 0.5 }),
+        await signRawToken({ exp: NOW_SECONDS + 300.5 }),
+      ];
+
+      for (const token of invalidTokens) {
+        expect((await authenticator.verifyJwt(token, { nowSeconds: NOW_SECONDS })).valid).toBe(false);
+      }
+    });
+
+    it("rejects an explicitly far-future expiration even with a controlled issue time", async () => {
+      const farFuture = await signRawToken({
+        iat: NOW_SECONDS,
+        nbf: NOW_SECONDS,
+        exp: NOW_SECONDS + 86_400,
+      });
+
+      expect((await authenticator.verifyJwt(farFuture, { nowSeconds: NOW_SECONDS })).valid).toBe(false);
+    });
+
+    it("returns generic authentication failures without token or secret material", async () => {
+      const rawToken = await authenticator.issueJwt("gateway", ["read:admin", "m2m:internal"], { nowSeconds: NOW_SECONDS });
+      const tamperedToken = `${rawToken.slice(0, -1)}${rawToken.endsWith("a") ? "b" : "a"}`;
+      const result = await authenticator.verifyJwt(tamperedToken, { nowSeconds: NOW_SECONDS });
+
+      expect(result).toEqual({ valid: false, error: "Invalid bearer token" });
+      expect(JSON.stringify(result)).not.toContain(rawToken);
+      expect(JSON.stringify(result)).not.toContain(STRONG_SECRET);
     });
   });
 });

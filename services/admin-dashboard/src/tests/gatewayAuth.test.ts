@@ -120,6 +120,36 @@ describe("Gateway M2M auth transport", () => {
     expect(result.valid).toBe(true);
   });
 
+  it("does not reuse a cached token after audience, issuer, or secret changes", async () => {
+    setEnvironment({ M2M_GATEWAY_AUTH_MODE: "jwt" });
+    const firstAuthorization = (await authHeaders()).get("Authorization");
+    const firstToken = firstAuthorization?.slice("Bearer ".length) ?? "";
+    expect(firstToken).not.toBe("");
+
+    process.env.GATEWAY_JWT_AUDIENCE = "rotated-audience";
+    M2MConfig.resetInstance();
+    const audienceAuthorization = (await authHeaders()).get("Authorization");
+    const audienceToken = audienceAuthorization?.slice("Bearer ".length) ?? "";
+    expect(audienceToken).not.toBe(firstToken);
+    expect(decodeJwt(audienceToken).aud).toBe("rotated-audience");
+
+    process.env.GATEWAY_JWT_ISSUER = "https://rotated-issuer.test.conxian";
+    M2MConfig.resetInstance();
+    const issuerAuthorization = (await authHeaders()).get("Authorization");
+    const issuerToken = issuerAuthorization?.slice("Bearer ".length) ?? "";
+    expect(issuerToken).not.toBe(audienceToken);
+    expect(decodeJwt(issuerToken).iss).toBe("https://rotated-issuer.test.conxian");
+
+    process.env.GATEWAY_JWT_SECRET = `${STRONG_SECRET}-rotated`;
+    M2MConfig.resetInstance();
+    const secretAuthorization = (await authHeaders()).get("Authorization");
+    const secretToken = secretAuthorization?.slice("Bearer ".length) ?? "";
+    expect(secretToken).not.toBe(issuerToken);
+
+    const rotatedResult = await new M2MAuthenticator().verifyJwt(secretToken, { nowSeconds: NOW_SECONDS });
+    expect(rotatedResult.valid).toBe(true);
+  });
+
   it("fails closed for explicitly selected JWT modes without valid configuration", async () => {
     for (const mode of ["dual", "jwt"] as const) {
       setEnvironment({ M2M_GATEWAY_AUTH_MODE: mode, GATEWAY_JWT_SECRET: undefined });

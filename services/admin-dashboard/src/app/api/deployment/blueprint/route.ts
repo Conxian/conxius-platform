@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { validateAdminAuth } from "@/lib/support/auth";
 
 export async function GET(req: Request) {
-  const authError = validateAdminAuth(req);
+  const authError = await validateAdminAuth(req, "admin:deploy");
   if (authError) return authError;
 
   // Deterministic Blueprint for AI Agents (Updated v0.2.4-remediated)

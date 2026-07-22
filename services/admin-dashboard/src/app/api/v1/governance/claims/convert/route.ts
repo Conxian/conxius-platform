@@ -3,7 +3,7 @@ import { validateAdminAuth } from "@/lib/support/auth";
 import { performGlobalSnapshotConversion } from "@/lib/governance/claims";
 
 export async function POST(req: Request) {
-  const authError = validateAdminAuth(req);
+  const authError = await validateAdminAuth(req, "write:governance");
   if (authError) return authError;
 
   try {

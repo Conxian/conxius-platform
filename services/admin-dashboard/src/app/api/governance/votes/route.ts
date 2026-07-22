@@ -22,7 +22,7 @@ export async function POST(req: Request): Promise<NextResponse> {
   const startedAt = startSidlTimer();
 
   // CON-353: Harden SIDL auth
-  const authError = validateAdminAuth(req);
+  const authError = await validateAdminAuth(req, "write:governance");
   if (authError) {
     observeSidlResponse({
       endpoint: ENDPOINT,

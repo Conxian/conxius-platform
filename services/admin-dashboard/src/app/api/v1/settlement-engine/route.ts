@@ -4,7 +4,7 @@ import { zkcpBridge } from "@/lib/support/zkcp";
 import { validateAdminAuth } from "@/lib/support/auth";
 
 export async function POST(req: Request) {
-  const authError = validateAdminAuth(req);
+  const authError = await validateAdminAuth(req, "write:treasury");
   if (authError) return authError;
 
   try {

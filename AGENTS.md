@@ -176,7 +176,7 @@ All services use multi-layered M2M auth per `docs/M2M_AUTHENTICATION.md`:
 
 ### Key Gaps Still Open
 - **Revenue automation handoff** — the protocol-owned `Conxian/Conxian` repository contains `contracts/treasury/revenue-automation.clar` with a current observed 100 bps / 1% baseline; platform specification and handoff are tracked in #1164/#1167, while protocol hardening and integration remain tracked in `Conxian/Conxian#538`
-- **JWT-based M2M token auth** — M2M module supports keys/scopes, but JWT tokens not implemented (#1160)
+- **JWT-based M2M token auth** — platform-side JWT issuance/verification is implemented; coordinated Rust Gateway verification remains open (#1160)
 - **Key rotation mechanism** — M2M keys are static, no rotation API (#1161)
 - **Swarm coordination** — Multi-agent patterns not implemented (#1163)
 - **"Harvest Sovereign Yield"** — both SFO implementations use `Math.random()` stubs
@@ -402,8 +402,8 @@ See `docs/SELF_EVOLVING_KB.md` for full architecture.
 | Local-first UI Wasm | In progress | — |
 | MFE Federation | Scaffolded | — |
 | Contributor Claim Ledger | **Implemented** | #1159 |
-| M2M Authentication | **Implemented (keys/scopes)** | #1160, #1161 |
 | Agent Onboarding & Discovery | **Implemented (manifest/registry/CLI/tests)** | #1162 |
+| M2M Authentication | **Implemented (keys/scopes + platform JWT)** | #1160, #1161 |
 | Swarm Coordination | **Patterns documented** | #1163 |
 | **Self-Evolving KB** | **Implemented (scaffolded)** | #1165 |
 | Proof-carrying treasury analytics | Spec-only | — |
@@ -442,7 +442,7 @@ Governance: 4 files/~40 tests. SIDL: 3/~25. Support: 5/~30. Bitcoin stack: 5/~35
 | `ADMIN_DASHBOARD_API_KEY` | Primary admin API authentication |
 | `SERVICE_KEY_*` | M2M service keys for internal auth (SERVICE_KEY_GATEWAY, SERVICE_KEY_ELIZAOS, etc.) |
 | `EXTERNAL_API_KEYS` | JSON map of external API keys to scopes |
-| `GATEWAY_JWT_SECRET` | For future JWT-based M2M auth |
+| `GATEWAY_JWT_SECRET` | Server-only platform JWT issuance/verification; Rust Gateway verification remains a coordinated follow-up |
 
 See `docs/M2M_AUTHENTICATION.md` for full M2M auth configuration.
 
@@ -1403,3 +1403,24 @@ AGENTS.md (this update)
 - Hosted checks must be re-evaluated on the final pushed PR head.
 **Gotchas**:
 - The synthetic discovery fixture intentionally uses `.github/REPOSITORY_TAXONOMY.md` for an isolated optional-file test; the corrected production documentation path is `docs/REPOSITORY_TAXONOMY.md`.
+### 2026-07-22 — Issue #1160 Server-side M2M JWT Authentication
+**Trigger**: Approved OpenSpec implementation for GitHub issue #1160 on `feat/1160-m2m-jwt-auth`.
+**What was done**:
+- Added server-only `jose` HS256 issuance and verification with strict header/claim/lifetime validation, bounded secret/TTL/skew policy, fresh `jti`, service identity checks, and issuance/verification scope ceilings.
+- Added strict Bearer precedence, async M2M/admin guards with explicit route scopes, legacy API/service/external-key compatibility, and Gateway `legacy`/`dual`/`jwt` header modes with process-local pre-expiry cache re-issuance.
+- Added focused security and Gateway migration tests, updated all production async guard callsites, documented environment/operator behavior, and updated the OpenSpec task checklist without claiming Rust Gateway verification.
+- Added exported-handler route authorization coverage for `admin:secrets`, `admin:deploy`, `write:treasury`, and `write:governance`, plus adversarial JWT boundary tests and cache invalidation coverage for audience, issuer, and secret changes.
+- Reconciled the branch with current `origin/main`'s repaired Next.js `15.5.18` / TypeScript `6.0.3` dependency graph while retaining the `jose` lock entries; frozen installation and both workspace builds pass after the rebase without changing JWT runtime semantics.
+**Key discoveries**:
+- The dated OpenSpec change validates strictly with the temporary `@fission-ai/openspec` CLI invocation; no repository-installed CLI binary was available.
+- The original pre-rebase branch reproduced the pre-existing Next.js `16.2.11` / TypeScript `7.0.2` compiler-discovery failure (`The "id" argument must be of type string. Received undefined`). Current `origin/main` carries the repaired Next.js `15.5.18` / TypeScript `6.0.3` graph, and both dashboard and workspace builds now pass after rebasing.
+- The current Rust Gateway JWT verifier and shared-secret rotation remain outside this repository; deployment must stay on `legacy` until coordinated evidence exists. Issue #1161 owns rotation, overlap, `kid`, and/or JWKS work.
+**Files touched**:
+- `services/admin-dashboard/src/lib/support/m2m.ts`, `services/admin-dashboard/src/lib/support/auth.ts`, `services/admin-dashboard/src/lib/sidl/gateway.ts`
+- All admin-dashboard API route callsites of `validateAdminAuth`, plus `services/admin-dashboard/src/tests/m2m.test.ts`, `services/admin-dashboard/src/tests/gatewayAuth.test.ts`, `services/admin-dashboard/src/tests/routeAuth.test.ts`, and server-only test mocks
+- `services/admin-dashboard/package.json`, `package.json`, `pnpm-lock.yaml`, environment schemas/examples, `docs/M2M_AUTHENTICATION.md`, and the issue-1160 OpenSpec tasks/evidence
+**Gaps identified**:
+- Coordinate and evidence Rust Gateway JWT verification before enabling `dual` or `jwt` in deployment.
+- Implement multi-key rotation/revocation/JWKS only under issue #1161.
+**Gotchas**:
+- Next build auto-rewrites `tsconfig.json` to `jsx: react-jsx`; restore the repository's intentional `jsx: preserve` setting after each build diagnostic. The final worktree keeps the original setting.

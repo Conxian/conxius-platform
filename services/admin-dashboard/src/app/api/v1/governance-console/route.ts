@@ -6,7 +6,7 @@ import {
 } from "@/lib/governance/treasury";
 
 export async function GET(req: Request) {
-  const authError = validateAdminAuth(req);
+  const authError = await validateAdminAuth(req);
   if (authError) return authError;
 
   const templatesByCategory: Record<string, number> = {};

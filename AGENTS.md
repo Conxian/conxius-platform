@@ -1350,3 +1350,17 @@ AGENTS.md (this update)
 **Gotchas**:
 - Keep the 100 bps / 1% value labeled as an observed implementation baseline, not an immutable policy; any rate change requires protocol governance.
 - Do not “fix” the historical #1164 session claims in place; preserve the append-only knowledge-base record and update only active status sections.
+
+### 2026-07-22 — PR #1191 Mainline Merge Verification
+**Trigger**: PR #1191 request to merge the current `origin/main` into `charlie/1164-revenue-automation-handoff`.
+**What was done**:
+- Fetched `origin/main` at `452834b4a81de32ed6338a22ad283358004e448f`, checked out the PR head at `a9b81c345348eb19020a98378588c37463400411`, and ran the required non-rebase merge; Git reported `Already up to date`.
+- Confirmed that the current PR head is directly based on the fetched mainline, so no content conflicts required manual resolution.
+**Key discoveries**:
+- The merge session is limited to preserving the existing protocol-owned revenue automation handoff and platform routing boundary; it does not add Clarity implementation or economic-policy changes.
+**Files touched**:
+- `AGENTS.md`
+**Gaps identified**:
+- Hosted checks remain the final PR validation gate after the branch update.
+**Gotchas**:
+- Keep the existing OpenSpec handoff scope intact and do not rewrite prior session-log entries.

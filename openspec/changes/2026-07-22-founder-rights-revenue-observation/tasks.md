@@ -36,8 +36,9 @@
   repository-wide OpenSpec scan remains baseline-failing for 22 older active
   changes that do not have current change-local deltas; this change is one of
   the three passing changes.
-- [ ] Commit with a conventional message, push the focused branch, and open a
-  PR against `main` with `Refs #1168` and `Refs #1167`.
+- [x] Commit with a conventional message, push the focused branch, and open
+  [PR #1197](https://github.com/Conxian/conxius-platform/pull/1197) against
+  `main` with `Refs #1168` and `Refs #1167`.
 
 ## Explicitly out of scope
 

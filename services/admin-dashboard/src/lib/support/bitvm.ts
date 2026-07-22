@@ -7,14 +7,18 @@ import {
   createVerificationFailure,
   digestCanonical,
   digestVerifierRequest,
+  isCanonicalSignatureHex,
   isAuthoritativeBackendIdentity,
   isBackendIdentity,
   isProvenance,
   isProductionVerified,
   isVerificationFailureCode,
   isUnavailableBackend,
+  normalizeBoundaryError,
   rejectNonProductionVerification,
   VERIFIER_RESOURCE_LIMITS,
+  VERIFIER_SIGNATURE_ENCODING,
+  VERIFIER_SIGNATURE_ENCODING_VERSION,
   type BackendIdentity,
   type Digest,
   type Provenance,
@@ -80,6 +84,7 @@ export interface BitVMFlowState {
 export interface SignatureAttestation {
   proof_id: string;
   verifier_id: string;
+  encoding_version: typeof VERIFIER_SIGNATURE_ENCODING_VERSION;
   signature_digest: Digest;
   backend: BackendIdentity;
   provenance: Provenance;
@@ -95,6 +100,7 @@ export interface PartialSignature {
 
 export interface AggregationState {
   proofId: string;
+  verifier_request_digest: Digest;
   signatures: PartialSignature[];
   required: number;
   authorized_signers: string[];
@@ -152,6 +158,8 @@ export interface BitVMSignatureVerifier {
     proofId: string;
     verifierId: string;
     signature: string;
+    signature_encoding: typeof VERIFIER_SIGNATURE_ENCODING;
+    signature_encoding_version: typeof VERIFIER_SIGNATURE_ENCODING_VERSION;
     aggregation: Readonly<AggregationState>;
   }): Promise<BitVMSignatureVerification>;
 }
@@ -180,7 +188,7 @@ export async function createSignatureAttestation(input: {
 }): Promise<SignatureAttestation> {
   if (!isNonEmptyString(input.proofId)
     || !isNonEmptyString(input.verifierId)
-    || typeof input.signature !== "string"
+    || !isCanonicalSignatureHex(input.signature)
     || !isBackendIdentity(input.backend)
     || !isProvenance(input.provenance)
     || input.proofId.length > VERIFIER_RESOURCE_LIMITS.maxIdentifierChars
@@ -192,6 +200,7 @@ export async function createSignatureAttestation(input: {
   const attestationWithoutDigest = {
     proof_id: input.proofId,
     verifier_id: input.verifierId,
+    encoding_version: VERIFIER_SIGNATURE_ENCODING_VERSION,
     signature_digest,
     backend: input.backend,
     provenance: input.provenance,
@@ -218,6 +227,13 @@ interface FloorValidationFailure {
 
 type FloorValidation = FloorValidationSuccess | FloorValidationFailure;
 
+interface FloorInitialization {
+  verifier_request_digest: Digest;
+  verifier_backend: BackendIdentity;
+  tap_profile?: BitVMTapProfile;
+  verification: VerificationResult;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -240,6 +256,7 @@ function isSignatureVerification(value: unknown): value is BitVMSignatureVerific
     || typeof value.verified !== "boolean"
     || !isBackendIdentity(value.backend)
     || !isProvenance(value.provenance)
+    || (value.error !== undefined && typeof value.error !== "string")
     || (value.failure_code !== undefined && !isVerificationFailureCode(value.failure_code))) {
     return false;
   }
@@ -397,9 +414,27 @@ function copyAggregation(aggregation: AggregationState): AggregationState {
   };
 }
 
+function copyVerificationResult(result: VerificationResult): VerificationResult {
+  return {
+    ...result,
+    backend: { ...result.backend },
+  };
+}
+
+function copyTapProfile(profile: BitVMTapProfile | undefined): BitVMTapProfile | undefined {
+  return profile
+    ? { ...profile, authorized_signers: profile.authorized_signers ? [...profile.authorized_signers] : undefined }
+    : undefined;
+}
+
+function sameTapProfile(left: BitVMTapProfile | undefined, right: BitVMTapProfile | undefined): boolean {
+  return canonicalJson(left ?? null) === canonicalJson(right ?? null);
+}
+
 export class BitVMBridge {
   private readonly states = new Map<string, BitVMFlowState>();
   private readonly aggregations = new Map<string, AggregationState>();
+  private readonly floorInitializations = new Map<string, FloorInitialization>();
   private readonly aggregationQueues = new Map<string, Promise<void>>();
   private readonly reservedSigners = new Map<string, Set<string>>();
 
@@ -464,68 +499,114 @@ export class BitVMBridge {
       );
     }
 
-    logger.info(`Received verification request for proof ${validation.request.proof_id}`);
-    let verification: VerificationResult;
-    try {
-      verification = await this.verifier.verify(validation.request.verifier_request);
-    } catch (error: unknown) {
-      verification = createVerificationFailure(
-        "internal_error",
-        error instanceof Error ? error.message : "Verifier adapter failed",
-        {
+    return this.withAggregationLock(validation.request.proof_id, async () => {
+      const existing = this.floorInitializations.get(validation.request.proof_id);
+      if (existing) {
+        const sameInitialization = existing.verifier_request_digest === validation.verifier_request_digest
+          && backendIdentityEquals(existing.verifier_backend, verifierBackend)
+          && backendIdentityEquals(existing.verifier_backend, validation.request.verifier_request.backend)
+          && sameTapProfile(existing.tap_profile, validation.request.tap_profile);
+        if (sameInitialization) {
+          // Replays are read-only: preserve any signatures already committed to
+          // this aggregation instead of replacing the live object.
+          return makeFloorResult(
+            validation.request.proof_id,
+            existing.tap_profile?.tap_count ?? 0,
+            copyVerificationResult(existing.verification),
+            existing.verifier_backend,
+          );
+        }
+
+        const failure = createVerificationFailure(
+          backendIdentityEquals(existing.verifier_backend, verifierBackend)
+            ? "malformed_request"
+            : "backend_mismatch",
+          "BitVM floor is already initialized for this proof id",
+          {
+            request_digest: validation.verifier_request_digest,
+            backend: verifierBackend,
+            provenance: validation.request.verifier_request.provenance,
+          },
+        );
+        return makeFloorResult(
+          validation.request.proof_id,
+          validation.request.tap_profile?.tap_count ?? 0,
+          failure,
+          verifierBackend,
+        );
+      }
+
+      logger.info(`Received verification request for proof ${validation.request.proof_id}`);
+      let verification: VerificationResult;
+      try {
+        verification = await this.verifier.verify(validation.request.verifier_request);
+      } catch (error: unknown) {
+        verification = createVerificationFailure(
+          "internal_error",
+          error,
+          {
+            request_digest: validation.verifier_request_digest,
+            backend: verifierBackend,
+            provenance: validation.request.verifier_request.provenance,
+          },
+        );
+      }
+      const resultValidation = await validateVerificationResult(
+        verification,
+        validation.request.verifier_request,
+        validation.verifier_request_digest,
+        verifierBackend,
+      );
+
+      if (!resultValidation.ok) {
+        verification = createVerificationFailure(resultValidation.failure_code, resultValidation.error, {
           request_digest: validation.verifier_request_digest,
           backend: verifierBackend,
           provenance: validation.request.verifier_request.provenance,
-        },
-      );
-    }
-    const resultValidation = await validateVerificationResult(
-      verification,
-      validation.request.verifier_request,
-      validation.verifier_request_digest,
-      verifierBackend,
-    );
-
-    if (!resultValidation.ok) {
-      verification = createVerificationFailure(resultValidation.failure_code, resultValidation.error, {
-        request_digest: validation.verifier_request_digest,
-        backend: verifierBackend,
-        provenance: validation.request.verifier_request.provenance,
-      });
-    } else {
-      verification = rejectNonProductionVerification(resultValidation.result, verifierBackend);
-    }
-
-    if (isProductionVerified(verification, verifierBackend)) {
-      const tapProfile = validation.request.tap_profile;
-      const now = new Date().toISOString();
-      this.states.set(validation.request.proof_id, {
-        proofId: validation.request.proof_id,
-        status: "verified",
-        segments: tapProfile?.tap_count ?? 0,
-        tapProfileId: tapProfile?.id,
-        activeChallenges: [],
-        lastUpdate: now,
-      });
-
-      if (tapProfile?.required_signatures !== undefined) {
-        this.aggregations.set(validation.request.proof_id, {
-          proofId: validation.request.proof_id,
-          signatures: [],
-          required: tapProfile.required_signatures,
-          authorized_signers: [...(tapProfile.authorized_signers ?? [])],
-          verifier_backend: validation.request.verifier_request.backend,
-          is_complete: false,
         });
+      } else {
+        verification = rejectNonProductionVerification(resultValidation.result, verifierBackend);
       }
-    }
 
-    return makeFloorResult(
-      validation.request.proof_id,
-      validation.request.tap_profile?.tap_count ?? 0,
-      verification,
-      verifierBackend,
-    );
+      if (isProductionVerified(verification, verifierBackend)) {
+        const tapProfile = copyTapProfile(validation.request.tap_profile);
+        const storedVerification = copyVerificationResult(verification);
+        const now = new Date().toISOString();
+        this.floorInitializations.set(validation.request.proof_id, {
+          verifier_request_digest: validation.verifier_request_digest,
+          verifier_backend: { ...verifierBackend },
+          tap_profile: tapProfile,
+          verification: storedVerification,
+        });
+        this.states.set(validation.request.proof_id, {
+          proofId: validation.request.proof_id,
+          status: "verified",
+          segments: tapProfile?.tap_count ?? 0,
+          tapProfileId: tapProfile?.id,
+          activeChallenges: [],
+          lastUpdate: now,
+        });
+
+        if (tapProfile?.required_signatures !== undefined) {
+          this.aggregations.set(validation.request.proof_id, {
+            proofId: validation.request.proof_id,
+            verifier_request_digest: validation.verifier_request_digest,
+            signatures: [],
+            required: tapProfile.required_signatures,
+            authorized_signers: [...(tapProfile.authorized_signers ?? [])],
+            verifier_backend: { ...verifierBackend },
+            is_complete: false,
+          });
+        }
+      }
+
+      return makeFloorResult(
+        validation.request.proof_id,
+        validation.request.tap_profile?.tap_count ?? 0,
+        verification,
+        verifierBackend,
+      );
+    });
   }
 
   public async submitSignature(
@@ -551,7 +632,7 @@ export class BitVMBridge {
         error: "Signature submission exceeds the v1 resource limit",
       };
     }
-    if (!/^[0-9a-fA-F]{128,}$/.test(signature)) {
+    if (!isCanonicalSignatureHex(signature)) {
       return {
         accepted: false,
         failure_code: "invalid_signature",
@@ -612,13 +693,24 @@ export class BitVMBridge {
             proofId,
             verifierId,
             signature,
+            signature_encoding: VERIFIER_SIGNATURE_ENCODING,
+            signature_encoding_version: VERIFIER_SIGNATURE_ENCODING_VERSION,
             aggregation: copyAggregation(aggregation),
           });
         } catch (error: unknown) {
+          const normalized = normalizeBoundaryError(error, "Signature verifier failed");
+          return {
+            accepted: false,
+            failure_code: normalized.truncated ? "resource_limit_exceeded" : "internal_error",
+            error: normalized.message,
+          };
+        }
+
+        if (this.aggregations.get(proofId) !== aggregation) {
           return {
             accepted: false,
             failure_code: "internal_error",
-            error: error instanceof Error ? error.message : "Signature verifier failed",
+            error: "Aggregation changed before signature commit",
           };
         }
 
@@ -630,11 +722,23 @@ export class BitVMBridge {
           };
         }
 
+        const signatureError = normalizeBoundaryError(
+          signatureVerification.error,
+          "Signature verifier did not provide valid evidence",
+        );
+        if (typeof signatureVerification.error === "string" && signatureError.truncated) {
+          return {
+            accepted: false,
+            failure_code: "resource_limit_exceeded",
+            error: signatureError.message,
+          };
+        }
+
         if (signatureVerification.status !== "valid" || !signatureVerification.verified) {
           return {
             accepted: false,
             failure_code: signatureVerification.failure_code ?? "invalid_signature",
-            error: signatureVerification.error ?? "Signature verifier did not provide valid evidence",
+            error: signatureError.message,
           };
         }
 
@@ -684,6 +788,13 @@ export class BitVMBridge {
             accepted: false,
             failure_code: "duplicate_signer",
             error: "A signer may contribute only one partial signature",
+          };
+        }
+        if (this.aggregations.get(proofId) !== aggregation) {
+          return {
+            accepted: false,
+            failure_code: "internal_error",
+            error: "Aggregation changed at signature commit",
           };
         }
         if (!reservations.has(verifierId)) {

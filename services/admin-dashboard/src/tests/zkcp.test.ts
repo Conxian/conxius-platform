@@ -13,6 +13,7 @@ import {
   createVerificationResult,
   digestVerifierRequest,
   UNAVAILABLE_BACKEND,
+  VERIFIER_RESOURCE_LIMITS,
   type BackendIdentity,
   type PaymentObservationResult,
   type VerifierRequest,
@@ -162,6 +163,26 @@ class ThrowingZKVerifier implements ZKProofVerifier {
   }
 }
 
+class OversizedResultZKVerifier extends AuthoritativeFixtureVerifier {
+  public override async verify(request: VerifierRequest) {
+    return createVerificationResult({
+      status: "valid",
+      request_digest: await digestVerifierRequest(request),
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production",
+      error: "v".repeat(VERIFIER_RESOURCE_LIMITS.maxErrorChars + 1),
+    });
+  }
+}
+
+class ThrowingOversizedZKVerifier implements ZKProofVerifier {
+  public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
+
+  public async verify(): Promise<never> {
+    throw new Error("v".repeat(VERIFIER_RESOURCE_LIMITS.maxErrorChars + 1));
+  }
+}
+
 class ThrowingPaymentMonitor implements OnChainMonitor {
   public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
 
@@ -170,11 +191,56 @@ class ThrowingPaymentMonitor implements OnChainMonitor {
   }
 }
 
+class OversizedPaymentMonitor implements OnChainMonitor {
+  public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
+
+  public async watchForPayment(): Promise<PaymentObservationResult> {
+    return {
+      contract_version: "conxian.verifier.v1",
+      status: "not_observed",
+      detected: false,
+      provenance: "production",
+      failure_code: "payment_not_observed",
+      error: "p".repeat(VERIFIER_RESOURCE_LIMITS.maxErrorChars + 1),
+    };
+  }
+}
+
+class ThrowingOversizedPaymentMonitor implements OnChainMonitor {
+  public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
+
+  public async watchForPayment(): Promise<never> {
+    throw new Error("p".repeat(VERIFIER_RESOURCE_LIMITS.maxErrorChars + 1));
+  }
+}
+
 class NullKeyReleaser implements DecryptionKeyReleaser {
   public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
 
   public async release(): Promise<never> {
     return null as never;
+  }
+}
+
+class OversizedKeyReleaser implements DecryptionKeyReleaser {
+  public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
+
+  public async release() {
+    return {
+      status: "rejected" as const,
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production" as const,
+      failure_code: "internal_error" as const,
+      error: "k".repeat(VERIFIER_RESOURCE_LIMITS.maxErrorChars + 1),
+    };
+  }
+}
+
+class ThrowingOversizedKeyReleaser implements DecryptionKeyReleaser {
+  public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
+
+  public async release(): Promise<never> {
+    throw new Error("k".repeat(VERIFIER_RESOURCE_LIMITS.maxErrorChars + 1));
   }
 }
 
@@ -558,6 +624,91 @@ describe("ZKCPBridge fail-closed boundary", () => {
     const finalized = await keyBridge.finalizeSettlement(keyInput.id);
     expect(finalized.failure_code).toBe("internal_error");
     expect(keyBridge.getIntent(keyInput.id)?.status).toBe("paid");
+  });
+
+  it("bounds over-limit verifier, payment, and key-release adapter errors", async () => {
+    const genericRequest = await makeVerifierRequest({ backend: AUTHORITATIVE_TEST_BACKEND, provenance: "production" });
+
+    const verifierInput = await makeIntentInput(genericRequest, "zkcp-over-limit-verifier");
+    const verifierRequest = await bindZKCPRequestToIntent(genericRequest, verifierInput);
+    const verifierBridge = new ZKCPBridge(
+      new OversizedResultZKVerifier(),
+      new UnavailableOnChainMonitor(),
+      new UnavailableDecryptionKeyReleaser(),
+    );
+    verifierBridge.initializeIntent(verifierInput);
+    const verifierResult = await verifierBridge.verifyProof(verifierInput.id, verifierRequest);
+    expect(verifierResult.failure_code).toBe("resource_limit_exceeded");
+    expect(verifierResult.error?.length).toBeLessThanOrEqual(VERIFIER_RESOURCE_LIMITS.maxErrorChars);
+
+    const throwingVerifierInput = await makeIntentInput(genericRequest, "zkcp-over-limit-thrown-verifier");
+    const throwingVerifierRequest = await bindZKCPRequestToIntent(genericRequest, throwingVerifierInput);
+    const throwingVerifierBridge = new ZKCPBridge(
+      new ThrowingOversizedZKVerifier(),
+      new UnavailableOnChainMonitor(),
+      new UnavailableDecryptionKeyReleaser(),
+    );
+    throwingVerifierBridge.initializeIntent(throwingVerifierInput);
+    const throwingVerifierResult = await throwingVerifierBridge.verifyProof(
+      throwingVerifierInput.id,
+      throwingVerifierRequest,
+    );
+    expect(throwingVerifierResult.failure_code).toBe("resource_limit_exceeded");
+    expect(throwingVerifierResult.error?.length).toBeLessThanOrEqual(VERIFIER_RESOURCE_LIMITS.maxErrorChars);
+
+    const observerInput = await makeIntentInput(genericRequest, "zkcp-over-limit-observer");
+    const observerRequest = await bindZKCPRequestToIntent(genericRequest, observerInput);
+    const observerBridge = new ZKCPBridge(
+      new AuthoritativeFixtureVerifier(),
+      new OversizedPaymentMonitor(),
+      new UnavailableDecryptionKeyReleaser(),
+    );
+    observerBridge.initializeIntent(observerInput);
+    await observerBridge.verifyProof(observerInput.id, observerRequest);
+    const observerResult = await observerBridge.watchForPayment(observerInput.id);
+    expect(observerResult.failure_code).toBe("resource_limit_exceeded");
+    expect(observerResult.error?.length).toBeLessThanOrEqual(VERIFIER_RESOURCE_LIMITS.maxErrorChars);
+
+    const throwingObserverInput = await makeIntentInput(genericRequest, "zkcp-over-limit-thrown-observer");
+    const throwingObserverRequest = await bindZKCPRequestToIntent(genericRequest, throwingObserverInput);
+    const throwingObserverBridge = new ZKCPBridge(
+      new AuthoritativeFixtureVerifier(),
+      new ThrowingOversizedPaymentMonitor(),
+      new UnavailableDecryptionKeyReleaser(),
+    );
+    throwingObserverBridge.initializeIntent(throwingObserverInput);
+    await throwingObserverBridge.verifyProof(throwingObserverInput.id, throwingObserverRequest);
+    const throwingObserverResult = await throwingObserverBridge.watchForPayment(throwingObserverInput.id);
+    expect(throwingObserverResult.failure_code).toBe("resource_limit_exceeded");
+    expect(throwingObserverResult.error?.length).toBeLessThanOrEqual(VERIFIER_RESOURCE_LIMITS.maxErrorChars);
+
+    const keyInput = await makeIntentInput(genericRequest, "zkcp-over-limit-key");
+    const keyRequest = await bindZKCPRequestToIntent(genericRequest, keyInput);
+    const keyBridge = new ZKCPBridge(
+      new AuthoritativeFixtureVerifier(),
+      new AuthoritativeFixtureMonitor(),
+      new OversizedKeyReleaser(),
+    );
+    keyBridge.initializeIntent(keyInput);
+    await keyBridge.verifyProof(keyInput.id, keyRequest);
+    await keyBridge.watchForPayment(keyInput.id);
+    const keyResult = await keyBridge.finalizeSettlement(keyInput.id);
+    expect(keyResult.failure_code).toBe("resource_limit_exceeded");
+    expect(keyResult.error?.length).toBeLessThanOrEqual(VERIFIER_RESOURCE_LIMITS.maxErrorChars);
+
+    const throwingKeyInput = await makeIntentInput(genericRequest, "zkcp-over-limit-thrown-key");
+    const throwingKeyRequest = await bindZKCPRequestToIntent(genericRequest, throwingKeyInput);
+    const throwingKeyBridge = new ZKCPBridge(
+      new AuthoritativeFixtureVerifier(),
+      new AuthoritativeFixtureMonitor(),
+      new ThrowingOversizedKeyReleaser(),
+    );
+    throwingKeyBridge.initializeIntent(throwingKeyInput);
+    await throwingKeyBridge.verifyProof(throwingKeyInput.id, throwingKeyRequest);
+    await throwingKeyBridge.watchForPayment(throwingKeyInput.id);
+    const throwingKeyResult = await throwingKeyBridge.finalizeSettlement(throwingKeyInput.id);
+    expect(throwingKeyResult.failure_code).toBe("resource_limit_exceeded");
+    expect(throwingKeyResult.error?.length).toBeLessThanOrEqual(VERIFIER_RESOURCE_LIMITS.maxErrorChars);
   });
 
   it("rejects unsafe integer amounts before canonical settlement binding", async () => {

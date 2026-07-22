@@ -6,6 +6,8 @@
 
 export const VERIFIER_CONTRACT_VERSION = "conxian.verifier.v1" as const;
 export const VERIFIER_RESOURCE_LIMITS_VERSION = "conxian.verifier.limits.v1" as const;
+export const VERIFIER_SIGNATURE_ENCODING_VERSION = "conxian.verifier.signature.v1" as const;
+export const VERIFIER_SIGNATURE_ENCODING = "hex" as const;
 
 /**
 * Resource limits are part of the boundary contract. Keep these values
@@ -23,8 +25,11 @@ export const VERIFIER_RESOURCE_LIMITS = Object.freeze({
   maxAddressChars: 256,
   maxTxidChars: 256,
   maxSignatureChars: 1024,
+  minSignatureBytes: 64,
+  maxSignatureBytes: 512,
   maxSignerCount: 64,
   maxTapCount: 1024,
+  maxRecursiveHeight: 1024,
   maxConfirmations: 1_000_000,
   maxErrorChars: 1024,
   maxTimestampChars: 64,
@@ -33,6 +38,7 @@ export const VERIFIER_RESOURCE_LIMITS = Object.freeze({
 } as const);
 
 export type VerifierContractVersion = typeof VERIFIER_CONTRACT_VERSION;
+export type VerifierSignatureEncodingVersion = typeof VERIFIER_SIGNATURE_ENCODING_VERSION;
 export type Digest = `sha256:${string}`;
 
 export type ProofSystem =
@@ -263,6 +269,43 @@ function isBoundedNonEmptyString(value: unknown, maxLength: number): value is st
 
 function isOversizedString(value: unknown, maxLength: number): boolean {
   return typeof value === "string" && value.length > maxLength;
+}
+
+export interface NormalizedBoundaryError {
+  message: string;
+  truncated: boolean;
+}
+
+/**
+* Adapter errors are untrusted boundary data. Preserve useful context only
+* within the versioned error ceiling and never call arbitrary `toString()`
+* implementations on thrown values.
+*/
+export function normalizeBoundaryError(value: unknown, fallback: string): NormalizedBoundaryError {
+  const fallbackMessage = typeof fallback === "string" && fallback.length > 0
+    ? fallback
+    : "Boundary adapter failed";
+  const rawMessage = value instanceof Error && typeof value.message === "string"
+    ? value.message
+    : typeof value === "string"
+      ? value
+      : fallbackMessage;
+  const message = rawMessage.length > 0 ? rawMessage : fallbackMessage;
+  if (message.length <= VERIFIER_RESOURCE_LIMITS.maxErrorChars) {
+    return { message, truncated: false };
+  }
+  return {
+    message: message.slice(0, VERIFIER_RESOURCE_LIMITS.maxErrorChars),
+    truncated: true,
+  };
+}
+
+export function isCanonicalSignatureHex(value: unknown): value is string {
+  return typeof value === "string"
+    && value.length % 2 === 0
+    && value.length >= VERIFIER_RESOURCE_LIMITS.minSignatureBytes * 2
+    && value.length <= VERIFIER_RESOURCE_LIMITS.maxSignatureBytes * 2
+    && /^[0-9a-fA-F]+$/.test(value);
 }
 
 export function isDigest(value: unknown): value is Digest {
@@ -617,23 +660,22 @@ export function createVerificationResult(input: {
 
 export function createVerificationFailure(
   failure_code: VerificationFailureCode,
-  error: string,
+  error: unknown,
   options: {
     request_digest?: Digest;
     backend?: BackendIdentity;
     provenance?: Provenance;
   } = {},
 ): VerificationResult {
-  const boundedError = error.length <= VERIFIER_RESOURCE_LIMITS.maxErrorChars
-    ? error
-    : "Verifier failure message exceeds the v1 resource limit";
+  const normalized = normalizeBoundaryError(error, "Verifier failure");
+  const effectiveFailureCode = normalized.truncated ? "resource_limit_exceeded" : failure_code;
   return createVerificationResult({
-    status: failureStatus(failure_code),
+    status: failureStatus(effectiveFailureCode),
     backend: options.backend ?? UNAVAILABLE_BACKEND,
     provenance: options.provenance ?? "unknown",
     request_digest: options.request_digest,
-    failure_code,
-    error: boundedError,
+    failure_code: effectiveFailureCode,
+    error: normalized.message,
   });
 }
 
@@ -769,12 +811,17 @@ export async function validateVerifierRequest(value: unknown): Promise<VerifierV
       request_digest: await digestVerifierRequest(request),
     };
   } catch (error: unknown) {
+    const normalized = normalizeBoundaryError(error, "Unable to validate encoded verifier data");
     return {
       ok: false,
-      failure_code: error instanceof Error && error.message.includes("Web Crypto")
-        ? "digest_unavailable"
-        : "malformed_encoding",
-      error: error instanceof Error ? error.message : "Unable to validate encoded verifier data",
+      failure_code: normalized.truncated
+        ? "resource_limit_exceeded"
+        : error instanceof Error
+          && typeof error.message === "string"
+          && error.message.includes("Web Crypto")
+          ? "digest_unavailable"
+          : "malformed_encoding",
+      error: normalized.message,
     };
   }
 }
@@ -797,7 +844,8 @@ export async function validateVerificationResult(
     || typeof value.verified !== "boolean"
     || !isBackendIdentity(value.backend)
     || !isProvenance(value.provenance)
-    || !isBoundedNonEmptyString(value.checked_at, VERIFIER_RESOURCE_LIMITS.maxTimestampChars)) {
+    || !isBoundedNonEmptyString(value.checked_at, VERIFIER_RESOURCE_LIMITS.maxTimestampChars)
+    || (value.error !== undefined && typeof value.error !== "string")) {
     return { ok: false, failure_code: "malformed_request", error: "Verifier result is not a canonical v1 result" };
   }
 
@@ -1000,10 +1048,11 @@ export async function validatePaymentObservation(
       return { ok: false, failure_code: "payment_mismatch", error: "Payment observation digest does not match its fields" };
     }
   } catch (error: unknown) {
+    const normalized = normalizeBoundaryError(error, "Unable to validate payment observation digest");
     return {
       ok: false,
       failure_code: "digest_unavailable",
-      error: error instanceof Error ? error.message : "Unable to validate payment observation digest",
+      error: normalized.message,
     };
   }
 
@@ -1020,18 +1069,18 @@ function paymentStatus(code: VerificationFailureCode): PaymentObservationStatus 
 
 export function createPaymentFailure(
   failure_code: VerificationFailureCode,
-  error: string,
+  error: unknown,
   provenance: Provenance = "unknown",
 ): PaymentObservationResult {
-  const exceedsErrorLimit = error.length > VERIFIER_RESOURCE_LIMITS.maxErrorChars;
-  const effectiveFailureCode = exceedsErrorLimit ? "resource_limit_exceeded" : failure_code;
+  const normalized = normalizeBoundaryError(error, "Payment observer failure");
+  const effectiveFailureCode = normalized.truncated ? "resource_limit_exceeded" : failure_code;
   return {
     contract_version: VERIFIER_CONTRACT_VERSION,
     status: paymentStatus(effectiveFailureCode),
     detected: false,
     provenance,
     failure_code: effectiveFailureCode,
-    error: exceedsErrorLimit ? "Payment observer error exceeds the v1 resource limit" : error,
+    error: normalized.message,
   };
 }
 

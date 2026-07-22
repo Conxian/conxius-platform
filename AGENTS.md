@@ -1717,3 +1717,26 @@ AGENTS.md (this update)
 - PowerShell runtime execution remains unverified until a `pwsh` environment is available.
 **Gotchas**:
 - Run `git diff --check` and strict issue #1187 OpenSpec validation again after this session-log append.
+
+### 2026-07-22 — PR #1198 Formal Review Follow-up
+**Trigger**: Formal review `4759065132` on PR #1198.
+**What was done**:
+- Serialized BitVM2 floor initialization/replay with the same per-proof FIFO guard as signature submission, recorded successful initialization identity, made identical replays read-only, rejected conflicts, and added aggregation object-identity compare-and-swap checks before signature commit.
+- Centralized bounded adapter-error normalization across verifier, signature-verifier, payment-observer, key-release, and settlement-route catch paths; over-limit returned and thrown errors now truncate to `maxErrorChars` and return typed resource failures.
+- Added the explicit `conxian.verifier.signature.v1` canonical even-length hex contract with 64–512 decoded-byte limits and pre-dispatch rejection for odd, short, and long signatures.
+- Enforced BitVM3 proof-id and recursive-height limits, including finite safe-integer, overflow, negative, and NaN-style validation before recursive verifier dispatch.
+- Updated the issue #1187 OpenSpec design/spec/tasks and added deferred race, adapter-error, signature-boundary, recursive-boundary, and route-catch regression coverage.
+**Key discoveries**:
+- Successful BitVM floor initialization must be retained separately from the mutable aggregation so an identical replay can be idempotent without replacing an aggregation that may contain committed signatures.
+- Shared normalization must handle arbitrary thrown values without invoking `toString()`; only bounded `Error.message` or string values are eligible for response text.
+- The strict OpenSpec CLI accepts the change identifier as a positional item with `--type change`; `--change` is not a supported flag in version 1.6.0.
+**Files touched**:
+- `services/admin-dashboard/src/lib/support/{verifier-contract.ts,bitvm.ts,bitvm3.ts,zkcp.ts}` and settlement route
+- `services/admin-dashboard/src/tests/{bitvm.test.ts,bitvm3.test.ts,zkcp.test.ts,routeAuth.test.ts,verifierContract.test.ts}`
+- `openspec/changes/2026-07-22-issue-1187-fail-closed-verifier-boundaries/{design.md,tasks.md,specs/fail-closed-verifier-boundaries/spec.md}`
+- `AGENTS.md`
+**Gaps identified**:
+- Hosted PR checks must be inspected after the focused commit is pushed; no merge or hosted-check wait is performed.
+- PowerShell runtime execution remains unavailable in this devbox; lifecycle parity checks are static/self-test based.
+**Gotchas**:
+- The strict validator command is `pnpm dlx @fission-ai/openspec@1.6.0 validate <change> --type change --strict --no-interactive --json`.

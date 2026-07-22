@@ -57,7 +57,10 @@ ZKCP getters/list methods return defensive immutable snapshots. Authoritative
 proof/payment evidence remains private to the bridge and is revalidated against
 the exact stored bindings immediately before key release. BitVM2 aggregation is
 also gated by authorized unique signers and explicit injected signature
-attestations; hex formatting alone is not evidence. Terminal finalization is
+attestations; hex formatting alone is not evidence. Floor initialization/replay
+and signature submission share a per-proof guard, identical floor replays are
+read-only, conflicting reinitialization is rejected, and signature commits use
+aggregation identity compare-and-swap checks. Terminal finalization is
 idempotent/serialized, payment watches cannot regress paid/finalized state, and
 throwing or malformed injected adapters become typed non-success results.
 
@@ -65,18 +68,24 @@ The boundary also publishes `conxian.verifier.limits.v1` resource limits. The
 settlement body is capped at 512 KiB; proofs at 128 KiB decoded bytes; public
 inputs at 32 entries, 16 KiB per value, and 128 KiB total; identifiers at 128
 characters; backend versions at 64; addresses and transaction ids at 256;
-signatures at 1,024; signer sets at 64; taps at 1,024; confirmations at
-1,000,000; and returned decryption-key evidence at 4,096 characters. Digest/
-domain strings remain exact SHA-256 forms. Oversized fields are rejected before
-decode/hash or backend dispatch with
+signatures use `conxian.verifier.signature.v1` canonical even-length hex with
+64–512 decoded bytes and at most 1,024 characters; signer sets are capped at
+64; taps at 1,024; BitVM3 proof ids at 128 characters and recursive heights at
+safe integer `0..1,024`; confirmations at 1,000,000; returned decryption-key
+evidence at 4,096 characters; and adapter/route error text at 1,024 characters.
+Digest/domain strings remain exact SHA-256 forms. Odd, short, long, or malformed
+signatures and invalid recursive metadata are rejected before backend dispatch.
+Oversized fields and normalized over-limit adapter errors return
 `resource_limit_exceeded`; the settlement route returns HTTP 413.
 
 ZKCP lifecycle operations are FIFO-serialized per intent and use generation /
 object-identity compare-and-swap checks before every asynchronous evidence or
 terminal-state commit. BitVM2 submissions reserve signer ids under a per-proof
 lock, release reservations on all failure paths, and re-check uniqueness at
-commit. These controls prevent stale adapter completions and concurrent
-duplicate signers from regressing or duplicating authoritative state.
+commit. Adapter and route-catch errors are normalized without invoking arbitrary
+thrown-value stringification. These controls prevent stale adapter completions
+and concurrent duplicate signers from regressing or duplicating authoritative
+state.
 
 Production construction explicitly injects verifier, payment-observer, and
 key-release dependencies. The checked-in construction uses unavailable

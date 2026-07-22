@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { bitvmBridge } from "@/lib/support/bitvm";
 import { zkcpBridge, type ZKCPStatus } from "@/lib/support/zkcp";
 import { validateAdminAuth } from "@/lib/support/auth";
-import { isDigest, VERIFIER_RESOURCE_LIMITS } from "@/lib/support/verifier-contract";
+import { isDigest, normalizeBoundaryError, VERIFIER_RESOURCE_LIMITS } from "@/lib/support/verifier-contract";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -57,11 +57,13 @@ function responseFor<T extends Record<string, unknown>>(
 
 function failureResponse(
   failure_code: string,
-  error: string,
+  error: unknown,
 ): NextResponse {
+  const normalized = normalizeBoundaryError(error, "Settlement request failed");
+  const effectiveFailureCode = normalized.truncated ? "resource_limit_exceeded" : failure_code;
   return NextResponse.json(
-    { accepted: false, status: "rejected", failure_code, error },
-    { status: statusForFailure(failure_code) },
+    { accepted: false, status: "rejected", failure_code: effectiveFailureCode, error: normalized.message },
+    { status: statusForFailure(effectiveFailureCode) },
   );
 }
 
@@ -320,14 +322,6 @@ export async function POST(req: Request) {
 
     return failureResponse("unknown_action", `Unsupported settlement action: ${action}`);
   } catch (error: unknown) {
-    return NextResponse.json(
-      {
-        accepted: false,
-        status: "rejected",
-        failure_code: "internal_error",
-        error: error instanceof Error ? error.message : "Settlement request failed",
-      },
-      { status: 500 },
-    );
+    return failureResponse("internal_error", error);
   }
 }

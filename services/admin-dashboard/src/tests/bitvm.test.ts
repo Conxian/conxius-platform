@@ -125,6 +125,38 @@ class FirstCallThrowingSignatureVerifier implements BitVMSignatureVerifier {
   }
 }
 
+class CountingSignatureVerifier extends ExplicitSignatureVerifier {
+  public calls = 0;
+
+  public override async verify(input: Parameters<BitVMSignatureVerifier["verify"]>[0]) {
+    this.calls += 1;
+    return super.verify(input);
+  }
+}
+
+class OversizedErrorSignatureVerifier implements BitVMSignatureVerifier {
+  public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
+
+  public async verify() {
+    return {
+      status: "invalid" as const,
+      verified: false,
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "test" as const,
+      failure_code: "invalid_signature" as const,
+      error: "s".repeat(VERIFIER_RESOURCE_LIMITS.maxErrorChars + 1),
+    };
+  }
+}
+
+class ThrowingOversizedErrorSignatureVerifier implements BitVMSignatureVerifier {
+  public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
+
+  public async verify(): Promise<never> {
+    throw new Error("s".repeat(VERIFIER_RESOURCE_LIMITS.maxErrorChars + 1));
+  }
+}
+
 class InvalidSignatureVerifier implements BitVMSignatureVerifier {
   public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
 
@@ -355,6 +387,30 @@ describe("BitVMBridge fail-closed boundary", () => {
     expect(bridge.getAggregation("fixture-floor-1")?.signatures).toHaveLength(1);
   });
 
+  it("keeps an initialized aggregation stable across a deferred signature and floor replay", async () => {
+    const signatureVerifier = new DeferredSignatureVerifier();
+    const bridge = new BitVMBridge(new AuthoritativeFixtureVerifier(), signatureVerifier);
+    const request = await makeVerifierRequest({
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production",
+    });
+    const floorRequest = makeFloorRequest(request);
+    expect((await bridge.verifyFloor(floorRequest)).verified).toBe(true);
+
+    const submission = bridge.submitSignature("fixture-floor-1", "verifier-1", "ab".repeat(64));
+    await signatureVerifier.started;
+    const replay = bridge.verifyFloor(floorRequest);
+
+    signatureVerifier.release();
+    const [submissionResult, replayResult] = await Promise.all([submission, replay]);
+
+    expect(submissionResult.accepted).toBe(true);
+    expect(replayResult.verified).toBe(true);
+    expect(bridge.getAggregation("fixture-floor-1")?.signatures).toMatchObject([
+      { verifier_id: "verifier-1", signature: "ab".repeat(64) },
+    ]);
+  });
+
   it("accepts concurrent distinct signers exactly once each", async () => {
     const signatureVerifier = new DeferredSignatureVerifier();
     const bridge = await makeAuthoritativeBridge(signatureVerifier);
@@ -418,6 +474,69 @@ describe("BitVMBridge fail-closed boundary", () => {
       },
     });
     expect(result.failure_code).toBe("resource_limit_exceeded");
+  });
+
+  it("enforces the versioned even-byte signature encoding at both boundaries", async () => {
+    const minimumVerifier = new CountingSignatureVerifier();
+    const minimumBridge = await makeAuthoritativeBridge(minimumVerifier);
+    const minimum = await minimumBridge.submitSignature(
+      "fixture-floor-1",
+      "verifier-1",
+      "ab".repeat(VERIFIER_RESOURCE_LIMITS.minSignatureBytes),
+    );
+    expect(minimum.accepted).toBe(true);
+    expect(minimumVerifier.calls).toBe(1);
+
+    const maximumVerifier = new CountingSignatureVerifier();
+    const maximumBridge = await makeAuthoritativeBridge(maximumVerifier);
+    const maximum = await maximumBridge.submitSignature(
+      "fixture-floor-1",
+      "verifier-1",
+      "cd".repeat(VERIFIER_RESOURCE_LIMITS.maxSignatureBytes),
+    );
+    expect(maximum.accepted).toBe(true);
+    expect(maximumVerifier.calls).toBe(1);
+
+    const oddVerifier = new CountingSignatureVerifier();
+    const oddBridge = await makeAuthoritativeBridge(oddVerifier);
+    const odd = await oddBridge.submitSignature("fixture-floor-1", "verifier-1", `${"ab".repeat(64)}a`);
+    expect(odd.accepted).toBe(false);
+    expect(odd.failure_code).toBe("invalid_signature");
+    expect(oddVerifier.calls).toBe(0);
+
+    const shortVerifier = new CountingSignatureVerifier();
+    const shortBridge = await makeAuthoritativeBridge(shortVerifier);
+    const short = await shortBridge.submitSignature(
+      "fixture-floor-1",
+      "verifier-1",
+      "ab".repeat(VERIFIER_RESOURCE_LIMITS.minSignatureBytes - 1),
+    );
+    expect(short.accepted).toBe(false);
+    expect(short.failure_code).toBe("invalid_signature");
+    expect(shortVerifier.calls).toBe(0);
+
+    const longVerifier = new CountingSignatureVerifier();
+    const longBridge = await makeAuthoritativeBridge(longVerifier);
+    const long = await longBridge.submitSignature(
+      "fixture-floor-1",
+      "verifier-1",
+      "ab".repeat(VERIFIER_RESOURCE_LIMITS.maxSignatureBytes + 1),
+    );
+    expect(long.accepted).toBe(false);
+    expect(long.failure_code).toBe("resource_limit_exceeded");
+    expect(longVerifier.calls).toBe(0);
+  });
+
+  it("bounds returned and thrown signature-verifier errors", async () => {
+    const returned = await (await makeAuthoritativeBridge(new OversizedErrorSignatureVerifier()))
+      .submitSignature("fixture-floor-1", "verifier-1", "ab".repeat(64));
+    expect(returned.failure_code).toBe("resource_limit_exceeded");
+    expect(returned.error?.length).toBeLessThanOrEqual(VERIFIER_RESOURCE_LIMITS.maxErrorChars);
+
+    const thrown = await (await makeAuthoritativeBridge(new ThrowingOversizedErrorSignatureVerifier()))
+      .submitSignature("fixture-floor-1", "verifier-1", "ab".repeat(64));
+    expect(thrown.failure_code).toBe("resource_limit_exceeded");
+    expect(thrown.error?.length).toBeLessThanOrEqual(VERIFIER_RESOURCE_LIMITS.maxErrorChars);
   });
 
   it("fails closed for unavailable and format-only signature verifiers", async () => {

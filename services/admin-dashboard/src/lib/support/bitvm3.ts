@@ -9,6 +9,7 @@ import {
   isProductionVerified,
   isUnavailableBackend,
   rejectNonProductionVerification,
+  VERIFIER_RESOURCE_LIMITS,
   type BackendIdentity,
   type VerificationFailureCode,
   type VerificationResult,
@@ -92,16 +93,46 @@ type RecursiveValidation = RecursiveValidationSuccess | RecursiveValidationFailu
 async function validateRecursiveRequest(value: unknown): Promise<RecursiveValidation> {
   if (!isRecord(value)
     || value.contract_version !== VERIFIER_CONTRACT_VERSION
-    || !isNonEmptyString(value.proof_id)
-    || typeof value.recursive_height !== "number"
-    || !Number.isInteger(value.recursive_height)
-    || value.recursive_height < 0) {
+    || !isNonEmptyString(value.proof_id)) {
     return {
       ok: false,
       proof_id: "unknown",
       recursive_height: 0,
       failure_code: "malformed_request",
       error: "BitVM3 request requires a non-negative recursive height and proof id",
+    };
+  }
+
+  if (value.proof_id.length > VERIFIER_RESOURCE_LIMITS.maxIdentifierChars) {
+    return {
+      ok: false,
+      proof_id: "unknown",
+      recursive_height: 0,
+      failure_code: "resource_limit_exceeded",
+      error: "BitVM3 proof id exceeds the v1 resource limit",
+    };
+  }
+
+  if (typeof value.recursive_height !== "number"
+    || !Number.isFinite(value.recursive_height)
+    || !Number.isSafeInteger(value.recursive_height)
+    || value.recursive_height < 0) {
+    return {
+      ok: false,
+      proof_id: value.proof_id,
+      recursive_height: 0,
+      failure_code: "malformed_request",
+      error: "BitVM3 recursive height must be a non-negative safe integer",
+    };
+  }
+
+  if (value.recursive_height > VERIFIER_RESOURCE_LIMITS.maxRecursiveHeight) {
+    return {
+      ok: false,
+      proof_id: value.proof_id,
+      recursive_height: VERIFIER_RESOURCE_LIMITS.maxRecursiveHeight,
+      failure_code: "resource_limit_exceeded",
+      error: "BitVM3 recursive height exceeds the v1 resource limit",
     };
   }
 
@@ -212,7 +243,7 @@ export class BitVM3Orchestrator {
     } catch (error: unknown) {
       verification = createVerificationFailure(
         "internal_error",
-        error instanceof Error ? error.message : "Recursive verifier adapter failed",
+        error,
         {
           request_digest: validation.verifier_request_digest,
           backend: verifierBackend,

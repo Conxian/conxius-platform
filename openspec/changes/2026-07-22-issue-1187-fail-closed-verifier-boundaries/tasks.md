@@ -78,3 +78,19 @@
 - [x] Add controlled deferred-promise race coverage for same/distinct BitVM
   signers, verifier throw/retry, concurrent ZKCP verification, and watch/
   finalize ordering.
+
+## Phase 7 — Formal review remediation (PR #1198)
+
+- [x] Serialize BitVM2 floor initialization/replay with signature submission,
+  define idempotent replay/conflict semantics, and guard signature commit with
+  aggregation identity compare-and-swap without poisoning the per-proof queue.
+- [x] Centralize bounded normalization for verifier, payment, signature, and
+  key-release adapter errors plus settlement-route catch responses; add returned
+  and thrown over-limit coverage.
+- [x] Define `conxian.verifier.signature.v1` canonical even-byte hex encoding
+  with explicit minimum/maximum byte limits and reject odd-length signatures
+  before backend dispatch.
+- [x] Enforce BitVM3 identifier and versioned recursive-height bounds, including
+  safe-integer, overflow, negative, NaN, and adapter-dispatch tests.
+- [x] Re-run focused/full Vitest, dashboard typecheck, lifecycle/control and
+  contamination guards, strict OpenSpec validation, and diff hygiene.

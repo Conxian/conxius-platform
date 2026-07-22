@@ -25,7 +25,13 @@ contract before decoding, hashing, or invoking an adapter. It MUST bound the
 request body, encoded proof bytes, public-input count and per/total input bytes,
 identifiers, digests/domains, backend versions, addresses, transaction ids,
 signatures, signer sets, tap counts, confirmation counts, timestamps, actions,
-and error strings. A resource overage MUST return the typed
+and error strings. BitVM signature submission MUST use the explicit versioned
+`conxian.verifier.signature.v1` hex encoding, require an even number of nibbles,
+and accept only the configured minimum/maximum decoded byte range. BitVM3
+recursive metadata MUST bound `proof_id` by the identifier limit and require
+`recursive_height` to be a finite non-negative safe integer no greater than the
+versioned recursive-height maximum. These checks MUST occur before the relevant
+signature or recursive verifier adapter is invoked. A resource overage MUST return the typed
 `resource_limit_exceeded` failure; the settlement route MUST return HTTP 413.
 
 #### Scenario: Contract mutations fail closed
@@ -35,12 +41,24 @@ and error strings. A resource overage MUST return the typed
 - **THEN** validation returns a typed non-success result and no verifier state
   advances
 
+#### Scenario: Versioned signature and recursive metadata bounds fail closed
+
+- **WHEN** a BitVM signature has odd-length hex, a decoded byte length below or
+  above the configured range, or non-hex characters, or a BitVM3 request has an
+  oversized proof id, negative/NaN/infinite/unsafe recursive height, or a height
+  above the versioned maximum
+- **THEN** the boundary returns `invalid_signature`, `malformed_request`, or
+  `resource_limit_exceeded` as appropriate, does not invoke the signature or
+  recursive verifier adapter, and does not advance state
+
 #### Scenario: Malformed or throwing adapters fail closed
 
 - **WHEN** an injected verifier, observer, signature verifier, or key-release
   adapter throws, returns null, or returns a malformed/contradictory result
-- **THEN** the boundary returns a typed non-success result and does not advance
-  or regress authoritative state
+- **THEN** the boundary returns a typed non-success result with error text
+  normalized to `maxErrorChars` and does not advance or regress authoritative
+  state; an over-limit error is `resource_limit_exceeded` and the settlement
+  route maps it to HTTP 413
 
 #### Scenario: Adapter identity is authoritative
 
@@ -167,6 +185,16 @@ toward completion. Signature formatting alone MUST NOT complete aggregation.
 - **THEN** the same signer is counted at most once, distinct authorized signers
   may each commit once, failed reservations are released for retry, and the
   commit re-checks signer uniqueness
+
+#### Scenario: Floor initialization cannot detach an active aggregation
+
+- **WHEN** a signature verifier is awaiting an async result while an identical
+  `verifyFloor` replay arrives for the same proof, or a conflicting floor
+  initialization arrives
+- **THEN** the replay waits on the same per-proof guard and is read-only (or is
+  rejected as a conflict), the live aggregation object and committed signatures
+  remain unchanged, and a stale signature result cannot commit to a detached
+  aggregation
 
 ### Requirement: Threat-class guard and regression coverage
 

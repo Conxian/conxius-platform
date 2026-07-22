@@ -82,16 +82,22 @@ calculation, or adapter dispatch:
 | Identifiers / circuit and key ids | 128 characters |
 | Backend version | 64 characters |
 | Addresses / transaction ids | 256 characters |
-| Signatures | 1,024 characters |
+| BitVM signatures | `conxian.verifier.signature.v1`, canonical even-length hex, 64–512 decoded bytes / 1,024 characters |
 | Authorized signers / tap count | 64 signers / 1,024 taps |
+| BitVM3 proof id / recursive height | 128 characters / safe integer `0..1,024` |
 | Confirmation count | 1,000,000 |
 | Decryption-key evidence | 4,096 characters |
 
 Digest fields remain exact `sha256:<64 lowercase hex>` values, while error,
-timestamp, and action strings have explicit length ceilings. Encoded-byte upper
-bounds reject oversized hex/base64/base64url values before decoding or hashing.
-The settlement route maps `resource_limit_exceeded` to HTTP `413`; helper and
-adapter boundaries return the same typed failure without invoking a backend.
+timestamp, and action strings have explicit length ceilings. BitVM signature
+submissions carry the explicit signature encoding/version contract and reject
+odd-length hex, short/long byte sequences, and malformed characters before
+signature-verifier dispatch. BitVM3 recursive metadata is checked for bounded
+identifiers, finite safe integers, non-negative height, and the versioned height
+ceiling before recursive-verifier dispatch. Encoded-byte upper bounds reject
+oversized hex/base64/base64url values before decoding or hashing. The settlement
+route maps `resource_limit_exceeded` to HTTP `413`; helper and adapter
+boundaries return the same typed failure without invoking a backend.
 
 ## 3. Adapter and provenance model
 
@@ -114,7 +120,11 @@ finalized intent. Duplicate intent ids are rejected rather than overwritten.
 Injected verifier, observer, signature, and key-release adapters are
 totalized at the boundary: thrown exceptions, null values, malformed result
 shapes, contradictory status/failure combinations, and non-production success
-labels become typed non-success results without state advancement.
+labels become typed non-success results without state advancement. All adapter
+and route-catch error text is normalized through the shared `maxErrorChars`
+ceiling; an over-limit message is truncated and classified as
+`resource_limit_exceeded`, and arbitrary thrown values never reach the response
+unbounded.
 
 BitVM2 aggregation requires a profile-scoped authorized signer set, unique
 signer ids, and an explicitly injected signature verifier that returns a
@@ -131,6 +141,14 @@ finalization is idempotent, and the existing finalization lock rejects a second
 key-release attempt while release is in flight. BitVM2 signature submissions
 are serialized per proof, reserve a signer before async verification, release
 that reservation on all failure/throw paths, and re-check uniqueness at commit.
+BitVM2 floor initialization and signature submission share that same per-proof
+FIFO guard. A successful floor initialization is recorded by request digest,
+backend identity, and tap profile; an identical replay is read-only and cannot
+replace the live aggregation, while a conflicting replay is rejected. Signature
+commit performs an object-identity compare-and-swap against the guarded
+aggregation so a stale async result cannot commit to a detached object, and the
+queue release is protected by `finally` so adapter failures do not poison the
+lock.
 
 The platform deliberately does not export a production simulator or a real
 cryptographic implementation. Future Gateway/Core/Nexus adapters must satisfy

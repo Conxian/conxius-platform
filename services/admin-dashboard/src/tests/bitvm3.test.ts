@@ -4,6 +4,7 @@ import type { BitVM3Verifier } from "../lib/support/bitvm3";
 import {
   createVerificationResult,
   digestVerifierRequest,
+  VERIFIER_RESOURCE_LIMITS,
   type BackendIdentity,
   type VerifierRequest,
 } from "../lib/support/verifier-contract";
@@ -36,8 +37,10 @@ class ContradictoryFixtureVerifier implements BitVM3Verifier {
 
 class AuthoritativeFixtureVerifier implements BitVM3Verifier {
   public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
+  public calls = 0;
 
   public async verify(request: VerifierRequest) {
+    this.calls += 1;
     return createVerificationResult({
       status: "valid",
       request_digest: await digestVerifierRequest(request),
@@ -145,5 +148,58 @@ describe("BitVM3Orchestrator fail-closed boundary", () => {
     expect(state.failure_code).toBe("malformed_request");
     expect(state.verification.status).toBe("malformed");
     expect(orchestrator.getState(request.proof_id)).toBeUndefined();
+  });
+
+  it("enforces proof-id and recursive-height limits before backend dispatch", async () => {
+    const verifier = new AuthoritativeFixtureVerifier();
+    const orchestrator = new BitVM3Orchestrator(verifier);
+    const verifierRequest = await makeVerifierRequest({
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production",
+    });
+
+    const maximum = await orchestrator.verifyRecursive({
+      ...makeRecursiveRequest(verifierRequest),
+      recursive_height: VERIFIER_RESOURCE_LIMITS.maxRecursiveHeight,
+    });
+    expect(maximum.isVerified).toBe(true);
+    expect(verifier.calls).toBe(1);
+
+    const oversizedProofId = await orchestrator.verifyRecursive({
+      ...makeRecursiveRequest(verifierRequest),
+      proof_id: "p".repeat(VERIFIER_RESOURCE_LIMITS.maxIdentifierChars + 1),
+    });
+    expect(oversizedProofId.failure_code).toBe("resource_limit_exceeded");
+
+    const oversizedHeight = await orchestrator.verifyRecursive({
+      ...makeRecursiveRequest(verifierRequest),
+      recursive_height: VERIFIER_RESOURCE_LIMITS.maxRecursiveHeight + 1,
+    });
+    expect(oversizedHeight.failure_code).toBe("resource_limit_exceeded");
+
+    const unsafeHeight = await orchestrator.verifyRecursive({
+      ...makeRecursiveRequest(verifierRequest),
+      recursive_height: Number.MAX_SAFE_INTEGER,
+    });
+    expect(unsafeHeight.failure_code).toBe("resource_limit_exceeded");
+
+    const overflowHeight = await orchestrator.verifyRecursive({
+      ...makeRecursiveRequest(verifierRequest),
+      recursive_height: Number.MAX_SAFE_INTEGER + 1,
+    });
+    expect(overflowHeight.failure_code).toBe("malformed_request");
+
+    const negativeHeight = await orchestrator.verifyRecursive({
+      ...makeRecursiveRequest(verifierRequest),
+      recursive_height: -1,
+    });
+    expect(negativeHeight.failure_code).toBe("malformed_request");
+
+    const nanHeight = await orchestrator.verifyRecursive({
+      ...makeRecursiveRequest(verifierRequest),
+      recursive_height: Number.NaN,
+    });
+    expect(nanHeight.failure_code).toBe("malformed_request");
+    expect(verifier.calls).toBe(1);
   });
 });

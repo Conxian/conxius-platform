@@ -1,15 +1,28 @@
 import { describe, expect, it } from "vitest";
 import {
   createPaymentObservation,
+  isCanonicalSignatureHex,
   isEncodedValueWithinLimit,
   maxEncodedLengthForBytes,
   validateVerifierRequest,
   VERIFIER_RESOURCE_LIMITS,
   VERIFIER_RESOURCE_LIMITS_VERSION,
+  VERIFIER_SIGNATURE_ENCODING,
+  VERIFIER_SIGNATURE_ENCODING_VERSION,
 } from "../lib/support/verifier-contract";
 import { makeVerifierRequest } from "./fixtures/verifierFixtures";
 
 describe("verifier contract resource limits", () => {
+  it("defines canonical versioned even-byte signature encoding bounds", () => {
+    expect(VERIFIER_SIGNATURE_ENCODING).toBe("hex");
+    expect(VERIFIER_SIGNATURE_ENCODING_VERSION).toBe("conxian.verifier.signature.v1");
+    expect(isCanonicalSignatureHex("ab".repeat(VERIFIER_RESOURCE_LIMITS.minSignatureBytes))).toBe(true);
+    expect(isCanonicalSignatureHex("cd".repeat(VERIFIER_RESOURCE_LIMITS.maxSignatureBytes))).toBe(true);
+    expect(isCanonicalSignatureHex(`${"ab".repeat(VERIFIER_RESOURCE_LIMITS.minSignatureBytes)}a`)).toBe(false);
+    expect(isCanonicalSignatureHex("ab".repeat(VERIFIER_RESOURCE_LIMITS.minSignatureBytes - 1))).toBe(false);
+    expect(isCanonicalSignatureHex("ab".repeat(VERIFIER_RESOURCE_LIMITS.maxSignatureBytes + 1))).toBe(false);
+  });
+
   it("exposes versioned encoded-byte boundaries", () => {
     expect(VERIFIER_RESOURCE_LIMITS_VERSION).toBe("conxian.verifier.limits.v1");
     const exactProof = "ab".repeat(VERIFIER_RESOURCE_LIMITS.maxProofBytes);

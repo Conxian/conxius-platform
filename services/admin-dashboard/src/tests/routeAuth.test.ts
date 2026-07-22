@@ -21,6 +21,7 @@ import { GET as getDeploymentBlueprint } from "../app/api/deployment/blueprint/r
 import { POST as postGovernanceVote } from "../app/api/governance/votes/route";
 import { POST as postSecrets } from "../app/api/secrets/route";
 import { POST as postSettlementEngine } from "../app/api/v1/settlement-engine/route";
+import { bitvmBridge } from "../lib/support/bitvm";
 import { M2MAuthenticator, M2MConfig, type Scope } from "../lib/support/m2m";
 import { VERIFIER_RESOURCE_LIMITS } from "../lib/support/verifier-contract";
 
@@ -227,5 +228,24 @@ describe("route-level M2M authorization", () => {
     );
     expect(oversizedIntent.status).toBe(413);
     expect(await oversizedIntent.json()).toMatchObject({ failure_code: "resource_limit_exceeded" });
+  });
+
+  it("bounds unexpected settlement catch errors before returning them", async () => {
+    const treasuryToken = await issueToken(["write:treasury", "m2m:internal"]);
+    const verifyFloor = vi.spyOn(bitvmBridge, "verifyFloor")
+      .mockRejectedValue(new Error("r".repeat(VERIFIER_RESOURCE_LIMITS.maxErrorChars + 1)));
+
+    try {
+      const response = await postSettlementEngine(
+        bearerRequest("POST", treasuryToken, { action: "verify-floor", request: {} }),
+      );
+      const body = await response.json() as { failure_code?: string; error?: string };
+
+      expect(response.status).toBe(413);
+      expect(body.failure_code).toBe("resource_limit_exceeded");
+      expect(body.error?.length).toBeLessThanOrEqual(VERIFIER_RESOURCE_LIMITS.maxErrorChars);
+    } finally {
+      verifyFloor.mockRestore();
+    }
   });
 });

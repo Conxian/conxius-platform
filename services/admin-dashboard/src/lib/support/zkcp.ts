@@ -16,6 +16,7 @@ import {
   isProvenance,
   isUnavailableBackend,
   isVerificationFailureCode,
+  normalizeBoundaryError,
   rejectNonProductionVerification,
   VERIFIER_RESOURCE_LIMITS,
   type BackendIdentity,
@@ -362,10 +363,11 @@ async function validateZKCPIntentBinding(
     }
     return { ok: true, binding };
   } catch (error: unknown) {
+    const normalized = normalizeBoundaryError(error, "Unable to derive ZKCP statement binding");
     return {
       ok: false,
       failure_code: "digest_unavailable",
-      error: error instanceof Error ? error.message : "Unable to derive ZKCP statement binding",
+      error: normalized.message,
     };
   }
 }
@@ -403,8 +405,11 @@ async function normalizePaymentResult(
   if (value.failure_code !== undefined && !isVerificationFailureCode(value.failure_code)) {
     return createPaymentFailure("payment_mismatch", "Payment observer returned an unknown failure code");
   }
+  if (value.error !== undefined && typeof value.error !== "string") {
+    return createPaymentFailure("payment_mismatch", "Payment observer returned a malformed error");
+  }
   if (typeof value.error === "string" && value.error.length > VERIFIER_RESOURCE_LIMITS.maxErrorChars) {
-    return createPaymentFailure("resource_limit_exceeded", "Payment observer error exceeds the v1 resource limit");
+    return createPaymentFailure("resource_limit_exceeded", value.error);
   }
 
   if (value.status !== "observed") {
@@ -670,7 +675,7 @@ export class ZKCPBridge {
       } catch (error: unknown) {
         result = createVerificationFailure(
           "internal_error",
-          error instanceof Error ? error.message : "ZK proof verifier adapter failed",
+          error,
           {
             request_digest: requestValidation.request_digest,
             backend: verifierBackend,
@@ -821,7 +826,7 @@ export class ZKCPBridge {
       } catch (error: unknown) {
         return copyPaymentResult(createPaymentFailure(
           "internal_error",
-          error instanceof Error ? error.message : "Payment observer adapter failed",
+          error,
         ));
       }
       if (!this.isCurrentOperation(operation)) {
@@ -1021,13 +1026,14 @@ export class ZKCPBridge {
         immutableCopy(paymentEvidence.observation),
       );
     } catch (error: unknown) {
+      const normalized = normalizeBoundaryError(error, "Key-release backend failed");
       return {
         finalized: false,
         status: "rejected",
         intentId,
         paymentHash: paymentEvidence.observation.txid,
-        failure_code: "internal_error",
-        error: error instanceof Error ? error.message : "Key-release backend failed",
+        failure_code: normalized.truncated ? "resource_limit_exceeded" : "internal_error",
+        error: normalized.message,
       };
     }
 
@@ -1046,13 +1052,14 @@ export class ZKCPBridge {
       && ((typeof release.error === "string" && release.error.length > VERIFIER_RESOURCE_LIMITS.maxErrorChars)
         || (typeof release.decryptionKey === "string"
           && release.decryptionKey.length > VERIFIER_RESOURCE_LIMITS.maxDecryptionKeyChars))) {
+      const normalized = normalizeBoundaryError(release.error, "Key-release evidence exceeds the v1 resource limit");
       return {
         finalized: false,
         status: "rejected",
         intentId,
         paymentHash: paymentEvidence.observation.txid,
         failure_code: "resource_limit_exceeded",
-        error: "Key-release evidence exceeds the v1 resource limit",
+        error: normalized.message,
       };
     }
 

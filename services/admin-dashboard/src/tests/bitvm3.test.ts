@@ -11,6 +11,8 @@ import {
   digestVerifierRequest,
   VERIFIER_BITVM3_RETENTION_POLICY,
   VERIFIER_BITVM3_RETENTION_POLICY_VERSION,
+  VERIFIER_BITVM3_TOMBSTONE_POLICY,
+  VERIFIER_BITVM3_TOMBSTONE_POLICY_VERSION,
   VERIFIER_RESOURCE_LIMITS,
   type BackendIdentity,
   type VerifierRequest,
@@ -124,6 +126,10 @@ describe("BitVM3Orchestrator fail-closed boundary", () => {
     expect(defaults.getRetentionSnapshot()).toMatchObject({
       max_retained_states: 1024,
       terminal_ttl_ms: 15 * 60 * 1000,
+      tombstone_policy_version: VERIFIER_BITVM3_TOMBSTONE_POLICY_VERSION,
+      max_tombstones: VERIFIER_BITVM3_TOMBSTONE_POLICY.maxTombstones,
+      tombstone_ttl_ms: VERIFIER_BITVM3_TOMBSTONE_POLICY.ttlMs,
+      tombstone_count: 0,
     });
 
     const lowerOverride = new BitVM3Orchestrator(new UnavailableBitVM3Verifier(), {
@@ -132,6 +138,13 @@ describe("BitVM3Orchestrator fail-closed boundary", () => {
     expect(lowerOverride.getRetentionSnapshot()).toMatchObject({
       max_retained_states: 2,
       terminal_ttl_ms: 1,
+    });
+    const lowerTombstoneOverride = new BitVM3Orchestrator(new UnavailableBitVM3Verifier(), {
+      tombstones: { maxTombstones: 2, ttlMs: 1 },
+    });
+    expect(lowerTombstoneOverride.getRetentionSnapshot()).toMatchObject({
+      max_tombstones: 2,
+      tombstone_ttl_ms: 1,
     });
   });
 
@@ -480,6 +493,7 @@ describe("BitVM3Orchestrator fail-closed boundary", () => {
       state_map_count: 0,
       initialization_map_count: 0,
       generation_map_count: 0,
+      tombstone_count: 1,
       in_flight_count: 0,
       proof_queue_count: 0,
     });
@@ -488,6 +502,103 @@ describe("BitVM3Orchestrator fail-closed boundary", () => {
     expect(replayAfterExpiry.status).toBe("verified");
     expect(verifier.calls).toBe(2);
     expect(orchestrator.getState(request.proof_id)?.status).toBe("verified");
+    expect(orchestrator.getRetentionSnapshot().tombstone_count).toBe(0);
+  });
+
+  it("retains an expired identity tombstone and rejects conflicting reuse without dispatch", async () => {
+    const clock = makeClock();
+    const verifier = new AuthoritativeFixtureVerifier();
+    const orchestrator = new BitVM3Orchestrator(verifier, {
+      now: clock.now,
+      retention: { maxRetainedStates: 2, terminalTtlMs: 10 },
+      tombstones: { maxTombstones: 2, ttlMs: 20 },
+    });
+    const request = makeRecursiveRequest(await makeVerifierRequest({
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production",
+    }));
+    expect((await orchestrator.verifyRecursive(request)).status).toBe("verified");
+
+    clock.advance(10);
+    expect(orchestrator.getState(request.proof_id)).toBeUndefined();
+    expect(orchestrator.getRetentionSnapshot()).toMatchObject({
+      tombstone_count: 1,
+      retained_state_count: 0,
+    });
+
+    const conflicting = await orchestrator.verifyRecursive({
+      ...request,
+      recursive_height: request.recursive_height + 1,
+    });
+    expect(conflicting.status).toBe("failed");
+    expect(conflicting.failure_code).toBe("malformed_request");
+    expect(verifier.calls).toBe(1);
+    expect(orchestrator.getRetentionSnapshot().tombstone_count).toBe(1);
+  });
+
+  it("enforces the tombstone cap without evicting an expired state, then cleans atomically", async () => {
+    const clock = makeClock();
+    const verifier = new AuthoritativeFixtureVerifier();
+    const orchestrator = new BitVM3Orchestrator(verifier, {
+      now: clock.now,
+      retention: { maxRetainedStates: 3, terminalTtlMs: 10 },
+      tombstones: { maxTombstones: 1, ttlMs: 100 },
+    });
+    const baseRequest = await makeVerifierRequest({
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production",
+    });
+    const first = makeRecursiveRequest(baseRequest);
+    const second = { ...first, proof_id: "fixture-recursive-cap-2" };
+    const third = { ...first, proof_id: "fixture-recursive-cap-3" };
+    expect((await orchestrator.verifyRecursive(first)).status).toBe("verified");
+    expect((await orchestrator.verifyRecursive(second)).status).toBe("verified");
+
+    clock.advance(10);
+    expect(orchestrator.getRetentionSnapshot()).toMatchObject({
+      tombstone_count: 1,
+      retained_state_count: 1,
+      state_map_count: 1,
+    });
+    const blocked = await orchestrator.verifyRecursive(third);
+    expect(blocked.failure_code).toBe("resource_limit_exceeded");
+    expect(verifier.calls).toBe(2);
+
+    clock.advance(100);
+    expect(orchestrator.getRetentionSnapshot()).toMatchObject({
+      tombstone_count: 1,
+      retained_state_count: 0,
+      state_map_count: 0,
+      initialization_map_count: 0,
+      generation_map_count: 0,
+    });
+  });
+
+  it("allows conflicting proof-id reuse only after the explicit tombstone window expires", async () => {
+    const clock = makeClock();
+    const verifier = new AuthoritativeFixtureVerifier();
+    const orchestrator = new BitVM3Orchestrator(verifier, {
+      now: clock.now,
+      retention: { maxRetainedStates: 2, terminalTtlMs: 10 },
+      tombstones: { maxTombstones: 2, ttlMs: 20 },
+    });
+    const request = makeRecursiveRequest(await makeVerifierRequest({
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production",
+    }));
+    expect((await orchestrator.verifyRecursive(request)).status).toBe("verified");
+
+    clock.advance(10);
+    expect(orchestrator.getRetentionSnapshot().tombstone_count).toBe(1);
+    clock.advance(20);
+    expect(orchestrator.getRetentionSnapshot().tombstone_count).toBe(0);
+
+    const conflictingAfterWindow = await orchestrator.verifyRecursive({
+      ...request,
+      recursive_height: request.recursive_height + 1,
+    });
+    expect(conflictingAfterWindow.status).toBe("verified");
+    expect(verifier.calls).toBe(2);
   });
 
   it("accepts the exact ECMAScript Date serialization boundary on adapter commit", async () => {

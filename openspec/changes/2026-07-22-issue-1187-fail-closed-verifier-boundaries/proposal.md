@@ -48,6 +48,15 @@ must reject simulated, malformed, invalid, unknown, or caller-only evidence.
 - Harden BitVM2, BitVM3, ZKCP, payment observation, and the settlement route so
   only an injected supported backend plus independently observed payment can
   advance settlement state.
+- Add versioned BitVM2 retained-state caps with pre-dispatch reservations,
+  active-operation preservation, and atomic terminal cleanup across associated
+  maps.
+- Retain bounded BitVM3 request-identity tombstones after terminal expiry so
+  conflicting same-id reuse fails closed during the explicit window; require a
+  durable Gateway/Core identity registry for permanent global uniqueness.
+- Capture and validate ZKCP finalization timestamps and bounded release inputs
+  before external key release, latch dispatch exactly once, and make deferred,
+  malformed, thrown, and retry paths fail closed without duplicate release.
 - Extend Python and PowerShell contamination guards to detect the exact
   dangerous classes without scanning test-only fixtures as production code.
 - Add negative-vector tests for unavailable backends, simulation, key/proof/input
@@ -91,3 +100,14 @@ those cross-repository backends are available and independently accepted.
    in both repository-supported script dialects.
 9. Documentation separates strategic alignment/scaffolding from production
    cryptographic readiness and records the remaining cross-repo work.
+10. BitVM2 retention reservations prevent verifier dispatch at capacity and
+    cleanup never evicts in-flight challenges, signatures, or queued work;
+    terminal cleanup removes related state maps atomically.
+11. BitVM3 retains a versioned, capped tombstone window for expired proof ids;
+    same-request replay is deterministic, conflicting replay fails closed, and
+    documentation requires durable Gateway/Core identity for permanent reuse
+    prevention.
+12. ZKCP validates a monotonic finite safe Date-range timestamp and prebuilds
+    bounded release inputs before key-releaser dispatch; invalid clocks make
+    zero external calls, successful/retry paths make exactly one call, and no
+    post-call clock/serialization failure can cause a duplicate release.

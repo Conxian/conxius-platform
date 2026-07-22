@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  BITVM2_TIMESTAMP_MAX_MS,
+  BitVM2ConfigurationError,
   BitVMBridge,
   createSignatureAttestation,
   UnavailableBitVMVerifier,
@@ -11,6 +13,8 @@ import {
 import {
   createVerificationResult,
   digestVerifierRequest,
+  VERIFIER_BITVM2_RETENTION_POLICY,
+  VERIFIER_BITVM2_RETENTION_POLICY_VERSION,
   VERIFIER_RESOURCE_LIMITS,
   type BackendIdentity,
   type VerifierRequest,
@@ -30,14 +34,43 @@ const AUTHORITATIVE_TEST_BACKEND: BackendIdentity = {
 
 class AuthoritativeFixtureVerifier implements BitVMVerifier {
   public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
+  public calls = 0;
 
   public async verify(request: VerifierRequest) {
+    this.calls += 1;
     return createVerificationResult({
       status: "valid",
       request_digest: await digestVerifierRequest(request),
       backend: AUTHORITATIVE_TEST_BACKEND,
       provenance: "production",
     });
+  }
+}
+
+class DeferredFloorVerifier extends AuthoritativeFixtureVerifier {
+  private resolveStarted!: () => void;
+  private resolveGate!: () => void;
+  public readonly started: Promise<void>;
+  private readonly gate: Promise<void>;
+
+  public constructor() {
+    super();
+    this.started = new Promise<void>((resolve) => {
+      this.resolveStarted = resolve;
+    });
+    this.gate = new Promise<void>((resolve) => {
+      this.resolveGate = resolve;
+    });
+  }
+
+  public override async verify(request: VerifierRequest) {
+    this.resolveStarted();
+    await this.gate;
+    return super.verify(request);
+  }
+
+  public release(): void {
+    this.resolveGate();
   }
 }
 
@@ -699,6 +732,191 @@ describe("BitVMBridge fail-closed boundary", () => {
     expect(simulatedResult.accepted).toBe(false);
     expect(simulatedResult.failure_code).toBe("simulated_result");
     expect(simulated.getAggregation("fixture-floor-1")?.signatures).toHaveLength(0);
+  });
+
+  it("publishes a versioned floor cap and refuses unique proofs before verifier dispatch", async () => {
+    let now = 1_800_000_000_000;
+    const verifier = new AuthoritativeFixtureVerifier();
+    const bridge = new BitVMBridge(verifier, undefined, {
+      now: () => now,
+      retention: { maxRetainedFloors: 1, terminalTtlMs: 10 },
+    });
+    const firstRequest = makeFloorRequest(await makeVerifierRequest({
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production",
+    }));
+    const secondRequest = {
+      ...makeFloorRequest(await makeVerifierRequest({
+        backend: AUTHORITATIVE_TEST_BACKEND,
+        provenance: "production",
+      })),
+      proof_id: "fixture-floor-cap-2",
+    };
+
+    expect((await bridge.verifyFloor(firstRequest)).verified).toBe(true);
+    const blocked = await bridge.verifyFloor(secondRequest);
+
+    expect(blocked.failure_code).toBe("resource_limit_exceeded");
+    expect(verifier.calls).toBe(1);
+    expect(bridge.getRetentionSnapshot()).toMatchObject({
+      policy_version: VERIFIER_BITVM2_RETENTION_POLICY_VERSION,
+      max_retained_floors: 1,
+      retained_floor_count: 1,
+      state_map_count: 1,
+      aggregation_map_count: 1,
+      initialization_map_count: 1,
+      in_flight_count: 0,
+      proof_queue_count: 0,
+    });
+    expect(VERIFIER_BITVM2_RETENTION_POLICY.maxRetainedFloors).toBeGreaterThan(0);
+  });
+
+  it("preserves in-flight floors and queues while capacity blocks a second dispatch", async () => {
+    let now = 1_800_000_000_000;
+    const verifier = new DeferredFloorVerifier();
+    const bridge = new BitVMBridge(verifier, undefined, {
+      now: () => now,
+      retention: { maxRetainedFloors: 1, terminalTtlMs: 10 },
+    });
+    const firstRequest = makeFloorRequest(await makeVerifierRequest({
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production",
+    }));
+    const secondRequest = {
+      ...makeFloorRequest(await makeVerifierRequest({
+        backend: AUTHORITATIVE_TEST_BACKEND,
+        provenance: "production",
+      })),
+      proof_id: "fixture-floor-in-flight-2",
+    };
+
+    const pending = bridge.verifyFloor(firstRequest);
+    await verifier.started;
+    now += 100;
+    expect(bridge.getRetentionSnapshot()).toMatchObject({
+      retained_floor_count: 0,
+      in_flight_count: 1,
+      proof_queue_count: 1,
+    });
+
+    const blocked = await bridge.verifyFloor(secondRequest);
+    expect(blocked.failure_code).toBe("resource_limit_exceeded");
+    expect(verifier.calls).toBe(0);
+
+    verifier.release();
+    expect((await pending).verified).toBe(true);
+    expect(verifier.calls).toBe(1);
+    expect(bridge.getRetentionSnapshot()).toMatchObject({
+      retained_floor_count: 1,
+      in_flight_count: 0,
+      proof_queue_count: 0,
+    });
+  });
+
+  it("keeps active challenges from terminal cleanup and removes associated maps atomically", async () => {
+    let now = 1_800_000_000_000;
+    const bridge = new BitVMBridge(new AuthoritativeFixtureVerifier(), undefined, {
+      now: () => now,
+      retention: { maxRetainedFloors: 2, terminalTtlMs: 10 },
+    });
+    const request = makeFloorRequest(await makeVerifierRequest({
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production",
+    }));
+    expect((await bridge.verifyFloor(request)).verified).toBe(true);
+    expect((await bridge.challengeTap(request.proof_id, 0)).accepted).toBe(true);
+    now += 100;
+    expect(bridge.getRetentionSnapshot()).toMatchObject({
+      retained_floor_count: 1,
+      state_map_count: 1,
+      aggregation_map_count: 1,
+      initialization_map_count: 1,
+    });
+
+    const cleanBridge = new BitVMBridge(new AuthoritativeFixtureVerifier(), undefined, {
+      now: () => now,
+      retention: { maxRetainedFloors: 2, terminalTtlMs: 10 },
+    });
+    const cleanRequest = {
+      ...request,
+      proof_id: "fixture-floor-terminal-cleanup",
+    };
+    expect((await cleanBridge.verifyFloor(cleanRequest)).verified).toBe(true);
+    const internals = cleanBridge as unknown as {
+      states: Map<string, { status: string; lastUpdate: string }>;
+      aggregations: Map<string, unknown>;
+      floorInitializations: Map<string, unknown>;
+      floorReservations: Map<string, unknown>;
+      reservedSigners: Map<string, unknown>;
+      aggregationQueues: Map<string, unknown>;
+    };
+    const terminalState = internals.states.get(cleanRequest.proof_id);
+    expect(terminalState).toBeDefined();
+    if (terminalState) terminalState.status = "failed";
+    now += 100;
+
+    expect(cleanBridge.purgeExpiredTerminalRecords()).toBe(1);
+    expect(cleanBridge.getRetentionSnapshot()).toMatchObject({
+      retained_floor_count: 0,
+      state_map_count: 0,
+      aggregation_map_count: 0,
+      initialization_map_count: 0,
+      in_flight_count: 0,
+      proof_queue_count: 0,
+      reserved_signer_proof_count: 0,
+    });
+    expect(internals.floorReservations.size).toBe(0);
+    expect(internals.reservedSigners.size).toBe(0);
+    expect(internals.aggregationQueues.size).toBe(0);
+  });
+
+  it("makes same-request replay deterministic and rejects conflicting reuse", async () => {
+    const verifier = new AuthoritativeFixtureVerifier();
+    const bridge = new BitVMBridge(verifier);
+    const request = makeFloorRequest(await makeVerifierRequest({
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production",
+    }));
+    const first = await bridge.verifyFloor(request);
+    const replay = await bridge.verifyFloor({ ...request });
+    const conflicting = await bridge.verifyFloor({
+      ...request,
+      tap_profile: {
+        ...request.tap_profile!,
+        tap_count: request.tap_profile!.tap_count - 1,
+      },
+    });
+
+    expect(first).toEqual(replay);
+    expect(conflicting.failure_code).toBe("malformed_request");
+    expect(verifier.calls).toBe(1);
+  });
+
+  it("rejects invalid BitVM2 clocks before verifier dispatch", async () => {
+    const cases = [
+      { value: -1, failure_code: "malformed_request" },
+      { value: Number.NaN, failure_code: "malformed_request" },
+      { value: Number.MAX_SAFE_INTEGER + 1, failure_code: "malformed_request" },
+      { value: BITVM2_TIMESTAMP_MAX_MS + 1, failure_code: "resource_limit_exceeded" },
+    ] as const;
+    for (const testCase of cases) {
+      const verifier = new AuthoritativeFixtureVerifier();
+      const bridge = new BitVMBridge(verifier, undefined, { now: () => testCase.value });
+      const request = makeFloorRequest(await makeVerifierRequest({
+        backend: AUTHORITATIVE_TEST_BACKEND,
+        provenance: "production",
+      }));
+      const result = await bridge.verifyFloor(request);
+
+      expect(result.failure_code).toBe(testCase.failure_code);
+      expect(verifier.calls).toBe(0);
+    }
+  });
+
+  it("rejects above-policy BitVM2 retention overrides with a typed configuration error", () => {
+    expect(() => new BitVMBridge(new UnavailableBitVMVerifier(), undefined, {
+      retention: { maxRetainedFloors: VERIFIER_BITVM2_RETENTION_POLICY.maxRetainedFloors + 1 },
+    })).toThrowError(BitVM2ConfigurationError);
   });
 
   it("rejects invalid tap challenges and signatures", async () => {

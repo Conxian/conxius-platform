@@ -136,3 +136,23 @@
 - [ ] Re-run focused/full Vitest, dashboard typecheck, lifecycle/control and
   contamination guards, strict OpenSpec validation, diff hygiene, and hosted
   PR checks after the focused commit is pushed.
+
+## Phase 10 — P1/P2 review remediation (PR #1198 review 4759557321)
+
+- [x] Move ZKCP clock validation, bounded release-input construction, and the
+  one-shot release-attempt latch before external key-releaser dispatch; remove
+  post-call clock/serialization/CAS failure paths and add malformed/throwing,
+  deferred, rollback, out-of-range, and retry-count tests.
+- [x] Add versioned BitVM3 tombstone cap/TTL identity retention, deterministic
+  same-request replay, conflicting replay rejection after state expiry,
+  tombstone expiry/cap behavior, atomic cleanup, and durable Gateway/Core
+  identity-registry requirements for permanent reuse prevention.
+- [x] Add versioned BitVM2 retained floor/aggregation/initialization caps with
+  pre-dispatch reservations, in-flight/challenge/signature preservation,
+  terminal associated-map cleanup, and replay/conflict/capacity tests.
+- [x] Apply safe monotonic timestamp/error handling to adjacent BitVM2 and ZKCP
+  commit timestamps and update the issue #1187 design/spec, production
+  boundary, risk, debt, gap, and session-continuity documentation.
+- [ ] Re-run focused/full Vitest, dashboard typecheck, lifecycle/control and
+  contamination guards, strict OpenSpec validation, dependency checks, diff
+  hygiene, and hosted PR checks after the single focused commit is pushed.

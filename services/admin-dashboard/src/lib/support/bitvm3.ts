@@ -13,6 +13,8 @@ import {
   rejectNonProductionVerification,
   VERIFIER_BITVM3_RETENTION_POLICY,
   VERIFIER_BITVM3_RETENTION_POLICY_VERSION,
+  VERIFIER_BITVM3_TOMBSTONE_POLICY,
+  VERIFIER_BITVM3_TOMBSTONE_POLICY_VERSION,
   VERIFIER_RESOURCE_LIMITS,
   type BackendIdentity,
   type VerificationFailureCode,
@@ -68,10 +70,10 @@ export type BitVM3ConfigurationErrorCode = "invalid_retention_policy";
 
 export class BitVM3ConfigurationError extends Error {
   public readonly code: BitVM3ConfigurationErrorCode;
-  public readonly option: "maxRetainedStates" | "terminalTtlMs";
+  public readonly option: "maxRetainedStates" | "terminalTtlMs" | "maxTombstones" | "tombstoneTtlMs";
 
   public constructor(
-    option: "maxRetainedStates" | "terminalTtlMs",
+    option: "maxRetainedStates" | "terminalTtlMs" | "maxTombstones" | "tombstoneTtlMs",
     message: string,
   ) {
     super(message);
@@ -303,15 +305,31 @@ interface BitVM3Initialization {
   retained_at_ms: number;
 }
 
+interface BitVM3ProofTombstone {
+  proof_id: string;
+  verifier_request_digest: string;
+  recursive_height: number;
+  verifier_backend: BackendIdentity;
+  expired_at_ms: number;
+  expires_at_ms: number;
+}
+
 export interface BitVM3RetentionPolicy {
   version: typeof VERIFIER_BITVM3_RETENTION_POLICY_VERSION;
   maxRetainedStates: number;
   terminalTtlMs: number;
 }
 
+export interface BitVM3TombstonePolicy {
+  version: typeof VERIFIER_BITVM3_TOMBSTONE_POLICY_VERSION;
+  maxTombstones: number;
+  ttlMs: number;
+}
+
 export interface BitVM3OrchestratorOptions {
   now?: () => number;
   retention?: Partial<Pick<BitVM3RetentionPolicy, "maxRetainedStates" | "terminalTtlMs">>;
+  tombstones?: Partial<Pick<BitVM3TombstonePolicy, "maxTombstones" | "ttlMs">>;
 }
 
 export interface BitVM3RetentionSnapshot {
@@ -322,6 +340,10 @@ export interface BitVM3RetentionSnapshot {
   state_map_count: number;
   initialization_map_count: number;
   generation_map_count: number;
+  tombstone_policy_version: typeof VERIFIER_BITVM3_TOMBSTONE_POLICY_VERSION;
+  max_tombstones: number;
+  tombstone_ttl_ms: number;
+  tombstone_count: number;
   in_flight_count: number;
   proof_queue_count: number;
 }
@@ -341,11 +363,13 @@ type RetentionCommit =
 export class BitVM3Orchestrator {
   private readonly states = new Map<string, BitVM3State>();
   private readonly initializations = new Map<string, BitVM3Initialization>();
+  private readonly tombstones = new Map<string, BitVM3ProofTombstone>();
   private readonly generations = new Map<string, number>();
   private readonly proofQueues = new Map<string, Promise<void>>();
   private readonly retainedReservations = new Set<string>();
   private readonly now: () => number;
   private readonly retentionPolicy: BitVM3RetentionPolicy;
+  private readonly tombstonePolicy: BitVM3TombstonePolicy;
   private lastObservedTimeMs: number | undefined;
   private retentionQueue: Promise<void> = Promise.resolve();
 
@@ -369,12 +393,25 @@ export class BitVM3Orchestrator {
       maxRetainedStates,
       terminalTtlMs,
     };
+    this.tombstonePolicy = {
+      version: VERIFIER_BITVM3_TOMBSTONE_POLICY_VERSION,
+      maxTombstones: this.policyOption(
+        options.tombstones?.maxTombstones,
+        VERIFIER_BITVM3_TOMBSTONE_POLICY.maxTombstones,
+        "maxTombstones",
+      ),
+      ttlMs: this.policyOption(
+        options.tombstones?.ttlMs,
+        VERIFIER_BITVM3_TOMBSTONE_POLICY.ttlMs,
+        "tombstoneTtlMs",
+      ),
+    };
   }
 
   private policyOption(
     value: number | undefined,
     fallback: number,
-    option: "maxRetainedStates" | "terminalTtlMs",
+    option: "maxRetainedStates" | "terminalTtlMs" | "maxTombstones" | "tombstoneTtlMs",
   ): number {
     if (value === undefined) return fallback;
     if (typeof value !== "number" || !Number.isSafeInteger(value) || value <= 0) {
@@ -436,6 +473,19 @@ export class BitVM3Orchestrator {
     return ids;
   }
 
+  private sameRequestAsTombstone(
+    tombstone: BitVM3ProofTombstone,
+    verifierRequestDigest: string,
+    recursiveHeight: number,
+    verifierBackend: BackendIdentity,
+    requestBackend: BackendIdentity,
+  ): boolean {
+    return tombstone.verifier_request_digest === verifierRequestDigest
+      && tombstone.recursive_height === recursiveHeight
+      && backendIdentityEquals(tombstone.verifier_backend, verifierBackend)
+      && backendIdentityEquals(tombstone.verifier_backend, requestBackend);
+  }
+
   /**
    * Remove only idle terminal records. A proof queue or reservation marks an
    * operation as in flight, so cleanup must leave every associated map alone
@@ -445,13 +495,42 @@ export class BitVM3Orchestrator {
     const timestamp = this.currentTimestamp();
     if (!timestamp.ok) return timestamp;
     const now = timestamp.milliseconds;
+
+    for (const [proofId, tombstone] of this.tombstones) {
+      if (now >= tombstone.expires_at_ms) this.tombstones.delete(proofId);
+    }
+
     for (const proofId of this.retainedProofIds()) {
-      if (this.proofQueues.has(proofId) || this.retainedReservations.has(proofId)) continue;
+      if (this.proofQueues.has(proofId)
+        || this.retainedReservations.has(proofId)
+        || this.tombstones.has(proofId)) continue;
       const initialization = this.initializations.get(proofId);
       const expired = !initialization
         || (now >= initialization.retained_at_ms
           && now - initialization.retained_at_ms >= this.retentionPolicy.terminalTtlMs);
       if (!expired) continue;
+
+      if (initialization && this.tombstones.size >= this.tombstonePolicy.maxTombstones) {
+        // Keep the expired state rather than dropping the identity binding. This
+        // is a deliberate availability tradeoff: fail closed until a tombstone
+        // slot becomes available instead of allowing conflicting proof-id reuse.
+        continue;
+      }
+
+      if (initialization) {
+        const expiresAt = Math.min(
+          BITVM3_TIMESTAMP_MAX_MS,
+          now + this.tombstonePolicy.ttlMs,
+        );
+        this.tombstones.set(proofId, {
+          proof_id: proofId,
+          verifier_request_digest: initialization.verifier_request_digest,
+          recursive_height: initialization.recursive_height,
+          verifier_backend: { ...initialization.verifier_backend },
+          expired_at_ms: now,
+          expires_at_ms: expiresAt,
+        });
+      }
 
       this.states.delete(proofId);
       this.initializations.delete(proofId);
@@ -482,7 +561,19 @@ export class BitVM3Orchestrator {
           : { kind: "conflict" };
       }
 
-      if (this.retainedProofIds().size + this.retainedReservations.size
+      const tombstone = this.tombstones.get(proofId);
+      if (tombstone && !this.sameRequestAsTombstone(
+        tombstone,
+        verifierRequestDigest,
+        recursiveHeight,
+        verifierBackend,
+        requestBackend,
+      )) {
+        return { kind: "conflict" };
+      }
+
+      if ((!tombstone && this.tombstones.size >= this.tombstonePolicy.maxTombstones)
+        || this.retainedProofIds().size + this.retainedReservations.size
         >= this.retentionPolicy.maxRetainedStates) {
         return { kind: "capacity" };
       }
@@ -534,6 +625,7 @@ export class BitVM3Orchestrator {
         state,
         retained_at_ms: retainedAt.milliseconds,
       });
+      this.tombstones.delete(input.proofId);
       this.generations.set(input.proofId, input.generation + 1);
       this.retainedReservations.delete(input.proofId);
       return { kind: "committed", state };
@@ -754,6 +846,10 @@ export class BitVM3Orchestrator {
       state_map_count: this.states.size,
       initialization_map_count: this.initializations.size,
       generation_map_count: this.generations.size,
+      tombstone_policy_version: this.tombstonePolicy.version,
+      max_tombstones: this.tombstonePolicy.maxTombstones,
+      tombstone_ttl_ms: this.tombstonePolicy.ttlMs,
+      tombstone_count: this.tombstones.size,
       in_flight_count: this.retainedReservations.size,
       proof_queue_count: this.proofQueues.size,
     };

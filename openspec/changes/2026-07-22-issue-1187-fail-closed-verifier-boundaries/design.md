@@ -86,6 +86,7 @@ calculation, or adapter dispatch:
 | Authorized signers / tap count | 64 signers / 1,024 taps |
 | BitVM3 proof id / recursive height | 128 characters / safe integer `0..1,024` |
 | BitVM signature attestation payload | canonical JSON string, 4,096 characters / 16 KiB UTF-8 |
+| BitVM2 retained floor/aggregation state | `conxian.bitvm2.retention.v1`, 1,024 floors / 15-minute terminal TTL |
 | BitVM3 retained terminal state | `conxian.bitvm3.retention.v1`, 1,024 states / 15-minute TTL |
 | Confirmation count | 1,000,000 |
 | Decryption-key evidence | 4,096 characters |
@@ -165,7 +166,52 @@ of stale state); a request before expiry remains a deterministic read-only
 replay, while a conflicting request remains a typed conflict. The clock is
 injectable for deterministic tests.
 
-### 2.6 Bounded ZKCP retention and listing
+Expired BitVM3 identity bindings are replaced by a bounded
+`conxian.bitvm3.tombstone.v1` tombstone rather than being forgotten immediately.
+The default tombstone cap is 2,048 entries and the default tombstone window is
+15 minutes. A tombstone retains the original verifier-request digest,
+recursive height, and adapter identity. During the window, an identical request
+may re-verify deterministically, while a conflicting same-id request fails
+closed without backend dispatch. Cleanup removes expired tombstones atomically
+before evaluating new capacity. If the cap is full, expired state remains
+retained rather than losing its identity binding; this is an explicit
+availability tradeoff. The process-local window cannot guarantee permanent
+global uniqueness, so a durable Gateway/Core identity registry is required
+before permanent proof-id reuse prevention can be claimed.
+
+### 2.6 BitVM2 bounded retention
+
+BitVM2 publishes `conxian.bitvm2.retention.v1` with a hard cap of 1,024
+retained floors, aggregations, and initialization records by default and a
+15-minute terminal TTL. A reservation is acquired before the asynchronous
+floor verifier dispatch, so capacity failure returns `resource_limit_exceeded`
+without invoking the verifier. Related floor state, aggregation state,
+initialization metadata, reservation maps, signer reservations, and per-proof
+queue metadata are cleaned in one synchronous critical section only when the
+floor is definitively terminal and idle. Active challenges, in-flight verifier
+calls, queued operations, and signature verification reservations are never
+evicted. The cap may intentionally reduce availability until terminal cleanup
+runs; a future durable Gateway/Core store owns cross-process retention and
+identity/replay guarantees.
+
+### 2.7 ZKCP release finalization boundary
+
+Before invoking an external key releaser, ZKCP captures and validates one
+monotonic, finite, safe, non-negative timestamp in the inclusive
+`0..8.64e15` ECMAScript Date range. It preconstructs immutable bounded intent
+and payment snapshots plus the release commit timestamp, then latches the
+intent id as dispatched exactly once. No clock read, timestamp serialization,
+unbounded copy, or fallible lifecycle compare-and-swap occurs after the
+external call. The returned adapter value is normalized through a total,
+bounded result validator; successful release evidence is recorded once with
+the prevalidated timestamp and the lifecycle is finalized synchronously. A
+throwing, malformed, rejected, or unexpectedly interrupted release remains
+latched and retry returns typed reconciliation failure rather than dispatching
+the releaser twice. A retained successful evidence latch can repair an
+interrupted in-memory terminal update without another external call. Invalid,
+thrown, rolled-back, or out-of-range clocks fail before key-release dispatch.
+
+### 2.8 Bounded ZKCP retention and listing
 
 ZKCP publishes `conxian.zkcp.retention.v1`: at most 1,024 active intents and
 2,048 total retained intents, with terminal records retained for at most 15
@@ -220,10 +266,13 @@ captures the intent object and generation, then performs an identity/generation
 compare-and-swap check before every evidence or terminal-state commit. Verify,
 watch, and finalize replays therefore have deterministic ordering: a replay
 after a successful transition is read-only or typed non-success, terminal
-finalization is idempotent, and the existing finalization lock rejects a second
-key-release attempt while release is in flight. BitVM2 signature submissions
-are serialized per proof, reserve a signer before async verification, release
-that reservation on all failure/throw paths, and re-check uniqueness at commit.
+finalization is idempotent, and the release-attempt latch rejects any second
+key-release dispatch even if an unexpected post-call condition occurs. The
+release timestamp and bounded release inputs are prepared before dispatch, so
+the external call cannot be followed by a fallible clock/serialization commit
+step. BitVM2 signature submissions are serialized per proof, reserve a signer
+before async verification, release that reservation on all failure/throw paths,
+and re-check uniqueness at commit.
 BitVM2 floor initialization and signature submission share that same per-proof
 FIFO guard. A successful floor initialization is recorded by request digest,
 backend identity, and tap profile; an identical replay is read-only and cannot

@@ -19,6 +19,8 @@ import {
   normalizeBoundaryError,
   parseBoundedJsonPayload,
   rejectNonProductionVerification,
+  VERIFIER_BITVM2_RETENTION_POLICY,
+  VERIFIER_BITVM2_RETENTION_POLICY_VERSION,
   VERIFIER_RESOURCE_LIMITS,
   VERIFIER_SIGNATURE_ENCODING,
   VERIFIER_SIGNATURE_ENCODING_VERSION,
@@ -252,6 +254,72 @@ interface FloorInitialization {
   verifier_backend: BackendIdentity;
   tap_profile?: BitVMTapProfile;
   verification: VerificationResult;
+  retained_at_ms: number;
+}
+
+export const BITVM2_TIMESTAMP_MIN_MS = 0;
+export const BITVM2_TIMESTAMP_MAX_MS = 8.64e15;
+const BITVM2_FALLBACK_TIMESTAMP = "1970-01-01T00:00:00.000Z";
+
+type BitVM2ClockFailureCode = "internal_error" | "malformed_request" | "resource_limit_exceeded";
+
+interface BitVM2ClockFailure {
+  ok: false;
+  failure_code: BitVM2ClockFailureCode;
+  error: string;
+}
+
+interface BitVM2Timestamp {
+  ok: true;
+  milliseconds: number;
+  iso: string;
+}
+
+type BitVM2TimestampResult = BitVM2Timestamp | BitVM2ClockFailure;
+
+function safeTimestamp(value: unknown, previousMilliseconds?: number): BitVM2TimestampResult {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return { ok: false, failure_code: "malformed_request", error: "BitVM2 clock must return a finite numeric timestamp" };
+  }
+  if (!Number.isSafeInteger(value)) {
+    return { ok: false, failure_code: "malformed_request", error: "BitVM2 clock must return a safe integer timestamp" };
+  }
+  if (value < BITVM2_TIMESTAMP_MIN_MS) {
+    return { ok: false, failure_code: "malformed_request", error: "BitVM2 clock must not return a negative timestamp" };
+  }
+  if (value > BITVM2_TIMESTAMP_MAX_MS) {
+    return {
+      ok: false,
+      failure_code: "resource_limit_exceeded",
+      error: "BitVM2 clock timestamp exceeds the ECMAScript Date serialization range",
+    };
+  }
+  if (previousMilliseconds !== undefined && value < previousMilliseconds) {
+    return { ok: false, failure_code: "internal_error", error: "BitVM2 clock moved backwards and violated monotonicity" };
+  }
+  try {
+    return { ok: true, milliseconds: value, iso: new Date(value).toISOString() };
+  } catch (error: unknown) {
+    const normalized = normalizeBoundaryError(error, "BitVM2 timestamp serialization failed");
+    return {
+      ok: false,
+      failure_code: normalized.truncated ? "resource_limit_exceeded" : "internal_error",
+      error: normalized.message,
+    };
+  }
+}
+
+export type BitVM2ConfigurationErrorCode = "invalid_retention_policy";
+
+export class BitVM2ConfigurationError extends Error {
+  public readonly code: BitVM2ConfigurationErrorCode = "invalid_retention_policy";
+  public readonly option: "maxRetainedFloors" | "terminalTtlMs";
+
+  public constructor(option: "maxRetainedFloors" | "terminalTtlMs", message: string) {
+    super(message);
+    this.name = "BitVM2ConfigurationError";
+    this.option = option;
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -452,13 +520,14 @@ function makeFloorResult(
   tapCount: number,
   verification: VerificationResult,
   authority: BackendIdentity,
+  timestamp = BITVM2_FALLBACK_TIMESTAMP,
 ): BitVMVerificationResult {
   return {
     verified: isProductionVerified(verification, authority),
     taps_generated: tapCount,
     proof_id: boundedIdentifier(proofId),
     status: resultStatus(verification, authority),
-    timestamp: new Date().toISOString(),
+    timestamp,
     verification,
     failure_code: verification.failure_code,
     error: verification.error,
@@ -497,17 +566,141 @@ function sameTapProfile(left: BitVMTapProfile | undefined, right: BitVMTapProfil
   return canonicalJson(left ?? null) === canonicalJson(right ?? null);
 }
 
+export interface BitVM2RetentionPolicy {
+  version: typeof VERIFIER_BITVM2_RETENTION_POLICY_VERSION;
+  maxRetainedFloors: number;
+  terminalTtlMs: number;
+}
+
+export interface BitVM2BridgeOptions {
+  now?: () => number;
+  retention?: Partial<Pick<BitVM2RetentionPolicy, "maxRetainedFloors" | "terminalTtlMs">>;
+}
+
+export interface BitVM2RetentionSnapshot {
+  policy_version: typeof VERIFIER_BITVM2_RETENTION_POLICY_VERSION;
+  max_retained_floors: number;
+  terminal_ttl_ms: number;
+  retained_floor_count: number;
+  state_map_count: number;
+  aggregation_map_count: number;
+  initialization_map_count: number;
+  in_flight_count: number;
+  proof_queue_count: number;
+  reserved_signer_proof_count: number;
+}
+
+function isTerminalFloorStatus(status: BitVMStatus): boolean {
+  return status === "failed"
+    || status === "unsupported"
+    || status === "disproved"
+    || status === "slashed";
+}
+
 export class BitVMBridge {
   private readonly states = new Map<string, BitVMFlowState>();
   private readonly aggregations = new Map<string, AggregationState>();
   private readonly floorInitializations = new Map<string, FloorInitialization>();
   private readonly aggregationQueues = new Map<string, Promise<void>>();
   private readonly reservedSigners = new Map<string, Set<string>>();
+  private readonly floorReservations = new Map<string, number>();
+  private readonly now: () => number;
+  private readonly retentionPolicy: BitVM2RetentionPolicy;
+  private lastObservedTimeMs: number | undefined;
 
   public constructor(
     private readonly verifier: BitVMVerifier,
     private readonly signatureVerifier: BitVMSignatureVerifier = new UnavailableBitVMSignatureVerifier(),
-  ) {}
+    options: BitVM2BridgeOptions = {},
+  ) {
+    this.now = options.now ?? (() => Date.now());
+    this.retentionPolicy = {
+      version: VERIFIER_BITVM2_RETENTION_POLICY_VERSION,
+      maxRetainedFloors: this.policyOption(
+        options.retention?.maxRetainedFloors,
+        VERIFIER_BITVM2_RETENTION_POLICY.maxRetainedFloors,
+        "maxRetainedFloors",
+      ),
+      terminalTtlMs: this.policyOption(
+        options.retention?.terminalTtlMs,
+        VERIFIER_BITVM2_RETENTION_POLICY.terminalTtlMs,
+        "terminalTtlMs",
+      ),
+    };
+  }
+
+  private policyOption(
+    value: number | undefined,
+    fallback: number,
+    option: "maxRetainedFloors" | "terminalTtlMs",
+  ): number {
+    if (value === undefined) return fallback;
+    if (!Number.isSafeInteger(value) || value <= 0 || value > fallback) {
+      throw new BitVM2ConfigurationError(
+        option,
+        `BitVM2 ${option} must be a positive safe integer at or below the v1 policy`,
+      );
+    }
+    return value;
+  }
+
+  private currentTimestamp(): BitVM2TimestampResult {
+    let value: unknown;
+    try {
+      value = this.now();
+    } catch (error: unknown) {
+      const normalized = normalizeBoundaryError(error, "BitVM2 clock failed");
+      return {
+        ok: false,
+        failure_code: normalized.truncated ? "resource_limit_exceeded" : "internal_error",
+        error: normalized.message,
+      };
+    }
+    const timestamp = safeTimestamp(value, this.lastObservedTimeMs);
+    if (timestamp.ok) this.lastObservedTimeMs = timestamp.milliseconds;
+    return timestamp;
+  }
+
+  private retainedProofIds(): Set<string> {
+    const ids = new Set<string>();
+    for (const id of this.states.keys()) ids.add(id);
+    for (const id of this.aggregations.keys()) ids.add(id);
+    for (const id of this.floorInitializations.keys()) ids.add(id);
+    return ids;
+  }
+
+  private cleanupExpiredTerminalRecords(
+    timestamp: BitVM2TimestampResult = this.currentTimestamp(),
+  ): BitVM2ClockFailure | undefined {
+    if (!timestamp.ok) return timestamp;
+    for (const proofId of this.retainedProofIds()) {
+      if (this.aggregationQueues.has(proofId)
+        || this.floorReservations.has(proofId)
+        || this.reservedSigners.has(proofId)) continue;
+      const state = this.states.get(proofId);
+      if (!state || !isTerminalFloorStatus(state.status)) continue;
+      const updatedAt = Date.parse(state.lastUpdate);
+      if (!Number.isFinite(updatedAt)
+        || timestamp.milliseconds < updatedAt
+        || timestamp.milliseconds - updatedAt < this.retentionPolicy.terminalTtlMs) continue;
+
+      // All related maps are removed in one synchronous critical section. An
+      // active queue/reservation/signature set was excluded above.
+      this.states.delete(proofId);
+      this.aggregations.delete(proofId);
+      this.floorInitializations.delete(proofId);
+      this.floorReservations.delete(proofId);
+      this.reservedSigners.delete(proofId);
+      this.aggregationQueues.delete(proofId);
+    }
+    return undefined;
+  }
+
+  public purgeExpiredTerminalRecords(): number {
+    const before = this.retainedProofIds().size;
+    this.cleanupExpiredTerminalRecords();
+    return before - this.retainedProofIds().size;
+  }
 
   private async withAggregationLock<T>(proofId: string, operation: () => Promise<T>): Promise<T> {
     const previous = this.aggregationQueues.get(proofId) ?? Promise.resolve();
@@ -566,6 +759,35 @@ export class BitVMBridge {
     }
 
     return this.withAggregationLock(validation.request.proof_id, async () => {
+      const timestamp = this.currentTimestamp();
+      if (!timestamp.ok) {
+        const failure = createVerificationFailure(timestamp.failure_code, timestamp.error, {
+          request_digest: validation.verifier_request_digest,
+          backend: verifierBackend,
+          provenance: validation.request.verifier_request.provenance,
+        });
+        return makeFloorResult(
+          validation.request.proof_id,
+          validation.request.tap_profile?.tap_count ?? 0,
+          failure,
+          verifierBackend,
+        );
+      }
+      const cleanupFailure = this.cleanupExpiredTerminalRecords(timestamp);
+      if (cleanupFailure) {
+        const failure = createVerificationFailure(cleanupFailure.failure_code, cleanupFailure.error, {
+          request_digest: validation.verifier_request_digest,
+          backend: verifierBackend,
+          provenance: validation.request.verifier_request.provenance,
+        });
+        return makeFloorResult(
+          validation.request.proof_id,
+          validation.request.tap_profile?.tap_count ?? 0,
+          failure,
+          verifierBackend,
+        );
+      }
+
       const existing = this.floorInitializations.get(validation.request.proof_id);
       if (existing) {
         const sameInitialization = existing.verifier_request_digest === validation.verifier_request_digest
@@ -580,6 +802,7 @@ export class BitVMBridge {
             existing.tap_profile?.tap_count ?? 0,
             copyVerificationResult(existing.verification),
             existing.verifier_backend,
+            this.states.get(validation.request.proof_id)?.lastUpdate,
           );
         }
 
@@ -602,76 +825,102 @@ export class BitVMBridge {
         );
       }
 
-      logger.info(`Received verification request for proof ${boundedIdentifier(validation.request.proof_id)}`);
-      let verification: VerificationResult;
-      try {
-        verification = await this.verifier.verify(validation.request.verifier_request);
-      } catch (error: unknown) {
-        verification = createVerificationFailure(
-          "internal_error",
-          error,
+      if (this.retainedProofIds().size + this.floorReservations.size
+        >= this.retentionPolicy.maxRetainedFloors) {
+        const failure = createVerificationFailure(
+          "resource_limit_exceeded",
+          "BitVM2 floor retention cap is full; verifier dispatch is unavailable until terminal cleanup",
           {
             request_digest: validation.verifier_request_digest,
             backend: verifierBackend,
             provenance: validation.request.verifier_request.provenance,
           },
         );
-      }
-      const resultValidation = await validateVerificationResult(
-        verification,
-        validation.request.verifier_request,
-        validation.verifier_request_digest,
-        verifierBackend,
-      );
-
-      if (!resultValidation.ok) {
-        verification = createVerificationFailure(resultValidation.failure_code, resultValidation.error, {
-          request_digest: validation.verifier_request_digest,
-          backend: verifierBackend,
-          provenance: validation.request.verifier_request.provenance,
-        });
-      } else {
-        verification = rejectNonProductionVerification(resultValidation.result, verifierBackend);
+        return makeFloorResult(
+          validation.request.proof_id,
+          validation.request.tap_profile?.tap_count ?? 0,
+          failure,
+          verifierBackend,
+        );
       }
 
-      if (isProductionVerified(verification, verifierBackend)) {
-        const tapProfile = copyTapProfile(validation.request.tap_profile);
-        const storedVerification = copyVerificationResult(verification);
-        const now = new Date().toISOString();
-        this.floorInitializations.set(validation.request.proof_id, {
-          verifier_request_digest: validation.verifier_request_digest,
-          verifier_backend: { ...verifierBackend },
-          tap_profile: tapProfile,
-          verification: storedVerification,
-        });
-        this.states.set(validation.request.proof_id, {
-          proofId: validation.request.proof_id,
-          status: "verified",
-          segments: tapProfile?.tap_count ?? 0,
-          tapProfileId: tapProfile?.id,
-          activeChallenges: [],
-          lastUpdate: now,
-        });
-
-        if (tapProfile?.required_signatures !== undefined) {
-          this.aggregations.set(validation.request.proof_id, {
-            proofId: validation.request.proof_id,
-            verifier_request_digest: validation.verifier_request_digest,
-            signatures: [],
-            required: tapProfile.required_signatures,
-            authorized_signers: [...(tapProfile.authorized_signers ?? [])],
-            verifier_backend: { ...verifierBackend },
-            is_complete: false,
-          });
+      this.floorReservations.set(validation.request.proof_id, timestamp.milliseconds);
+      try {
+        logger.info(`Received verification request for proof ${boundedIdentifier(validation.request.proof_id)}`);
+        let verification: VerificationResult;
+        try {
+          verification = await this.verifier.verify(validation.request.verifier_request);
+        } catch (error: unknown) {
+          verification = createVerificationFailure(
+            "internal_error",
+            error,
+            {
+              request_digest: validation.verifier_request_digest,
+              backend: verifierBackend,
+              provenance: validation.request.verifier_request.provenance,
+            },
+          );
         }
-      }
+        const resultValidation = await validateVerificationResult(
+          verification,
+          validation.request.verifier_request,
+          validation.verifier_request_digest,
+          verifierBackend,
+        );
 
-      return makeFloorResult(
-        validation.request.proof_id,
-        validation.request.tap_profile?.tap_count ?? 0,
-        verification,
-        verifierBackend,
-      );
+        if (!resultValidation.ok) {
+          verification = createVerificationFailure(resultValidation.failure_code, resultValidation.error, {
+            request_digest: validation.verifier_request_digest,
+            backend: verifierBackend,
+            provenance: validation.request.verifier_request.provenance,
+          });
+        } else {
+          verification = rejectNonProductionVerification(resultValidation.result, verifierBackend);
+        }
+
+        if (isProductionVerified(verification, verifierBackend)) {
+          const tapProfile = copyTapProfile(validation.request.tap_profile);
+          const storedVerification = copyVerificationResult(verification);
+          const state: BitVMFlowState = {
+            proofId: validation.request.proof_id,
+            status: "verified",
+            segments: tapProfile?.tap_count ?? 0,
+            tapProfileId: tapProfile?.id,
+            activeChallenges: [],
+            lastUpdate: timestamp.iso,
+          };
+          this.floorInitializations.set(validation.request.proof_id, {
+            verifier_request_digest: validation.verifier_request_digest,
+            verifier_backend: { ...verifierBackend },
+            tap_profile: tapProfile,
+            verification: storedVerification,
+            retained_at_ms: timestamp.milliseconds,
+          });
+          this.states.set(validation.request.proof_id, state);
+
+          if (tapProfile?.required_signatures !== undefined) {
+            this.aggregations.set(validation.request.proof_id, {
+              proofId: validation.request.proof_id,
+              verifier_request_digest: validation.verifier_request_digest,
+              signatures: [],
+              required: tapProfile.required_signatures,
+              authorized_signers: [...(tapProfile.authorized_signers ?? [])],
+              verifier_backend: { ...verifierBackend },
+              is_complete: false,
+            });
+          }
+        }
+
+        return makeFloorResult(
+          validation.request.proof_id,
+          validation.request.tap_profile?.tap_count ?? 0,
+          verification,
+          verifierBackend,
+          timestamp.iso,
+        );
+      } finally {
+        this.floorReservations.delete(validation.request.proof_id);
+      }
     });
   }
 
@@ -750,6 +999,15 @@ export class BitVMBridge {
             accepted: false,
             failure_code: "unsupported_backend",
             error: "Explicit signature verification evidence is unavailable",
+          };
+        }
+
+        const timestamp = this.currentTimestamp();
+        if (!timestamp.ok) {
+          return {
+            accepted: false,
+            failure_code: timestamp.failure_code,
+            error: timestamp.error,
           };
         }
 
@@ -903,7 +1161,7 @@ export class BitVMBridge {
         aggregation.signatures.push({
           verifier_id: verifierId,
           signature,
-          timestamp: new Date().toISOString(),
+          timestamp: timestamp.iso,
           attestation: attestationSnapshot,
         });
         aggregation.is_complete = aggregation.signatures.length >= aggregation.required;
@@ -916,28 +1174,55 @@ export class BitVMBridge {
   }
 
   public async challengeTap(proofId: string, tapIndex: number): Promise<TapChallengeResult> {
-    const state = this.states.get(proofId);
-    if (!state || state.status !== "verified") {
-      return {
-        accepted: false,
-        failure_code: "invalid_challenge",
-        error: "A verified floor is required before challenging a tap",
-      };
-    }
+    return this.withAggregationLock(proofId, async () => {
+      const state = this.states.get(proofId);
+      if (!state || state.status !== "verified") {
+        return {
+          accepted: false,
+          failure_code: "invalid_challenge",
+          error: "A verified floor is required before challenging a tap",
+        };
+      }
 
-    if (!Number.isInteger(tapIndex) || tapIndex < 0 || tapIndex >= state.segments) {
-      return {
-        accepted: false,
-        failure_code: "invalid_challenge",
-        error: "Tap index is outside the selected profile",
-      };
-    }
+      if (!Number.isInteger(tapIndex) || tapIndex < 0 || tapIndex >= state.segments) {
+        return {
+          accepted: false,
+          failure_code: "invalid_challenge",
+          error: "Tap index is outside the selected profile",
+        };
+      }
 
-    logger.warn(`Challenge requested for tap ${tapIndex} on proof ${boundedIdentifier(proofId)}`);
-    state.status = "challenged";
-    state.activeChallenges.push(tapIndex);
-    state.lastUpdate = new Date().toISOString();
-    return { accepted: true };
+      const timestamp = this.currentTimestamp();
+      if (!timestamp.ok) {
+        return {
+          accepted: false,
+          failure_code: timestamp.failure_code,
+          error: timestamp.error,
+        };
+      }
+
+      logger.warn(`Challenge requested for tap ${tapIndex} on proof ${boundedIdentifier(proofId)}`);
+      state.status = "challenged";
+      state.activeChallenges.push(tapIndex);
+      state.lastUpdate = timestamp.iso;
+      return { accepted: true };
+    });
+  }
+
+  public getRetentionSnapshot(): BitVM2RetentionSnapshot {
+    this.cleanupExpiredTerminalRecords();
+    return {
+      policy_version: this.retentionPolicy.version,
+      max_retained_floors: this.retentionPolicy.maxRetainedFloors,
+      terminal_ttl_ms: this.retentionPolicy.terminalTtlMs,
+      retained_floor_count: this.retainedProofIds().size,
+      state_map_count: this.states.size,
+      aggregation_map_count: this.aggregations.size,
+      initialization_map_count: this.floorInitializations.size,
+      in_flight_count: this.floorReservations.size,
+      proof_queue_count: this.aggregationQueues.size,
+      reserved_signer_proof_count: this.reservedSigners.size,
+    };
   }
 
   public getState(proofId: string): BitVMFlowState | undefined {

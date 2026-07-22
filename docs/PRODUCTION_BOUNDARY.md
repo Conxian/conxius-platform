@@ -101,6 +101,18 @@ thrown-value stringification. These controls prevent stale adapter completions
 and concurrent duplicate signers from regressing or duplicating authoritative
 state.
 
+ZKCP finalization captures a monotonic, finite, safe-integer timestamp inside
+the valid ECMAScript `Date` range and preconstructs bounded immutable release
+snapshots plus commit data before calling the external key releaser. A
+per-intent release-attempt latch is set immediately before dispatch. After
+dispatch, result interpretation is total and bounded; no clock read,
+serialization, or throwing state-validation/compare-and-swap step is required
+to finalize the already prepared evidence. Successful release evidence is
+latched exactly once, and retries repair the terminal intent from that evidence
+without dispatching the key releaser again. Invalid, thrown, rolled-back, or
+out-of-range clocks therefore fail before dispatch, while a clock failure or
+unexpected condition after dispatch cannot cause a second release attempt.
+
 BitVM3 uses the same per-proof FIFO discipline around the full asynchronous
 backend call and commit. Identical request-digest/height/backend replays are
 read-only, conflicting same-id requests fail closed, and generation/state checks
@@ -111,8 +123,22 @@ records after 15 minutes. Capacity is reserved before backend dispatch, so a
 full cap returns a typed resource failure without dispatch. In-flight
 reservations and queues are never evicted; TTL cleanup atomically removes state,
 initialization metadata, generation counters, and idle queue metadata. An
-identical request after expiry is safely re-verified under the bounded policy,
-and the clock is injectable for deterministic lifecycle tests.
+identical request after expiry is safely re-verified under the bounded policy.
+The separate `conxian.bitvm3.tombstone.v1` policy retains up to 2,048 expired
+proof identities for 15 minutes; conflicting same-id requests fail closed while
+the tombstone is retained, and the cap deliberately preserves expired state
+rather than permitting unsafe reuse. The bounded window cannot provide global
+permanent uniqueness, so production enablement requires a durable Gateway/Core
+identity registry. The clock is injectable for deterministic lifecycle tests.
+
+BitVM2 publishes `conxian.bitvm2.retention.v1` with a hard cap of 1,024
+retained floor identities and a default 15-minute terminal TTL. Reservations
+are acquired before verifier dispatch, so capacity failures make zero backend
+calls. Active challenges, in-flight verification/signature operations, and
+reserved signers are never evicted; terminal cleanup removes state,
+aggregation, initialization, reservation, signer, and queue maps atomically.
+This process-local policy is an availability tradeoff until durable Gateway/Core
+retention owns long-lived verification identity and evidence.
 
 ZKCP publishes `conxian.zkcp.retention.v1` with 1,024 active and 2,048 total
 retained-intent limits plus a default 15-minute terminal TTL. Capacity handling

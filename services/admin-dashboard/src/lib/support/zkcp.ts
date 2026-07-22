@@ -103,6 +103,58 @@ export const ZKCP_LIST_POLICY = Object.freeze({
   maxOffset: VERIFIER_RESOURCE_LIMITS.maxZkcpListOffset,
 } as const);
 
+export const ZKCP_TIMESTAMP_MIN_MS = 0;
+export const ZKCP_TIMESTAMP_MAX_MS = 8.64e15;
+const ZKCP_FALLBACK_TIMESTAMP = "1970-01-01T00:00:00.000Z";
+
+type ZKCPClockFailureCode = "internal_error" | "malformed_request" | "resource_limit_exceeded";
+
+interface ZKCPClockFailure {
+  ok: false;
+  failure_code: ZKCPClockFailureCode;
+  error: string;
+}
+
+interface ZKCPTimestamp {
+  ok: true;
+  milliseconds: number;
+  iso: string;
+}
+
+type ZKCPTimestampResult = ZKCPTimestamp | ZKCPClockFailure;
+
+function safeTimestamp(value: unknown, previousMilliseconds?: number): ZKCPTimestampResult {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return { ok: false, failure_code: "malformed_request", error: "ZKCP clock must return a finite numeric timestamp" };
+  }
+  if (!Number.isSafeInteger(value)) {
+    return { ok: false, failure_code: "malformed_request", error: "ZKCP clock must return a safe integer timestamp" };
+  }
+  if (value < ZKCP_TIMESTAMP_MIN_MS) {
+    return { ok: false, failure_code: "malformed_request", error: "ZKCP clock must not return a negative timestamp" };
+  }
+  if (value > ZKCP_TIMESTAMP_MAX_MS) {
+    return {
+      ok: false,
+      failure_code: "resource_limit_exceeded",
+      error: "ZKCP clock timestamp exceeds the ECMAScript Date serialization range",
+    };
+  }
+  if (previousMilliseconds !== undefined && value < previousMilliseconds) {
+    return { ok: false, failure_code: "internal_error", error: "ZKCP clock moved backwards and violated monotonicity" };
+  }
+  try {
+    return { ok: true, milliseconds: value, iso: new Date(value).toISOString() };
+  } catch (error: unknown) {
+    const normalized = normalizeBoundaryError(error, "ZKCP timestamp serialization failed");
+    return {
+      ok: false,
+      failure_code: normalized.truncated ? "resource_limit_exceeded" : "internal_error",
+      error: normalized.message,
+    };
+  }
+}
+
 export interface ZKCPIntentPage {
   policy_version: typeof VERIFIER_ZKCP_LIST_POLICY_VERSION;
   intents: ReadonlyArray<Readonly<ZKCPIntent>>;
@@ -269,10 +321,10 @@ export interface ZKCPBridgeOptions {
 }
 
 export class ZKCPBoundaryError extends Error {
-  public readonly failure_code: "malformed_request" | "resource_limit_exceeded";
+  public readonly failure_code: ZKCPClockFailureCode;
 
   public constructor(
-    failure_code: "malformed_request" | "resource_limit_exceeded",
+    failure_code: ZKCPClockFailureCode,
     message: string,
   ) {
     super(message);
@@ -609,11 +661,45 @@ function isKeyReleaseResult(value: unknown): value is DecryptionKeyReleaseResult
     && isProvenance(value.provenance)
     && (value.failure_code === undefined || isVerificationFailureCode(value.failure_code))
     && (value.decryptionKey === undefined
-      || (typeof value.decryptionKey === "string"
-        && value.decryptionKey.length <= VERIFIER_RESOURCE_LIMITS.maxDecryptionKeyChars))
+      || typeof value.decryptionKey === "string")
     && (value.error === undefined
-      || (typeof value.error === "string"
-        && value.error.length <= VERIFIER_RESOURCE_LIMITS.maxErrorChars));
+      || typeof value.error === "string");
+}
+
+type KeyReleaseBoundaryValidation =
+  | { ok: true; result: DecryptionKeyReleaseResult }
+  | { ok: false; failure_code: VerificationFailureCode; error: string };
+
+function normalizeKeyReleaseResult(value: unknown): KeyReleaseBoundaryValidation {
+  try {
+    if (!isKeyReleaseResult(value)) {
+      return { ok: false, failure_code: "internal_error", error: "Key-release backend returned malformed evidence" };
+    }
+    if ((typeof value.error === "string" && value.error.length > VERIFIER_RESOURCE_LIMITS.maxErrorChars)
+      || (typeof value.decryptionKey === "string"
+        && value.decryptionKey.length > VERIFIER_RESOURCE_LIMITS.maxDecryptionKeyChars)) {
+      const normalized = normalizeBoundaryError(value.error, "Key-release evidence exceeds the v1 resource limit");
+      return { ok: false, failure_code: "resource_limit_exceeded", error: normalized.message };
+    }
+    return {
+      ok: true,
+      result: {
+        status: value.status,
+        backend: { ...value.backend },
+        provenance: value.provenance,
+        decryptionKey: value.decryptionKey,
+        failure_code: value.failure_code,
+        error: value.error,
+      },
+    };
+  } catch (error: unknown) {
+    const normalized = normalizeBoundaryError(error, "Key-release evidence validation failed");
+    return {
+      ok: false,
+      failure_code: normalized.truncated ? "resource_limit_exceeded" : "internal_error",
+      error: normalized.message,
+    };
+  }
 }
 
 export class ZKCPBridge {
@@ -621,6 +707,7 @@ export class ZKCPBridge {
   private readonly verificationEvidence = new Map<string, StoredVerificationEvidence>();
   private readonly paymentEvidence = new Map<string, StoredPaymentEvidence>();
   private readonly keyReleaseEvidence = new Map<string, StoredKeyReleaseEvidence>();
+  private readonly keyReleaseAttempts = new Set<string>();
   private readonly finalizationLocks = new Set<string>();
   private readonly lifecycleQueues = new Map<string, Promise<void>>();
   private readonly lifecycleGenerations = new Map<string, number>();
@@ -629,6 +716,7 @@ export class ZKCPBridge {
   private readonly maxActiveIntents: number;
   private readonly maxTotalIntents: number;
   private readonly terminalRetentionMs: number;
+  private lastObservedTimeMs: number | undefined;
 
   public constructor(
     private readonly verifier: ZKProofVerifier,
@@ -666,8 +754,21 @@ export class ZKCPBridge {
     return value;
   }
 
-  private nowIso(): string {
-    return new Date(this.now()).toISOString();
+  private currentTimestamp(): ZKCPTimestampResult {
+    let value: unknown;
+    try {
+      value = this.now();
+    } catch (error: unknown) {
+      const normalized = normalizeBoundaryError(error, "ZKCP clock failed");
+      return {
+        ok: false,
+        failure_code: normalized.truncated ? "resource_limit_exceeded" : "internal_error",
+        error: normalized.message,
+      };
+    }
+    const timestamp = safeTimestamp(value, this.lastObservedTimeMs);
+    if (timestamp.ok) this.lastObservedTimeMs = timestamp.milliseconds;
+    return timestamp;
   }
 
   private isActiveIntent(intent: ZKCPIntent): boolean {
@@ -678,10 +779,13 @@ export class ZKCPBridge {
     this.verificationEvidence.delete(intentId);
     this.paymentEvidence.delete(intentId);
     this.keyReleaseEvidence.delete(intentId);
+    this.keyReleaseAttempts.delete(intentId);
   }
 
   private cleanupExpiredTerminalRecords(): number {
-    const cutoff = this.now() - this.terminalRetentionMs;
+    const timestamp = this.currentTimestamp();
+    if (!timestamp.ok) return 0;
+    const cutoff = timestamp.milliseconds - this.terminalRetentionMs;
     let removed = 0;
     for (const [intentId, intent] of this.intents) {
       if (this.isActiveIntent(intent)
@@ -780,10 +884,14 @@ export class ZKCPBridge {
   }
 
   private recordFailure(operation: IntentOperation, result: VerificationResult): VerificationResult {
+    const timestamp = this.currentTimestamp();
+    if (!timestamp.ok) {
+      return copyVerificationResult(failedVerification(operation.intentId, timestamp.failure_code, timestamp.error));
+    }
     if (!this.commitOperation(operation, (intent) => {
       intent.status = result.status === "unavailable" || result.status === "unsupported" ? "unsupported" : "failed";
       intent.verification = immutableCopy(result);
-      intent.updatedAt = this.nowIso();
+      intent.updatedAt = timestamp.iso;
       this.deleteIntentEvidence(intent.id);
       this.emit({ type: "intent_failed", intentId: intent.id, timestamp: intent.updatedAt, data: { failure_code: result.failure_code } });
     })) {
@@ -815,7 +923,9 @@ export class ZKCPBridge {
       throw new ZKCPBoundaryError("resource_limit_exceeded", "ZKCP retained-intent capacity is full");
     }
 
-    const now = this.nowIso();
+    const timestamp = this.currentTimestamp();
+    if (!timestamp.ok) throw new ZKCPBoundaryError(timestamp.failure_code, timestamp.error);
+    const now = timestamp.iso;
     const intent: ZKCPIntent = {
       ...params,
       status: "pending",
@@ -929,9 +1039,13 @@ export class ZKCPBridge {
         request_digest: requestValidation.request_digest,
         result,
       });
+      const timestamp = this.currentTimestamp();
+      if (!timestamp.ok) {
+        return copyVerificationResult(failedVerification(intentId, timestamp.failure_code, timestamp.error));
+      }
       if (!this.commitOperation(operation, (currentIntent) => {
         this.verificationEvidence.set(currentIntent.id, evidence);
-        currentIntent.updatedAt = this.nowIso();
+        currentIntent.updatedAt = timestamp.iso;
         currentIntent.verification = immutableCopy(result);
         currentIntent.status = "verified";
         currentIntent.proofSystem = proofSystem;
@@ -1056,12 +1170,16 @@ export class ZKCPBridge {
       if (!isProductionPayment(result, observerBackend)) return copyPaymentResult(result);
 
       const observation = immutableCopy(result.observation);
+      const timestamp = this.currentTimestamp();
+      if (!timestamp.ok) {
+        return copyPaymentResult(createPaymentFailure(timestamp.failure_code, timestamp.error));
+      }
       if (!this.commitOperation(operation, (currentIntent) => {
         this.paymentEvidence.set(currentIntent.id, immutableCopy({ request, observation }));
         currentIntent.paymentObservation = observation;
         currentIntent.paymentHash = observation.txid;
         currentIntent.status = "paid";
-        currentIntent.updatedAt = this.nowIso();
+        currentIntent.updatedAt = timestamp.iso;
         this.emit({
           type: "payment_detected",
           intentId,
@@ -1170,6 +1288,33 @@ export class ZKCPBridge {
             decryptionKey: intent.decryptionKey,
           };
         }
+        const retainedRelease = this.keyReleaseEvidence.get(safeIntentId);
+        if (retainedRelease) {
+          // Recover a successful release latch without dispatching the external
+          // releaser again if an unexpected post-call condition interrupted the
+          // in-memory terminal-state update.
+          intent.status = "finalized";
+          intent.decryptionKey = retainedRelease.result.decryptionKey;
+          intent.updatedAt = retainedRelease.released_at;
+          this.lifecycleGenerations.set(safeIntentId, (this.lifecycleGenerations.get(safeIntentId) ?? 0) + 1);
+          return {
+            finalized: true,
+            status: "finalized",
+            intentId: safeIntentId,
+            paymentHash: intent.paymentHash,
+            decryptionKey: intent.decryptionKey,
+          };
+        }
+        if (this.keyReleaseAttempts.has(safeIntentId)) {
+          return {
+            finalized: false,
+            status: "rejected",
+            intentId: safeIntentId,
+            paymentHash: intent.paymentHash,
+            failure_code: "internal_error",
+            error: "Key-release dispatch was already attempted; durable reconciliation is required",
+          };
+        }
         const operation = this.beginOperation(safeIntentId, ["pending", "verified", "paid", "failed", "unsupported"]);
         if (!operation) {
           return {
@@ -1247,12 +1392,44 @@ export class ZKCPBridge {
       };
     }
 
-    let release: DecryptionKeyReleaseResult;
+    const releaseTimestamp = this.currentTimestamp();
+    if (!releaseTimestamp.ok) {
+      return {
+        finalized: false,
+        status: "rejected",
+        intentId,
+        paymentHash: paymentEvidence.observation.txid,
+        failure_code: releaseTimestamp.failure_code,
+        error: releaseTimestamp.error,
+      };
+    }
+
+    let releaseIntentSnapshot: Readonly<ZKCPIntent>;
+    let releasePaymentSnapshot: Readonly<PaymentObservation>;
     try {
-      release = await this.keyReleaser.release(
-        immutableCopy(intent),
-        immutableCopy(paymentEvidence.observation),
-      );
+      releaseIntentSnapshot = immutableCopy(intent);
+      releasePaymentSnapshot = immutableCopy(paymentEvidence.observation);
+    } catch (error: unknown) {
+      const normalized = normalizeBoundaryError(error, "Unable to prepare bounded key-release input");
+      return {
+        finalized: false,
+        status: "rejected",
+        intentId,
+        paymentHash: paymentEvidence.observation.txid,
+        failure_code: normalized.truncated ? "resource_limit_exceeded" : "internal_error",
+        error: normalized.message,
+      };
+    }
+
+    const releaseCommitContext = Object.freeze({
+      released_at: releaseTimestamp.iso,
+      payment_hash: paymentEvidence.observation.txid,
+    });
+    this.keyReleaseAttempts.add(intentId);
+
+    let rawRelease: unknown;
+    try {
+      rawRelease = await this.keyReleaser.release(releaseIntentSnapshot, releasePaymentSnapshot);
     } catch (error: unknown) {
       const normalized = normalizeBoundaryError(error, "Key-release backend failed");
       return {
@@ -1265,44 +1442,33 @@ export class ZKCPBridge {
       };
     }
 
-    if (!this.isCurrentOperation(operation, ["paid"])) {
+    const releaseValidation = normalizeKeyReleaseResult(rawRelease);
+    if (!releaseValidation.ok) {
       return {
         finalized: false,
         status: "rejected",
         intentId,
         paymentHash: paymentEvidence.observation.txid,
-        failure_code: "internal_error",
-        error: "ZKCP finalization became stale after key release",
+        failure_code: releaseValidation.failure_code,
+        error: releaseValidation.error,
       };
     }
-
-    if (isRecord(release)
-      && ((typeof release.error === "string" && release.error.length > VERIFIER_RESOURCE_LIMITS.maxErrorChars)
-        || (typeof release.decryptionKey === "string"
-          && release.decryptionKey.length > VERIFIER_RESOURCE_LIMITS.maxDecryptionKeyChars))) {
-      const normalized = normalizeBoundaryError(release.error, "Key-release evidence exceeds the v1 resource limit");
+    const release = releaseValidation.result;
+    let productionRelease = false;
+    try {
+      productionRelease = isProductionKeyRelease(release, releaseBackend);
+    } catch (error: unknown) {
+      const normalized = normalizeBoundaryError(error, "Key-release evidence validation failed");
       return {
         finalized: false,
         status: "rejected",
         intentId,
         paymentHash: paymentEvidence.observation.txid,
-        failure_code: "resource_limit_exceeded",
+        failure_code: normalized.truncated ? "resource_limit_exceeded" : "internal_error",
         error: normalized.message,
       };
     }
-
-    if (!isKeyReleaseResult(release)) {
-      return {
-        finalized: false,
-        status: "rejected",
-        intentId,
-        paymentHash: paymentEvidence.observation.txid,
-        failure_code: "internal_error",
-        error: "Key-release backend returned malformed evidence",
-      };
-    }
-
-    if (!isProductionKeyRelease(release, releaseBackend)) {
+    if (!productionRelease) {
       return {
         finalized: false,
         status: release.status === "unavailable" ? "unavailable" : "rejected",
@@ -1313,44 +1479,36 @@ export class ZKCPBridge {
       };
     }
 
-    if (!this.commitOperation(operation, (currentIntent) => {
-      const releasedAt = this.nowIso();
-      this.keyReleaseEvidence.set(currentIntent.id, immutableCopy({
-        result: {
-          status: release.status,
-          backend: { ...release.backend },
-          provenance: release.provenance,
-          decryptionKey: release.decryptionKey,
-          failure_code: release.failure_code,
-          error: release.error,
-        },
-        released_at: releasedAt,
-      }));
-      currentIntent.status = "finalized";
-      currentIntent.decryptionKey = release.decryptionKey;
-      currentIntent.updatedAt = releasedAt;
-      this.emit({
-        type: "settlement_finalized",
-        intentId,
-        timestamp: currentIntent.updatedAt,
-        data: { paymentHash: paymentEvidence.observation.txid },
-      });
-    }, ["paid"])) {
+    const releaseEvidence: StoredKeyReleaseEvidence = {
+      result: release,
+      released_at: releaseCommitContext.released_at,
+    };
+    if (this.keyReleaseEvidence.has(intentId)) {
       return {
-        finalized: false,
-        status: "rejected",
+        finalized: true,
+        status: "finalized",
         intentId,
-        paymentHash: paymentEvidence.observation.txid,
-        failure_code: "internal_error",
-        error: "ZKCP finalization became stale before terminal state commit",
+        paymentHash: releaseCommitContext.payment_hash,
+        decryptionKey: release.decryptionKey,
       };
     }
+    this.keyReleaseEvidence.set(intentId, releaseEvidence);
+    intent.status = "finalized";
+    intent.decryptionKey = release.decryptionKey;
+    intent.updatedAt = releaseCommitContext.released_at;
+    this.lifecycleGenerations.set(intentId, operation.generation + 1);
+    this.emit({
+      type: "settlement_finalized",
+      intentId,
+      timestamp: intent.updatedAt,
+      data: { paymentHash: releaseCommitContext.payment_hash },
+    });
 
     return {
       finalized: true,
       status: "finalized",
       intentId,
-      paymentHash: paymentEvidence.observation.txid,
+      paymentHash: releaseCommitContext.payment_hash,
       decryptionKey: release.decryptionKey,
     };
   }

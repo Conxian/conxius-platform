@@ -1809,3 +1809,26 @@ AGENTS.md (this update)
 - PowerShell runtime execution remains unavailable in this devbox; static contamination parity/self-tests remain the available validation.
 **Gotchas**:
 - The strict OpenSpec validator and `git diff --check` must be rerun after this session-log append; hosted PR checks must be inspected after pushing the focused commit.
+
+### 2026-07-22 — PR #1198 P1/P2 Review Hardening
+**Trigger**: Formal review `4759557321` on PR #1198.
+**What was done**:
+- Closed the ZKCP post-release failure window by validating a monotonic finite safe Date-range timestamp and preconstructing bounded release inputs/commit data before key-release dispatch; latching the attempt prevents duplicate dispatch, successful evidence is committed once, and retry repairs terminal state without a second external call.
+- Added deferred, invalid-clock, post-release clock invalidation, and release-count regressions proving zero dispatch on bad clocks and one dispatch across successful retries.
+- Added versioned `conxian.bitvm3.tombstone.v1` retention for expired proof identities with a 2,048-entry/15-minute bounded window, deterministic same-request replay, fail-closed conflicting reuse, atomic cleanup, cap behavior, and explicit durable Gateway/Core registry requirements for permanent uniqueness.
+- Added versioned `conxian.bitvm2.retention.v1` hard floor cap/reservations, terminal-only cleanup, active challenge/in-flight/signature preservation, associated-map cleanup, and capacity/replay/conflict regressions.
+- Updated the issue #1187 OpenSpec, production boundary, risk, gap, debt, and session documentation for the three review findings without selecting a production backend.
+**Key discoveries**:
+- Process-local BitVM3 tombstones can only preserve proof-id conflict safety for a finite, explicitly versioned window; permanent reuse prevention belongs to a durable Gateway/Core identity registry.
+- BitVM2 retention capacity must count reservations before verifier dispatch, while cleanup must leave queued, reserved, challenged, and signature-active operations untouched.
+- ZKCP release finalization must never depend on a post-dispatch clock read or throwing commit helper; the external release attempt remains latched even when result handling is rejected or throws.
+**Files touched**:
+- `services/admin-dashboard/src/lib/support/{verifier-contract.ts,bitvm.ts,bitvm3.ts,zkcp.ts}`
+- `services/admin-dashboard/src/tests/{bitvm.test.ts,bitvm3.test.ts,zkcp.test.ts}`
+- `openspec/changes/2026-07-22-issue-1187-fail-closed-verifier-boundaries/{proposal.md,design.md,tasks.md,specs/fail-closed-verifier-boundaries/spec.md}`
+- `docs/{PRODUCTION_BOUNDARY.md,PHASE_7_RISK_REGISTER.md,GAPS.md,DEBT_INVENTORY.md}` and `AGENTS.md`
+**Gaps identified**:
+- Production cryptographic verifier, payment observer, key-release backends, and durable Gateway/Core identity retention remain unavailable and require independent acceptance.
+- PowerShell runtime execution remains unavailable in this devbox; lifecycle parity remains static/self-test based.
+**Gotchas**:
+- Re-run focused/full tests, strict issue #1187 OpenSpec validation, lifecycle/contamination checks, and `git diff --check` after this final session-log edit; inspect hosted PR checks after pushing the single commit.

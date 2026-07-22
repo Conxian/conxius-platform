@@ -10,7 +10,9 @@ export const VERIFIER_SIGNATURE_ENCODING_VERSION = "conxian.verifier.signature.v
 export const VERIFIER_ATTESTATION_LIMITS_VERSION = "conxian.verifier.attestation.v1" as const;
 export const VERIFIER_ZKCP_RETENTION_POLICY_VERSION = "conxian.zkcp.retention.v1" as const;
 export const VERIFIER_ZKCP_LIST_POLICY_VERSION = "conxian.zkcp.list.v1" as const;
+export const VERIFIER_BITVM2_RETENTION_POLICY_VERSION = "conxian.bitvm2.retention.v1" as const;
 export const VERIFIER_BITVM3_RETENTION_POLICY_VERSION = "conxian.bitvm3.retention.v1" as const;
+export const VERIFIER_BITVM3_TOMBSTONE_POLICY_VERSION = "conxian.bitvm3.tombstone.v1" as const;
 export const VERIFIER_SIGNATURE_ENCODING = "hex" as const;
 
 /**
@@ -70,6 +72,28 @@ export const VERIFIER_BITVM3_RETENTION_POLICY = Object.freeze({
   version: VERIFIER_BITVM3_RETENTION_POLICY_VERSION,
   maxRetainedStates: 1024,
   terminalTtlMs: 15 * 60 * 1000,
+} as const);
+
+/**
+* BitVM2 floor and aggregation evidence is process-local orchestration state.
+* A hard cap is mandatory; the terminal TTL only applies to explicitly closed
+* records and never to floors that can still receive challenges or signatures.
+*/
+export const VERIFIER_BITVM2_RETENTION_POLICY = Object.freeze({
+  version: VERIFIER_BITVM2_RETENTION_POLICY_VERSION,
+  maxRetainedFloors: 1024,
+  terminalTtlMs: 15 * 60 * 1000,
+} as const);
+
+/**
+* Expired BitVM3 state is replaced by a bounded identity tombstone. The window
+* is intentionally finite: permanent proof-id uniqueness belongs to a durable
+* Gateway/Core registry, not process-local dashboard memory.
+*/
+export const VERIFIER_BITVM3_TOMBSTONE_POLICY = Object.freeze({
+  version: VERIFIER_BITVM3_TOMBSTONE_POLICY_VERSION,
+  maxTombstones: 2048,
+  ttlMs: 15 * 60 * 1000,
 } as const);
 
 export type VerifierContractVersion = typeof VERIFIER_CONTRACT_VERSION;

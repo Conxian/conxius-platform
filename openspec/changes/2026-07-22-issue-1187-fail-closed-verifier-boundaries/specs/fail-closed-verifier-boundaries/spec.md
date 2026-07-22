@@ -174,9 +174,12 @@ finite, safe, non-negative integer milliseconds within the inclusive
 ECMAScript Date serialization range `0..8.64e15`. Accepted readings MUST be
 monotonic; a negative, non-finite, unsafe, out-of-range, or rolled-back reading
 MUST return a typed failure without an uncaught serialization error or state
-commit. An identical request before expiry MUST be a read-only replay; after
-expiry it MUST safely re-verify or return a typed expired/unknown result, and a
-conflicting request MUST remain a typed conflict.
+commit. An identical request before expiry MUST be a read-only replay. After
+expiry, the identity MUST remain in a bounded tombstone window: an identical
+request MAY safely re-verify, while a conflicting request MUST remain a typed
+conflict. Once the explicit tombstone window expires, process-local memory MAY
+permit reuse, but permanent global proof-id uniqueness MUST be owned by a
+durable Gateway/Core identity registry.
 
 #### Scenario: BitVM3 capacity fails before backend dispatch
 
@@ -207,6 +210,73 @@ conflicting request MUST remain a typed conflict.
 - **THEN** construction fails with a typed configuration error, or verification
   returns a typed bounded failure without backend dispatch or an uncaught
   `toISOString()` exception
+
+#### Scenario: BitVM3 tombstones reject conflicting reuse after state cleanup
+
+- **WHEN** an idle terminal proof reaches its state TTL and cleanup removes its
+  state, initialization, generation, and queue records
+- **THEN** cleanup retains a versioned bounded tombstone containing the original
+  request digest, recursive height, and backend identity; an identical request
+  follows deterministic safe re-verification, while a conflicting same-id
+  request returns `malformed_request` without backend dispatch
+
+#### Scenario: BitVM3 tombstone cap trades availability for identity safety
+
+- **WHEN** the explicit tombstone cap is full while another terminal state
+  expires
+- **THEN** cleanup retains the expired state rather than dropping its identity
+  binding, new unique requests fail `resource_limit_exceeded` without dispatch,
+  and atomic cleanup resumes after a tombstone expires or is removed
+
+#### Scenario: BitVM3 tombstone expiry is explicit and not global uniqueness
+
+- **WHEN** a tombstone reaches its configured TTL
+- **THEN** cleanup removes the tombstone atomically and process-local memory may
+  accept a new request for that id; documentation MUST require a durable
+  Gateway/Core identity registry before production claims permanent reuse
+  prevention
+
+### Requirement: Versioned bounded BitVM2 floor retention
+
+BitVM2 MUST publish the versioned `conxian.bitvm2.retention.v1` policy with a
+hard cap on retained floor, aggregation, and initialization state plus a
+terminal TTL. A floor reservation MUST be acquired before asynchronous verifier
+dispatch; capacity failure MUST return `resource_limit_exceeded` without
+invoking the verifier. Cleanup MUST remove related state, aggregation,
+initialization, reservation, signer-reservation, and idle queue maps atomically
+only for definitively terminal and idle floors. Active challenges, in-flight
+verifier calls, queued operations, and signature verification reservations MUST
+NOT be evicted. The bounded in-memory policy MUST be documented as a local
+availability control, not permanent cross-process retention or identity
+guarantee; future durable Gateway/Core ownership is required.
+
+#### Scenario: BitVM2 capacity fails before verifier dispatch
+
+- **WHEN** retained floors plus reservations reach the versioned cap and a new
+  unique floor is submitted
+- **THEN** the request returns `resource_limit_exceeded`, no verifier call
+  occurs, and existing state remains unchanged
+
+#### Scenario: BitVM2 active operations survive cleanup
+
+- **WHEN** cleanup runs while a floor verifier, challenge, queued operation, or
+  signature verification is in flight
+- **THEN** active state and all reservation/queue metadata remain present until
+  the operation commits or releases its reservation
+
+#### Scenario: BitVM2 terminal cleanup removes associated maps together
+
+- **WHEN** a terminal floor exceeds its TTL and has no active queue, challenge,
+  signer, or floor reservation
+- **THEN** state, aggregation, initialization, reservation, signer, and idle
+  queue entries are removed in one cleanup critical section
+
+#### Scenario: BitVM2 replay and conflict semantics remain deterministic
+
+- **WHEN** the same floor request is replayed or a same-id request changes its
+  digest, backend, or tap profile
+- **THEN** the identical replay is read-only, the conflicting request returns a
+  typed non-success result, and no second verifier dispatch occurs
 
 ### Requirement: Bounded ZKCP retention and paginated listing
 
@@ -306,6 +376,46 @@ settlement authorization.
   `simulated` provenance, or a fixture observer reports a synthetic payment
 - **THEN** the bridge and settlement route return a typed rejection and retain
   the intent/floor in a non-authoritative state
+
+### Requirement: One-shot ZKCP key-release finalization
+
+Before invoking an external ZKCP key releaser, the bridge MUST capture and
+validate one monotonic, finite, safe, non-negative timestamp in the inclusive
+ECMAScript Date range `0..8.64e15`. It MUST preconstruct bounded immutable
+intent/payment inputs and the release commit timestamp, and MUST latch the
+release attempt before dispatch. Invalid, thrown, rolled-back, or out-of-range
+clock readings MUST return a typed failure before the releaser is invoked.
+After dispatch, finalization MUST NOT read the clock, serialize an unbounded
+value, or run a fallible lifecycle compare-and-swap that can leave a successful
+external release unrecorded. Adapter results MUST be normalized to a bounded
+typed value; successful evidence MUST be latched exactly once with the
+prevalidated timestamp. If dispatch throws, returns malformed/rejected output,
+or an unexpected post-call condition occurs, retries MUST fail closed or repair
+from the retained successful evidence without invoking the releaser again.
+
+#### Scenario: Invalid clock prevents key-release dispatch
+
+- **WHEN** finalization observes a thrown, non-finite, unsafe, negative,
+  out-of-range, or rolled-back clock before release
+- **THEN** it returns a typed failure, leaves the intent paid, and the key
+  releaser call count remains zero; a later valid deliberate retry may dispatch
+  exactly once
+
+#### Scenario: Deferred release does not perform post-call clock work
+
+- **WHEN** a key releaser is deferred and the clock becomes invalid while the
+  external call is in flight
+- **THEN** the release completes using the prevalidated timestamp, the intent
+  finalizes without a post-call clock/serialization failure, and repeated
+  finalization remains idempotent with one releaser call
+
+#### Scenario: Unexpected post-call conditions cannot replay release
+
+- **WHEN** an external release has been dispatched and a malformed result or
+  unexpected terminal-update condition occurs
+- **THEN** the release-attempt latch prevents a second dispatch and returns a
+  typed reconciliation failure unless successful release evidence was already
+  latched and can repair the terminal snapshot
 
 ### Requirement: Fail-closed settlement transitions
 

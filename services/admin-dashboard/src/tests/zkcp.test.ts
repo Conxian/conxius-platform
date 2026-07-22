@@ -5,6 +5,7 @@ import {
   UnavailableZKVerifier,
   ZKCP_LIST_POLICY,
   ZKCP_RETENTION_POLICY,
+  ZKCP_TIMESTAMP_MAX_MS,
   ZKCPBridge,
   type DecryptionKeyReleaser,
   type OnChainMonitor,
@@ -45,6 +46,29 @@ async function setup(verifier: ZKProofVerifier = new DeterministicFixtureVerifie
   );
   bridge.initializeIntent(input);
   return { bridge, request, input };
+}
+
+async function setupAuthoritativeSettlement(
+  id: string,
+  now: () => number,
+  keyReleaser: DecryptionKeyReleaser,
+) {
+  const genericRequest = await makeVerifierRequest({
+    backend: AUTHORITATIVE_TEST_BACKEND,
+    provenance: "production",
+  });
+  const input = await makeIntentInput(genericRequest, id);
+  const request = await bindZKCPRequestToIntent(genericRequest, input);
+  const bridge = new ZKCPBridge(
+    new AuthoritativeFixtureVerifier(),
+    new AuthoritativeFixtureMonitor(),
+    keyReleaser,
+    { now },
+  );
+  bridge.initializeIntent(input);
+  expect((await bridge.verifyProof(input.id, request)).status).toBe("valid");
+  expect((await bridge.watchForPayment(input.id)).status).toBe("observed");
+  return { bridge, input };
 }
 
 class AuthoritativeFixtureVerifier implements ZKProofVerifier {
@@ -218,8 +242,10 @@ class ThrowingOversizedPaymentMonitor implements OnChainMonitor {
 
 class NullKeyReleaser implements DecryptionKeyReleaser {
   public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
+  public releaseCount = 0;
 
   public async release(): Promise<never> {
+    this.releaseCount += 1;
     return null as never;
   }
 }
@@ -270,6 +296,23 @@ class BlockingKeyReleaser extends AuthoritativeFixtureKeyReleaser {
 
   public unblock(): void {
     this.resolveReleaseGate();
+  }
+}
+
+class ClockInvalidatingKeyReleaser extends AuthoritativeFixtureKeyReleaser {
+  public constructor(private readonly invalidateClock: () => void) {
+    super();
+  }
+
+  public override async release() {
+    this.releaseCount += 1;
+    this.invalidateClock();
+    return {
+      status: "released" as const,
+      backend: AUTHORITATIVE_TEST_BACKEND,
+      provenance: "production" as const,
+      decryptionKey: "fixture-release-key",
+    };
   }
 }
 
@@ -628,6 +671,25 @@ describe("ZKCPBridge fail-closed boundary", () => {
     expect(keyBridge.getIntent(keyInput.id)?.status).toBe("paid");
   });
 
+  it("latches a dispatched release when post-call result handling rejects it", async () => {
+    const keyReleaser = new NullKeyReleaser();
+    const { bridge, input } = await setupAuthoritativeSettlement(
+      "zkcp-post-dispatch-malformed-release",
+      () => 1_800_000_000_000,
+      keyReleaser,
+    );
+
+    const first = await bridge.finalizeSettlement(input.id);
+    const retry = await bridge.finalizeSettlement(input.id);
+
+    expect(first.finalized).toBe(false);
+    expect(first.failure_code).toBe("internal_error");
+    expect(retry.finalized).toBe(false);
+    expect(retry.failure_code).toBe("internal_error");
+    expect(keyReleaser.releaseCount).toBe(1);
+    expect(bridge.getIntent(input.id)?.status).toBe("paid");
+  });
+
   it("bounds over-limit verifier, payment, and key-release adapter errors", async () => {
     const genericRequest = await makeVerifierRequest({ backend: AUTHORITATIVE_TEST_BACKEND, provenance: "production" });
 
@@ -771,6 +833,102 @@ describe("ZKCPBridge fail-closed boundary", () => {
     expect(second.finalized).toBe(false);
     expect(second.failure_code).toBe("internal_error");
     expect(firstResult.finalized).toBe(true);
+    expect(keyReleaser.releaseCount).toBe(1);
+  });
+
+  it("fails before key-release dispatch for invalid clocks and allows one deliberate retry", async () => {
+    const cases = [
+      {
+        label: "thrown",
+        invalidate: (clock: { value: number; throwing: boolean }) => {
+          clock.throwing = true;
+        },
+      },
+      {
+        label: "rollback",
+        invalidate: (clock: { value: number; throwing: boolean }) => {
+          clock.value -= 1;
+        },
+      },
+      {
+        label: "out-of-range",
+        invalidate: (clock: { value: number; throwing: boolean }) => {
+          clock.value = ZKCP_TIMESTAMP_MAX_MS + 1;
+        },
+      },
+    ] as const;
+
+    for (const testCase of cases) {
+      const clock = { value: 1_800_000_000_000, throwing: false };
+      const now = () => {
+        if (clock.throwing) throw new Error(`fixture ${testCase.label} clock failure`);
+        return clock.value;
+      };
+      const keyReleaser = new AuthoritativeFixtureKeyReleaser();
+      const { bridge, input } = await setupAuthoritativeSettlement(
+        `zkcp-clock-${testCase.label}`,
+        now,
+        keyReleaser,
+      );
+
+      testCase.invalidate(clock);
+      const failed = await bridge.finalizeSettlement(input.id);
+      expect(failed.finalized).toBe(false);
+      expect(failed.failure_code).toBe(testCase.label === "out-of-range"
+        ? "resource_limit_exceeded"
+        : "internal_error");
+      expect(keyReleaser.releaseCount).toBe(0);
+
+      clock.throwing = false;
+      clock.value = 1_800_000_000_001;
+      const retried = await bridge.finalizeSettlement(input.id);
+      expect(retried.finalized).toBe(true);
+      expect(keyReleaser.releaseCount).toBe(1);
+    }
+  });
+
+  it("does not read the clock after a deferred key release and retries terminally without redispatch", async () => {
+    const clock = { value: 1_800_000_000_000, throwing: false };
+    const keyReleaser = new BlockingKeyReleaser();
+    const { bridge, input } = await setupAuthoritativeSettlement(
+      "zkcp-clock-deferred-release",
+      () => {
+        if (clock.throwing) throw new Error("clock must not be read after release dispatch");
+        return clock.value;
+      },
+      keyReleaser,
+    );
+
+    const finalization = bridge.finalizeSettlement(input.id);
+    await keyReleaser.releaseStarted;
+    clock.throwing = true;
+    keyReleaser.unblock();
+
+    const first = await finalization;
+    const retry = await bridge.finalizeSettlement(input.id);
+    expect(first.finalized).toBe(true);
+    expect(retry.finalized).toBe(true);
+    expect(keyReleaser.releaseCount).toBe(1);
+  });
+
+  it("latches a successful release exactly once even when the releaser invalidates the clock", async () => {
+    const clock = { value: 1_800_000_000_000, throwing: false };
+    const keyReleaser = new ClockInvalidatingKeyReleaser(() => {
+      clock.throwing = true;
+    });
+    const { bridge, input } = await setupAuthoritativeSettlement(
+      "zkcp-clock-post-release",
+      () => {
+        if (clock.throwing) throw new Error("post-release clock access is forbidden");
+        return clock.value;
+      },
+      keyReleaser,
+    );
+
+    const first = await bridge.finalizeSettlement(input.id);
+    const retry = await bridge.finalizeSettlement(input.id);
+    expect(first.finalized).toBe(true);
+    expect(retry.finalized).toBe(true);
     expect(keyReleaser.releaseCount).toBe(1);
   });
 

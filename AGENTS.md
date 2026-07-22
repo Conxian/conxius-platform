@@ -566,7 +566,7 @@ See `docs/M2M_AUTHENTICATION.md` for full M2M auth configuration.
 - Release: SemVer tag validation, conventional commit changelog generation
 
 *OpenSpec Changes (36 proposals)*:
-- Templates always include: `proposal.md` (required), `tasks.md` (common), `design.md` (complex), `spec-delta.md` (spec changes), `.openspec.yaml` (config)
+- Current `spec-driven` CLI artifacts are `proposal.md`, `specs/<capability>/spec.md`, `design.md`, `tasks.md`, and `.openspec.yaml`; a legacy `spec-delta.md` may remain only as a non-normative repository index.
 - Most active areas: Sovereign Computing (6 proposals), Phase 6 alignment (5 proposals), BitVM/BitVMX research (2 proposals), lifecycle/control gates (4 proposals)
 - Notable unimplemented specs: BitVM2 multi-party aggregation, BitVMX high-efficiency computation, micro-frontend federation for admin dashboard
 - Archive contains only 1 proposal: system-alignment-v2 from 2026-03-08
@@ -1491,3 +1491,23 @@ AGENTS.md (this update)
 - Implement multi-key rotation/revocation/JWKS only under issue #1161.
 **Gotchas**:
 - Next build auto-rewrites `tsconfig.json` to `jsx: react-jsx`; restore the repository's intentional `jsx: preserve` setting after each build diagnostic. The final worktree keeps the original setting.
+
+### 2026-07-22 — OpenSpec Delta Layout Remediation (#1163)
+**Trigger**: Issue #1163 strict OpenSpec validation after merging the latest `origin/main`.
+**What was done**:
+- Added the current `spec-driven` change-local delta at `openspec/changes/2026-07-22-issue-1163-swarm-coordination/specs/swarm-coordination/spec.md` with one `ADDED` requirement and scenario mapped to each of AC-1 through AC-5.
+- Kept `openspec/specs/swarm-coordination-v1.spec.md` as the single detailed canonical normative contract and converted the old `spec-delta.md` into a non-duplicating index.
+- Updated the proposal, design, tasks, and session evidence with the exact capability name, CLI format, and validation results; onboarding and continuity docs already linked the canonical spec and were not duplicated.
+**Key discoveries**:
+- `pnpm dlx @fission-ai/openspec --version` resolves the current CLI as `1.6.0`; strict validation requires `specs/<capability>/spec.md`, `## ADDED Requirements`, `### Requirement:`, and at least one `#### Scenario:` per requirement.
+- The exact #1163 capability name is `swarm-coordination`; the strict change validator passes with five parsed deltas.
+- Repo-wide `validate --all` still reports 21 older active changes that lack current delta directories; #1160 and #1163 both pass, and this remediation does not broaden scope to rewrite those changes.
+**Files touched**:
+- `openspec/changes/2026-07-22-issue-1163-swarm-coordination/specs/swarm-coordination/spec.md`
+- `openspec/changes/2026-07-22-issue-1163-swarm-coordination/{proposal.md,design.md,spec-delta.md,tasks.md}`
+- `AGENTS.md`
+**Gaps identified**:
+- Independent external review/approval for #1163 remains outstanding.
+- The 21 pre-existing active OpenSpec changes without current `specs/<capability>/spec.md` deltas remain outside this focused remediation.
+**Gotchas**:
+- The deprecated `openspec change show` command is not the preferred inspection path; after aligning proposal headings to `Why` and `What Changes`, the current `openspec show ... --json --deltas-only` command reports the five deltas cleanly.

@@ -6,7 +6,7 @@
 **Status**: Implemented; independent review/approval outstanding
 **Phase**: Canonical specification, implementation, hardening, and validation
 
-## 1. Problem statement
+## Why
 
 The repository documents several swarm coordination patterns, but it does not yet define interoperable contracts that independent agents can validate without sharing a provider-specific runtime. The current documentation does not establish:
 
@@ -18,7 +18,7 @@ The repository documents several swarm coordination patterns, but it does not ye
 
 Without these contracts, two agents can report superficially compatible data while disagreeing about ownership, retries, task dependencies, result validity, or which context is authoritative. A centralized scheduler would hide those differences but would create a new runtime dependency and provider lock-in. This change instead defines a transport-neutral protocol and validation layer that can be implemented by different orchestrators, CLIs, or future transports.
 
-## 2. Goals
+## What Changes
 
 - Define a versioned `conxian.swarm` protocol with canonical, machine-readable envelopes.
 - Make message validation, graph validation, capability matching, aggregation, handover, and context resolution deterministic and independently testable.
@@ -29,7 +29,7 @@ Without these contracts, two agents can report superficially compatible data whi
 - Depend on the merged #1162 discovery protocol for repository-local allowlists and context discovery, without modifying #1162 artifacts or implementation.
 - Provide and validate the implementation, tests, CI wiring, and documentation while keeping the runtime boundary transport-neutral.
 
-## 3. Dependency and sequencing
+## Dependency and sequencing
 
 Issue #1162 is a strict prerequisite for repository-local context discovery. The swarm protocol MAY consume the outputs of `.agents/manifest.json`, `.agents/skills/registry.json`, and the discovery CLI defined by #1162, including its safe relative-path and optional-context semantics. It MUST NOT change those contracts, execute discovered skills, or infer trust from discovery alone. The #1163 boundary consumes a versioned, content-addressed #1162 attestation plus a separate trusted discovery anchor supplied by an adapter/deployment boundary; the pure library verifies their content binding but cannot authenticate the origin of the anchor.
 
@@ -43,7 +43,7 @@ The dependency boundary is:
 
 Agent identity, authentication, transport delivery, and runtime scheduling remain separate concerns. The #1163 implementation must be usable by a local process, a CI job, or a future transport adapter without requiring any one of them.
 
-## 4. Scope
+## Scope
 
 ### 4.1 In scope
 
@@ -70,12 +70,13 @@ Agent identity, authentication, transport delivery, and runtime scheduling remai
 - UI, dashboard, or operator workflow changes beyond documentation of the contracts.
 - Runtime transport, scheduling, provider adapters, and automatic skill execution remain out of scope; implementation is intentionally limited to pure contracts and validators in this repository.
 
-## 5. Implemented contract surface
+## Implemented contract surface
 
 The following paths are the implemented contract surface:
 
 | Area | Artifact | Purpose |
 | --- | --- | --- |
+| Change-local OpenSpec delta | `openspec/changes/2026-07-22-issue-1163-swarm-coordination/specs/swarm-coordination/spec.md` | Current `spec-driven` capability delta with one requirement/scenario mapped to each of AC-1 through AC-5 |
 | Canonical specification | `openspec/specs/swarm-coordination-v1.spec.md` | Normative protocol, schemas, state transitions, failure semantics, and compatibility rules |
 | Protocol, validation, graph, aggregation, handover, and context logic | `scripts/agent-coordination.ts` | Strict types, pure validators, deterministic ordering, digests, evidence, provenance, and bounded context |
 | Contract tests | `scripts/agent-coordination.test.ts` | Focused vectors, semantic conflicts, provenance/tamper checks, graph linkage, and JSON Schema fixtures |
@@ -85,7 +86,14 @@ The following paths are the implemented contract surface:
 
 The implementation MUST keep the source and test modules transport-neutral and must not turn the control plane into a centralized runtime.
 
-## 6. Acceptance criteria
+The `swarm-coordination` directory is the capability name required by the
+current `spec-driven` OpenSpec schema. Its change-local specification is an
+acceptance-oriented delta and not a second canonical contract; the existing
+`openspec/specs/swarm-coordination-v1.spec.md` remains the single normative
+source for detailed protocol behavior. `spec-delta.md` indexes this
+relationship and does not duplicate the canonical requirements.
+
+## Acceptance criteria
 
 The following criteria directly close the five unchecked issue items. They define the implementation contract; current completion status is recorded in `tasks.md`, while independent review/approval remains a separate gate.
 
@@ -126,7 +134,7 @@ The canonical spec and context validator MUST allow only #1162-declared reposito
 - Validators MUST be zero-network and side-effect free.
 - The implementation MUST preserve evidence for duplicates, conflicts, stale context, and partial failure rather than silently discarding it.
 
-## 7. Independent review and approval gate
+## Independent review and approval gate
 
 Reviewers should confirm:
 

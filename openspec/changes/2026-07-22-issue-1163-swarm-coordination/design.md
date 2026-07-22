@@ -267,6 +267,19 @@ tests/typechecking in addition to the repository's existing baseline.
 Documentation links the canonical spec from onboarding and continuity guidance
 without duplicating normative rules.
 
-## 11. Explicit non-goals
+## 11. OpenSpec artifact relationship
+
+The current `spec-driven` OpenSpec validator recognizes a change delta under
+`specs/<capability>/spec.md`. For #1163 the exact capability name is
+`swarm-coordination`, so the change-local delta is
+`openspec/changes/2026-07-22-issue-1163-swarm-coordination/specs/swarm-coordination/spec.md`.
+It maps AC-1 through AC-5 to one requirement and scenario each, while the
+existing `openspec/specs/swarm-coordination-v1.spec.md` remains the repository's
+single detailed normative contract. `spec-delta.md` is retained as a concise
+index for repository readers and does not create a competing requirement list.
+The onboarding and session-continuity documents therefore continue to link the
+canonical spec only.
+
+## 12. Explicit non-goals
 
 This design does not define a scheduler, queue, transport, provider integration, credential system, execution sandbox, economic policy, consensus protocol, or automatic agent/skill execution. Those concerns may consume these contracts later but cannot be added implicitly through extensions.

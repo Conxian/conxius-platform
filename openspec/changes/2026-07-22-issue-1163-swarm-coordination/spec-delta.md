@@ -1,34 +1,49 @@
 # Spec Delta: Deterministic Swarm Coordination Protocol v1
 
-This change defines and implements the canonical specification at:
+The current `spec-driven` OpenSpec delta is the capability specification at:
+
+`openspec/changes/2026-07-22-issue-1163-swarm-coordination/specs/swarm-coordination/spec.md`
+
+That file contains one requirement and scenario for each issue-level criterion
+AC-1 through AC-5 and is the artifact consumed by the strict OpenSpec
+validator. The exact capability name is `swarm-coordination`.
+
+The detailed normative contract remains the existing canonical specification:
 
 `openspec/specs/swarm-coordination-v1.spec.md`
 
-## Normative additions
+The change-local capability file intentionally points to that canonical source
+instead of reproducing its envelope, graph, aggregation, handover, context,
+serialization, and security requirements. This legacy-named file is retained
+as a reader-facing index for repositories and tooling that still link to
+`spec-delta.md`; it is not a second normative contract.
 
-1. The repository SHALL define a versioned, transport-neutral protocol namespace `conxian.swarm`.
-2. Every core inter-agent message SHALL use a versioned envelope containing `message_id`, `message_type`, `sender`, `recipient`, `correlation_id`, `idempotency_key`, lifecycle state/sequence, expiry, payload, and integrity metadata. `causation_id` SHALL be supported for delegation, retries, and handover resumption.
-3. Envelope identity fields SHALL be treated as claims unless an explicit deployment profile verifies authentication. Missing or invalid required authentication SHALL fail closed. Authentication is an envelope-only concern; handovers and context snapshots SHALL use digest-only integrity metadata.
-4. Lifecycle transitions SHALL be explicit, monotonic, and validated. Terminal states SHALL NOT be reopened; retries and corrections SHALL create new linked messages.
-5. Idempotency SHALL be evaluated by a declared scope, key, and canonical payload digest. Identical replays SHALL be safe; reuse of a key with a different digest SHALL produce a machine-readable replay conflict.
-6. A task graph SHALL be a validated DAG with unique task IDs, declared dependencies, required/optional status, capability requirements, and bounded retry/timeout policy. Cycles, missing dependencies, ambiguous requirements, and invalid bounds SHALL be rejected.
-7. Topological task order and capability candidate order SHALL be deterministic and independent of message arrival order, transport, or provider implementation. Matching SHALL produce evidence/candidates, not a scheduling command.
-8. Result aggregation SHALL distinguish `COMPLETE`, `PARTIAL`, `FAILED`, `CONFLICT`, and `CANCELLED` outcomes. Identical semantic duplicate results SHALL collapse by an exact fingerprint covering all normative result fields except delivery identity. Same-payload results with different status, error, agent, evidence, artifacts, links, or other semantic metadata SHALL be retained as conflicts, even when their payload digest is identical.
-9. A versioned machine-readable handover SHALL include correlation/graph identity, a required `graph_digest`, lifecycle state, completed/active/blocked/pending tasks, decisions, artifacts with digests, conflicts with at least two distinct payload digests, risks/blockers, bounded context, and structured resume instructions. A handover validator SHALL require the referenced graph, the validated derived #1162 `ContextAllowlist`, its source `DiscoveryResult`, and the same content-addressed trusted discovery anchor as inputs, verify graph and provenance linkage, and recheck every embedded context source. Handover creation, validation, resumability assessment, and handover-envelope validation/deduplication SHALL fail closed when those inputs are absent or mismatched; local recomputation of entry, snapshot, handover, or envelope digests SHALL NOT authorize an unallowlisted source. Resumability SHALL fail closed when mandatory state is missing, stale, or unverifiable. Handover authentication SHALL NOT be exposed outside envelope validation.
-10. Session context SHALL be admitted only from explicit task input, governance/canonical sources, #1162-declared repository context, validated artifact references, or explicitly marked assumptions. A free-form allowlist SHALL NOT be authoritative: the allowlist SHALL be versioned and digest-bound to a validated #1162 discovery result and a versioned, digest-bound trusted discovery anchor supplied out of band by a trusted adapter/deployment boundary. The pure library SHALL verify the anchor's content binding but SHALL NOT claim to authenticate its origin. Public `validateContextSnapshot()` SHALL require the anchor, discovery result, and derived allowlist; structural-only normalization SHALL remain private/non-authoritative. `mergeContextSnapshots()` SHALL require the same provenance triple for every input, reject mixed/forged provenance, preserve the standard allowlist digest, and produce a snapshot accepted by authoritative validation and handover paths. Unlisted paths, arbitrary environment/configuration, credentials, raw secrets, and implicit provider transcripts SHALL NOT be admitted.
-11. Context entries SHALL carry provenance, classification, redaction status, capture/stale/expiry metadata, precedence, size/depth accounting, and truncation/original-digest metadata when applicable. Context profiles SHALL enforce item, byte, depth, and per-entry bounds, with graph `max_context_bytes` as the effective minimum total budget when a graph is supplied.
-12. Context resolution SHALL use explicit precedence: current task input, governance/canonical sources, architectural context, live operational context, evidence, historical reference, then agent assumptions. Stale/expired values SHALL be evaluated against the effective `now` rather than capture time and SHALL NOT silently satisfy current requirements; discarded lower-precedence conflicts SHALL remain observable.
-13. Normative objects SHALL use stable UTF-8 canonical JSON with RFC 8785-compatible object-key ordering, documented semantic array ordering, an RFC 3339 millisecond timestamp profile that rejects four-to-nine-digit fractions and canonicalizes to exactly three UTC fractional digits, finite numeric values, and domain-separated SHA-256 digests.
-14. Validators SHALL be zero-network, side-effect free, and fail closed for malformed data, unsafe paths, unsupported major versions, unknown required fields, invalid transitions, stale mandatory context, digest mismatches, and graph/handover violations.
-15. Minor-version extensions SHALL be explicitly namespaced and optional. Unknown core types, unsupported namespaces, and unknown required extensions SHALL be rejected. Core validation SHALL not interpret provider-specific behavior.
-16. The protocol SHALL not require or define a centralized scheduler, queue, broker, provider transport, credential/key issuance system, automatic skill execution path, protocol/funds logic, or user-data handling.
+## Acceptance mapping
 
-## Compatibility and dependency notes
+| Issue criterion | Change-local requirement | Canonical contract |
+| --- | --- | --- |
+| AC-1 — Inter-agent communication protocols | `AC-1 — Transport-neutral envelope and lifecycle validation` | Canonical Section 5 |
+| AC-2 — Task decomposition patterns | `AC-2 — Deterministic task decomposition and capability matching` | Canonical Section 6 |
+| AC-3 — Result aggregation mechanisms | `AC-3 — Deterministic result aggregation and conflict evidence` | Canonical Section 7 |
+| AC-4 — Agent-to-agent handover format | `AC-4 — Graph-linked machine-readable handover` | Canonical Section 8 |
+| AC-5 — Session context sharing | `AC-5 — Allowlisted, bounded, and precedence-aware context sharing` | Canonical Section 9 |
 
-- Issue #1163 depends on the merged #1162 discovery protocol for repository root, declared context, and inert skill boundaries. This delta consumes those outputs but does not modify them.
-- Existing onboarding and continuity prose remains compatible. Follow-up documentation should link to the canonical swarm specification rather than duplicate its normative rules.
-- Implementations that cannot validate a required major version, mandatory field, digest, authentication profile, or context boundary MUST reject the object rather than downgrade silently.
+## Dependency and compatibility notes
+
+- Issue #1163 consumes the merged #1162 discovery protocol for repository root,
+  declared context, inert skills, attestation, and trusted-anchor boundaries;
+  it does not modify or execute #1162 artifacts.
+- Existing onboarding and continuity documentation links the canonical spec and
+  remains compatible with this change-local OpenSpec layout.
+- Implementations that cannot validate a required version, mandatory field,
+  digest, provenance boundary, or context rule must reject rather than silently
+  downgrade.
 
 ## Implemented surface
 
-The implementation is concentrated in `scripts/agent-coordination.ts` and `scripts/agent-discovery-contract.ts`, with discovery production in `scripts/agent-discovery.ts`, contract tests in `scripts/agent-coordination.test.ts` and `scripts/agent-discovery.test.ts`, machine-readable schemas in `schemas/agent-swarm.schema.json` and `schemas/agent-discovery-trust.schema.json`, focused root scripts and CI coverage, and links from `docs/AGENT_ONBOARDING.md` and `docs/SESSION_CONTINUITY.md`. The canonical normative source is `openspec/specs/swarm-coordination-v1.spec.md`.
+The implementation remains concentrated in `scripts/agent-coordination.ts`
+and `scripts/agent-discovery-contract.ts`, with discovery production in
+`scripts/agent-discovery.ts`, tests in `scripts/agent-coordination.test.ts` and
+`scripts/agent-discovery.test.ts`, machine-readable schemas in
+`schemas/agent-swarm.schema.json` and `schemas/agent-discovery-trust.schema.json`,
+and links from `docs/AGENT_ONBOARDING.md` and `docs/SESSION_CONTINUITY.md`.

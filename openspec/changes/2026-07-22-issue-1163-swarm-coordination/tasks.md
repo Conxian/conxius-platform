@@ -3,7 +3,8 @@
 ## Phase 1 — OpenSpec artifact baseline
 
 - [x] Create `openspec/changes/2026-07-22-issue-1163-swarm-coordination/` from current `origin/main`.
-- [x] Add `.openspec.yaml`, `proposal.md`, `design.md`, `spec-delta.md`, and `tasks.md` before implementation edits.
+- [x] Add `.openspec.yaml`, `proposal.md`, `design.md`, the `swarm-coordination` capability delta, `spec-delta.md`, and `tasks.md` before implementation edits.
+- [x] Migrate the change delta to `specs/swarm-coordination/spec.md` with one OpenSpec requirement/scenario mapped to each of AC-1 through AC-5, while keeping `openspec/specs/swarm-coordination-v1.spec.md` as the single canonical normative contract.
 - [x] Record the dependency on merged issue #1162 without modifying its artifacts or implementation.
 - [x] Define the transport-neutral boundary and explicitly exclude a centralized runtime, scheduler, and provider-specific transports.
 - [x] Define versioned envelopes, identity/correlation/idempotency, lifecycle, DAG decomposition, capability matching, aggregation, handover, bounded context, serialization, security, compatibility, and failure semantics.
@@ -60,9 +61,13 @@ The five issue-level criteria are checked against the canonical specification, r
 
 ## Validation evidence
 
-- [x] No repository-provided OpenSpec validator was found during inspection; structural checks cover `.openspec.yaml`, the canonical spec, required headings/links, all five acceptance IDs, and the change artifacts.
+- [x] The current OpenSpec CLI requires a `specs/<capability>/spec.md` delta; the change-local `swarm-coordination` capability now carries the five acceptance-mapped requirements and scenarios, while `spec-delta.md` remains a non-duplicating index.
+- [x] With `@fission-ai/openspec` version `1.6.0`, `pnpm dlx @fission-ai/openspec validate 2026-07-22-issue-1163-swarm-coordination --strict --no-interactive --json` passes with one valid change and no issues.
+- [x] `pnpm dlx @fission-ai/openspec show 2026-07-22-issue-1163-swarm-coordination --json --deltas-only --no-interactive` parses five `ADDED` deltas under the `swarm-coordination` capability, each with a scenario.
 - [x] Cross-document review confirms the proposal, design, spec delta, canonical spec, schema, implementation, tests, and docs use the same `conxian.swarm` v1 namespace, #1162 boundary, transport-neutral ownership, lifecycle, deterministic ordering, conflict, provenance, freshness, graph linkage, and authentication semantics.
 - [x] Focused validation passes: `pnpm run test:agent-coordination` (26/26), `pnpm run typecheck:agent-coordination`, `pnpm run test:agent-discovery` (21/21), and `pnpm run typecheck:agent-discovery`.
 - [x] JSON Schema tests compile Ajv 2020 with explicitly declared `ajv` and `ajv-formats` dependencies and cover valid/invalid envelope, graph, result, handover, and context fixtures.
-- [x] Full validation passes: `pnpm install --frozen-lockfile`, `pnpm test`, `pnpm typecheck`, `pnpm run check:lifecycle-control`, `pnpm run lint`, `pnpm run build` (admin dashboard on Next `15.5.18`), JSON/YAML/OpenSpec/docs structural checks, and `git diff --check`.
+- [x] Current repository checks pass: `pnpm test`, `pnpm typecheck`, `pnpm lint`, JSON parsing for 17 tracked files, YAML parsing for 35 tracked files, relative-link validation for the five changed OpenSpec Markdown files, and `git diff --check`.
+- [x] The repo-wide `pnpm dlx @fission-ai/openspec validate --all --strict --no-interactive --json` run was recorded: #1160 and #1163 pass, while 21 older active changes without current `specs/<capability>/spec.md` deltas remain baseline failures; no unrelated changes were made to mask them.
+- [x] Earlier implementation validation remains recorded separately: `pnpm install --frozen-lockfile`, `pnpm run check:lifecycle-control`, and `pnpm run build` passed on the implementation branch before this layout-only remediation.
 - [x] `git diff --check` passes for the remediation diff. Independent external review/approval remains unchecked and is the only review gate outside this implementation.

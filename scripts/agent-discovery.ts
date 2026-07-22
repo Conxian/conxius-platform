@@ -240,18 +240,18 @@ function validateRelativePath(value: unknown, label: string): string {
   return candidate;
 }
 
-function isWithin(rootDirectory: string, targetPath: string): boolean {
-  const targetRelative = relative(rootDirectory, targetPath);
+export function isRelativePathWithinRoot(targetRelative: string): boolean {
+  const normalizedRelative = targetRelative.replaceAll('\\', '/');
   return (
-    targetRelative === '' ||
-    (!targetRelative.startsWith(`..${requirePathSeparator()}`) &&
-      targetRelative !== '..' &&
-      !isAbsolutePath(targetRelative))
+    normalizedRelative === '' ||
+    (!normalizedRelative.startsWith('../') &&
+      normalizedRelative !== '..' &&
+      !isAbsolutePath(normalizedRelative))
   );
 }
 
-function requirePathSeparator(): string {
-  return '/';
+function isWithin(rootDirectory: string, targetPath: string): boolean {
+  return isRelativePathWithinRoot(relative(rootDirectory, targetPath));
 }
 
 function isAbsolutePath(value: string): boolean {

@@ -33,3 +33,11 @@
 - `pnpm test` passed: discovery tests plus all three workspace test suites (`22` dashboard files / `117` tests, `1` pulse file / `6` tests, and `1` plugin file / `7` tests).
 - Root and nested JSON CLI runs produced byte-identical output; the checked-in JSON contracts parsed successfully; `git diff --check` passed.
 - `pnpm install --frozen-lockfile` remains blocked by the pre-existing `origin/main` mismatch between the root `pnpm.overrides.next` value and the committed lockfile override. This change intentionally does not repair unrelated dependency state.
+
+## Post-merge remediation for PR #1188 — 2026-07-22
+
+- [x] Make the relative containment predicate separator-independent by normalizing both `/` and `\\` before rejecting `..` escapes; remove the hard-coded POSIX-only separator guard.
+- [x] Add regression coverage for Windows-style `..\\outside` and `..\\outside\\secret.md` escapes, while retaining acceptance for valid Windows-style descendants such as `inside\\child\\context.md`.
+- [x] Re-run discovery tests and strict discovery typecheck after adding the focused helper seam and root-owned compiler dependency.
+- [x] Local clean-install evidence now supersedes the prior pre-remediation note: `pnpm install --frozen-lockfile`, `pnpm run test:agent-discovery`, `pnpm run typecheck:agent-discovery`, root `pnpm test`, and root `pnpm typecheck` passed on 2026-07-22.
+- [ ] Inspect hosted discovery/CI checks on the remediation PR head; do not infer current-head results from PR #1188's pre-remediation failures.

@@ -1305,3 +1305,24 @@ AGENTS.md (this update)
 - Hosted checks remain to be evaluated after the feature branch is pushed.
 **Gotchas**:
 - The current `origin/main` dependency lockfile predates the root Next.js override update; this issue-1162 change intentionally avoids unrelated dependency graph repairs.
+
+### 2026-07-22 — Post-merge PR #1188 Discovery and CI Remediation
+**Trigger**: Formal post-merge review `4754509039` for PR #1188.
+**What was done**:
+- Restored the OpenSpec-authorized Next.js `15.5.18` / TypeScript `6.0.3` graph across the root override, dashboard manifest, all workspace TypeScript manifests, and `pnpm-lock.yaml`.
+- Declared root-owned TypeScript `6.0.3` for the strict discovery compiler contract and added `check:dependency-consistency` before frozen CI, cross-repo, Docker, and benchmark installs.
+- Normalized both path separators in discovery containment and added Windows-style escape/descendant regression coverage.
+- Replaced the remaining cross-repo and benchmark unlocked install paths with root frozen workspace installs.
+- Updated the active CI-reliability and agent-discovery OpenSpec task notes with current-main regression context and validation evidence.
+**Key discoveries**:
+- PRs #1178, #1179, #1185, and #1186 landed after the earlier dependency repair evidence and reintroduced Next.js `16.2.11` / TypeScript `7.0.2`, leaving the root override and lockfile inconsistent on merged main.
+- The root assertion must run before dependency installation to provide a useful mismatch diagnostic; the Docker stage copies all workspace manifests needed by that assertion.
+**Files touched**:
+- `package.json`, `pnpm-lock.yaml`, `services/admin-dashboard/package.json`, `services/admin-pulse-bos/package.json`, `services/elizaos-plugin-conxian/package.json`
+- `scripts/check-dependency-consistency.mjs`, `scripts/agent-discovery.ts`, `scripts/agent-discovery.test.ts`, `scripts/run-benchmarks.sh`
+- `services/admin-dashboard/Dockerfile`, `.github/workflows/reusable-ci.yml`, `.github/workflows/cross-repo-integration-mvp.yml`
+- `openspec/changes/2026-07-21-ci-dependency-and-kb-reliability/tasks.md`, `openspec/changes/2026-07-22-issue-1162-agent-discovery/tasks.md`
+**Gaps identified**:
+- Direct Docker and Compose validation remains blocked in this devbox because the `docker` command is not installed; hosted checks are pending on the remediation PR head.
+**Gotchas**:
+- The earlier PR #1188 validation note correctly described a pre-existing frozen-install blocker, but its OpenSpec evidence was stale after later Dependabot merges; current-head claims must use the remediation head only.

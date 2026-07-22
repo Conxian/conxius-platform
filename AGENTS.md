@@ -1208,6 +1208,34 @@ AGENTS.md (this update)
 - Minimum sustainable: $84k/year = need ~$3.4M annual protocol volume
 - This IS the 1%→0.75% model you described (starts higher at launch)
 
+### 2026-07-21 — PR #1170 CI Dependency and KB Reliability Evidence
+**Trigger**: PR #1170 — CI dependency and Knowledge-Base reliability implementation evidence.
+**What was done**:
+- Recorded the implementation evidence for dependency alignment, the root-context/frozen-install Docker contract, Dependabot policy, root script repair, and the locked KB runner in `openspec/changes/2026-07-21-ci-dependency-and-kb-reliability/tasks.md`.
+- Verified local validation and the 18 successful hosted check runs at implementation head `da186a78c32ca79e2099461401bbf27952d930b0`; preserved the provider/admin classification.
+- Recorded that the first hosted manual KB dispatch [run `29829364746`](https://github.com/Conxian/conxius-platform/actions/runs/29829364746) failed Research/Health because hidden `.knowledge-store.json` was excluded by `upload-artifact`, producing zero artifact output, while Ingest's frozen install and `tsx` commands passed.
+- Recorded the repair in [commit `da186a78c32ca79e2099461401bbf27952d930b0`](https://github.com/Conxian/conxius-platform/commit/da186a78c32ca79e2099461401bbf27952d930b0), which adds `include-hidden-files: true` and `if-no-files-found: error` to the existing upload step without changing its action pin, retention, or conditions; the successful manual dispatch [run `29829870126`](https://github.com/Conxian/conxius-platform/actions/runs/29829870126) passed Ingest, Research, and Health and produced the seven-day `knowledge-store` artifact [ID `8494802707`](https://github.com/Conxian/conxius-platform/actions/runs/29829870126/artifacts/8494802707). Synthesize was intentionally skipped because it is schedule-only, and no branch, commit, or PR was created by the hosted dispatch.
+- Formal final review [review `4744589534`](https://github.com/Conxian/conxius-platform/pull/1170#pullrequestreview-4744589534) found two blocking issues: a direct/effective Next.js mismatch and insufficient explicit Dependabot workspace manifest coverage.
+- Applied [repair commit `0d43732948f8e58865a95b21c9ef8b435a0324ad`](https://github.com/Conxian/conxius-platform/commit/0d43732948f8e58865a95b21c9ef8b435a0324ad): `services/admin-dashboard/package.json`, the root override, the installed package, and effective lock resolution now align on exact Next.js `15.5.18`; the single npm updater now explicitly covers `/`, `/services/admin-dashboard`, `/services/admin-pulse-bos`, and `/services/elizaos-plugin-conxian`, while minor/patch grouping and non-npm entries remain unchanged.
+- Final-review local validation passed for frozen install, dashboard typecheck, 117 dashboard tests, dashboard production build, root typecheck/tests, Next.js resolution assertions, Dependabot YAML/policy/importer coverage assertions, action-version, hygiene, drift, and `git diff --check`.
+- No hosted result is claimed yet for the documentation-only follow-up head; the prior implementation-head hosted evidence remains recorded separately.
+- Updated this continuity entry without changing code, configuration, lockfiles, PR metadata, or prior session history.
+**Key discoveries**:
+- The implementation is distributed across commits `60482a9396709a7d7c57f2a3b89ee82cadbe9bc0`, `145440755f9952a790dfa4396eb55a7351c4d4a1`, `2515622dcb68723f0d7b4f1317c43529348007e6`, `5d422cb02de1685f5eb23a4bdb3e7fb421f2206a`, and `da186a78c32ca79e2099461401bbf27952d930b0`.
+- Hosted Synergy, Server, and Cloud validation passed with the repository-root Docker contract; local Docker execution was unavailable and is not represented as completed.
+- Eight external provider suites remain queued with zero check runs; they are provider/admin follow-up, not repository-code failures.
+- The successful manual KB dispatch validated the executable jobs and artifact repair, but did not exercise `Synthesize`; it remains schedule-only, so scheduled synthesis coverage is still unvalidated.
+- Hosted validation for the documentation-only follow-up head remains pending; no current-head hosted check result is being inferred from the prior implementation-head runs.
+**Files touched**:
+- `openspec/changes/2026-07-21-ci-dependency-and-kb-reliability/tasks.md` (updated implementation checkboxes and evidence)
+- `AGENTS.md` (updated the existing 2026-07-21 session entry)
+**Gaps identified**:
+- Scheduled KB Evolution synthesis remains unvalidated because `Synthesize` is schedule-only and was intentionally skipped by the successful manual dispatch.
+- Local pytest collection remains environment-blocked by missing declared Python packages; Docker-local validation remains unavailable until a Docker daemon is present.
+**Gotchas**:
+- Do not infer scheduled `Synthesize` coverage from the successful manual dispatch; it validated Ingest, Research, Health, and the artifact repair only.
+- Do not claim Docker-local execution; only the hosted Synergy/Server/Cloud evidence is available.
+- Keep the documentation follow-up limited to the two requested files and preserve the existing OpenSpec proposal/design scope.
 ### 2026-07-21 — PR #1171 TypeScript/Next.js Compatibility Repair
 **Trigger**: PR #1171 CI failures in the admin-dashboard Docker build.
 **What was done**:
@@ -1229,3 +1257,22 @@ AGENTS.md (this update)
 - Re-run the exact Docker and Compose build checks in CI or a Docker-enabled environment.
 **Gotchas**:
 - PR #1171's head branch is a Dependabot branch with merge commits; repair was applied directly without rebasing or rewriting history.
+
+### 2026-07-22 — PR #1170 Mainline Merge
+**Trigger**: PR #1170 request to merge the current `origin/main` into the existing Dependabot head branch.
+**What was done**:
+- Fetched `origin/main` at `eee5d099dbde1072dd8a6fe32603258996c36f1d` and merged it into `dependabot/npm_and_yarn/services/admin-dashboard/dashboard-dependencies-8387d3cff7` without rebasing or force-pushing.
+- Resolved `AGENTS.md` by retaining both existing PR #1170 and PR #1171 continuity entries, resolved the root manifest dependency overlap, and regenerated `pnpm-lock.yaml` with pnpm `9.15.5`.
+- Verified the frozen workspace install, admin-dashboard typecheck/tests/build, admin-pulse-bos typecheck/tests, workspace typecheck/tests, conflict-marker absence, and merge state.
+**Key discoveries**:
+- The checkout was shallow at `cdf53217ade89ceae9331f71585e3d9790e90660`; deepening the local history was required before Git could identify merge base `e9dde87c60b5ab88aafc698a6e1df84e7478fee1`.
+- The final root dependency state preserves the PR's locked `tsx` KB runner and the mainline `vite` `8.1.5` update.
+**Files touched**:
+- `AGENTS.md`
+- `package.json`
+- `pnpm-lock.yaml`
+- Mainline files brought into the merge: `openspec/changes/2026-07-21-typescript-next-compatibility/`, `services/admin-pulse-bos/package.json`, `services/admin-pulse-bos/src/__tests__/SovereignFinancialOffice.test.tsx`, and `services/admin-pulse-bos/vitest.config.ts`
+**Gaps identified**:
+- Hosted checks must be re-evaluated on the pushed merge commit.
+**Gotchas**:
+- Do not treat the initial shallow-clone `refusing to merge unrelated histories` message as a repository divergence; after local history deepening, the normal merge completed with three content conflicts.

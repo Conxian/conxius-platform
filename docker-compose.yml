@@ -27,7 +27,8 @@ services:
   # Admin Dashboard - Managed locally in this monorepo
   admin-dashboard:
     build:
-      context: ./services/admin-dashboard
+      context: .
+      dockerfile: services/admin-dashboard/Dockerfile
     restart: unless-stopped
     ports:
       - "3002:3001"

@@ -37,6 +37,12 @@ export const EVIDENCE_KINDS = [
 ] as const;
 export type EvidenceKind = (typeof EVIDENCE_KINDS)[number];
 
+const APPROVAL_EVIDENCE_KINDS: readonly EvidenceKind[] = ['approval'];
+const COLLECTOR_ROUTE_EVIDENCE_KINDS = ['collector-authorization', 'route-verification', 'interface-verification'] as const;
+const DISTRIBUTOR_ROUTE_EVIDENCE_KINDS = ['route-verification', 'interface-verification'] as const;
+const SOURCE_ROUTE_EVIDENCE_KINDS = ['source-authorization', 'route-verification', 'interface-verification'] as const;
+const PAYOUT_EVIDENCE_KINDS = ['route-verification', 'interface-verification', 'approval'] as const;
+
 export type PolicyAuthorityKind = 'source' | 'proposal' | 'approved';
 export type PolicyApprovalStatus = 'not-applicable' | 'unratified' | 'ratified' | 'revoked' | 'unresolved';
 export type CompensationStatus = 'none-observed' | 'proposed' | 'approved' | 'active' | 'disabled' | 'unresolved';
@@ -329,9 +335,54 @@ function readIdentifier(record: JsonRecord, key: string, path: string, prefix?: 
   return value;
 }
 
+function parseStrictDateTime(value: string): number | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.(\d{3})Z$/.exec(value);
+  if (match === null) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = Number(match[4]);
+  const minute = Number(match[5]);
+  const second = Number(match[6]);
+  const millisecond = Number(match[7]);
+  const isLeapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const daysInMonth = [31, isLeapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+  if (
+    year < 1 ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > daysInMonth[month - 1] ||
+    hour > 23 ||
+    minute > 59 ||
+    second > 59
+  ) {
+    return null;
+  }
+
+  const date = new Date(0);
+  date.setUTCFullYear(year, month - 1, day);
+  date.setUTCHours(hour, minute, second, millisecond);
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day ||
+    date.getUTCHours() !== hour ||
+    date.getUTCMinutes() !== minute ||
+    date.getUTCSeconds() !== second ||
+    date.getUTCMilliseconds() !== millisecond ||
+    date.toISOString() !== value
+  ) {
+    return null;
+  }
+  return date.getTime();
+}
+
 function readDateTime(record: JsonRecord, key: string, path: string): string {
   const value = readString(record, key, path);
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value) || !Number.isFinite(Date.parse(value))) {
+  if (parseStrictDateTime(value) === null) {
     fail('INVALID_TIMESTAMP', 'must be an RFC 3339 UTC timestamp with milliseconds', `${path}.${key}`);
   }
   return value;
@@ -676,9 +727,9 @@ function parseRoot(value: unknown): ProtocolRevenueObservation {
   };
 }
 
-function milliseconds(value: string): number {
-  const parsed = Date.parse(value);
-  if (!Number.isFinite(parsed)) fail('INVALID_TIMESTAMP', 'must be a valid timestamp');
+function milliseconds(value: string, path: string): number {
+  const parsed = parseStrictDateTime(value);
+  if (parsed === null) fail('INVALID_TIMESTAMP', 'must be an RFC 3339 UTC timestamp with milliseconds', path);
   return parsed;
 }
 
@@ -689,16 +740,16 @@ function assertReferencedIdsExist(ids: readonly string[], evidence: ReadonlyMap<
 }
 
 function assertFreshEvidence(observation: ProtocolRevenueObservation, options: ObservationValidationOptions, evidence: ReadonlyMap<string, Evidence>): void {
-  const now = milliseconds(options.now);
-  const observedAt = milliseconds(observation.observation.observed_at);
-  const expiresAt = milliseconds(observation.observation.expires_at);
+  const now = milliseconds(options.now, 'options.now');
+  const observedAt = milliseconds(observation.observation.observed_at, 'observation.observation.observed_at');
+  const expiresAt = milliseconds(observation.observation.expires_at, 'observation.observation.expires_at');
   if (expiresAt <= observedAt) fail('INVALID_TIMESTAMP', 'observation expiry must be after observation time', 'observation.observation.expires_at');
   if (expiresAt <= now) fail('STALE_EVIDENCE', 'observation evidence window has expired', 'observation.observation.expires_at');
   if (observedAt > now) fail('INVALID_TIMESTAMP', 'observation cannot be from the future', 'observation.observation.observed_at');
   const maxAgeSeconds = options.maxEvidenceAgeSeconds ?? DEFAULT_MAX_EVIDENCE_AGE_SECONDS;
   if (!Number.isSafeInteger(maxAgeSeconds) || maxAgeSeconds <= 0) fail('INVALID_TIMESTAMP', 'maxEvidenceAgeSeconds must be a positive safe integer');
   for (const item of evidence.values()) {
-    const itemTime = milliseconds(item.observed_at);
+    const itemTime = milliseconds(item.observed_at, `evidence.${item.evidence_id}.observed_at`);
     if (itemTime > observedAt || itemTime > now) fail('INVALID_TIMESTAMP', 'evidence cannot be newer than the snapshot or current time', `evidence.${item.evidence_id}.observed_at`);
     if (now - itemTime > maxAgeSeconds * 1000) fail('STALE_EVIDENCE', 'evidence exceeds the allowed observation age', `evidence.${item.evidence_id}.observed_at`);
   }
@@ -709,6 +760,20 @@ function assertEvidenceKinds(ids: readonly string[], allowedKinds: readonly Evid
     const item = evidence.get(id);
     if (item === undefined) fail('MISSING_EVIDENCE', `references unknown evidence '${id}'`, path);
     if (!allowedKinds.includes(item.kind)) fail('INVALID_CONTRACT', `evidence '${id}' has kind '${item.kind}', expected ${allowedKinds.join(', ')}`, path);
+  }
+}
+
+function assertApprovalEvidence(authority: PolicyAuthority, evidence: ReadonlyMap<string, Evidence>): void {
+  if (authority.kind !== 'approved' && authority.approval_status !== 'ratified') return;
+  if (authority.approval_evidence_ids.length === 0) {
+    fail('MISSING_EVIDENCE', 'approved or ratified authority requires approval evidence', 'observation.policy_authority.approval_evidence_ids');
+  }
+  for (const id of authority.approval_evidence_ids) {
+    const item = evidence.get(id);
+    if (item === undefined) fail('MISSING_EVIDENCE', `references unknown evidence '${id}'`, 'observation.policy_authority.approval_evidence_ids');
+    if (!APPROVAL_EVIDENCE_KINDS.includes(item.kind)) {
+      fail('INVALID_AUTHORITY', `approval evidence '${id}' has kind '${item.kind}', expected ${APPROVAL_EVIDENCE_KINDS.join(', ')}`, 'observation.policy_authority.approval_evidence_ids');
+    }
   }
 }
 
@@ -785,7 +850,10 @@ function assertEndpointEvidence(
   allowedKinds: readonly EvidenceKind[],
 ): void {
   assertReferencedIdsExist(endpoint.evidence_ids, evidence, `${path}.evidence_ids`);
-  if (endpoint.authorization === 'verified') assertEvidenceKinds(endpoint.evidence_ids, allowedKinds, evidence, `${path}.evidence_ids`);
+  if (endpoint.authorization === 'verified') {
+    if (endpoint.evidence_ids.length === 0) fail('MISSING_EVIDENCE', 'verified routes require at least one evidence record', `${path}.evidence_ids`);
+    assertEvidenceKinds(endpoint.evidence_ids, allowedKinds, evidence, `${path}.evidence_ids`);
+  }
 }
 
 function assertCompensationGate(
@@ -822,7 +890,8 @@ function assertPayoutGate(observation: ProtocolRevenueObservation, evidence: Rea
   if (observation.compensation.founder.status !== 'active' && observation.compensation.builder.status !== 'active') fail('PAYOUT_NOT_ELIGIBLE', 'payout requires at least one active compensation track', 'observation.payout.payout_enabled');
   if (observation.routing.collector.authorization !== 'verified' || observation.routing.distributor.authorization !== 'verified') fail('PAYOUT_NOT_ELIGIBLE', 'collector and distributor authorization must be verified', 'observation.routing');
   if (observation.routing.authorized_sources.some((source) => source.authorization !== 'verified')) fail('PAYOUT_NOT_ELIGIBLE', 'all authorized sources must be verified', 'observation.routing.authorized_sources');
-  assertEvidenceKinds(observation.payout.evidence_ids, ['route-verification', 'interface-verification', 'approval'], evidence, 'observation.payout.evidence_ids');
+  if (observation.payout.evidence_ids.length === 0) fail('PAYOUT_NOT_ELIGIBLE', 'enabled payout requires at least one payout evidence record', 'observation.payout.evidence_ids');
+  assertEvidenceKinds(observation.payout.evidence_ids, PAYOUT_EVIDENCE_KINDS, evidence, 'observation.payout.evidence_ids');
 }
 
 export function validateProtocolRevenueObservation(value: unknown, options: ObservationValidationOptions): ProtocolRevenueObservation {
@@ -842,11 +911,12 @@ export function validateProtocolRevenueObservation(value: unknown, options: Obse
   for (const [index, source] of observation.routing.authorized_sources.entries()) assertReferencedIdsExist(source.evidence_ids, evidenceById, `observation.routing.authorized_sources[${index}].evidence_ids`);
   assertReferencedIdsExist(observation.payout.evidence_ids, evidenceById, 'observation.payout.evidence_ids');
   assertFreshEvidence(observation, options, evidenceById);
+  assertApprovalEvidence(observation.policy_authority, evidenceById);
   assertProvenance(observation, evidenceById);
   assertDeploymentEvidence(observation, evidenceById);
-  assertEndpointEvidence(observation.routing.collector, evidenceById, 'observation.routing.collector', ['collector-authorization', 'route-verification', 'interface-verification']);
-  assertEndpointEvidence(observation.routing.distributor, evidenceById, 'observation.routing.distributor', ['route-verification', 'interface-verification']);
-  for (const [index, source] of observation.routing.authorized_sources.entries()) assertEndpointEvidence(source, evidenceById, `observation.routing.authorized_sources[${index}]`, ['source-authorization', 'route-verification', 'interface-verification']);
+  assertEndpointEvidence(observation.routing.collector, evidenceById, 'observation.routing.collector', COLLECTOR_ROUTE_EVIDENCE_KINDS);
+  assertEndpointEvidence(observation.routing.distributor, evidenceById, 'observation.routing.distributor', DISTRIBUTOR_ROUTE_EVIDENCE_KINDS);
+  for (const [index, source] of observation.routing.authorized_sources.entries()) assertEndpointEvidence(source, evidenceById, `observation.routing.authorized_sources[${index}]`, SOURCE_ROUTE_EVIDENCE_KINDS);
   assertCompensationGate(observation.compensation.founder, 'founder', observation, evidenceById);
   assertCompensationGate(observation.compensation.builder, 'builder', observation, evidenceById);
   assertPayoutGate(observation, evidenceById);

@@ -349,9 +349,22 @@ function appendEvidence(root: Record<string, unknown>, item: ProtocolRevenueObse
   evidence.push(item);
 }
 
-function expectCode(value: unknown, code: ProtocolRevenueObservationError['code']): void {
+function setSnapshotTimes(root: Record<string, unknown>, observedAt: string, expiresAt: string): void {
+  const observation = recordAt(root, ['observation']);
+  observation.observed_at = observedAt;
+  observation.expires_at = expiresAt;
+  recordAt(root, ['anchor']).observed_at = observedAt;
+  const evidence = root.evidence;
+  if (!Array.isArray(evidence)) throw new Error('fixture evidence must be an array');
+  for (const item of evidence) {
+    if (item === null || typeof item !== 'object' || Array.isArray(item)) throw new Error('fixture evidence item must be an object');
+    (item as Record<string, unknown>).observed_at = observedAt;
+  }
+}
+
+function expectCode(value: unknown, code: ProtocolRevenueObservationError['code'], now = NOW): void {
   assert.throws(
-    () => validateProtocolRevenueObservation(value, { now: NOW }),
+    () => validateProtocolRevenueObservation(value, { now }),
     (error: unknown) => error instanceof ProtocolRevenueObservationError && error.code === code,
   );
 }
@@ -369,6 +382,10 @@ test('accepts a fully evidenced synthetic active snapshot only when every gate i
   assert.equal(validated.deployment.stage, 'live-interface-verified');
   assert.equal(validated.payout.payout_enabled, true);
   assert.equal(validated.compensation.founder.schedule.entries[0]?.rate_bps, 250);
+  assert.deepEqual(validated.policy_authority.approval_evidence_ids, ['ev-approval']);
+  assert.deepEqual(validated.routing.collector.evidence_ids, ['ev-collector']);
+  assert.deepEqual(validated.routing.distributor.evidence_ids, ['ev-distributor']);
+  assert.deepEqual(validated.payout.evidence_ids, ['ev-route']);
 });
 
 test('compiles the checked-in Draft 2020-12 schema and validates representative snapshots', () => {
@@ -378,6 +395,18 @@ test('compiles the checked-in Draft 2020-12 schema and validates representative 
   const validate = ajv.compile(schema);
   assert.equal(validate(observedSnapshot()), true, JSON.stringify(validate.errors));
   assert.equal(validate(activeSnapshot()), true, JSON.stringify(validate.errors));
+
+  const emptyVerifiedRoute = cloneSnapshot(activeSnapshot());
+  recordAt(emptyVerifiedRoute, ['routing', 'collector']).evidence_ids = [];
+  assert.equal(validate(emptyVerifiedRoute), false);
+
+  const emptyEnabledPayout = cloneSnapshot(activeSnapshot());
+  recordAt(emptyEnabledPayout, ['payout']).evidence_ids = [];
+  assert.equal(validate(emptyEnabledPayout), false);
+
+  const impossibleCalendarDate = cloneSnapshot(observedSnapshot());
+  recordAt(impossibleCalendarDate, ['observation']).observed_at = '2026-02-30T12:00:00.000Z';
+  assert.equal(validate(impossibleCalendarDate), false);
 });
 
 test('rejects ambiguous fee units instead of inferring a denominator or asset unit', () => {
@@ -394,6 +423,59 @@ test('rejects missing observation evidence and unknown evidence references', () 
   const unknown = cloneSnapshot(observedSnapshot());
   recordAt(unknown, ['observation']).evidence_ids = ['ev-does-not-exist'];
   expectCode(unknown, 'MISSING_EVIDENCE');
+});
+
+test('rejects source or generic governance evidence from being used as ratification', () => {
+  const empty = cloneSnapshot(activeSnapshot());
+  recordAt(empty, ['policy_authority']).approval_evidence_ids = [];
+  expectCode(empty, 'INVALID_AUTHORITY');
+
+  const source = cloneSnapshot(activeSnapshot());
+  recordAt(source, ['policy_authority']).approval_evidence_ids = ['ev-source'];
+  expectCode(source, 'INVALID_AUTHORITY');
+
+  const genericGovernance = cloneSnapshot(activeSnapshot());
+  appendEvidence(genericGovernance, evidence('ev-generic-governance', 'governance', 'Generic governance evidence is not explicit ratification evidence.'));
+  recordAt(genericGovernance, ['policy_authority']).approval_evidence_ids = ['ev-generic-governance'];
+  expectCode(genericGovernance, 'INVALID_AUTHORITY');
+});
+
+test('rejects verified collector and distributor routes without evidence', () => {
+  const collector = cloneSnapshot(activeSnapshot());
+  recordAt(collector, ['routing', 'collector']).evidence_ids = [];
+  expectCode(collector, 'MISSING_EVIDENCE');
+
+  const distributor = cloneSnapshot(activeSnapshot());
+  recordAt(distributor, ['routing', 'distributor']).evidence_ids = [];
+  expectCode(distributor, 'MISSING_EVIDENCE');
+});
+
+test('rejects verified routes when their evidence kind is from another evidence domain', () => {
+  const snapshot = cloneSnapshot(activeSnapshot());
+  recordAt(snapshot, ['routing', 'collector']).evidence_ids = ['ev-source'];
+  expectCode(snapshot, 'INVALID_CONTRACT');
+});
+
+test('rejects enabled payout without payout evidence', () => {
+  const snapshot = cloneSnapshot(activeSnapshot());
+  recordAt(snapshot, ['payout']).evidence_ids = [];
+  expectCode(snapshot, 'PAYOUT_NOT_ELIGIBLE');
+});
+
+test('accepts a strictly validated leap-day timestamp window', () => {
+  const snapshot = cloneSnapshot(activeSnapshot());
+  setSnapshotTimes(snapshot, '2024-02-29T12:00:00.000Z', '2024-02-29T13:00:00.000Z');
+  const validated = validateProtocolRevenueObservation(snapshot, { now: '2024-02-29T12:30:00.000Z' });
+  assert.equal(validated.observation.observed_at, '2024-02-29T12:00:00.000Z');
+});
+
+test('rejects impossible calendar dates and ambiguous timestamp zones', () => {
+  const impossibleDate = cloneSnapshot(observedSnapshot());
+  recordAt(impossibleDate, ['observation']).observed_at = '2026-02-30T12:00:00.000Z';
+  expectCode(impossibleDate, 'INVALID_TIMESTAMP');
+
+  const ambiguousZone = cloneSnapshot(observedSnapshot());
+  expectCode(ambiguousZone, 'INVALID_TIMESTAMP', '2026-07-22T12:00:00.000+00:00');
 });
 
 test('rejects unratified founder rights reported as active', () => {

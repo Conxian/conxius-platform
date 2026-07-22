@@ -1669,3 +1669,25 @@ AGENTS.md (this update)
 **Gotchas**:
 - The fully evidenced active fixture is synthetic test data only; it must not be described as a mainnet or beneficiary assertion.
 - Keep historical AGENTS entries and evidence documents immutable; future integrations require a separate OpenSpec change and must remain protocol-owned.
+
+### 2026-07-22 — PR #1197 Formal Review Repair
+**Trigger**: Formal review `4758577860` on [conxius-platform#1197](https://github.com/Conxian/conxius-platform/pull/1197).
+**What was done**:
+- Required explicit `approval` evidence for approved/ratified authority and rejected source, proposal, and generic governance records used as ratification.
+- Required non-empty, domain-specific evidence for verified routes and enabled payouts, with schema-level conditional minimums and validator allowlists.
+- Replaced `Date.parse` freshness handling with strict, calendar-valid UTC timestamp parsing and added leap-day/impossible-date/timezone regression coverage.
+- Clarified the repaired contract in the canonical OpenSpec, change-local spec/design, schema, and research report.
+**Key discoveries**:
+- The existing vocabulary already has an explicit `approval` kind, so no new evidence kind was needed; generic `governance` remains insufficient for ratification.
+- JSON Schema can enforce non-empty conditional references and RFC3339 format, while cross-record evidence-kind semantics remain validator responsibilities.
+**Files touched**:
+- `scripts/protocol-revenue-observation.ts`, `scripts/protocol-revenue-observation.test.ts`
+- `schemas/protocol-revenue-observation.schema.json`
+- `openspec/specs/protocol-revenue-observation-v1.spec.md`
+- `openspec/changes/2026-07-22-founder-rights-revenue-observation/{design.md,specs/protocol-revenue-observation/spec.md}`
+- `docs/architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md`
+- `AGENTS.md`
+**Gaps identified**:
+- Hosted checks must be re-evaluated after the repair commit is pushed.
+**Gotchas**:
+- Keep timestamp acceptance narrower than generic JavaScript date parsing: only millisecond UTC `Z` timestamps with valid Gregorian calendar components are contract-valid.

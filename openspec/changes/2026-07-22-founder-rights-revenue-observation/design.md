@@ -30,6 +30,10 @@ rights or move funds.
 
 The validator requires the authority provenance role to match the class. This
 prevents a repository path or proposal from being relabeled as approval.
+For `approved`/`ratified` authority, the validator uses a strict
+`approval_evidence_ids` allowlist containing only the explicit `approval`
+evidence kind. Generic governance, source, proposal, deployment, route, and
+interface records cannot be relabeled as ratification.
 
 ## 3. Snapshot fields
 
@@ -53,6 +57,13 @@ prevents a repository path or proposal from being relabeled as approval.
 - `custody_claim`: a schema-level constant `false`.
 - `evidence`: stable evidence IDs with URLs or external IDs and observation
   timestamps.
+
+Evidence references are domain-specific. Verified collectors require collector
+authorization, route verification, or interface verification evidence;
+verified distributors require route or interface verification; verified
+authorized sources require source authorization, route verification, or
+interface verification; and an enabled payout requires non-empty fresh
+route/interface/approval evidence.
 
 ## 4. Deployment stages
 
@@ -84,7 +95,8 @@ that are not final.
 
 The validator rejects:
 
-- unknown fields, malformed IDs, missing references, invalid timestamps, or
+- unknown fields, malformed IDs, missing references, impossible or ambiguous
+  timestamps, or
   expired/stale evidence;
 - source/proposal authority represented as ratified or active;
 - ambiguous units, non-10,000 denominators, non-integer rates, or unresolved

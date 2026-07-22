@@ -51,8 +51,11 @@ Authority has three classes:
 
 The authority provenance role MUST match the class. Each provenance record MUST
 include repository, ref, full commit SHA, safe relative artifact path, role, and
-evidence IDs. A platform document, UI label, or Gateway fallback cannot be
-substituted for protocol authority.
+evidence IDs. For `approved`/`ratified` authority, `approval_evidence_ids` MUST
+be non-empty and every referenced record MUST have the explicit `approval`
+evidence kind. Generic `source`, `proposal`, `governance`, deployment, route,
+or interface evidence is not approval evidence. A platform document, UI label,
+or Gateway fallback cannot be substituted for protocol authority.
 
 ## 4. Units and rates
 
@@ -71,9 +74,12 @@ support active compensation or payout.
 Every snapshot MUST provide `observed_at` and `expires_at`; expiry MUST be after
 observation time and after the validator's comparison time. Referenced evidence
 MUST exist, be no newer than the snapshot, and be within the configured maximum
-age. A snapshot MUST include the observed Bitcoin burn-block height, observation
-time, and evidence ID. Stale, missing, or future-dated evidence MUST fail
-closed.
+age. Timestamps MUST use the strict UTC profile `YYYY-MM-DDTHH:mm:ss.sssZ`,
+represent a real Gregorian calendar date (including leap-day rules), and round
+trip without normalization. Offsets, missing or ambiguous timezones, impossible
+dates, and future-dated evidence MUST fail closed before freshness calculations.
+A snapshot MUST include the observed Bitcoin burn-block height, observation time,
+and evidence ID.
 
 ## 6. Deployment stages
 
@@ -99,8 +105,12 @@ schedule. The reference may identify an evidence record, repository path,
 governance record, or on-chain reference; it MUST NOT embed PII in the snapshot.
 
 Collector, distributor, and authorized-source endpoints MUST have
-`owner_scope: protocol`. Endpoint authorization and evidence are separate from
-the platform's operational flags. `platform_substitution` MUST be `false`.
+`owner_scope: protocol`. A verified endpoint MUST reference at least one
+evidence record and MUST use the route-specific evidence allowlist: collector
+authorization/route/interface evidence for collectors, route/interface evidence
+for distributors, and source-authorization/route/interface evidence for
+authorized sources. Endpoint authorization and evidence are separate from the
+platform's operational flags. `platform_substitution` MUST be `false`.
 
 ## 8. Payout gate and custody
 
@@ -111,7 +121,8 @@ the platform's operational flags. `platform_substitution` MUST be `false`.
 3. at least one compensation track is active and satisfies section 7;
 4. deployment is `live-interface-verified`;
 5. collector, distributor, and every authorized source are verified;
-6. payout evidence is fresh and has an allowed route/approval/interface kind;
+6. payout evidence is non-empty, fresh, and has an allowed
+   route-verification/interface-verification/approval kind;
    and
 7. payout route state is verified.
 

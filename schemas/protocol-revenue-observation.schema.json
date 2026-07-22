@@ -93,6 +93,7 @@
     },
     "dateTime": {
       "type": "string",
+      "format": "date-time",
       "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
     },
     "repository": {
@@ -537,7 +538,26 @@
         "evidence_ids": {
           "$ref": "#/$defs/evidenceReferences"
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "authorization": {
+                "const": "verified"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence_ids": {
+                "type": "array",
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
     },
     "authorizedSource": {
       "type": "object",
@@ -558,7 +578,26 @@
         "evidence_ids": {
           "$ref": "#/$defs/evidenceReferences"
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "authorization": {
+                "const": "verified"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence_ids": {
+                "type": "array",
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
     },
     "routing": {
       "type": "object",
@@ -618,7 +657,26 @@
           "type": ["string", "null"],
           "minLength": 1
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "payout_enabled": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence_ids": {
+                "type": "array",
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
     },
     "evidence": {
       "type": "object",

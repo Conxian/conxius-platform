@@ -16,10 +16,12 @@ evidence contract, implemented by:
 - [`scripts/protocol-revenue-observation.test.ts`](../../../scripts/protocol-revenue-observation.test.ts).
 
 The implementation distinguishes source, proposal, and approved authority;
-requires explicit integer units and basis points; records staged deployment
-evidence; preserves protocol-owned collector/distributor routes; anchors an
-observation to Bitcoin burn-block height and time; and fails closed on stale,
-ambiguous, substituted, or incomplete evidence.
+requires explicit approval evidence kinds, integer units, and basis points;
+records staged deployment evidence; preserves protocol-owned
+collector/distributor routes with route-specific evidence; anchors an
+observation to strictly calendar-valid UTC timestamps and Bitcoin burn-block
+height; and fails closed on stale, ambiguous, substituted, or incomplete
+evidence.
 
 This report does **not** conclude that founder rights are approved, that any
 fee or allocation is adopted, that a beneficiary is entitled to compensation,

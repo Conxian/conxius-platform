@@ -8,6 +8,10 @@ The platform MUST represent source, proposal, and approved protocol authority as
 distinct states. Every authority claim MUST reference repository/ref/commit
 provenance and evidence. A proposal or source-only artifact MUST NOT be
 reported as ratified, active founder compensation, or payout-enabled.
+When authority is `approved` with `ratified` status, its approval evidence list
+MUST be non-empty and every referenced evidence record MUST use the explicit
+`approval` kind; source, proposal, or generic governance evidence is
+insufficient.
 
 #### Scenario: Source implementation is observed without approval
 
@@ -23,6 +27,13 @@ reported as ratified, active founder compensation, or payout-enabled.
 - **WHEN** no protocol ratification evidence is present
 - **THEN** the snapshot uses `proposal` with an unratified or unresolved status
 - **AND** the validator rejects any active compensation or payout claim
+
+#### Scenario: Source evidence is relabeled as approval
+
+- **GIVEN** an authority record points `approval_evidence_ids` at a `source`,
+  `proposal`, or generic `governance` evidence record
+- **WHEN** validation runs
+- **THEN** validation fails closed as invalid authority
 
 ### Requirement: Fee units, denominators, and rates MUST be explicit integers
 
@@ -50,6 +61,8 @@ confirmed, and live-interface-verified stages. Confirmation requires a
 transaction reference, confirmation evidence, and a Bitcoin burn-block height.
 Live-interface verification additionally requires interface/source evidence.
 Evidence MUST be referenced, time-bounded, and fresh at validation time.
+Timestamps MUST use the strict UTC profile `YYYY-MM-DDTHH:mm:ss.sssZ`, represent
+real Gregorian calendar dates, and be validated before freshness calculations.
 
 #### Scenario: A deployment plan is mistaken for a live deployment
 
@@ -67,8 +80,17 @@ Evidence MUST be referenced, time-bounded, and fresh at validation time.
 ### Requirement: Protocol routing ownership and custody boundaries MUST be preserved
 
 Collector, distributor, and authorized-source endpoints MUST remain
-protocol-owned and explicitly authorized. The platform substitution flag and
-custody claim MUST always be false.
+protocol-owned and explicitly authorized. A verified endpoint MUST have a
+non-empty evidence reference list whose records use the endpoint's allowed
+collector, distributor, or source route kinds. The platform substitution flag
+and custody claim MUST always be false.
+
+#### Scenario: Verified route has no evidence
+
+- **GIVEN** a collector, distributor, or authorized source is marked `verified`
+  with an empty evidence list
+- **WHEN** validation runs
+- **THEN** validation fails closed as missing evidence
 
 #### Scenario: Platform supplies its own collector
 
@@ -88,7 +110,8 @@ Active compensation MUST require ratified protocol authority, a disclosed
 non-PII beneficiary reference, a verified route, and a resolved schedule with
 exact burn-height boundaries. Payout MUST additionally require live-interface
 verification, a resolved fee schedule, verified protocol collector/distributor
-and source authorization, and fresh route evidence.
+and source authorization, a non-empty payout evidence list with allowed
+route/interface/approval kinds, and fresh route evidence.
 
 #### Scenario: Unresolved schedule is reported active
 
@@ -100,6 +123,13 @@ and source authorization, and fresh route evidence.
 
 - **GIVEN** a snapshot sets `payout_enabled` to true before ratification,
   confirmation, live-interface verification, or verified routes
+- **WHEN** validation runs
+- **THEN** validation fails closed with a payout-not-eligible error
+
+#### Scenario: Enabled payout has no evidence
+
+- **GIVEN** a snapshot satisfies the other payout gates but sets
+  `payout_enabled` to `true` with an empty `evidence_ids` list
 - **WHEN** validation runs
 - **THEN** validation fails closed with a payout-not-eligible error
 

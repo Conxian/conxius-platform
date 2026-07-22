@@ -26,7 +26,7 @@
     "timestamp": {
       "type": "string",
       "format": "date-time",
-      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$"
+      "pattern": "^(?!0000-)(\\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])T([01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,9})?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
     },
     "jsonValue": {
       "oneOf": [
@@ -100,6 +100,67 @@
       "properties": {
         "digest": { "$ref": "#/$defs/digest" },
         "authentication": { "$ref": "#/$defs/authentication" }
+      }
+    },
+    "digestIntegrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["digest"],
+      "properties": {
+        "digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "repositoryPath": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*//)(?!.*(^|/)\\.)[^\\u0000-\\u001F]+$"
+        },
+        { "const": ".agents/manifest.json" },
+        { "const": ".agents/skills/registry.json" },
+        { "type": "string", "pattern": "^\\.agents/skills/[A-Za-z0-9][A-Za-z0-9._-]*/SKILL\\.md$" }
+      ]
+    },
+    "allowlistRepositoryPath": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "tier", "required"],
+      "properties": {
+        "path": { "$ref": "#/$defs/repositoryPath" },
+        "tier": { "enum": ["GOVERNANCE", "CANONICAL", "ARCHITECTURAL", "OPERATIONAL", "EVIDENCE", "HISTORICAL"] },
+        "required": { "type": "boolean" }
+      }
+    },
+    "contextAllowlistProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol", "version", "discovery_protocol", "manifest_path", "manifest_version", "registry_path", "registry_version", "repository_paths", "repository_paths_digest", "discovery_digest"],
+      "properties": {
+        "protocol": { "const": "conxian.swarm.context-allowlist" },
+        "version": { "const": "1.0.0" },
+        "discovery_protocol": { "const": "conxian-agent-discovery" },
+        "manifest_path": { "const": ".agents/manifest.json" },
+        "manifest_version": { "type": "string", "pattern": "^1\\.\\d+\\.\\d+$" },
+        "registry_path": { "const": ".agents/skills/registry.json" },
+        "registry_version": { "type": "string", "pattern": "^1\\.\\d+\\.\\d+$" },
+        "repository_paths": { "type": "array", "items": { "$ref": "#/$defs/allowlistRepositoryPath" }, "uniqueItems": true },
+        "repository_paths_digest": { "$ref": "#/$defs/digest" },
+        "discovery_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "contextAllowlist": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository_paths", "task_input_keys", "required_task_input_keys", "artifact_ids", "required_artifact_ids", "assumption_keys", "provenance"],
+      "properties": {
+        "repository_paths": { "type": "array", "items": { "$ref": "#/$defs/allowlistRepositoryPath" }, "uniqueItems": true },
+        "task_input_keys": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/contextKey" } },
+        "required_task_input_keys": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/contextKey" } },
+        "artifact_ids": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } },
+        "required_artifact_ids": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } },
+        "assumption_keys": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/contextKey" } },
+        "provenance": { "$ref": "#/$defs/contextAllowlistProvenance" }
       }
     },
     "failure": {
@@ -244,7 +305,7 @@
         },
         {
           "type": "object", "additionalProperties": false, "required": ["kind", "path", "tier"],
-          "properties": { "kind": { "const": "DECLARED_REPOSITORY" }, "path": { "type": "string", "minLength": 1, "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*//)(?!.*(^|/)\\.)[^\\u0000-\\u001F]+$" }, "tier": { "enum": ["GOVERNANCE", "CANONICAL", "ARCHITECTURAL", "OPERATIONAL", "EVIDENCE", "HISTORICAL"] } }
+          "properties": { "kind": { "const": "DECLARED_REPOSITORY" }, "path": { "$ref": "#/$defs/repositoryPath" }, "tier": { "enum": ["GOVERNANCE", "CANONICAL", "ARCHITECTURAL", "OPERATIONAL", "EVIDENCE", "HISTORICAL"] } }
         },
         {
           "type": "object", "additionalProperties": false, "required": ["kind", "artifact_id", "tier"],
@@ -279,9 +340,9 @@
     },
     "contextSnapshot": {
       "type": "object", "additionalProperties": false,
-      "required": ["schema", "captured_at", "entries", "required_keys", "missing_required", "stale_required", "expired_required", "conflicts", "warnings", "limits", "allowlist_digest", "integrity"],
+      "required": ["schema", "captured_at", "evaluated_at", "entries", "required_keys", "missing_required", "stale_required", "expired_required", "conflicts", "warnings", "limits", "allowlist_digest", "integrity"],
       "properties": {
-        "schema": { "const": "context.v1" }, "captured_at": { "$ref": "#/$defs/timestamp" }, "entries": { "type": "array", "items": { "$ref": "#/$defs/contextEntry" } }, "required_keys": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }, "missing_required": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }, "stale_required": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }, "expired_required": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }, "conflicts": { "type": "array", "items": { "$ref": "#/$defs/contextConflict" } }, "warnings": { "type": "array", "items": { "type": "string" } }, "limits": { "$ref": "#/$defs/contextLimits" }, "allowlist_digest": { "$ref": "#/$defs/digest" }, "integrity": { "$ref": "#/$defs/integrity" }
+        "schema": { "const": "context.v1" }, "captured_at": { "$ref": "#/$defs/timestamp" }, "evaluated_at": { "$ref": "#/$defs/timestamp" }, "entries": { "type": "array", "items": { "$ref": "#/$defs/contextEntry" } }, "required_keys": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }, "missing_required": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }, "stale_required": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }, "expired_required": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }, "conflicts": { "type": "array", "items": { "$ref": "#/$defs/contextConflict" } }, "warnings": { "type": "array", "items": { "type": "string" } }, "limits": { "$ref": "#/$defs/contextLimits" }, "allowlist_digest": { "$ref": "#/$defs/digest" }, "integrity": { "$ref": "#/$defs/digestIntegrity" }
       }
     },
     "contextReference": {
@@ -328,9 +389,9 @@
     },
     "handover": {
       "type": "object", "additionalProperties": false,
-      "required": ["schema", "handover_id", "correlation_id", "graph_id", "captured_at", "expires_at", "lifecycle_state", "completed_tasks", "active_tasks", "blocked_tasks", "pending_tasks", "decisions", "artifacts", "unresolved_conflicts", "risks_and_blockers", "resume_instructions", "context_snapshot", "links", "integrity"],
+      "required": ["schema", "handover_id", "correlation_id", "graph_id", "graph_digest", "captured_at", "expires_at", "lifecycle_state", "completed_tasks", "active_tasks", "blocked_tasks", "pending_tasks", "decisions", "artifacts", "unresolved_conflicts", "risks_and_blockers", "resume_instructions", "context_snapshot", "links", "integrity"],
       "properties": {
-        "schema": { "const": "handover.v1" }, "handover_id": { "$ref": "#/$defs/identifier" }, "correlation_id": { "$ref": "#/$defs/identifier" }, "graph_id": { "$ref": "#/$defs/identifier" }, "source_agent": { "$ref": "#/$defs/identity" }, "target_agent": { "$ref": "#/$defs/identity" }, "captured_at": { "$ref": "#/$defs/timestamp" }, "expires_at": { "$ref": "#/$defs/timestamp" }, "lifecycle_state": { "enum": ["PROPOSED", "ACCEPTED", "STARTED", "COMPLETED", "FAILED", "BLOCKED", "CANCELLED", "REJECTED", "EXPIRED"] }, "completed_tasks": { "type": "array", "items": { "$ref": "#/$defs/handoverTask" } }, "active_tasks": { "type": "array", "items": { "$ref": "#/$defs/handoverTask" } }, "blocked_tasks": { "type": "array", "items": { "$ref": "#/$defs/handoverTask" } }, "pending_tasks": { "type": "array", "items": { "$ref": "#/$defs/handoverTask" } }, "decisions": { "type": "array", "items": { "$ref": "#/$defs/decision" } }, "artifacts": { "type": "array", "items": { "$ref": "#/$defs/artifact" } }, "unresolved_conflicts": { "type": "array", "items": { "$ref": "#/$defs/handoverConflict" } }, "risks_and_blockers": { "type": "array", "items": { "$ref": "#/$defs/risk" } }, "resume_instructions": { "type": "array", "items": { "$ref": "#/$defs/resume" } }, "context_snapshot": { "$ref": "#/$defs/contextSnapshot" }, "links": { "type": "array", "items": { "$ref": "#/$defs/link" } }, "integrity": { "$ref": "#/$defs/integrity" }
+        "schema": { "const": "handover.v1" }, "handover_id": { "$ref": "#/$defs/identifier" }, "correlation_id": { "$ref": "#/$defs/identifier" }, "graph_id": { "$ref": "#/$defs/identifier" }, "graph_digest": { "$ref": "#/$defs/digest" }, "source_agent": { "$ref": "#/$defs/identity" }, "target_agent": { "$ref": "#/$defs/identity" }, "captured_at": { "$ref": "#/$defs/timestamp" }, "expires_at": { "$ref": "#/$defs/timestamp" }, "lifecycle_state": { "enum": ["PROPOSED", "ACCEPTED", "STARTED", "COMPLETED", "FAILED", "BLOCKED", "CANCELLED", "REJECTED", "EXPIRED"] }, "completed_tasks": { "type": "array", "items": { "$ref": "#/$defs/handoverTask" } }, "active_tasks": { "type": "array", "items": { "$ref": "#/$defs/handoverTask" } }, "blocked_tasks": { "type": "array", "items": { "$ref": "#/$defs/handoverTask" } }, "pending_tasks": { "type": "array", "items": { "$ref": "#/$defs/handoverTask" } }, "decisions": { "type": "array", "items": { "$ref": "#/$defs/decision" } }, "artifacts": { "type": "array", "items": { "$ref": "#/$defs/artifact" } }, "unresolved_conflicts": { "type": "array", "items": { "$ref": "#/$defs/handoverConflict" } }, "risks_and_blockers": { "type": "array", "items": { "$ref": "#/$defs/risk" } }, "resume_instructions": { "type": "array", "items": { "$ref": "#/$defs/resume" } }, "context_snapshot": { "$ref": "#/$defs/contextSnapshot" }, "links": { "type": "array", "items": { "$ref": "#/$defs/link" } }, "integrity": { "$ref": "#/$defs/digestIntegrity" }
       }
     }
   }

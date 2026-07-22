@@ -2,6 +2,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
+import Ajv2020 from 'ajv/dist/2020.js';
+import addFormats from 'ajv-formats';
+
+import { discoverRepository } from './agent-discovery';
+
 import {
   AGGREGATE_STATUSES,
   SWARM_PROTOCOL,
@@ -22,6 +27,7 @@ import {
   deduplicateResults,
   deterministicTopologicalOrder,
   digestFor,
+  deriveContextAllowlist,
   matchCapabilities,
   mergeContextSnapshots,
   packageContext,
@@ -42,6 +48,11 @@ const LATER = '2026-07-22T13:00:00.000Z';
 const FUTURE = '2026-07-23T12:00:00.000Z';
 const DIGEST = digestFor('test', 'evidence');
 const emptyLimits: ContextLimits = { max_items: 16, max_total_bytes: 4096, max_entry_bytes: 1024, max_depth: 8 };
+const DISCOVERY = discoverRepository(process.cwd(), { includeOptional: true });
+const DISCOVERY_ANCHORS = [
+  { path: '.agents/manifest.json', tier: 'CANONICAL' as const, required: false },
+  { path: '.agents/skills/registry.json', tier: 'CANONICAL' as const, required: false },
+];
 
 function expectCode(callback: () => unknown, code: CoordinationError['code']): void {
   assert.throws(callback, (error: unknown) => error instanceof CoordinationError && error.code === code);
@@ -94,14 +105,12 @@ function result(taskId: string, payload: unknown, status: TaskResult['status'] =
   };
 }
 
-const emptyAllowlist: ContextAllowlist = {
-  repository_paths: [],
-  task_input_keys: [],
-  required_task_input_keys: [],
-  artifact_ids: [],
-  required_artifact_ids: [],
-  assumption_keys: [],
-};
+const emptyAllowlist: ContextAllowlist = deriveContextAllowlist(DISCOVERY, { repository_paths: DISCOVERY_ANCHORS });
+
+function makeAllowlist(overrides: Parameters<typeof deriveContextAllowlist>[1] = {}): ContextAllowlist {
+  const repositoryPaths = overrides.repository_paths === undefined ? DISCOVERY_ANCHORS : [...DISCOVERY_ANCHORS, ...overrides.repository_paths];
+  return deriveContextAllowlist(DISCOVERY, { ...overrides, repository_paths: repositoryPaths });
+}
 
 function contextInput(overrides: Partial<ContextInput> = {}): ContextInput {
   return {
@@ -117,7 +126,7 @@ function contextInput(overrides: Partial<ContextInput> = {}): ContextInput {
 }
 
 function emptyContext() {
-  return packageContext([], { allowlist: emptyAllowlist, limits: emptyLimits, captured_at: NOW, now: NOW });
+  return packageContext([], { allowlist: emptyAllowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW });
 }
 
 test('schema is strict, versioned, and defines all protocol object families', () => {
@@ -165,6 +174,24 @@ test('task graph ordering is independent of node input order and capability requ
   const matches = matchCapabilities(requirements, candidates);
   assert.deepEqual(matches.selected_candidates.map((candidate) => candidate.agent_id), ['agent-a', 'agent-z']);
   assert.equal(matches.blocked, false);
+  const missingConstraint = {
+    agent_id: 'agent-missing-constraint',
+    capabilities: [{ capability_id: 'rust.build', version: '1.1.0', constraints: {} }],
+    declared_priority: 0,
+    links: [],
+  };
+  const mismatchedConstraint = {
+    agent_id: 'agent-mismatched-constraint',
+    capabilities: [{ capability_id: 'rust.build', version: '1.1.0', constraints: { target: 'darwin' } }],
+    declared_priority: 0,
+    links: [],
+  };
+  const ranked = matchCapabilities(requirements, [...candidates, missingConstraint, mismatchedConstraint]);
+  const rankedAgain = matchCapabilities(requirements, [mismatchedConstraint, ...candidates, missingConstraint]);
+  assert.deepEqual(ranked.candidates.map((candidate) => candidate.agent_id), rankedAgain.candidates.map((candidate) => candidate.agent_id));
+  assert.equal(ranked.candidates.find((candidate) => candidate.agent_id === 'agent-missing-constraint')?.unmet_required_count, 1);
+  assert.equal(ranked.candidates.find((candidate) => candidate.agent_id === 'agent-mismatched-constraint')?.unmet_required_count, 1);
+  assert.equal(ranked.candidates.find((candidate) => candidate.agent_id === 'agent-missing-constraint')?.unmet_requirements[0]?.capability_id, 'rust.build');
   assert.equal(matchCapabilities([{ capability_id: 'rust.build', version_range: '2.0.0', constraints: {} }], candidates).blocked, true);
   expectCode(() => matchCapabilities([{ capability_id: 'rust.build', version_range: '1.0.0 || 2.0.0', constraints: {} }], candidates), 'CAPABILITY_MISMATCH');
   expectCode(() => matchCapabilities(requirements, [{ ...candidates[0], capabilities: [...candidates[0].capabilities, candidates[0].capabilities[0]] }]), 'INVALID_CONTRACT');
@@ -173,6 +200,17 @@ test('task graph ordering is independent of node input order and capability requ
 test('result validation enforces IDs, statuses, payload digest, and failure linkage', () => {
   const success = validateTaskResult(result('task-a', { output: 'ok' }));
   assert.equal(success.status, 'SUCCEEDED');
+  assert.equal(validateTaskResult({ ...success, completed_at: '2026-07-22T08:00:00-04:00' }).completed_at, NOW);
+  for (const timestamp of [
+    '2026-02-29T00:00:00Z',
+    '2026-04-31T00:00:00Z',
+    '2026-13-01T00:00:00Z',
+    '2026-01-01T24:00:00Z',
+    '2026-01-01T00:00:00+01:60',
+    '0000-01-01T00:00:00Z',
+  ]) {
+    expectCode(() => validateTaskResult({ ...success, completed_at: timestamp }), 'INVALID_TIMESTAMP');
+  }
   expectCode(() => validateTaskResult({ ...success, schema: 'result.v2' }), 'UNSUPPORTED_VERSION');
   expectCode(() => validateTaskResult({ ...success, canonical_payload_digest: DIGEST }), 'INVALID_DIGEST');
   expectCode(() => validateTaskResult({ ...success, status: 'FAILED' }), 'INVALID_RESULT');
@@ -182,7 +220,7 @@ test('result validation enforces IDs, statuses, payload digest, and failure link
 
 test('result deduplication collapses identical deliveries and preserves conflicting attempts', () => {
   const duplicateA = result('task-a', { output: 'same' }, 'SUCCEEDED', 'result-a-1', 1, 'agent-a');
-  const duplicateB = { ...duplicateA, result_id: 'result-a-2', agent_id: 'agent-b' };
+  const duplicateB = { ...duplicateA, result_id: 'result-a-2' };
   const conflict = result('task-a', { output: 'different' }, 'SUCCEEDED', 'result-a-3', 1, 'agent-c');
   const forward = deduplicateResults([conflict, duplicateB, duplicateA]);
   const reverse = deduplicateResults([duplicateA, duplicateB, conflict]);
@@ -190,6 +228,26 @@ test('result deduplication collapses identical deliveries and preserves conflict
   assert.equal(forward.conflicts.length, 1);
   assert.deepEqual(forward.conflicts[0]?.payload_digests, reverse.conflicts[0]?.payload_digests);
   assert.deepEqual(forward.unique.map((entry) => entry.canonical_payload_digest), reverse.unique.map((entry) => entry.canonical_payload_digest));
+});
+
+test('result semantic fingerprints preserve same-payload status, evidence, and artifact conflicts', () => {
+  const base = result('task-a', { output: 'same' }, 'SUCCEEDED', 'semantic-base', 1, 'agent-a');
+  const statusConflict = result('task-a', { output: 'same' }, 'FAILED', 'semantic-status', 1, 'agent-a');
+  const evidenceConflict = {
+    ...base,
+    result_id: 'semantic-evidence',
+    evidence: [{ evidence_id: 'evidence-1', kind: 'test', locator: 'urn:evidence:1', digest: DIGEST, summary: 'different evidence', links: [] }],
+  };
+  const artifactConflict = {
+    ...base,
+    result_id: 'semantic-artifact',
+    artifacts: [{ artifact_id: 'artifact-1', locator: 'urn:artifact:1', media_type: 'text/plain', digest: DIGEST, classification: 'INTERNAL' as const, links: [] }],
+  };
+  const deduplicated = deduplicateResults([artifactConflict, statusConflict, evidenceConflict, base]);
+  assert.equal(deduplicated.conflicts.length, 1);
+  assert.equal(new Set(deduplicated.conflicts[0]?.payload_digests).size, 1);
+  assert.equal(deduplicated.conflicts[0]?.result_fingerprints.length, 4);
+  assert.deepEqual(deduplicated.duplicates, []);
 });
 
 test('envelope construction validates message linkage, expiry, authentication, and replay conflicts', () => {
@@ -225,24 +283,27 @@ test('lifecycle transition validation is monotonic and terminal states cannot re
   expectCode(() => validateLifecycleTransition('COMPLETED', 'STARTED', 1, 2), 'INVALID_TRANSITION');
   expectCode(() => validateLifecycleTransition('PROPOSED', 'STARTED', 0, 1), 'INVALID_TRANSITION');
   expectCode(() => validateLifecycleTransition('PROPOSED', 'ACCEPTED', 0, 2), 'INVALID_TRANSITION');
+  expectCode(() => validateLifecycleTransition('PROPOSED', 'ACCEPTED', -1, 0), 'INVALID_TRANSITION');
+  expectCode(() => validateLifecycleTransition('PROPOSED', 'ACCEPTED', 0.5, 1.5), 'INVALID_TRANSITION');
+  expectCode(() => validateLifecycleTransition('PROPOSED', 'ACCEPTED', 2_147_483_647, 2_147_483_648), 'INVALID_TRANSITION');
 });
 
 test('context packaging enforces #1162 allowlists, redacts sensitive fields, and records provenance', () => {
-  const allowlist: ContextAllowlist = {
+  const allowlist = makeAllowlist({
     repository_paths: [
       { path: 'AGENTS.md', tier: 'ARCHITECTURAL', required: true },
-      { path: 'docs/optional.md', tier: 'OPERATIONAL', required: false },
+      { path: 'docs/REPOSITORY_TAXONOMY.md', tier: 'ARCHITECTURAL', required: false },
     ],
     task_input_keys: ['instructions'],
     required_task_input_keys: ['instructions'],
     artifact_ids: ['artifact-1'],
     required_artifact_ids: [],
     assumption_keys: ['assumption'],
-  };
+  });
   const snapshot = packageContext([
     contextInput(),
     { context_id: 'context-agents', key: 'repo.agents', source: { kind: 'DECLARED_REPOSITORY', path: 'AGENTS.md', tier: 'ARCHITECTURAL' }, value: '# context', classification: 'INTERNAL', sensitivity: 'NONE', captured_at: NOW },
-  ], { allowlist, limits: emptyLimits, captured_at: NOW, now: NOW });
+  ], { allowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW });
   assert.deepEqual(snapshot.required_keys, ['repo:AGENTS.md', 'task:instructions']);
   assert.equal(snapshot.entries.length, 2);
   const instructions = snapshot.entries.find((entry) => entry.key === 'current.instructions');
@@ -250,26 +311,26 @@ test('context packaging enforces #1162 allowlists, redacts sensitive fields, and
   assert.equal(canonicalJson(instructions?.value).includes('must-not-leak'), false);
   assert.equal(instructions?.provenance_digest.startsWith('sha256:'), true);
   assert.deepEqual(validateContextSnapshot(snapshot).entries.map((entry) => entry.key), ['current.instructions', 'repo.agents']);
-  expectCode(() => packageContext([contextInput({ source: { kind: 'DECLARED_REPOSITORY', path: '.env.production', tier: 'OPERATIONAL' } })], { allowlist: { ...allowlist, repository_paths: [{ path: '.env.production', tier: 'OPERATIONAL', required: false }], required_task_input_keys: [] }, limits: emptyLimits, captured_at: NOW, now: NOW }), 'CONTEXT_NOT_ALLOWED');
-  expectCode(() => packageContext([contextInput({ source: { kind: 'DECLARED_REPOSITORY', path: 'docs/.secret.md', tier: 'OPERATIONAL' } })], { allowlist: { ...allowlist, repository_paths: [{ path: 'docs/.secret.md', tier: 'OPERATIONAL', required: false }], required_task_input_keys: [] }, limits: emptyLimits, captured_at: NOW, now: NOW }), 'CONTEXT_NOT_ALLOWED');
-  expectCode(() => packageContext([contextInput({ source: { kind: 'TASK_INPUT', key: 'unlisted' } })], { allowlist, limits: emptyLimits, captured_at: NOW, now: NOW }), 'CONTEXT_NOT_ALLOWED');
+  expectCode(() => packageContext([contextInput({ source: { kind: 'DECLARED_REPOSITORY', path: '.env.production', tier: 'OPERATIONAL' } })], { allowlist: { ...allowlist, repository_paths: [{ path: '.env.production', tier: 'OPERATIONAL', required: false }] }, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW }), 'CONTEXT_NOT_ALLOWED');
+  expectCode(() => packageContext([contextInput({ source: { kind: 'DECLARED_REPOSITORY', path: 'docs/.secret.md', tier: 'OPERATIONAL' } })], { allowlist: { ...allowlist, repository_paths: [{ path: 'docs/.secret.md', tier: 'OPERATIONAL', required: false }] }, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW }), 'CONTEXT_NOT_ALLOWED');
+  expectCode(() => packageContext([contextInput({ source: { kind: 'TASK_INPUT', key: 'unlisted' } })], { allowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW }), 'CONTEXT_NOT_ALLOWED');
 });
 
 test('context packaging rejects missing and stale required sources, while optional stale data is flagged', () => {
-  const allowlist: ContextAllowlist = {
+  const allowlist = makeAllowlist({
     repository_paths: [{ path: 'AGENTS.md', tier: 'ARCHITECTURAL', required: true }],
     task_input_keys: ['instructions'], required_task_input_keys: ['instructions'], artifact_ids: [], required_artifact_ids: [], assumption_keys: [],
-  };
-  expectCode(() => packageContext([contextInput()], { allowlist, limits: emptyLimits, captured_at: NOW, now: NOW }), 'MISSING_CONTEXT');
+  });
+  expectCode(() => packageContext([contextInput()], { allowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW }), 'MISSING_CONTEXT');
   const stale = contextInput({ captured_at: '2026-07-22T10:00:00Z', stale_after: '2026-07-22T11:00:00Z' });
   const agentsContext: ContextInput = {
     ...contextInput({ context_id: 'agents', key: 'agents', source: { kind: 'DECLARED_REPOSITORY', path: 'AGENTS.md', tier: 'ARCHITECTURAL' }, value: 'agents' }),
   };
-  expectCode(() => packageContext([stale, agentsContext], { allowlist, limits: emptyLimits, captured_at: NOW, now: NOW }), 'STALE_CONTEXT');
+  expectCode(() => packageContext([stale, agentsContext], { allowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW }), 'STALE_CONTEXT');
   const retainedAgents: ContextInput = {
     ...contextInput({ context_id: 'agents-2', key: 'agents', source: { kind: 'DECLARED_REPOSITORY', path: 'AGENTS.md', tier: 'ARCHITECTURAL' }, value: 'agents' }),
   };
-  const retained = packageContext([stale, retainedAgents], { allowlist, limits: emptyLimits, captured_at: NOW, now: NOW, allow_stale: true });
+  const retained = packageContext([stale, retainedAgents], { allowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW, allow_stale: true });
   const resolution = resolveContextSnapshot(retained, LATER);
   assert.equal(resolution.valid, false);
   assert.deepEqual(resolution.stale_required, ['task:instructions']);
@@ -277,22 +338,33 @@ test('context packaging rejects missing and stale required sources, while option
   expectCode(() => validateContextSnapshot(retained, { now: LATER, reject_stale_required: true }), 'STALE_CONTEXT');
 });
 
+test('context freshness uses effective now at the captured/stale boundary', () => {
+  const allowlist = makeAllowlist({ task_input_keys: ['instructions'], required_task_input_keys: ['instructions'] });
+  const boundary = contextInput({ captured_at: '2026-07-22T10:00:00Z', stale_after: '2026-07-22T11:00:00Z' });
+  const current = packageContext([boundary], { allowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: '2026-07-22T10:00:00Z', now: '2026-07-22T10:30:00Z' });
+  assert.equal(current.entries[0]?.stale, false);
+  expectCode(() => packageContext([boundary], { allowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: '2026-07-22T10:00:00Z', now: '2026-07-22T11:30:00Z' }), 'STALE_CONTEXT');
+  const retained = packageContext([boundary], { allowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: '2026-07-22T10:00:00Z', now: '2026-07-22T11:30:00Z', allow_stale: true });
+  assert.equal(retained.entries[0]?.stale, true);
+  assert.deepEqual(retained.stale_required, ['task:instructions']);
+});
+
 test('context bounds reject oversized values and support explicit deterministic truncation', () => {
-  const allowlist: ContextAllowlist = { ...emptyAllowlist, task_input_keys: ['instructions'], required_task_input_keys: ['instructions'] };
+  const allowlist = makeAllowlist({ task_input_keys: ['instructions'], required_task_input_keys: ['instructions'] });
   const tiny: ContextLimits = { max_items: 2, max_total_bytes: 128, max_entry_bytes: 64, max_depth: 3 };
-  expectCode(() => packageContext([contextInput({ value: 'a'.repeat(200) })], { allowlist, limits: tiny, captured_at: NOW, now: NOW }), 'CONTEXT_LIMIT');
-  const truncated = packageContext([contextInput({ value: 'a'.repeat(200) })], { allowlist, limits: tiny, captured_at: NOW, now: NOW, allow_truncation: true });
+  expectCode(() => packageContext([contextInput({ value: 'a'.repeat(200) })], { allowlist, discovery: DISCOVERY, limits: tiny, captured_at: NOW, now: NOW }), 'CONTEXT_LIMIT');
+  const truncated = packageContext([contextInput({ value: 'a'.repeat(200) })], { allowlist, discovery: DISCOVERY, limits: tiny, captured_at: NOW, now: NOW, allow_truncation: true });
   assert.equal(truncated.entries[0]?.truncated, true);
   assert.equal((truncated.entries[0]?.byte_length ?? 999) <= tiny.max_entry_bytes, true);
   assert.equal(validateContextSnapshot(truncated).entries[0]?.original_digest?.startsWith('sha256:'), true);
-  expectCode(() => packageContext([contextInput({ value: { nested: { deeper: { value: true } } } })], { allowlist, limits: { ...tiny, max_entry_bytes: 1024, max_total_bytes: 1024, max_depth: 2 }, captured_at: NOW, now: NOW }), 'CONTEXT_LIMIT');
+  expectCode(() => packageContext([contextInput({ value: { nested: { deeper: { value: true } } } })], { allowlist, discovery: DISCOVERY, limits: { ...tiny, max_entry_bytes: 1024, max_total_bytes: 1024, max_depth: 2 }, captured_at: NOW, now: NOW }), 'CONTEXT_LIMIT');
 });
 
 test('context merge applies precedence and retains deterministic conflict evidence', () => {
-  const taskAllowlist: ContextAllowlist = { ...emptyAllowlist, task_input_keys: ['decision'], required_task_input_keys: [] };
-  const operationalAllowlist: ContextAllowlist = { ...emptyAllowlist, repository_paths: [{ path: 'runbook.md', tier: 'OPERATIONAL', required: false }] };
-  const taskSnapshot = packageContext([contextInput({ context_id: 'task-decision', key: 'decision', source: { kind: 'TASK_INPUT', key: 'decision' }, value: 'current' })], { allowlist: taskAllowlist, limits: emptyLimits, captured_at: NOW, now: NOW });
-  const operationalSnapshot = packageContext([contextInput({ context_id: 'runbook-decision', key: 'decision', source: { kind: 'DECLARED_REPOSITORY', path: 'runbook.md', tier: 'OPERATIONAL' }, value: 'old' })], { allowlist: operationalAllowlist, limits: emptyLimits, captured_at: NOW, now: NOW });
+  const taskAllowlist = makeAllowlist({ task_input_keys: ['decision'], required_task_input_keys: [] });
+  const operationalAllowlist = makeAllowlist({ repository_paths: [{ path: 'docs/AGENT_ONBOARDING.md', tier: 'ARCHITECTURAL', required: false }] });
+  const taskSnapshot = packageContext([contextInput({ context_id: 'task-decision', key: 'decision', source: { kind: 'TASK_INPUT', key: 'decision' }, value: 'current' })], { allowlist: taskAllowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW });
+  const operationalSnapshot = packageContext([contextInput({ context_id: 'runbook-decision', key: 'decision', source: { kind: 'DECLARED_REPOSITORY', path: 'docs/AGENT_ONBOARDING.md', tier: 'ARCHITECTURAL' }, value: 'old' })], { allowlist: operationalAllowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW });
   const merged = mergeContextSnapshots([operationalSnapshot, taskSnapshot], { now: NOW });
   assert.equal(merged.entries.find((entry) => entry.key === 'decision')?.value, 'current');
   assert.equal(merged.conflicts.length, 1);
@@ -323,7 +395,7 @@ test('aggregation classifies complete, partial, failed, blocked, conflict, and c
 });
 
 test('aggregation is invariant to input ordering and preserves duplicate evidence', () => {
-  const duplicate = result('task-a', { value: 'a' }, 'SUCCEEDED', 'a-duplicate', 1, 'agent-b');
+  const duplicate = result('task-a', { value: 'a' }, 'SUCCEEDED', 'a-duplicate', 1, 'agent-a');
   const base = result('task-a', { value: 'a' }, 'SUCCEEDED', 'a-result', 1, 'agent-a');
   const values = [result('task-b', { value: 'b' }), result('task-c', { value: 'c' }), duplicate, base];
   const first = aggregateResults(graphFixture(), values);
@@ -363,13 +435,13 @@ test('handover validation rejects missing fields, bad task linkage, stale contex
   }, graph);
   const missing = { ...base } as Record<string, unknown>;
   delete missing.resume_instructions;
-  expectCode(() => validateHandover(missing), 'INVALID_CONTRACT');
+  expectCode(() => validateHandover(missing, { graph }), 'INVALID_CONTRACT');
   expectCode(() => validateHandover({ ...base, graph_id: 'graph-other' }, { graph }), 'INVALID_HANDOVER');
-  expectCode(() => validateHandover({ ...base, integrity: { ...base.integrity, digest: DIGEST } }), 'INVALID_DIGEST');
+  expectCode(() => validateHandover({ ...base, integrity: { ...base.integrity, digest: DIGEST } }, { graph }), 'INVALID_DIGEST');
   expectCode(() => createHandover({ ...base, handover_id: 'handover-3', completed_tasks: [{ task_id: 'missing', state: 'COMPLETED', links: [] }] }, graph), 'INVALID_HANDOVER');
-  const staleContext = packageContext([contextInput({ stale_after: '2026-07-22T12:30:00Z' })], { allowlist: { ...emptyAllowlist, task_input_keys: ['instructions'], required_task_input_keys: ['instructions'] }, limits: emptyLimits, captured_at: NOW, now: NOW });
-  const staleHandover = createHandover({ ...base, handover_id: 'handover-stale', context_snapshot: staleContext });
-  const staleAssessment = assessHandoverResumability(staleHandover, undefined, LATER);
+  const staleContext = packageContext([contextInput({ stale_after: '2026-07-22T12:30:00Z' })], { allowlist: makeAllowlist({ task_input_keys: ['instructions'], required_task_input_keys: ['instructions'] }), discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW });
+  const staleHandover = createHandover({ ...base, handover_id: 'handover-stale', context_snapshot: staleContext }, graph);
+  const staleAssessment = assessHandoverResumability(staleHandover, graph, LATER);
   assert.equal(staleAssessment.resumable, false);
   assert.deepEqual(staleAssessment.stale_context_ids, ['task:instructions']);
 });
@@ -384,8 +456,8 @@ test('redaction handles nested secrets and never emits the raw sensitive value',
 });
 
 test('sensitive context is serialized as a typed marker and raw values fail validation', () => {
-  const allowlist: ContextAllowlist = { ...emptyAllowlist, task_input_keys: ['instructions'], required_task_input_keys: ['instructions'] };
-  const snapshot = packageContext([contextInput({ sensitivity: 'SECRET', value: 'raw-secret' })], { allowlist, limits: emptyLimits, captured_at: NOW, now: NOW });
+  const allowlist = makeAllowlist({ task_input_keys: ['instructions'], required_task_input_keys: ['instructions'] });
+  const snapshot = packageContext([contextInput({ sensitivity: 'SECRET', value: 'raw-secret' })], { allowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW });
   const entry = snapshot.entries[0];
   assert.deepEqual(entry?.value, { redacted: true, reason: 'SECRET' });
   assert.deepEqual(entry?.redaction, { redacted: true, fields: ['$'], reason: 'SECRET' });
@@ -394,4 +466,79 @@ test('sensitive context is serialized as a typed marker and raw values fail vali
     entries: [{ ...entry, value: 'raw-secret', byte_length: Buffer.byteLength(JSON.stringify('raw-secret'), 'utf8'), depth: 1 }],
   };
   expectCode(() => validateContextSnapshot(forged), 'INVALID_CONTEXT');
+});
+
+test('context allowlists require #1162 provenance and permit only declared .agents sources', () => {
+  const manifestAllowlist = makeAllowlist({ repository_paths: [{ path: '.agents/manifest.json', tier: 'CANONICAL', required: false }] });
+  const manifestSnapshot = packageContext([contextInput({ context_id: 'manifest', key: 'manifest', source: { kind: 'DECLARED_REPOSITORY', path: '.agents/manifest.json', tier: 'CANONICAL' }, value: { protocol: 'conxian-agent-discovery' } })], { allowlist: manifestAllowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW });
+  assert.equal(manifestSnapshot.entries[0]?.source.kind, 'DECLARED_REPOSITORY');
+
+  expectCode(() => packageContext([contextInput({ source: { kind: 'DECLARED_REPOSITORY', path: '.agents/not-listed.md', tier: 'ARCHITECTURAL' } })], { allowlist: emptyAllowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW }), 'CONTEXT_NOT_ALLOWED');
+  expectCode(() => packageContext([contextInput({ source: { kind: 'DECLARED_REPOSITORY', path: 'docs/../AGENTS.md', tier: 'ARCHITECTURAL' } })], { allowlist: emptyAllowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW }), 'CONTEXT_NOT_ALLOWED');
+  expectCode(() => packageContext([contextInput({ source: { kind: 'DECLARED_REPOSITORY', path: 'docs//AGENTS.md', tier: 'ARCHITECTURAL' } })], { allowlist: emptyAllowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW }), 'CONTEXT_NOT_ALLOWED');
+
+  const tamperedDigest = { ...emptyAllowlist, provenance: { ...emptyAllowlist.provenance, repository_paths_digest: digestFor('tampered-paths', emptyAllowlist.repository_paths) } };
+  expectCode(() => packageContext([], { allowlist: tamperedDigest, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW }), 'INVALID_DIGEST');
+  const tamperedDiscovery = { ...emptyAllowlist, provenance: { ...emptyAllowlist.provenance, discovery_digest: digestFor('tampered-discovery', DISCOVERY) } };
+  expectCode(() => packageContext([], { allowlist: tamperedDiscovery, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW }), 'CONTEXT_NOT_ALLOWED');
+  const freeForm = { ...emptyAllowlist } as Record<string, unknown>;
+  delete freeForm.provenance;
+  expectCode(() => packageContext([], { allowlist: freeForm as unknown as ContextAllowlist, discovery: DISCOVERY, limits: emptyLimits, captured_at: NOW, now: NOW }), 'INVALID_CONTRACT');
+});
+
+test('prototype-key JSON values round-trip and redact without prototype pollution', () => {
+  const parsed = parseCanonicalJson('{"__proto__":{"polluted":true},"constructor":"constructor-value","prototype":"prototype-value"}');
+  assert.equal(Object.prototype.hasOwnProperty.call(parsed, '__proto__'), true);
+  assert.equal(Object.prototype.hasOwnProperty.call(parsed, 'constructor'), true);
+  assert.equal(Object.prototype.hasOwnProperty.call(parsed, 'prototype'), true);
+  assert.equal((Object.prototype as Record<string, unknown>).polluted, undefined);
+  const redacted = redactSensitiveFields(parsed);
+  assert.equal(typeof redacted.value === 'object' && redacted.value !== null && !Array.isArray(redacted.value), true);
+  const redactedRecord = redacted.value as Record<string, unknown>;
+  assert.deepEqual(Object.keys(redactedRecord).sort(), ['__proto__', 'constructor', 'prototype']);
+  assert.deepEqual(parseCanonicalJson(canonicalJson(redacted.value)), redacted.value);
+});
+
+test('graph context budgets and handover graph/authentication boundaries are enforced', () => {
+  const smallGraph = { ...graphFixture(), limits: { ...graphFixture().limits, max_context_bytes: 32 } };
+  expectCode(() => packageContext([contextInput({ value: 'a'.repeat(128) })], { allowlist: makeAllowlist({ task_input_keys: ['instructions'], required_task_input_keys: ['instructions'] }), discovery: DISCOVERY, graph: smallGraph, limits: emptyLimits, captured_at: NOW, now: NOW }), 'CONTEXT_LIMIT');
+
+  const graph = graphFixture();
+  const handover = createHandover({ handover_id: 'boundary-handover', correlation_id: 'correlation-1', graph_id: 'graph-1', captured_at: NOW, expires_at: FUTURE, lifecycle_state: 'STARTED', completed_tasks: [], active_tasks: [], blocked_tasks: [], pending_tasks: [], decisions: [], artifacts: [], unresolved_conflicts: [], risks_and_blockers: [], resume_instructions: [], context_snapshot: emptyContext(), links: [] }, graph);
+  expectCode(() => validateHandover({ ...handover, graph_digest: DIGEST }, { graph }), 'INVALID_HANDOVER');
+  expectCode(() => validateHandover({ ...handover, integrity: { ...handover.integrity, authentication: { scheme: 'signature', verified: true, subject: 'agent-a' } } }, { graph }), 'UNKNOWN_FIELD');
+
+  const handoverEnvelope = createEnvelope({
+    message_id: 'handover-message-1', message_type: 'handover', sender: { agent_id: 'agent-a' }, recipient: { agent_id: 'agent-b' },
+    correlation_id: 'correlation-1', idempotency_scope: 'workflow-1', idempotency_key: 'handover-key',
+    lifecycle: { state: 'STARTED', sequence: 2, expires_at: FUTURE }, payload: { kind: 'handover', handover, links: [] }, links: [],
+  }, { graph });
+  expectCode(() => deduplicateEnvelopes([handoverEnvelope]), 'INVALID_HANDOVER');
+  assert.equal(deduplicateEnvelopes([handoverEnvelope], { graph }).unique.length, 1);
+});
+
+test('JSON Schema validation covers valid and invalid protocol fixtures', () => {
+  const schema = JSON.parse(readFileSync('schemas/agent-swarm.schema.json', 'utf8')) as Record<string, unknown>;
+  const ajv = new Ajv2020({ allErrors: true, strict: false });
+  addFormats(ajv);
+  const validate = ajv.compile(schema);
+  const validEnvelope = createEnvelope({
+    message_id: 'schema-message', message_type: 'task', sender: { agent_id: 'agent-a' }, recipient: { agent_id: 'agent-b' }, correlation_id: 'schema-correlation', idempotency_scope: 'schema-scope', idempotency_key: 'schema-key',
+    lifecycle: { state: 'PROPOSED', sequence: 0, expires_at: FUTURE }, payload: { kind: 'task', graph_id: 'graph-1', task: task('task-a'), links: [] }, links: [],
+  });
+  const validGraph = graphFixture();
+  const validResult = result('task-a', { output: 'schema' });
+  const validContext = emptyContext();
+  const validHandover = createHandover({ handover_id: 'schema-handover', correlation_id: 'schema-correlation', graph_id: 'graph-1', captured_at: NOW, expires_at: FUTURE, lifecycle_state: 'STARTED', completed_tasks: [], active_tasks: [], blocked_tasks: [], pending_tasks: [], decisions: [], artifacts: [], unresolved_conflicts: [], risks_and_blockers: [], resume_instructions: [], context_snapshot: validContext, links: [] }, validGraph);
+  for (const fixture of [validEnvelope, validGraph, validResult, validHandover, validContext]) assert.equal(validate(fixture), true, JSON.stringify(validate.errors));
+
+  const invalidFixtures: unknown[] = [
+    { ...validEnvelope, integrity: undefined },
+    { ...validGraph, nodes: [] },
+    { ...validResult, attempt: 0 },
+    { ...validHandover, graph_digest: undefined },
+    { ...validContext, evaluated_at: undefined },
+    { ...validHandover, unresolved_conflicts: [{ conflict_id: 'conflict-1', object_id: 'task-a', payload_digests: [DIGEST], resolution_required: true, links: [] }] },
+  ];
+  for (const fixture of invalidFixtures) assert.equal(validate(fixture), false, JSON.stringify(validate.errors));
 });

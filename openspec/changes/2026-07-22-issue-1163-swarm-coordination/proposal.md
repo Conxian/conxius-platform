@@ -3,8 +3,8 @@
 **Date**: 2026-07-22
 **Reference**: [Issue #1163](https://github.com/Conxian/conxius-platform/issues/1163)
 **Dependency**: [Issue #1162](https://github.com/Conxian/conxius-platform/issues/1162), merged on the current `origin/main` at `f8a231baa8131398b27139a1fbbc22b2d0a3a290`
-**Status**: Proposed
-**Phase**: OpenSpec artifacts only
+**Status**: Implemented; independent review/approval outstanding
+**Phase**: Canonical specification, implementation, hardening, and validation
 
 ## 1. Problem statement
 
@@ -25,9 +25,9 @@ Without these contracts, two agents can report superficially compatible data whi
 - Preserve stable identity and correlation across retries, delegation, handover, and resumed sessions.
 - Make duplicate delivery safe and make conflicting or incomplete work visible rather than silently selecting a winner.
 - Bound shared context to repository-approved sources and explicit size/depth limits, with redaction and staleness metadata.
-- Establish security, compatibility, and failure semantics before implementation begins.
+- Establish security, compatibility, and failure semantics in a canonical specification and executable validators.
 - Depend on the merged #1162 discovery protocol for repository-local allowlists and context discovery, without modifying #1162 artifacts or implementation.
-- Provide a concrete implementation/test/CI/documentation plan while keeping this phase limited to OpenSpec artifacts.
+- Provide and validate the implementation, tests, CI wiring, and documentation while keeping the runtime boundary transport-neutral.
 
 ## 3. Dependency and sequencing
 
@@ -56,7 +56,7 @@ Agent identity, authentication, transport delivery, and runtime scheduling remai
 7. A bounded context snapshot derived only from #1162-allowlisted sources or explicitly supplied task data, with redaction markers, source precedence, capture/stale times, truncation indicators, and provenance digests.
 8. Stable serialization and hashing rules for all normative objects.
 9. Security, compatibility, and failure semantics, including unknown major versions, unknown required fields, replay conflicts, stale context, malformed DAGs, and provider-independent transport errors.
-10. Proposed canonical spec, source modules, tests, CI checks, and documentation updates for the follow-up implementation phase.
+10. Canonical specification, source implementation, contract tests, CI checks, and documentation updates for the implementation phase.
 
 ### 4.2 Out of scope
 
@@ -68,30 +68,26 @@ Agent identity, authentication, transport delivery, and runtime scheduling remai
 - A universal policy for choosing the most capable or cheapest provider; matching produces deterministic evidence and candidates, not an execution decision.
 - Distributed consensus, Byzantine fault tolerance, or a guarantee that an untrusted agent is truthful.
 - UI, dashboard, or operator workflow changes beyond documentation of the contracts.
-- Implementation code in this phase; only the five files in this OpenSpec change directory are created.
+- Runtime transport, scheduling, provider adapters, and automatic skill execution remain out of scope; implementation is intentionally limited to pure contracts and validators in this repository.
 
-## 5. Proposed deliverables for the implementation phase
+## 5. Implemented contract surface
 
-The following paths are proposed, not created by this phase:
+The following paths are the implemented contract surface:
 
-| Area | Proposed artifact | Purpose |
+| Area | Artifact | Purpose |
 | --- | --- | --- |
 | Canonical specification | `openspec/specs/swarm-coordination-v1.spec.md` | Normative protocol, schemas, state transitions, failure semantics, and compatibility rules |
-| Protocol types | `src/swarm/protocol.ts` | Strict TypeScript types for envelopes, graphs, results, handovers, and context |
-| Validation | `src/swarm/validation.ts` | No-network, fail-closed validation and canonical serialization/hash helpers |
-| Graph logic | `src/swarm/graph.ts` | DAG validation, deterministic topological ordering, and capability matching |
-| Aggregation | `src/swarm/aggregation.ts` | Duplicate collapse, conflict preservation, partial-failure classification, and evidence ordering |
-| Handover/context | `src/swarm/handover.ts`, `src/swarm/context.ts` | Machine-readable handover and bounded allowlisted/redacted context handling |
-| Public exports | `src/swarm/index.ts`, `src/index.ts` | Expose the protocol without coupling it to a transport or runtime |
-| Unit/property tests | `src/swarm/__tests__/` | Contract vectors, state/graph tests, aggregation tests, handover/context tests, and determinism checks |
+| Protocol, validation, graph, aggregation, handover, and context logic | `scripts/agent-coordination.ts` | Strict types, pure validators, deterministic ordering, digests, evidence, provenance, and bounded context |
+| Contract tests | `scripts/agent-coordination.test.ts` | Focused vectors, semantic conflicts, provenance/tamper checks, graph linkage, and JSON Schema fixtures |
+| Machine-readable schema | `schemas/agent-swarm.schema.json` | Strict v1 interchange and allowlist definitions |
 | CI | `.github/workflows/reusable-ci.yml` and root `package.json` | Run focused swarm validation and typechecking in the existing reusable CI baseline |
 | Documentation | `docs/AGENT_ONBOARDING.md`, `docs/SESSION_CONTINUITY.md` | Link the normative protocol and explain how it composes with #1162 |
 
-The implementation phase MUST keep the proposed source and test modules transport-neutral and must not turn the control plane into a centralized runtime.
+The implementation MUST keep the source and test modules transport-neutral and must not turn the control plane into a centralized runtime.
 
 ## 6. Acceptance criteria
 
-The following criteria directly close the five unchecked issue items. They are definitions for the implementation phase; they are intentionally not marked complete by this artifact-only change.
+The following criteria directly close the five unchecked issue items. They define the implementation contract; current completion status is recorded in `tasks.md`, while independent review/approval remains a separate gate.
 
 ### AC-1 — Inter-agent communication protocols
 
@@ -130,9 +126,9 @@ The canonical spec and context validator MUST allow only #1162-declared reposito
 - Validators MUST be zero-network and side-effect free.
 - The implementation MUST preserve evidence for duplicates, conflicts, stale context, and partial failure rather than silently discarding it.
 
-## 7. Review and approval gates
+## 7. Independent review and approval gate
 
-Before implementation begins, reviewers should confirm:
+Reviewers should confirm:
 
 - the #1162 dependency boundary does not modify or execute discovery/skill artifacts;
 - the protocol remains transport-neutral and does not become a scheduler;
@@ -140,4 +136,4 @@ Before implementation begins, reviewers should confirm:
 - context precedence matches the repository governance and information hierarchy; and
 - proposed source, test, CI, and documentation paths fit existing repository ownership.
 
-No implementation, issue update, push, or PR is part of this phase.
+This branch contains the implementation and validation work but does not modify issue state, push changes, or open a PR.

@@ -241,18 +241,29 @@ Message IDs, timestamps, and transport metadata may be different across executio
 
 Every failure record includes a stable machine-readable code, the affected object ID, correlation ID, canonical input digest when available, and a redacted human-readable explanation.
 
-## 10. Proposed implementation and validation plan
+## 10. Implemented validation surface and hardening decisions
 
-The follow-up implementation should add the files listed in the proposal and validate:
+The implementation is concentrated in `scripts/agent-coordination.ts` with
+contract tests in `scripts/agent-coordination.test.ts`, structural contracts in
+`schemas/agent-swarm.schema.json`, and focused root/CI commands. The canonical
+normative source is `openspec/specs/swarm-coordination-v1.spec.md`.
+
+The implementation validates:
 
 - envelope schemas, lifecycle transitions, replay/idempotency, canonical serialization, and digest vectors;
 - DAG cycles, deterministic topological order, capability version/ranking, and graph limits;
 - aggregation under reorder, duplicate delivery, retries, partial failure, cancellation, and conflict;
-- handover round-trip, missing/invalid state, artifact digest, and resumability checks;
-- context allowlist, redaction, bounds, precedence, stale/expired values, truncation, and deterministic conflict records;
+- handover round-trip, required graph input and `graph_digest`, missing/invalid state, artifact digest, two-digest conflict minimum, envelope-only authentication, and resumability checks;
+- context allowlist provenance/digests from #1162, explicit `.agents` source exceptions, redaction, bounds, graph context budgets, precedence, effective-now stale/expired values, truncation, and deterministic conflict records;
+- semantic result fingerprints that include status, error, agent, evidence, artifacts, links, and all other normative metadata while excluding only delivery `result_id`;
+- strict RFC 3339 calendar/offset validation, lifecycle sequence bounds, and prototype-key-safe JSON parsing/normalization;
+- representative valid/invalid JSON Schema fixtures through explicitly declared Ajv 2020 dependencies;
 - no-network and no-side-effect behavior, unknown-version rejection, and extension compatibility.
 
-The existing `.github/workflows/reusable-ci.yml` should run focused swarm tests/typechecking in addition to the repository's existing baseline. Documentation should link the canonical spec from onboarding and continuity guidance without duplicating normative rules.
+The existing `.github/workflows/reusable-ci.yml` runs focused swarm
+tests/typechecking in addition to the repository's existing baseline.
+Documentation links the canonical spec from onboarding and continuity guidance
+without duplicating normative rules.
 
 ## 11. Explicit non-goals
 

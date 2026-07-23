@@ -15,7 +15,6 @@ class ContaminationGuardSelfTest(unittest.TestCase):
         export const bridge = new ZKCPBridge(
           new UnavailableZKVerifier(),
           new UnavailableOnChainMonitor(),
-          new UnavailableDecryptionKeyReleaser(),
         );
         """
         self.assertEqual(scan_content("services/admin-dashboard/src/lib/support/zkcp.ts", content), [])
@@ -56,9 +55,11 @@ class ContaminationGuardSelfTest(unittest.TestCase):
         self.assertIn(r"new\s+ZKCPBridge\s*\((?!", powershell)
         self.assertIn(r"new\s+UnavailableZKVerifier\s*\(\s*\)", powershell)
         self.assertIn(r"new\s+UnavailableOnChainMonitor\s*\(\s*\)", powershell)
-        self.assertIn(r"new\s+UnavailableDecryptionKeyReleaser\s*\(\s*\)", powershell)
         self.assertIn('Id = "production-simulator-construction"', powershell)
         self.assertIn('Id = "production-fixture-import"', powershell)
+        self.assertIn('Id = "production-key-release-adapter"', powershell)
+        self.assertIn('Id = "production-key-release-output"', powershell)
+        self.assertIn('Id = "production-key-release-dispatch"', powershell)
         self.assertNotIn(r"\s*\)))' }", powershell)
 
         # PowerShell is not available in this environment. Normalize the
@@ -79,14 +80,12 @@ class ContaminationGuardSelfTest(unittest.TestCase):
                 "new ZKCPBridge(\n"
                 "  new UnavailableZKVerifier(),\n"
                 "  new UnavailableOnChainMonitor(),\n"
-                "  new UnavailableDecryptionKeyReleaser(),\n"
                 ")",
                 False,
             ),
             (
                 "new ZKCPBridge(new DefaultZKVerifier(), "
-                "new UnavailableOnChainMonitor(), "
-                "new UnavailableDecryptionKeyReleaser())",
+                "new UnavailableOnChainMonitor())",
                 True,
             ),
         ]

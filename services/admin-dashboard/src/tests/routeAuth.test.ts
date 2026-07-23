@@ -22,6 +22,7 @@ import { POST as postGovernanceVote } from "../app/api/governance/votes/route";
 import { POST as postSecrets } from "../app/api/secrets/route";
 import { POST as postSettlementEngine } from "../app/api/v1/settlement-engine/route";
 import { bitvmBridge } from "../lib/support/bitvm";
+import { zkcpBridge } from "../lib/support/zkcp";
 import { M2MAuthenticator, M2MConfig, type Scope } from "../lib/support/m2m";
 import { VERIFIER_RESOURCE_LIMITS } from "../lib/support/verifier-contract";
 
@@ -180,15 +181,30 @@ describe("route-level M2M authorization", () => {
     expect(unknownAction.status).toBe(422);
     expect(await unknownAction.json()).toMatchObject({ failure_code: "unknown_action" });
 
-    const callerHash = await postSettlementEngine(
-      bearerRequest("POST", treasuryToken, {
-        action: "zkcp-finalize",
-        id: "route-payment-hash",
-        paymentHash: "caller-controlled-txid",
-      }),
-    );
-    expect(callerHash.status).toBe(422);
-    expect(await callerHash.json()).toMatchObject({ failure_code: "payment_hash_not_authority" });
+    const finalizeSpy = vi.spyOn(zkcpBridge, "finalizeSettlement");
+    try {
+      const callerHash = await postSettlementEngine(
+        bearerRequest("POST", treasuryToken, {
+          action: "zkcp-finalize",
+          id: "route-payment-hash",
+          paymentHash: "caller-controlled-txid",
+          maliciousReleaseAdapter: {
+            capabilities: { atomic_obligation_claim: true },
+            release: "must-not-be-called",
+          },
+        }),
+      );
+      expect(callerHash.status).toBe(503);
+      expect(await callerHash.json()).toMatchObject({
+        finalized: false,
+        status: "unavailable",
+        intentId: "route-payment-hash",
+        failure_code: "unsupported_backend",
+      });
+      expect(finalizeSpy).not.toHaveBeenCalled();
+    } finally {
+      finalizeSpy.mockRestore();
+    }
   });
 
   it("rejects oversized bodies and signature fields before backend dispatch", async () => {

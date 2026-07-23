@@ -86,12 +86,35 @@ VERIFIER_RULES: list[tuple[str, re.Pattern[str]]] = [
             r"(?:key-\$\{|(?:decryptionKey|decryption_key)\s*[:=]\s*[`\"'](?:key-|synthetic|fake|dummy))"
         ),
     ),
+    (
+        "production-key-release-adapter",
+        re.compile(
+            r"\b(?:DecryptionKeyReleaser|UnavailableDecryptionKeyReleaser|"
+            r"keyReleaser|keyRelease(?:Registry|Evidence|Attempts|Request)|"
+            r"deriveZKCPKeyRelease|buildKeyReleaseRequest)\b"
+        ),
+    ),
+    (
+        "production-key-release-output",
+        re.compile(r"\bdecryptionKey\b|\bstatus\s*[:=]\s*[\"']finalized[\"']"),
+    ),
+    (
+        "production-key-release-dispatch",
+        re.compile(
+            r"\b(?:getByObligationId|releaseDecryptionKey)\s*\(|"
+            r"\bkeyReleaser\s*\.\s*(?:getByObligationId|release)\s*\("
+        ),
+    ),
 ]
 
 SETTLEMENT_RULES: list[tuple[str, re.Pattern[str]]] = [
     (
         "settlement-success-default",
         re.compile(r"\b(?:success\s*:\s*true|status\s*:\s*[\"'](?:idle|success|ok)[\"'])"),
+    ),
+    (
+        "settlement-zkcp-finalize-dispatch",
+        re.compile(r"\bzkcpBridge\s*\.\s*finalizeSettlement\s*\("),
     ),
 ]
 
@@ -114,8 +137,7 @@ def _bridge_construction_findings(rel_path: str, content: str) -> Iterable[Findi
         "BitVM3Orchestrator": re.compile(r"new\s+UnavailableBitVM3Verifier\s*\(\s*\)\s*"),
         "ZKCPBridge": re.compile(
             r"new\s+UnavailableZKVerifier\s*\(\s*\)\s*,\s*"
-            r"new\s+UnavailableOnChainMonitor\s*\(\s*\)\s*,\s*"
-            r"new\s+UnavailableDecryptionKeyReleaser\s*\(\s*\)\s*,?\s*"
+            r"new\s+UnavailableOnChainMonitor\s*\(\s*\)\s*,?\s*"
         ),
     }
     construction = re.compile(r"new\s+(BitVMBridge|BitVM3Orchestrator|ZKCPBridge)\s*\(", re.DOTALL)

@@ -89,8 +89,6 @@ calculation, or adapter dispatch:
 | BitVM2 retained floor/aggregation state | `conxian.bitvm2.retention.v1`, 1,024 floors / 15-minute terminal TTL |
 | BitVM3 retained terminal state | `conxian.bitvm3.retention.v1`, 1,024 states / 15-minute TTL |
 | Confirmation count | 1,000,000 |
-| Decryption-key evidence | 4,096 characters |
-
 Digest fields remain exact `sha256:<64 lowercase hex>` values, while error,
 timestamp, and action strings have explicit length ceilings. BitVM signature
 submissions carry the explicit signature encoding/version contract and reject
@@ -194,64 +192,43 @@ evicted. The cap may intentionally reduce availability until terminal cleanup
 runs; a future durable Gateway/Core store owns cross-process retention and
 identity/replay guarantees.
 
-### 2.7 ZKCP release finalization boundary
+### 2.7 Production ZKCP key-release quarantine
 
-Before invoking an external key releaser, ZKCP requires exact versioned
-capability metadata for `conxian.zkcp.key-release.v1`,
-`conxian.zkcp.key-release.idempotency.v1`,
-`conxian.zkcp.key-release.obligation.v1`,
-`conxian.zkcp.key-release.registry.v1`, and
-`conxian.zkcp.key-release.policy.v1`. The backend must advertise durable
-idempotency, lookup-by-obligation, atomic obligation claim, idempotent
-release, the pinned registry namespace, and the
-`exactly_once_per_obligation` guarantee. This is an admission contract: the
-external backend owns the durable record and must atomically bind one stable
-obligation to one canonical binding digest, idempotency key, and irreversible
-release so replicas, retries, and process restarts cannot release the same
-encrypted payload twice.
+The platform does not implement or expose production key release. `ZKCPBridge`
+accepts only a verifier and payment observer; it has no key-releaser,
+capability registry, obligation lookup, release evidence, or irreversible
+dispatch dependency. The checked-in singleton uses unavailable verifier and
+observer sentinels, and test-only proof/payment fixtures are not importable
+through production modules.
 
-The stable obligation identity is a domain-separated digest of the canonical
-encrypted-data commitment plus stable seller and buyer identity. It excludes
-intent ids, amount, network, statement/proof terms, payment txid, timestamps,
-and backend artifact/version. Those mutable settlement terms are represented by
-a separate binding digest and idempotency key. The bridge pins registry version
-`conxian.zkcp.key-release.registry.v1` and namespace
-`conxian.zkcp.key-release.obligations.v1`; a backend with missing or drifted
-registry metadata is rejected before lookup or release. Backend artifact
-rotation may continue only when it uses that same durable registry namespace;
-the existing obligation then returns a typed conflict if its binding changes.
+No release coordinator is retained in production or test fixtures. A future
+implementation requires an independently authenticated, server-bound
+Gateway/Core atomic claim-or-get coordinator plus a durable registry. Dependency
+injection, capability strings, registry strings, or adapter self-attestation
+alone are explicitly insufficient.
 
-Finalization captures and validates one monotonic, finite, safe, non-negative
-timestamp in the inclusive `0..8.64e15` ECMAScript Date range. It preconstructs
-immutable bounded intent/payment snapshots and a release binding containing
-only immutable intent terms, statement/domain and encrypted-data digests,
-observed payment terms, backend identity/artifact, and release policy. The
-binding digest and bounded deterministic key are derived from that binding;
-timestamps and process state are excluded. Before release, the intent lock
-performs durable lookup by obligation id with the exact registry, obligation,
-binding digest, and key. A found record with matching binding/evidence is
-committed without another release. A found record with a different binding or
-key returns `key_release_obligation_conflict` and never releases. An absent
-record invokes the atomic claim/release method with the obligation, binding
-digest, and key. Lookup failures, unavailable/rejected responses, missing
-capabilities, registry drift, and ambiguous release timeouts fail closed;
-retries look up the same obligation and never select another key or a
-non-idempotent fallback.
+`finalizeSettlement` is retained only as a typed compatibility boundary. It
+always returns `status: unavailable`, `failure_code: unsupported_backend`, and
+`finalized: false` without reading bridge state, mutating an intent, calling an
+adapter, or returning a decryption key. The `zkcp-finalize` route applies the
+same unconditional hard stop and does not call `ZKCPBridge` or trust a caller
+payment hash/adapter-shaped payload. A paid intent remains paid evidence, never
+finalized, and cannot release data.
 
-Key-release evidence crosses the adapter boundary only as a bounded canonical
-JSON string. The allow-list is an exact flat object of primitive fields for
-the contract, registry, obligation, binding digest, idempotency key, and
-backend identity/artifact. Objects, arrays, nested values, accessors, proxies,
-cycles, recursive copies, extra properties, non-canonical serialization, and
-over-limit payloads are rejected before evidence is retained.
+If a future contract needs an obligation identity, its only content input is
+the canonical encrypted-data commitment plus an explicit version/domain. The
+commitment bytes are the exact UTF-8 encoding of the validated ASCII token
+`sha256:` followed by 64 lowercase hexadecimal characters, with no whitespace,
+Unicode normalization, seller/buyer strings, or mutable settlement terms. A
+future domain-separated digest may encode the version/domain as a fixed UTF-8
+ASCII label and a single zero-byte separator before those commitment bytes.
+This identity rule is documented for future coordination only and is not
+executable in this platform change.
 
-No clock read, timestamp serialization, unbounded copy, or fallible lifecycle
-compare-and-swap occurs after the external call. The returned adapter value is
-normalized through a total, bounded validator, and successful evidence is
-committed with the prevalidated timestamp. Local attempt/evidence maps may
-speed diagnostics or repair a local terminal snapshot, but they are never the
-authority for cross-restart exactly-once behavior. Invalid, thrown, rolled-back,
-or out-of-range clocks fail before durable lookup/release dispatch.
+There is no post-call clock, evidence, compare-and-swap, or retry path because
+there is no external release call. Invalid, thrown, restart-shaped, and drift-
+shaped finalization inputs all produce the same typed unavailable result and
+zero dispatch.
 
 ### 2.8 Bounded ZKCP retention and listing
 
@@ -260,8 +237,8 @@ ZKCP publishes `conxian.zkcp.retention.v1`: at most 1,024 active intents and
 minutes by default. Capacity checks run after terminal cleanup but active or
 pending intents are never silently evicted; a full active/retained capacity is
 a typed `resource_limit_exceeded` response. Terminal eviction atomically removes
-the intent and all private proof, payment, key-release, generation, lock, and
-queue bookkeeping. The bridge accepts an injectable clock for deterministic
+the intent and all private proof, payment, generation, lock, and queue
+bookkeeping. The bridge accepts an injectable clock for deterministic
 cleanup tests.
 
 `conxian.zkcp.list.v1` requires deterministic creation-time/id ordering and a
@@ -279,17 +256,16 @@ failures and never mutate settlement state.
 Tests may inject `DeterministicFixtureVerifier` and a payment fixture observer
 from `src/tests/fixtures`. Fixture results must carry `provenance: simulated`
 and a fixture backend artifact digest. The ZKCP bridge and route reject those
-results before changing intent status to `verified`, `paid`, or `finalized`.
+results before changing intent status to `verified` or `paid`; they can never
+authorize finalization or release.
 
 ZKCP intent getters return deep immutable snapshots. Authoritative proof and
-payment evidence remain in private bridge records; finalization revalidates the
-stored request/result/observation digests and adapter identities immediately
-before invoking key release. Terminal finalization is idempotent, concurrent
-release attempts are rejected, and payment observation cannot regress a paid or
-finalized intent. Duplicate intent ids are rejected rather than overwritten.
+payment evidence remain in private bridge records; payment observation cannot
+regress a paid intent, and no lifecycle operation can convert it to finalized.
+Duplicate intent ids are rejected rather than overwritten.
 
-Injected verifier, observer, signature, and key-release adapters are
-totalized at the boundary: thrown exceptions, null values, malformed result
+Injected verifier, observer, and signature adapters are totalized at the
+boundary: thrown exceptions, null values, malformed result
 shapes, contradictory status/failure combinations, and non-production success
 labels become typed non-success results without state advancement. All adapter
 and route-catch error text is normalized through the shared `maxErrorChars`
@@ -305,13 +281,10 @@ and hex formatting alone cannot advance aggregation.
 
 Lifecycle operations are serialized FIFO per ZKCP intent. Each async operation
 captures the intent object and generation, then performs an identity/generation
-compare-and-swap check before every evidence or terminal-state commit. Verify,
-watch, and finalize replays therefore have deterministic ordering: a replay
-after a successful transition is read-only or typed non-success, terminal
-finalization reconciles through the durable key-release lookup before any
-possible release. The release timestamp and bounded release inputs are prepared
-before dispatch, so the external call cannot be followed by a fallible
-clock/serialization commit step. BitVM2 signature submissions are serialized
+compare-and-swap check before every evidence or terminal-state commit. Verify
+and watch replays therefore have deterministic ordering; `finalizeSettlement`
+is an unconditional unavailable result and never mutates state. BitVM2
+signature submissions are serialized
 per proof, reserve a signer before async verification, release that reservation
 on all failure/throw paths, and re-check uniqueness at commit.
 BitVM2 floor initialization and signature submission share that same per-proof
@@ -323,9 +296,11 @@ aggregation so a stale async result cannot commit to a detached object, and the
 queue release is protected by `finally` so adapter failures do not poison the
 lock.
 
-The platform deliberately does not export a production simulator or a real
-cryptographic implementation. Future Gateway/Core/Nexus adapters must satisfy
-the same contract and must be selected by explicit dependency injection.
+The platform deliberately does not export a production simulator, key-release
+coordinator, or real cryptographic implementation. Future Gateway/Core/Nexus
+verifier/observer adapters must satisfy the same contract, while any future
+irreversible coordinator must be independently authenticated and server-bound;
+explicit dependency injection alone cannot enable release.
 
 ## 4. Settlement state rules
 
@@ -336,18 +311,12 @@ the same contract and must be selected by explicit dependency injection.
 - Payment is eligible only when the injected observer returns a validated
   observation bound to the intent/address/amount and a non-empty txid. The
   `paymentHash` request field is not evidence.
-- Payment and key-release predicates additionally require adapter-owned,
-  authoritative backend identities matching the retained observation/result;
-  `production` provenance alone is never sufficient.
-- Finalization requires the stored observed payment and a real externally
-  supplied decryption-key release adapter that advertises the durable
-  idempotency/lookup contract. Until that backend exists, finalization returns
-  `decryption_key_unavailable` or `key_release_capability_missing` and leaves
-  the intent in `paid`/`verified` state. No synthetic key is constructed.
-- Repeated finalization of an already-finalized intent is read-only and
-  idempotent; retries after an ambiguous outcome reuse the same obligation and
-  reconcile through durable lookup. Concurrent key-release attempts remain
-  serialized, and local BFF memory never claims cross-restart exactly once.
+- Payment is independently observable, but it is never a key-release
+  authorization. `paid` is the terminal payment-evidence state exposed by this
+  platform boundary; no production operation converts it to `finalized`.
+- Finalization is always typed `unsupported_backend`/unavailable and leaves the
+  intent state unchanged. No synthetic key, injected key, release registry,
+  obligation lookup, or external dispatch exists in production code.
 - Adapter exceptions or malformed top-level responses are normalized to typed
   non-success outcomes; they never escape as an apparent authorization.
 - Unknown actions are explicit 400 non-success responses.
@@ -360,13 +329,16 @@ not `src/tests` or documentation. It detects structural dangerous patterns:
 - unconditional `verified`/`isVerified` true assignments in verifier modules;
 - proof-length-only predicates used as verification;
 - production simulator/default-verifier construction;
-- synthetic decryption-key generation;
+- synthetic decryption-key generation, production key-releaser construction,
+  or any call from `zkcp-finalize`/`ZKCPBridge.finalizeSettlement` to a release
+  adapter;
 - unknown settlement-action success responses.
 
 The Python and PowerShell implementations scan complete file content, including
 multiline constructs. They reject non-canonical bridge construction, simulator
-or default aliases, and imports from test fixtures into production verifier or
-settlement paths. Test-only fixtures remain outside the production scan.
+or default aliases, production key-release adapters/outputs/dispatch, and
+imports from test fixtures into production verifier or settlement paths.
+Test-only fixtures remain outside the production scan.
 
 Python and PowerShell rule identifiers and scope remain equivalent. The guard
 must avoid broad words such as `simulated` in tests/docs so evaluation fixtures

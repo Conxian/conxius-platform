@@ -30,17 +30,16 @@ must reject simulated, malformed, invalid, unknown, or caller-only evidence.
   digest covering encrypted data, payment condition, parties, amount, network,
   proof, and public-input terms before any lifecycle transition.
 - Keep authoritative proof/payment evidence internal, expose only immutable
-  intent snapshots, and revalidate retained bindings immediately before
-  key-release finalization.
+  intent snapshots, and keep payment observation separate from any future
+  irreversible key-release coordinator. `paid` is evidence, not finalization.
 - Gate BitVM2 aggregation on authorized unique signers plus explicit injected
   signature-verification attestations; unavailable/default signature checking
   remains unsupported.
 - Normalize contradictory adapter responses so no user-visible status can be
   `verified`/success-shaped when `verified` is false or a failure code exists.
-- Totalize injected adapter boundaries, reject unsafe settlement amounts, and
-  make terminal finalization idempotent/serialized so exceptions, malformed
-  responses, replayed watches, and concurrent key releases cannot advance or
-  regress state.
+- Totalize injected adapter boundaries and reject unsafe settlement amounts;
+  production key release remains hard-disabled so malformed responses,
+  replayed watches, and concurrent callers cannot cause an irreversible effect.
 - Replace production-facing simulator/default-verifier construction with
   explicitly injected unavailable adapters.
 - Keep deterministic cryptographic-looking fixtures only in test/evaluation
@@ -54,27 +53,22 @@ must reject simulated, malformed, invalid, unknown, or caller-only evidence.
 - Retain bounded BitVM3 request-identity tombstones after terminal expiry so
   conflicting same-id reuse fails closed during the explicit window; require a
   durable Gateway/Core identity registry for permanent global uniqueness.
-- Define a versioned external ZKCP key-release capability contract requiring a
-  stable obligation identity, a pinned durable registry namespace, lookup by
-  obligation, atomic obligation claim, and an idempotent release guarantee
-  owned by the backend rather than BFF memory.
-- Derive one bounded versioned obligation identity from the canonical encrypted
-  data commitment plus stable seller/buyer identity. Keep mutable amount,
-  network, statement, payment txid, timestamps, and backend artifact/version
-  out of that identity; bind those terms separately so an altered retry is a
-  typed conflict rather than a second obligation.
-- Derive one bounded binding digest/idempotency key for the current settlement
-  terms; validate every durable evidence artifact against the same obligation,
-  registry, binding, payment, backend identity, and backend artifact.
-- Accept key-release evidence only as a bounded canonical JSON string with an
-  exact flat primitive allow-list; reject objects, proxies, arrays, nested
-  values, recursive copies, and extra properties at the boundary.
-- Capture and validate ZKCP finalization timestamps and bounded release inputs
-  before external key release. Under the intent lock, lookup durable evidence
-  first, release only when the lookup is absent, and reuse the same key after
-  timeouts or ambiguous outcomes without a non-idempotent fallback. Local
-  latches/evidence remain optimization-only and cannot claim cross-restart
-  exactly-once behavior.
+- Quarantine production key release completely: `ZKCPBridge` accepts only
+  verifier and payment-observer dependencies, `finalizeSettlement` always
+  returns a typed unavailable/unsupported result, and the settlement route
+  performs the same hard stop without calling the bridge or inspecting caller
+  claims. No decryption key, finalized success, release registry, obligation
+  lookup, or irreversible dispatch is exported by the platform.
+- Record the future dependency explicitly: any later release implementation
+  requires an independently authenticated, server-bound Gateway/Core atomic
+  claim-or-get coordinator and durable registry. Dependency injection,
+  capability strings, or adapter self-attestation alone must never enable it.
+- If a future release contract needs an obligation identity, derive it only
+  from the canonical encrypted-data commitment plus an explicit version/domain.
+  The commitment is the exact UTF-8 bytes of the validated ASCII token
+  `sha256:` followed by 64 lowercase hexadecimal characters; no whitespace,
+  Unicode normalization, seller/buyer strings, or mutable settlement terms
+  enter the identity. This is a future contract, not executable platform code.
 - Extend Python and PowerShell contamination guards to detect the exact
   dangerous classes without scanning test-only fixtures as production code.
 - Add negative-vector tests for unavailable backends, simulation, key/proof/input
@@ -104,12 +98,11 @@ those cross-repository backends are available and independently accepted.
 4. ZKCP verification rejects mutated intent terms, statement/domain digests, or
    public-input order/value bindings before state transition.
 5. Payment observation is explicitly injected; a caller-supplied payment hash
-   alone cannot finalize settlement and no synthetic key is emitted. Returned
-   intent/lifecycle objects are immutable snapshots, and finalization
-   revalidates retained proof/payment evidence rather than mutable labels;
-   terminal finalization is idempotent and concurrent release is serialized;
-   exactly-once irreversible release depends on the external durable backend
-   contract, not process-local BFF memory.
+   alone cannot authorize any irreversible action. A paid intent is not
+   finalized, no synthetic or adapter-supplied decryption key is emitted, and
+   the production finalize route returns typed `unsupported_backend` with zero
+   bridge/adapter dispatch. Returned intent/lifecycle objects are immutable
+   snapshots.
 6. Unknown settlement actions and all rejected outcomes leave settlement state
    unchanged and return non-success HTTP responses.
 7. BitVM2 aggregation rejects duplicate/unauthorized signers, arbitrary
@@ -127,22 +120,18 @@ those cross-repository backends are available and independently accepted.
     same-request replay is deterministic, conflicting replay fails closed, and
     documentation requires durable Gateway/Core identity for permanent reuse
     prevention.
-12. ZKCP validates a monotonic finite safe Date-range timestamp and prebuilds
-    bounded release inputs before key-releaser dispatch; invalid clocks make
-    zero external calls, and no post-call clock/serialization failure can
-    cause a duplicate release.
-13. A supported key-release backend must advertise the versioned durable
-    obligation/registry contract and guarantee at most one irreversible release
-    for each obligation across retries, replicas, and process restarts. The
-    registry atomically binds one obligation to one binding digest,
-    idempotency key, and release evidence. Finalization looks up the obligation
-    first, reconciles matching evidence without release, returns a typed
-    obligation conflict for different evidence, and calls release only for an
-    absent obligation using the obligation, binding digest, and key.
-14. Ambiguous backend timeouts, lookup failures, missing capabilities, registry
-    drift, and mismatched obligation/binding/payment/backend/artifact evidence
-    fail closed without alternate-key or non-idempotent fallback. Backend
-    artifact changes must reuse the pinned registry namespace or fail before
-    dispatch. Restart/crash tests prove one shared durable fixture side effect
-    and altered-term conflict behavior, while the production adapter remains
-    unavailable-by-default.
+12. Production `zkcp-finalize` and direct-library finalization return a typed
+    unavailable/unsupported result for every caller payload, including valid,
+    malformed, replayed, restart, and drift-shaped inputs. They make zero
+    calls to injected-looking adapters and never create `finalized` state or
+    decryption-key output.
+13. Proof and independently observed payment transitions remain fail closed;
+    `paid` is the terminal payment-evidence state exposed by this boundary and
+    cannot release data. Test-only deterministic proof/payment fixtures carry
+    `simulated` provenance and cannot authorize settlement.
+14. A future release proposal must provide an independently authenticated,
+    server-bound Gateway/Core atomic claim-or-get coordinator and durable
+    registry. If it introduces an obligation id, its canonical input is only
+    the encrypted-data commitment bytes plus version/domain as specified above;
+    raw seller/buyer representations and dependency-injected self-attestation
+    are not authority.

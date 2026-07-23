@@ -1,6 +1,6 @@
 # Conxius Platform: Gap-to-Research Scoring Matrix (Phase 7)
 
-This matrix scores the identified gaps based on Strategic Alignment, Implementation Complexity, and Customer Validation Signal. Scores are prioritization signals, not production-readiness evidence. For BitVM/ZKCP, issue #1187 records the current platform state: fail-closed contracts, stable encrypted-data obligation identity, pinned durable registry/lookup/claim/conflict admission, bounded canonical evidence, and quarantine are implemented, while external cryptographic/key-release backends and independent acceptance remain pending. BFF memory alone is never an exactly-once authority.
+This matrix scores the identified gaps based on Strategic Alignment, Implementation Complexity, and Customer Validation Signal. Scores are prioritization signals, not production-readiness evidence. For BitVM/ZKCP, issue #1187 records the current platform state: fail-closed proof/payment contracts, bounded canonical evidence, versioned intent binding, and quarantine are implemented. Production key release is fully removed and unavailable; an independently authenticated, server-bound Gateway/Core atomic claim-or-get coordinator and durable registry are future launch gates. Dependency injection or BFF memory is never irreversible authority.
 
 | ID | Gap Description | Strategic Alignment | Complexity | Validation Signal | **Total Score** | Primary Research Link |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -36,7 +36,7 @@ This matrix scores the identified gaps based on Strategic Alignment, Implementat
 | **G-47** | **BIP-119 (CTV) Vaults** | 9 | 7 | 6 | **22** | [BIP-119 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#47) |
 | **G-48** | **BIP-324 V2 Transport** | 8 | 6 | 7 | **21** | [BIP-324 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#48) |
 | **G-49** | **Decentralized USI Transport** | 9 | 5 | 9 | **23** | [Nostr/Waku Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#49) |
-| **G-50** | **ZK Contingent Payments** | 10 | 9 | 7 | **26** | [ZKCP Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#50) — verifier/observer and external durable key-release backends pending; stable obligation, pinned registry, lookup/claim/conflict, and bounded evidence contract is fail-closed |
+| **G-50** | **ZK Contingent Payments** | 10 | 9 | 7 | **26** | [ZKCP Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#50) — verifier/observer backends pending; production key release is hard-disabled with no obligation execution, registry lookup, decryption-key output, or finalized success. Future coordinator requires independent authentication, server binding, Gateway/Core atomic claim-or-get, and durable registry |
 | **G-51** | **BitVM2 Optimized Verifier** | 9 | 8 | 7 | **24** | [Verifier Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#51) — research only; no pairing implementation here |
 | **G-52** | **BRC-20 / Runes Integration** | 7 | 6 | 9 | **22** | [Indexer Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#52) |
 | **G-53** | **Lightning Async Payments** | 8 | 7 | 9 | **24** | [Async Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#53) |

@@ -376,7 +376,7 @@ Research into secondary settlement layers to ensure multidimensional redundancy.
 ## 50. Zero-Knowledge Contingent Payments (ZKCP)
 - **Concept**: A protocol that allows for the trustless exchange of information for Bitcoin, where the buyer only pays if the information is valid according to a ZK-proof.
 - **Strategic Impact**: Foundation for decentralized data markets and trustless "pay-for-proof" services in the Nexus network.
-- **Platform readiness**: The dashboard exposes only canonical request/result/payment contracts with unavailable defaults. It has no pairing verifier, chain observer, or production key-release backend; simulated fixtures are test-only and settlement-rejected.
+- **Platform readiness**: The dashboard exposes only canonical request/result/payment contracts with unavailable defaults. It has no pairing verifier, chain observer, or production key-release backend; simulated fixtures are test-only and settlement-rejected. `zkcp-finalize` is hard-disabled and returns typed HTTP 503 `unsupported_backend` without invoking the bridge, dispatching an adapter, returning a key, or creating `finalized` state.
 
 ## 51. BitVM2 Optimized Snark Verifier (v1.9.4)
 - **Concept**: Optimizing the Groth16 SNARK verifier specifically for Bitcoin Script limits, focusing on reduction of script size and stack depth.

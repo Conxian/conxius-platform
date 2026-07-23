@@ -7,7 +7,12 @@ import {
   type ZKCPStatus,
 } from "@/lib/support/zkcp";
 import { validateAdminAuth } from "@/lib/support/auth";
-import { isDigest, normalizeBoundaryError, VERIFIER_RESOURCE_LIMITS } from "@/lib/support/verifier-contract";
+import {
+  boundedIdentifier,
+  isDigest,
+  normalizeBoundaryError,
+  VERIFIER_RESOURCE_LIMITS,
+} from "@/lib/support/verifier-contract";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -36,7 +41,6 @@ function isZKCPStatus(value: unknown): value is ZKCPStatus {
   return value === "pending"
     || value === "verified"
     || value === "paid"
-    || value === "finalized"
     || value === "failed"
     || value === "unsupported";
 }
@@ -44,15 +48,10 @@ function isZKCPStatus(value: unknown): value is ZKCPStatus {
 function statusForFailure(failureCode: unknown): number {
   if (failureCode === "backend_unavailable"
     || failureCode === "observer_unavailable"
-    || failureCode === "decryption_key_unavailable"
-    || failureCode === "unsupported_backend"
-    || failureCode === "key_release_capability_missing"
-    || failureCode === "key_release_registry_mismatch"
-    || failureCode === "key_release_lookup_failed"
-    || failureCode === "key_release_ambiguous") return 503;
+    || failureCode === "unsupported_backend") return 503;
   if (failureCode === "resource_limit_exceeded") return 413;
   if (failureCode === "internal_error") return 500;
-  if (failureCode === "payment_not_observed" || failureCode === "key_release_obligation_conflict") return 409;
+  if (failureCode === "payment_not_observed") return 409;
   return 422;
 }
 
@@ -287,23 +286,20 @@ export async function POST(req: Request) {
     }
 
     if (action === "zkcp-finalize") {
-      if (!isNonEmptyString(payload.id)) {
-        return failureResponse("malformed_request", "Missing ZKCP intent id");
-      }
-      if (!isBoundedNonEmptyString(payload.id, VERIFIER_RESOURCE_LIMITS.maxIdentifierChars)) {
-        return failureResponse("resource_limit_exceeded", "ZKCP intent id exceeds the v1 resource limit");
-      }
-      if (Object.prototype.hasOwnProperty.call(payload, "paymentHash")) {
-        return failureResponse(
-          "payment_hash_not_authority",
-          "Caller-supplied payment hashes cannot authorize finalization",
-        );
-      }
-      const result = await zkcpBridge.finalizeSettlement(payload.id);
+      // Key release is deliberately quarantined at the route boundary. Do
+      // not call the bridge, inspect caller payment claims, or dispatch any
+      // injected-looking adapter. Paid is evidence only; it is not finalized
+      // and cannot produce a decryption key in this service.
       return responseFor(
-        result as unknown as Record<string, unknown>,
-        result.finalized,
-        result.failure_code,
+        {
+          finalized: false,
+          status: "unavailable",
+          intentId: boundedIdentifier(payload.id),
+          failure_code: "unsupported_backend",
+          error: "ZKCP key release is unavailable until an independently authenticated Gateway/Core coordinator is implemented",
+        },
+        false,
+        "unsupported_backend",
       );
     }
 

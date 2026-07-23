@@ -19,18 +19,21 @@ The Conxian knowledge base (AGENTS.md) should be a **living system** that:
 ### Readiness rule: durable side effects
 
 Knowledge-base entries about settlement authorization MUST distinguish local
-orchestration state from externally durable authority. For ZKCP key release,
-exactly-once is a backend contract: the selected backend must publish versioned
-obligation/registry capability metadata, lookup-by-obligation and atomic claim
-semantics, a pinned registry namespace, and an idempotent release guarantee.
-The obligation id is derived from the canonical encrypted-data commitment plus
-stable seller/buyer identity; mutable settlement terms use a separate bounded
-binding digest/key and conflict rather than creating a second obligation. Key-
-release evidence is recorded only as bounded canonical JSON with an exact flat
-primitive schema. Process-local latches, caches, or evidence are optimization
-signals only and must not be recorded as proof of cross-restart exactly-once
-behavior. The checked-in unavailable adapter remains the source-of-truth
-default until an external backend is independently accepted.
+orchestration state from externally durable authority. Production ZKCP key
+release is currently quarantined: the platform has no releaser, obligation
+execution, registry lookup, decryption-key output, or finalized success. `paid`
+is payment evidence only. Any future irreversible coordinator must be
+independently authenticated and server-bound, provide a Gateway/Core atomic
+claim-or-get operation, and use a durable registry; dependency injection or
+self-attested capability strings are never sufficient. If a future obligation
+id is needed, its only content input is the canonical encrypted-data commitment
+plus version/domain. The commitment bytes are the exact UTF-8 encoding of the
+validated ASCII token `sha256:` followed by 64 lowercase hexadecimal
+characters, with no whitespace, Unicode normalization, seller/buyer strings,
+or mutable terms. Process-local latches, caches, or evidence must never be
+recorded as proof of irreversible authority or cross-restart uniqueness.
+The checked-in unavailable finalization boundary remains the source-of-truth
+default until a separately reviewed coordinator exists.
 
 ### Internal Sources (Repository)
 

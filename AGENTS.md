@@ -175,7 +175,7 @@ All services use multi-layered M2M auth per `docs/M2M_AUTHENTICATION.md`:
 - **Gateway clients**: `services/admin-dashboard/src/lib/sidl/gateway.ts`, `services/elizaos-plugin-conxian/src/conxianClient.ts` now include M2M auth headers
 
 ### Key Gaps Still Open
-- **BitVM/ZKCP verifier readiness (#1187)** — `services/admin-dashboard` now has versioned proof/payment contracts, unavailable defaults, simulation quarantine, and typed settlement failures; no production cryptographic verifier, payment observer, or key-release backend is selected or claimed here.
+- **BitVM/ZKCP verifier readiness (#1187)** — `services/admin-dashboard` has versioned proof/payment contracts, unavailable defaults, simulation quarantine, and typed settlement failures. Production key release is completely quarantined: no releaser, registry/obligation execution, decryption-key output, or finalized success is selected or claimed here. Any future irreversible coordinator requires independent authentication, server binding, Gateway/Core atomic claim-or-get, and a durable registry; dependency injection alone is insufficient.
 - **Revenue automation handoff** — the protocol-owned `Conxian/Conxian` repository contains `contracts/treasury/revenue-automation.clar` with a current observed 100 bps / 1% baseline; platform specification and handoff are tracked in #1164/#1167, while protocol hardening and integration remain tracked in `Conxian/Conxian#538`
 - **JWT-based M2M token auth** — platform-side JWT issuance/verification is implemented; coordinated Rust Gateway verification remains open (#1160)
 - **Key rotation mechanism** — M2M keys are static, no rotation API (#1161)
@@ -1879,3 +1879,26 @@ AGENTS.md (this update)
 - PowerShell runtime execution remains unavailable in this devbox; contamination validation is static/self-test based.
 **Gotchas**:
 - Re-run focused/full tests, strict issue #1187 OpenSpec validation, lifecycle/contamination checks, dependency checks, `git diff --check`, and hosted PR checks after the focused commit is pushed.
+
+### 2026-07-23 — PR #1198 Complete Production ZKCP Key-Release Quarantine
+**Trigger**: P1/P2 review `4759956526` on PR #1198.
+**What was done**:
+- Removed the production `DecryptionKeyReleaser`/registry/obligation execution surface, release evidence/maps, constructor injection, finalized status, decryption-key output, and synthetic/adapter-dispatch paths from `ZKCPBridge` and the settlement route.
+- Made direct-library `finalizeSettlement` and route `zkcp-finalize` unconditional typed unavailable/`unsupported_backend` results with `finalized: false`, no state read/mutation, and zero bridge or external adapter calls for every payload.
+- Preserved proof/payment fail-closed transitions while making `paid` payment evidence only; replaced release-heavy tests with test-only proof/payment fixtures and malicious/conforming-looking adapter, arbitrary payload, replay, restart-shaped, drift-shaped, route, and zero-call regressions.
+- Extended Python and PowerShell contamination guards for production release adapters, dispatch, decryption-key output, finalized status, and prohibited bridge finalization calls.
+- Updated the issue #1187 proposal/design/spec/tasks and production-boundary, risk, debt, gaps, scoring, architecture, and knowledge-base documents. Future obligation identity is documented as exact canonical encrypted-data commitment bytes plus version/domain only; raw seller/buyer representations are excluded.
+**Key discoveries**:
+- Dependency injection and self-attested capability/registry strings cannot establish an independently authenticated, server-bound Gateway/Core atomic claim-or-get coordinator; the safe platform behavior is hard quarantine, not a configurable adapter.
+- The current platform contains no executable obligation identity or release coordinator. If one is proposed later, the commitment input is the exact UTF-8 bytes of `sha256:` plus 64 lowercase hexadecimal characters, with no normalization or party-string inputs.
+**Files touched**:
+- `services/admin-dashboard/src/lib/support/{zkcp.ts,verifier-contract.ts}` and `services/admin-dashboard/src/app/api/v1/settlement-engine/route.ts`
+- `services/admin-dashboard/src/tests/{zkcp.test.ts,routeAuth.test.ts}`
+- `scripts/{verify_contamination_guard.py,verify_contamination_guard.ps1,test_contamination_guard.py}`
+- `openspec/changes/2026-07-22-issue-1187-fail-closed-verifier-boundaries/{proposal.md,design.md,tasks.md,specs/fail-closed-verifier-boundaries/spec.md}`
+- `docs/{PRODUCTION_BOUNDARY.md,GAPS.md,DEBT_INVENTORY.md,PHASE_7_RISK_REGISTER.md,SCORING_MATRIX.md,SELF_EVOLVING_KB.md}` and `docs/architecture/{PHASE_7_PROPOSAL_UNIVERSAL_SETTLEMENT.md,FULL_STACK_BITCOIN_RESEARCH.md}`
+**Gaps identified**:
+- No independently authenticated, server-bound Gateway/Core atomic claim-or-get coordinator or durable registry exists; production key release remains unsupported until a separate implementation is reviewed and accepted.
+- The devbox has no `pwsh` runtime, so PowerShell contamination parity remains static/self-test based.
+**Gotchas**:
+- Historical Phase 10–12 release-coordinator sketches in the change are explicitly superseded by Phase 13 and do not authorize production execution; rerun strict OpenSpec, full tests, lifecycle/contamination, dependency, and diff checks after this append.

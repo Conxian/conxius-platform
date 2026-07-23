@@ -53,8 +53,9 @@ signature or recursive verifier adapter is invoked. A resource overage MUST retu
 
 #### Scenario: Malformed or throwing adapters fail closed
 
-- **WHEN** an injected verifier, observer, signature verifier, or key-release
-  adapter throws, returns null, or returns a malformed/contradictory result
+- **WHEN** an injected verifier, observer, or signature verifier throws, returns
+  null, or returns a malformed/contradictory result, or a release-shaped value
+  is supplied to a production boundary
 - **THEN** the boundary returns a typed non-success result with error text
   normalized to `maxErrorChars` and does not advance or regress authoritative
   state; an over-limit error is `resource_limit_exceeded` and the settlement
@@ -285,7 +286,7 @@ active and total retained-intent quotas and a terminal-record TTL. Capacity
 handling MUST never silently evict an active or pending intent; it MUST either
 clean expired terminal records or return a typed `resource_limit_exceeded`
 capacity response. Terminal cleanup MUST atomically remove the intent and all
-associated proof, payment, key-release, lock, generation, and queue evidence.
+associated proof, payment, lock, generation, and queue evidence.
 The clock MUST be injectable for deterministic lifecycle tests.
 
 ZKCP list operations MUST publish `conxian.zkcp.list.v1`, validate positive
@@ -377,141 +378,71 @@ settlement authorization.
 - **THEN** the bridge and settlement route return a typed rejection and retain
   the intent/floor in a non-authoritative state
 
-### Requirement: Stable-obligation ZKCP key-release finalization
+### Requirement: Quarantined ZKCP key release
 
-Before invoking an external ZKCP key releaser, the bridge MUST require exact
-versioned capability metadata for the key-release contract, idempotency,
-obligation, registry, and release-policy contracts. The metadata MUST declare
-durable idempotency, lookup-by-obligation, atomic obligation claim, idempotent
-release, the expected registry version/namespace, and an
-`exactly_once_per_obligation` backend guarantee. The backend MUST own the
-durable obligation record and MUST ensure that one stable obligation cannot
-perform the irreversible release twice across retries, replicas, or process
-restarts. A backend without this metadata, registry binding, or lookup method
-MUST be rejected before lookup or release dispatch.
+Production ZKCP MUST NOT expose, construct, invoke, or trust a key-release
+adapter, release registry, obligation lookup, release evidence, or irreversible
+coordinator. `ZKCPBridge` MUST accept only verifier and payment-observer
+adapters. Its production construction MUST use unavailable sentinels unless an
+independently reviewed non-release backend is explicitly supplied.
 
-The bridge MUST derive one versioned, domain-separated obligation id from the
-canonical encrypted-data commitment plus stable seller/buyer identity. Intent
-ids, amount, network, statement/proof terms, payment txid, timestamps, and
-backend artifact/version MUST NOT enter the obligation id. Those mutable terms
-MUST be represented by a separate canonical binding digest and idempotency key.
-The bridge MUST pin the expected registry namespace independently of the
-releaser artifact and MUST reject missing or drifted registry metadata before
-lookup/release. An artifact/version change using the same registry MUST consult
-the same obligation store; a changed binding for an existing obligation MUST
-return a typed obligation conflict and MUST NOT release.
+`finalizeSettlement` MUST always return a typed unavailable/unsupported result
+with `finalized: false` and `failure_code: unsupported_backend`. It MUST NOT
+read bridge state, mutate an intent, call any injected-looking adapter, or
+return a decryption key. The `zkcp-finalize` route MUST apply the same hard stop
+for every caller payload and MUST return a non-success HTTP response. A caller-
+supplied payment hash, capability string, registry string, or adapter-shaped
+field MUST have no effect.
 
-The bridge MUST capture and validate one monotonic, finite, safe,
-non-negative timestamp in the inclusive ECMAScript Date range `0..8.64e15`.
-It MUST preconstruct bounded immutable intent/payment inputs and a canonical
-release binding containing the immutable intent terms, statement/domain and
-encrypted-data digests, observed payment, backend identity/artifact, and
-release policy. It MUST derive one bounded deterministic binding digest and
-idempotency key from that binding only; mutable timestamps and process-local
-state MUST NOT enter either identity. Before dispatch, the intent lock MUST
-query durable evidence by obligation id with the pinned registry, binding
-digest, and key. A found record with matching binding/evidence MUST be
-committed without release. A found record with a different binding digest or
-key MUST return `key_release_obligation_conflict` and MUST NOT release. Only
-an absent lookup MAY call the atomic obligation claim/release method, and it
-MUST include the same obligation id, binding digest, and key.
+The platform MUST treat `paid` as payment evidence only. No production
+transition may create a `finalized` status from `paid`, and no payment or proof
+result may release encrypted data. Deterministic proof/payment fixtures, if
+retained for evaluation, MUST be test-only, carry explicit `simulated`
+provenance, and be impossible to import from production paths. No executable
+release coordinator is retained in the current test fixtures.
 
-Key-release evidence MUST cross the adapter boundary as a bounded canonical
-JSON string. The accepted schema MUST be an exact flat allow-list of primitive
-fields for the contract, registry, obligation, binding digest, idempotency
-key, and backend identity/artifact. Objects, arrays, nested values, accessors,
-proxies, cycles, recursive copies, extra properties, non-canonical encodings,
-and over-limit payloads MUST be rejected before evidence is retained.
+A future release proposal MUST require an independently authenticated,
+server-bound Gateway/Core atomic claim-or-get coordinator and durable registry.
+Dependency injection, self-attested capability metadata, or a registry string
+alone MUST NOT enable an irreversible effect. If that future contract needs an
+obligation identity, it MUST derive it only from the canonical encrypted-data
+commitment plus an explicit version/domain. The commitment bytes MUST be the
+exact UTF-8 encoding of the validated ASCII token `sha256:` followed by 64
+lowercase hexadecimal characters, with no whitespace, Unicode normalization,
+raw seller/buyer strings, or mutable settlement terms. A future domain-separated
+preimage MAY encode a fixed UTF-8 ASCII domain/version label, one zero-byte
+separator, and those commitment bytes; this rule is not executable in the
+current platform boundary.
 
-Invalid, thrown, rolled-back, or out-of-range clock readings MUST return a
-typed failure before lookup/release dispatch. After dispatch, finalization MUST
-NOT read the clock, serialize an unbounded value, or run a fallible lifecycle
-compare-and-swap that can leave a successful external release unrecorded.
-Adapter results MUST be normalized to a bounded typed value. Ambiguous release
-timeouts, lookup errors, unavailable/rejected lookup results, registry drift,
-and malformed or mismatched evidence MUST fail closed; retries MUST lookup the
-same obligation and MUST NOT select an alternate key or non-idempotent
-fallback. Local latches and evidence MAY optimize diagnostics or local repair,
-but MUST NOT be treated as authority for cross-restart exactly-once behavior.
+#### Scenario: Paid evidence cannot finalize
 
-#### Scenario: Invalid clock prevents key-release dispatch
+- **WHEN** an intent reaches `paid` from authoritative proof and independently
+  observed payment evidence, and a caller invokes direct or route finalization
+- **THEN** the intent remains `paid`, the result is typed unavailable with
+  `unsupported_backend`, `finalized` is false, and no key material is present
 
-- **WHEN** finalization observes a thrown, non-finite, unsafe, negative,
-  out-of-range, or rolled-back clock before release
-- **THEN** it returns a typed failure, leaves the intent paid, and the key
-  releaser call count remains zero; a later valid deliberate retry may dispatch
-  exactly once
+#### Scenario: Injected-looking release adapters receive zero calls
 
-#### Scenario: Deferred release does not perform post-call clock work
+- **WHEN** a conforming-looking or malicious release object is supplied through
+  a runtime-shaped constructor argument or caller payload
+- **THEN** the production bridge and route make zero calls to it, do not inspect
+  its release methods, and cannot create finalized state or key output
 
-- **WHEN** a key releaser is deferred and the clock becomes invalid while the
-  external call is in flight
-- **THEN** the release completes using the prevalidated timestamp, the intent
-  finalizes without a post-call clock/serialization failure, and repeated
-  finalization remains idempotent with one irreversible backend release
+#### Scenario: Payload, restart, and drift cases remain unsupported
 
-#### Scenario: Unexpected post-call conditions cannot replay release
+- **WHEN** finalization is requested with valid, malformed, replayed, restart,
+  altered-binding, registry-drift, or arbitrary payment-hash-shaped input
+- **THEN** the direct library and route return the same typed unavailable result,
+  preserve existing state, and perform zero external dispatch
 
-- **WHEN** an external release has been dispatched and a malformed result or
-  unexpected terminal-update condition occurs
-- **THEN** the durable backend record remains the authority; retry performs a
-  lookup with the same obligation id, validates successful evidence, and
-  commits without a second irreversible release. No local latch or alternate
-  key is sufficient to authorize a retry.
+#### Scenario: Future obligation identity has no party bypass
 
-#### Scenario: Durable lookup reconciles a process restart
-
-- **WHEN** the backend commits the release and the first bridge is lost before
-  its local terminal commit, then a second bridge reconstructs the same
-  immutable intent/payment/proof binding
-- **THEN** the second bridge derives the same stable obligation and binding,
-  finds and validates the durable evidence, finalizes without invoking
-  release, and the shared backend records exactly one irreversible side effect
-
-#### Scenario: Ambiguous timeout reuses the same key
-
-- **WHEN** release times out after the backend may have committed
-- **THEN** finalization returns a typed ambiguous failure without fallback, and
-  a later retry performs lookup with the identical obligation before any
-  release
-
-#### Scenario: Rehydrated mutable terms conflict with one obligation
-
-- **WHEN** a rehydrated intent changes amount, network, statement, payment txid,
-  or backend artifact/version while preserving the encrypted-data commitment
-  and stable seller/buyer identity
-- **THEN** the bridge looks up the original obligation in the same pinned
-  registry, returns `key_release_obligation_conflict`, and performs zero new
-  irreversible releases
-
-#### Scenario: Registry drift is rejected before dispatch
-
-- **WHEN** the key releaser advertises a missing, unsupported, or different
-  durable registry namespace
-- **THEN** the bridge returns `key_release_registry_mismatch` before lookup or
-  release and leaves the paid intent available for a deliberate retry
-
-#### Scenario: Hostile key-release evidence is bounded
-
-- **WHEN** a key releaser returns an object/proxy/cycle, an array/nested value,
-  an extra property, a deep or oversized JSON payload, or a non-canonical
-  evidence string
-- **THEN** the bridge rejects the evidence without recursively traversing or
-  retaining adapter-owned data and performs no second release
-
-#### Scenario: Lookup error blocks release
-
-- **WHEN** durable lookup throws or returns an unavailable/rejected outcome
-- **THEN** finalization returns a typed lookup failure and makes zero release
-  calls
-
-#### Scenario: Durable evidence binding mismatch fails closed
-
-- **WHEN** found evidence changes the key, immutable intent, statement,
-  encrypted-data digest, observed payment, backend identity, or backend
-  artifact
-- **THEN** finalization returns the corresponding typed mismatch and makes no
-  release call
+- **WHEN** a future coordinator derives an obligation for the same canonical
+  encrypted-data commitment using different seller/buyer string
+  representations
+- **THEN** the commitment/version/domain bytes are the only identity input, so
+  the representations cannot create separate obligations or bypass a durable
+  claim; the current platform contains no executable derivation
 
 ### Requirement: Fail-closed settlement transitions
 
@@ -528,30 +459,29 @@ state mutation.
 - **THEN** the route returns a typed non-success response, does not emit a
   decryption key, and leaves settlement state unchanged
 
-#### Scenario: Lifecycle snapshots cannot bypass finalization evidence
+#### Scenario: Lifecycle snapshots cannot bypass the quarantine
 
 - **WHEN** a caller mutates an object returned by an intent getter/list method,
   or a status string conflicts with retained proof/payment evidence
-- **THEN** the caller changes no authoritative state and finalization
-  revalidates the internally retained evidence before key release
+- **THEN** the caller changes no authoritative state and finalization returns
+  typed `unsupported_backend` without reading mutable caller state or dispatch
 
-#### Scenario: Terminal finalization cannot be replayed or raced
+#### Scenario: Terminal payment evidence cannot become finalization
 
-- **WHEN** a caller watches payment after finalization, finalizes an already
-  finalized intent, or invokes finalization concurrently
-- **THEN** the first authoritative release is preserved, repeated finalization
-  is idempotent, payment state does not regress, and a concurrent release is
-  rejected without a second key-release invocation
+- **WHEN** a caller finalizes a paid intent, retries the request, invokes it
+  concurrently, or supplies an arbitrary payment hash
+- **THEN** the intent remains `paid`, every result is unavailable/
+  `unsupported_backend`, and no key-release invocation or key output occurs
 
 #### Scenario: Async lifecycle commits cannot regress state
 
-- **WHEN** verification, payment observation, or finalization awaits an
+- **WHEN** verification or payment observation awaits an
   adapter while another lifecycle operation or replay is queued for the same
   intent
 - **THEN** operations execute in deterministic per-intent order and every
   evidence/terminal commit re-checks operation identity, generation, and
-  expected status so a stale operation cannot overwrite `verified`, `paid`, or
-  `finalized` state
+  expected status so a stale operation cannot overwrite `verified` or `paid`
+  state; finalization has no lifecycle commit path
 
 ### Requirement: Attested unique BitVM2 aggregation
 

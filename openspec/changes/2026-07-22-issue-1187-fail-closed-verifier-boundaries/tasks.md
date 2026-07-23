@@ -206,3 +206,31 @@
 - [ ] Re-run focused/full Vitest, dashboard typecheck, lifecycle/control and
   contamination guards, strict OpenSpec validation, dependency checks, diff
   hygiene, and hosted PR checks after the focused commit is pushed.
+
+## Phase 13 — Complete production key-release quarantine (PR #1198 review 4759956526)
+
+The release-coordinator work described in Phases 10–12 is historical and is
+superseded by this quarantine. Those design sketches do not authorize a
+production adapter, registry, obligation lookup, or irreversible dispatch.
+
+- [x] Remove production key-release interfaces, registry/obligation execution,
+  constructor injection, release evidence, synthetic-key paths, and finalized
+  status output from `ZKCPBridge` and the settlement route.
+- [x] Make direct-library and `zkcp-finalize` route finalization typed
+  unavailable/unsupported for every payload with zero bridge or adapter calls.
+- [x] Preserve authoritative proof/payment fail-closed transitions while
+  keeping `paid` distinct from `finalized`; retain no executable release
+  coordinator in production or test fixtures.
+- [x] Add direct-library and route tests for malicious/conforming-looking
+  adapters, arbitrary payloads, replay, restart-shaped inputs, and drift; prove
+  zero calls, no finalized state, and no decryption-key output.
+- [x] Extend Python/PowerShell contamination guards for production release
+  adapters, dispatch, decryption-key output, and finalized status.
+- [x] Document the remaining future dependency: independently authenticated,
+  server-bound Gateway/Core atomic claim-or-get plus a durable registry.
+- [x] Document future obligation identity as canonical encrypted-data
+  commitment bytes plus version/domain only; exclude raw seller/buyer strings
+  and specify exact byte/encoding rules.
+- [ ] Re-run focused/full Vitest, dashboard typecheck, lifecycle/control and
+  contamination guards, strict OpenSpec validation, dependency checks, diff
+  hygiene, and hosted PR checks after the focused commit is pushed.

@@ -33,13 +33,17 @@ $VERIFIER_RULES = @(
     @{ Id = "production-simulator-construction"; Pattern = '\b(?:class\s+Default\w*(?:Verifier|Monitor|Releaser|Backend)|new\s+Default\w*(?:Verifier|Monitor|Releaser|Backend)|new\s+\w*(?:Simulator|Simulation|Fixture|Mock|Fake|Dummy)\w*\s*\(|\b(?:const|let|var)\s+\w*(?:Verifier|Monitor|Releaser|Backend)\w*\s*=\s*(?:new\s+)?(?:Default\w*(?:Verifier|Monitor|Releaser|Backend)|\w*(?:Simulator|Simulation|Fixture|Mock|Fake|Dummy)\w*)|\b(?:const|let|var)\s+Default\w*(?:Verifier|Monitor|Releaser|Backend)\w*\s*=\s*\w+)' }
     @{ Id = "production-fixture-import"; Pattern = '(?:from\s*|import\s*)["''][^"'']*(?:src/tests|tests/fixtures)[^"'']*["'']' }
     @{ Id = "synthetic-decryption-key"; Pattern = '(?:key-\$\{|(?:decryptionKey|decryption_key)\s*[:=]\s*[`"''](?:key-|synthetic|fake|dummy))' }
+    @{ Id = "production-key-release-adapter"; Pattern = '\b(?:DecryptionKeyReleaser|UnavailableDecryptionKeyReleaser|keyReleaser|keyRelease(?:Registry|Evidence|Attempts|Request)|deriveZKCPKeyRelease|buildKeyReleaseRequest)\b' }
+    @{ Id = "production-key-release-output"; Pattern = '\bdecryptionKey\b|\bstatus\s*[:=]\s*["'']finalized["'']' }
+    @{ Id = "production-key-release-dispatch"; Pattern = '\b(?:getByObligationId|releaseDecryptionKey)\s*\(|\bkeyReleaser\s*\.\s*(?:getByObligationId|release)\s*\(' }
     @{ Id = "production-bridge-construction"; Pattern = 'new\s+BitVMBridge\s*\((?!\s*new\s+UnavailableBitVMVerifier\s*\(\s*\)\s*\))' }
     @{ Id = "production-bridge-construction"; Pattern = 'new\s+BitVM3Orchestrator\s*\((?!\s*new\s+UnavailableBitVM3Verifier\s*\(\s*\)\s*\))' }
-    @{ Id = "production-bridge-construction"; Pattern = 'new\s+ZKCPBridge\s*\((?!\s*new\s+UnavailableZKVerifier\s*\(\s*\)\s*,\s*new\s+UnavailableOnChainMonitor\s*\(\s*\)\s*,\s*new\s+UnavailableDecryptionKeyReleaser\s*\(\s*\)\s*,?\s*\))' }
+    @{ Id = "production-bridge-construction"; Pattern = 'new\s+ZKCPBridge\s*\((?!\s*new\s+UnavailableZKVerifier\s*\(\s*\)\s*,\s*new\s+UnavailableOnChainMonitor\s*\(\s*\)\s*,?\s*\))' }
 )
 
 $SETTLEMENT_RULES = @(
     @{ Id = "settlement-success-default"; Pattern = '\b(?:success\s*:\s*true|status\s*:\s*["''](?:idle|success|ok)["''])' }
+    @{ Id = "settlement-zkcp-finalize-dispatch"; Pattern = '\bzkcpBridge\s*\.\s*finalizeSettlement\s*\(' }
 )
 
 function ScanFile([string]$relPath) {

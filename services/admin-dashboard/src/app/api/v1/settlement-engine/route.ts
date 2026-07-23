@@ -45,7 +45,10 @@ function statusForFailure(failureCode: unknown): number {
   if (failureCode === "backend_unavailable"
     || failureCode === "observer_unavailable"
     || failureCode === "decryption_key_unavailable"
-    || failureCode === "unsupported_backend") return 503;
+    || failureCode === "unsupported_backend"
+    || failureCode === "key_release_capability_missing"
+    || failureCode === "key_release_lookup_failed"
+    || failureCode === "key_release_ambiguous") return 503;
   if (failureCode === "resource_limit_exceeded") return 413;
   if (failureCode === "internal_error") return 500;
   if (failureCode === "payment_not_observed") return 409;

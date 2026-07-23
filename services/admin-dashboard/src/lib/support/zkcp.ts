@@ -9,6 +9,7 @@ import {
   boundedIdentifier,
   digestCanonical,
   digestVerifierRequest,
+  isDigest,
   isAuthoritativeBackendIdentity,
   isBackendIdentity,
   isPaymentNetwork,
@@ -20,6 +21,9 @@ import {
   normalizeBoundaryError,
   rejectNonProductionVerification,
   VERIFIER_RESOURCE_LIMITS,
+  VERIFIER_ZKCP_KEY_RELEASE_CONTRACT_VERSION,
+  VERIFIER_ZKCP_KEY_RELEASE_IDEMPOTENCY_VERSION,
+  VERIFIER_ZKCP_KEY_RELEASE_POLICY_VERSION,
   VERIFIER_ZKCP_LIST_POLICY_VERSION,
   VERIFIER_ZKCP_RETENTION_POLICY_VERSION,
   type BackendIdentity,
@@ -47,6 +51,9 @@ import {
 const logger = createLogger("ZKCP");
 
 export const ZKCP_STATEMENT_BINDING_VERSION = "conxian.zkcp.statement.v1" as const;
+export const ZKCP_KEY_RELEASE_CONTRACT_VERSION = VERIFIER_ZKCP_KEY_RELEASE_CONTRACT_VERSION;
+export const ZKCP_KEY_RELEASE_IDEMPOTENCY_VERSION = VERIFIER_ZKCP_KEY_RELEASE_IDEMPOTENCY_VERSION;
+export const ZKCP_KEY_RELEASE_POLICY_VERSION = VERIFIER_ZKCP_KEY_RELEASE_POLICY_VERSION;
 
 export type ZKCPStatus = "pending" | "verified" | "paid" | "finalized" | "failed" | "unsupported";
 export type ZKProofSystem = "groth16" | "plonk" | "stark";
@@ -82,6 +89,81 @@ export interface ZKCPIntentInput {
 
 export type ZKVerificationResult = VerificationResult;
 
+/**
+* Admission metadata for a durable key-release backend. These declarations
+* are not a local latch: the backend owns the durable record and MUST make
+* every irreversible release for one key atomic with its idempotency record,
+* so retries, replicas, and process restarts cannot release twice.
+*/
+export interface DecryptionKeyReleaseCapabilities {
+  contract_version: typeof ZKCP_KEY_RELEASE_CONTRACT_VERSION;
+  idempotency_version: typeof ZKCP_KEY_RELEASE_IDEMPOTENCY_VERSION;
+  release_policy_version: typeof ZKCP_KEY_RELEASE_POLICY_VERSION;
+  release_guarantee: "exactly_once_per_idempotency_key";
+  durable_idempotency: true;
+  get_by_idempotency_key: true;
+  idempotent_release: true;
+}
+
+export const ZKCP_KEY_RELEASE_CAPABILITIES: DecryptionKeyReleaseCapabilities = Object.freeze({
+  contract_version: ZKCP_KEY_RELEASE_CONTRACT_VERSION,
+  idempotency_version: ZKCP_KEY_RELEASE_IDEMPOTENCY_VERSION,
+  release_policy_version: ZKCP_KEY_RELEASE_POLICY_VERSION,
+  release_guarantee: "exactly_once_per_idempotency_key",
+  durable_idempotency: true,
+  get_by_idempotency_key: true,
+  idempotent_release: true,
+});
+
+export interface ZKCPKeyReleasePaymentBinding {
+  address: string;
+  expected_amount: number;
+  amount: number;
+  network: PaymentNetwork;
+  txid: string;
+}
+
+export interface ZKCPKeyReleaseBinding {
+  binding_version: typeof ZKCP_KEY_RELEASE_IDEMPOTENCY_VERSION;
+  release_policy_version: typeof ZKCP_KEY_RELEASE_POLICY_VERSION;
+  intent_id: string;
+  amount: number;
+  seller_address: string;
+  buyer_address: string;
+  network: PaymentNetwork;
+  encrypted_data_digest: Digest;
+  proof_digest: Digest;
+  statement_digest: Digest;
+  domain_digest: Digest;
+  payment: ZKCPKeyReleasePaymentBinding;
+  backend: BackendIdentity;
+}
+
+export interface DecryptionKeyReleaseRequest {
+  contract_version: typeof ZKCP_KEY_RELEASE_CONTRACT_VERSION;
+  idempotency_key: string;
+  binding: ZKCPKeyReleaseBinding;
+  intent: Readonly<ZKCPIntent>;
+  payment: Readonly<PaymentObservation>;
+}
+
+export interface DecryptionKeyReleaseEvidence {
+  contract_version: typeof ZKCP_KEY_RELEASE_CONTRACT_VERSION;
+  idempotency_key: string;
+  binding: ZKCPKeyReleaseBinding;
+  backend: BackendIdentity;
+  backend_artifact_digest: Digest;
+}
+
+export type DecryptionKeyReleaseLookupStatus = "found" | "absent" | "unavailable" | "rejected";
+
+export interface DecryptionKeyReleaseLookupRequest {
+  contract_version: typeof ZKCP_KEY_RELEASE_CONTRACT_VERSION;
+  idempotency_key: string;
+  binding: ZKCPKeyReleaseBinding;
+  backend: BackendIdentity;
+}
+
 export interface ZKCPBindingDigests {
   version: typeof ZKCP_STATEMENT_BINDING_VERSION;
   payment_condition_digest: Digest;
@@ -105,7 +187,6 @@ export const ZKCP_LIST_POLICY = Object.freeze({
 
 export const ZKCP_TIMESTAMP_MIN_MS = 0;
 export const ZKCP_TIMESTAMP_MAX_MS = 8.64e15;
-const ZKCP_FALLBACK_TIMESTAMP = "1970-01-01T00:00:00.000Z";
 
 type ZKCPClockFailureCode = "internal_error" | "malformed_request" | "resource_limit_exceeded";
 
@@ -242,19 +323,47 @@ export interface DecryptionKeyReleaseResult {
   backend: BackendIdentity;
   provenance: Provenance;
   decryptionKey?: string;
+  evidence?: DecryptionKeyReleaseEvidence;
+  failure_code?: VerificationFailureCode;
+  error?: string;
+}
+
+export interface DecryptionKeyReleaseLookupResult {
+  status: DecryptionKeyReleaseLookupStatus;
+  backend: BackendIdentity;
+  provenance: Provenance;
+  release?: DecryptionKeyReleaseResult;
   failure_code?: VerificationFailureCode;
   error?: string;
 }
 
 export interface DecryptionKeyReleaser {
   readonly backendIdentity: BackendIdentity;
-  release(intent: Readonly<ZKCPIntent>, payment: Readonly<PaymentObservation>): Promise<DecryptionKeyReleaseResult>;
+  readonly capabilities?: DecryptionKeyReleaseCapabilities;
+  /** Returns the durable release record for the exact canonical key/binding. */
+  getByIdempotencyKey(request: Readonly<DecryptionKeyReleaseLookupRequest>): Promise<DecryptionKeyReleaseLookupResult>;
+  /**
+   * The external backend MUST atomically persist the key/binding and perform
+   * at most one irreversible release for that idempotency key.
+   */
+  release(request: Readonly<DecryptionKeyReleaseRequest>): Promise<DecryptionKeyReleaseResult>;
 }
 
 export class UnavailableDecryptionKeyReleaser implements DecryptionKeyReleaser {
   public readonly backendIdentity = UNAVAILABLE_BACKEND;
+  public readonly capabilities = undefined;
 
-  public async release(_intent: Readonly<ZKCPIntent>, _payment: Readonly<PaymentObservation>): Promise<DecryptionKeyReleaseResult> {
+  public async getByIdempotencyKey(_request: Readonly<DecryptionKeyReleaseLookupRequest>): Promise<DecryptionKeyReleaseLookupResult> {
+    return {
+      status: "unavailable",
+      backend: UNAVAILABLE_BACKEND,
+      provenance: "unknown",
+      failure_code: "decryption_key_unavailable",
+      error: "Decryption-key release backend is not configured",
+    };
+  }
+
+  public async release(_request: Readonly<DecryptionKeyReleaseRequest>): Promise<DecryptionKeyReleaseResult> {
     return {
       status: "unavailable",
       backend: UNAVAILABLE_BACKEND,
@@ -311,6 +420,8 @@ interface StoredPaymentEvidence {
 interface StoredKeyReleaseEvidence {
   result: DecryptionKeyReleaseResult;
   released_at: string;
+  idempotency_key: string;
+  binding: ZKCPKeyReleaseBinding;
 }
 
 export interface ZKCPBridgeOptions {
@@ -346,6 +457,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+function isBoundedNonEmptyString(value: unknown, maxLength: number): value is string {
+  return isNonEmptyString(value) && value.length <= maxLength;
 }
 
 function validateIntentIdentifier(value: unknown):
@@ -641,17 +756,169 @@ function copyVerificationResult(result: VerificationResult): VerificationResult 
   return immutableCopy(result);
 }
 
+function isBoundedIdempotencyKey(value: unknown): value is string {
+  return typeof value === "string"
+    && value.length <= VERIFIER_RESOURCE_LIMITS.maxIdempotencyKeyChars
+    && /^zkcp-release-v1:[0-9a-f]{64}$/.test(value);
+}
+
+function isDurableKeyReleaseCapabilities(value: unknown): value is DecryptionKeyReleaseCapabilities {
+  return isRecord(value)
+    && value.contract_version === ZKCP_KEY_RELEASE_CONTRACT_VERSION
+    && value.idempotency_version === ZKCP_KEY_RELEASE_IDEMPOTENCY_VERSION
+    && value.release_policy_version === ZKCP_KEY_RELEASE_POLICY_VERSION
+    && value.release_guarantee === "exactly_once_per_idempotency_key"
+    && value.durable_idempotency === true
+    && value.get_by_idempotency_key === true
+    && value.idempotent_release === true;
+}
+
+function isKeyReleasePaymentBinding(value: unknown): value is ZKCPKeyReleasePaymentBinding {
+  return isRecord(value)
+    && isBoundedNonEmptyString(value.address, VERIFIER_RESOURCE_LIMITS.maxAddressChars)
+    && typeof value.expected_amount === "number"
+    && Number.isSafeInteger(value.expected_amount)
+    && value.expected_amount > 0
+    && typeof value.amount === "number"
+    && Number.isSafeInteger(value.amount)
+    && value.amount > 0
+    && value.amount === value.expected_amount
+    && isPaymentNetwork(value.network)
+    && isBoundedNonEmptyString(value.txid, VERIFIER_RESOURCE_LIMITS.maxTxidChars);
+}
+
+function isKeyReleaseBinding(value: unknown, authority?: BackendIdentity): value is ZKCPKeyReleaseBinding {
+  return isRecord(value)
+    && value.binding_version === ZKCP_KEY_RELEASE_IDEMPOTENCY_VERSION
+    && value.release_policy_version === ZKCP_KEY_RELEASE_POLICY_VERSION
+    && isBoundedNonEmptyString(value.intent_id, VERIFIER_RESOURCE_LIMITS.maxIdentifierChars)
+    && typeof value.amount === "number"
+    && Number.isSafeInteger(value.amount)
+    && value.amount > 0
+    && isBoundedNonEmptyString(value.seller_address, VERIFIER_RESOURCE_LIMITS.maxAddressChars)
+    && isBoundedNonEmptyString(value.buyer_address, VERIFIER_RESOURCE_LIMITS.maxAddressChars)
+    && isPaymentNetwork(value.network)
+    && isDigest(value.encrypted_data_digest)
+    && isDigest(value.proof_digest)
+    && isDigest(value.statement_digest)
+    && isDigest(value.domain_digest)
+    && isKeyReleasePaymentBinding(value.payment)
+    && isAuthoritativeBackendIdentity(value.backend)
+    && (authority === undefined || backendIdentityEquals(value.backend, authority));
+}
+
+function isKeyReleaseEvidenceShape(value: unknown): value is DecryptionKeyReleaseEvidence {
+  return isRecord(value)
+    && value.contract_version === ZKCP_KEY_RELEASE_CONTRACT_VERSION
+    && isBoundedIdempotencyKey(value.idempotency_key)
+    && isKeyReleaseBinding(value.binding)
+    && isBackendIdentity(value.backend)
+    && isDigest(value.backend_artifact_digest);
+}
+
+export async function deriveZKCPKeyReleaseIdempotencyKey(
+  binding: ZKCPKeyReleaseBinding,
+): Promise<string> {
+  if (!isKeyReleaseBinding(binding)) {
+    throw new Error("ZKCP key-release binding is malformed");
+  }
+  const digest = await digestCanonical({
+    contract_version: ZKCP_KEY_RELEASE_CONTRACT_VERSION,
+    idempotency_version: ZKCP_KEY_RELEASE_IDEMPOTENCY_VERSION,
+    purpose: "zkcp-key-release-idempotency",
+    binding,
+  });
+  const key = `zkcp-release-v1:${digestHex(digest)}`;
+  if (!isBoundedIdempotencyKey(key)) {
+    throw new Error("ZKCP key-release idempotency key exceeds the v1 resource limit");
+  }
+  return key;
+}
+
+function keyReleaseBindingMatchesRequest(
+  binding: ZKCPKeyReleaseBinding,
+  intent: Readonly<ZKCPIntent>,
+  payment: Readonly<PaymentObservation>,
+  statementDigest: Digest,
+  domainDigest: Digest,
+  authority: BackendIdentity,
+): boolean {
+  return isKeyReleaseBinding(binding, authority)
+    && binding.intent_id === intent.id
+    && binding.amount === intent.amount
+    && binding.seller_address === intent.sellerAddress
+    && binding.buyer_address === intent.buyerAddress
+    && binding.network === intent.network
+    && binding.encrypted_data_digest === intent.encryptedDataHash
+    && binding.proof_digest === intent.proofHash
+    && binding.statement_digest === statementDigest
+    && binding.domain_digest === domainDigest
+    && binding.payment.address === payment.address
+    && binding.payment.expected_amount === payment.expected_amount
+    && binding.payment.amount === payment.amount
+    && binding.payment.network === payment.network
+    && binding.payment.txid === payment.txid;
+}
+
+interface KeyReleaseEvidenceValidationSuccess {
+  ok: true;
+  evidence: DecryptionKeyReleaseEvidence;
+}
+
+interface KeyReleaseEvidenceValidationFailure {
+  ok: false;
+  failure_code: VerificationFailureCode;
+  error: string;
+}
+
+type KeyReleaseEvidenceValidation =
+  | KeyReleaseEvidenceValidationSuccess
+  | KeyReleaseEvidenceValidationFailure;
+
+function validateKeyReleaseEvidence(
+  value: unknown,
+  request: Readonly<DecryptionKeyReleaseRequest>,
+  authority: BackendIdentity,
+): KeyReleaseEvidenceValidation {
+  if (!isKeyReleaseEvidenceShape(value)) {
+    return { ok: false, failure_code: "key_release_evidence_mismatch", error: "Key-release evidence is not a canonical v1 binding" };
+  }
+  if (value.idempotency_key !== request.idempotency_key) {
+    return { ok: false, failure_code: "key_release_idempotency_mismatch", error: "Key-release evidence uses a different idempotency key" };
+  }
+  if (!backendIdentityEquals(value.backend, authority)
+    || !backendIdentityEquals(value.binding.backend, authority)
+    || value.backend_artifact_digest !== authority.artifact_digest) {
+    return { ok: false, failure_code: "key_release_backend_mismatch", error: "Key-release evidence is not bound to the configured backend artifact" };
+  }
+  if (!keyReleaseBindingMatchesRequest(
+    value.binding,
+    request.intent,
+    request.payment,
+    request.binding.statement_digest,
+    request.binding.domain_digest,
+    authority,
+  ) || canonicalJson(value.binding) !== canonicalJson(request.binding)) {
+    return { ok: false, failure_code: "key_release_evidence_mismatch", error: "Key-release evidence is not bound to the immutable settlement request" };
+  }
+  return { ok: true, evidence: immutableCopy(value) };
+}
+
 function isProductionKeyRelease(
   result: DecryptionKeyReleaseResult,
   authority: BackendIdentity,
-): boolean {
-  return result.status === "released"
-    && result.provenance === "production"
-    && result.failure_code === undefined
-    && isNonEmptyString(result.decryptionKey)
-    && isAuthoritativeBackendIdentity(result.backend)
-    && isAuthoritativeBackendIdentity(authority)
-    && backendIdentityEquals(result.backend, authority);
+  request: Readonly<DecryptionKeyReleaseRequest>,
+): KeyReleaseEvidenceValidation {
+  if (result.status !== "released"
+    || result.provenance !== "production"
+    || result.failure_code !== undefined
+    || !isNonEmptyString(result.decryptionKey)
+    || !isAuthoritativeBackendIdentity(result.backend)
+    || !isAuthoritativeBackendIdentity(authority)
+    || !backendIdentityEquals(result.backend, authority)) {
+    return { ok: false, failure_code: "key_release_evidence_mismatch", error: "Production key-release evidence is not authoritative" };
+  }
+  return validateKeyReleaseEvidence(result.evidence, request, authority);
 }
 
 function isKeyReleaseResult(value: unknown): value is DecryptionKeyReleaseResult {
@@ -662,6 +929,7 @@ function isKeyReleaseResult(value: unknown): value is DecryptionKeyReleaseResult
     && (value.failure_code === undefined || isVerificationFailureCode(value.failure_code))
     && (value.decryptionKey === undefined
       || typeof value.decryptionKey === "string")
+    && (value.evidence === undefined || isKeyReleaseEvidenceShape(value.evidence))
     && (value.error === undefined
       || typeof value.error === "string");
 }
@@ -688,6 +956,7 @@ function normalizeKeyReleaseResult(value: unknown): KeyReleaseBoundaryValidation
         backend: { ...value.backend },
         provenance: value.provenance,
         decryptionKey: value.decryptionKey,
+        evidence: value.evidence === undefined ? undefined : immutableCopy(value.evidence),
         failure_code: value.failure_code,
         error: value.error,
       },
@@ -700,6 +969,116 @@ function normalizeKeyReleaseResult(value: unknown): KeyReleaseBoundaryValidation
       error: normalized.message,
     };
   }
+}
+
+function normalizeKeyReleaseLookupResult(value: unknown):
+  | { ok: true; result: DecryptionKeyReleaseLookupResult }
+  | { ok: false; failure_code: VerificationFailureCode; error: string } {
+  try {
+    if (!isRecord(value)
+      || (value.status !== "found"
+        && value.status !== "absent"
+        && value.status !== "unavailable"
+        && value.status !== "rejected")
+      || !isBackendIdentity(value.backend)
+      || !isProvenance(value.provenance)
+      || (value.failure_code !== undefined && !isVerificationFailureCode(value.failure_code))
+      || (value.error !== undefined && typeof value.error !== "string")) {
+      return { ok: false, failure_code: "key_release_lookup_failed", error: "Key-release durable lookup returned malformed evidence" };
+    }
+    if (typeof value.error === "string" && value.error.length > VERIFIER_RESOURCE_LIMITS.maxErrorChars) {
+      const normalized = normalizeBoundaryError(value.error, "Key-release durable lookup error exceeds the v1 resource limit");
+      return { ok: false, failure_code: "resource_limit_exceeded", error: normalized.message };
+    }
+    if (value.status === "found") {
+      if (value.failure_code !== undefined || value.error !== undefined) {
+        return { ok: false, failure_code: "key_release_lookup_failed", error: "A found durable lookup cannot carry failure evidence" };
+      }
+      const release = normalizeKeyReleaseResult(value.release);
+      if (!release.ok) return release;
+      return {
+        ok: true,
+        result: {
+          status: "found",
+          backend: { ...value.backend },
+          provenance: value.provenance,
+          release: release.result,
+        },
+      };
+    }
+    if (value.release !== undefined) {
+      return { ok: false, failure_code: "key_release_lookup_failed", error: "An absent or failed durable lookup cannot carry release evidence" };
+    }
+    if (value.status === "absent" && (value.failure_code !== undefined || value.error !== undefined)) {
+      return { ok: false, failure_code: "key_release_lookup_failed", error: "A durable lookup is absent only when it carries no failure evidence" };
+    }
+    return {
+      ok: true,
+      result: {
+        status: value.status,
+        backend: { ...value.backend },
+        provenance: value.provenance,
+        failure_code: value.failure_code,
+        error: value.error,
+      },
+    };
+  } catch (error: unknown) {
+    const normalized = normalizeBoundaryError(error, "Key-release durable lookup validation failed");
+    return {
+      ok: false,
+      failure_code: normalized.truncated ? "resource_limit_exceeded" : "key_release_lookup_failed",
+      error: normalized.message,
+    };
+  }
+}
+
+async function buildKeyReleaseRequest(
+  intent: Readonly<ZKCPIntent>,
+  payment: Readonly<PaymentObservation>,
+  proofRequest: Readonly<VerifierRequest>,
+  authority: BackendIdentity,
+): Promise<Readonly<DecryptionKeyReleaseRequest>> {
+  const binding: ZKCPKeyReleaseBinding = immutableCopy({
+    binding_version: ZKCP_KEY_RELEASE_IDEMPOTENCY_VERSION,
+    release_policy_version: ZKCP_KEY_RELEASE_POLICY_VERSION,
+    intent_id: intent.id,
+    amount: intent.amount,
+    seller_address: intent.sellerAddress,
+    buyer_address: intent.buyerAddress,
+    network: intent.network,
+    encrypted_data_digest: intent.encryptedDataHash,
+    proof_digest: intent.proofHash,
+    statement_digest: proofRequest.statement_digest,
+    domain_digest: proofRequest.domain_digest,
+    payment: {
+      address: payment.address,
+      expected_amount: payment.expected_amount,
+      amount: payment.amount,
+      network: payment.network,
+      txid: payment.txid,
+    },
+    backend: { ...authority },
+  });
+
+  if (!keyReleaseBindingMatchesRequest(
+    binding,
+    intent,
+    payment,
+    proofRequest.statement_digest,
+    proofRequest.domain_digest,
+    authority,
+  )) {
+    throw new Error("ZKCP key-release binding is not aligned with retained settlement evidence");
+  }
+
+  const idempotency_key = await deriveZKCPKeyReleaseIdempotencyKey(binding);
+  return immutableCopy({
+    contract_version: ZKCP_KEY_RELEASE_CONTRACT_VERSION,
+    idempotency_key,
+    binding,
+    intent,
+    payment,
+  });
 }
 
 export class ZKCPBridge {
@@ -1288,33 +1667,6 @@ export class ZKCPBridge {
             decryptionKey: intent.decryptionKey,
           };
         }
-        const retainedRelease = this.keyReleaseEvidence.get(safeIntentId);
-        if (retainedRelease) {
-          // Recover a successful release latch without dispatching the external
-          // releaser again if an unexpected post-call condition interrupted the
-          // in-memory terminal-state update.
-          intent.status = "finalized";
-          intent.decryptionKey = retainedRelease.result.decryptionKey;
-          intent.updatedAt = retainedRelease.released_at;
-          this.lifecycleGenerations.set(safeIntentId, (this.lifecycleGenerations.get(safeIntentId) ?? 0) + 1);
-          return {
-            finalized: true,
-            status: "finalized",
-            intentId: safeIntentId,
-            paymentHash: intent.paymentHash,
-            decryptionKey: intent.decryptionKey,
-          };
-        }
-        if (this.keyReleaseAttempts.has(safeIntentId)) {
-          return {
-            finalized: false,
-            status: "rejected",
-            intentId: safeIntentId,
-            paymentHash: intent.paymentHash,
-            failure_code: "internal_error",
-            error: "Key-release dispatch was already attempted; durable reconciliation is required",
-          };
-        }
         const operation = this.beginOperation(safeIntentId, ["pending", "verified", "paid", "failed", "unsupported"]);
         if (!operation) {
           return {
@@ -1337,7 +1689,6 @@ export class ZKCPBridge {
     intent: ZKCPIntent,
     operation: IntentOperation,
   ): Promise<SettlementFinalizationResult> {
-
     const proofEvidence = await this.revalidateProofEvidence(intent);
     if (!proofEvidence.ok) {
       return {
@@ -1392,6 +1743,19 @@ export class ZKCPBridge {
       };
     }
 
+    if (!isDurableKeyReleaseCapabilities(this.keyReleaser.capabilities)
+      || typeof this.keyReleaser.getByIdempotencyKey !== "function"
+      || typeof this.keyReleaser.release !== "function") {
+      return {
+        finalized: false,
+        status: "unavailable",
+        intentId,
+        paymentHash: paymentEvidence.observation.txid,
+        failure_code: "key_release_capability_missing",
+        error: "Key-release backend must provide the versioned durable idempotency and lookup contract",
+      };
+    }
+
     const releaseTimestamp = this.currentTimestamp();
     if (!releaseTimestamp.ok) {
       return {
@@ -1404,11 +1768,16 @@ export class ZKCPBridge {
       };
     }
 
-    let releaseIntentSnapshot: Readonly<ZKCPIntent>;
-    let releasePaymentSnapshot: Readonly<PaymentObservation>;
+    let releaseRequest: Readonly<DecryptionKeyReleaseRequest>;
     try {
-      releaseIntentSnapshot = immutableCopy(intent);
-      releasePaymentSnapshot = immutableCopy(paymentEvidence.observation);
+      const releaseIntentSnapshot = immutableCopy(intent);
+      const releasePaymentSnapshot = immutableCopy(paymentEvidence.observation);
+      releaseRequest = await buildKeyReleaseRequest(
+        releaseIntentSnapshot,
+        releasePaymentSnapshot,
+        proofEvidence.evidence.request,
+        releaseBackend,
+      );
     } catch (error: unknown) {
       const normalized = normalizeBoundaryError(error, "Unable to prepare bounded key-release input");
       return {
@@ -1425,11 +1794,20 @@ export class ZKCPBridge {
       released_at: releaseTimestamp.iso,
       payment_hash: paymentEvidence.observation.txid,
     });
+
+    // This local marker is diagnostic/cache state only. Durable backend lookup
+    // and idempotent release keyed by `releaseRequest.idempotency_key` remain
+    // authoritative across retries, replicas, and process restarts.
     this.keyReleaseAttempts.add(intentId);
 
-    let rawRelease: unknown;
+    let rawLookup: unknown;
     try {
-      rawRelease = await this.keyReleaser.release(releaseIntentSnapshot, releasePaymentSnapshot);
+      rawLookup = await this.keyReleaser.getByIdempotencyKey({
+        contract_version: releaseRequest.contract_version,
+        idempotency_key: releaseRequest.idempotency_key,
+        binding: releaseRequest.binding,
+        backend: releaseBackend,
+      });
     } catch (error: unknown) {
       const normalized = normalizeBoundaryError(error, "Key-release backend failed");
       return {
@@ -1437,38 +1815,113 @@ export class ZKCPBridge {
         status: "rejected",
         intentId,
         paymentHash: paymentEvidence.observation.txid,
-        failure_code: normalized.truncated ? "resource_limit_exceeded" : "internal_error",
+        failure_code: normalized.truncated ? "resource_limit_exceeded" : "key_release_lookup_failed",
         error: normalized.message,
       };
     }
 
-    const releaseValidation = normalizeKeyReleaseResult(rawRelease);
-    if (!releaseValidation.ok) {
+    if (!this.isCurrentOperation(operation, ["paid"])) {
       return {
         finalized: false,
         status: "rejected",
         intentId,
         paymentHash: paymentEvidence.observation.txid,
-        failure_code: releaseValidation.failure_code,
-        error: releaseValidation.error,
+        failure_code: "internal_error",
+        error: "ZKCP finalization became stale after durable key-release lookup",
       };
     }
-    const release = releaseValidation.result;
-    let productionRelease = false;
-    try {
-      productionRelease = isProductionKeyRelease(release, releaseBackend);
-    } catch (error: unknown) {
-      const normalized = normalizeBoundaryError(error, "Key-release evidence validation failed");
+
+    const lookupValidation = normalizeKeyReleaseLookupResult(rawLookup);
+    if (!lookupValidation.ok) {
       return {
         finalized: false,
         status: "rejected",
         intentId,
         paymentHash: paymentEvidence.observation.txid,
-        failure_code: normalized.truncated ? "resource_limit_exceeded" : "internal_error",
-        error: normalized.message,
+        failure_code: lookupValidation.failure_code,
+        error: lookupValidation.error,
       };
     }
-    if (!productionRelease) {
+
+    const lookup = lookupValidation.result;
+    if (!backendIdentityEquals(lookup.backend, releaseBackend)) {
+      return {
+        finalized: false,
+        status: "rejected",
+        intentId,
+        paymentHash: paymentEvidence.observation.txid,
+        failure_code: "key_release_backend_mismatch",
+        error: "Durable key-release lookup is not bound to the configured backend identity",
+      };
+    }
+
+    if (lookup.provenance !== "production") {
+      return {
+        finalized: false,
+        status: "rejected",
+        intentId,
+        paymentHash: paymentEvidence.observation.txid,
+        failure_code: "key_release_lookup_failed",
+        error: "Durable key-release lookup must carry production provenance",
+      };
+    }
+
+    let release: DecryptionKeyReleaseResult;
+    if (lookup.status === "found") {
+      if (lookup.release === undefined) {
+        return {
+          finalized: false,
+          status: "rejected",
+          intentId,
+          paymentHash: paymentEvidence.observation.txid,
+          failure_code: "key_release_lookup_failed",
+          error: "Durable key-release lookup reported found without release evidence",
+        };
+      }
+      release = lookup.release;
+    } else if (lookup.status === "absent") {
+      let rawRelease: unknown;
+      try {
+        // The same deterministic key and complete immutable binding are reused
+        // after an absent lookup. No timestamp or process-local state enters
+        // this request, and no non-idempotent fallback is permitted.
+        rawRelease = await this.keyReleaser.release(releaseRequest);
+      } catch (error: unknown) {
+        const normalized = normalizeBoundaryError(error, "Key-release backend outcome is ambiguous");
+        return {
+          finalized: false,
+          status: "rejected",
+          intentId,
+          paymentHash: paymentEvidence.observation.txid,
+          failure_code: normalized.truncated ? "resource_limit_exceeded" : "key_release_ambiguous",
+          error: normalized.message,
+        };
+      }
+
+      const releaseValidation = normalizeKeyReleaseResult(rawRelease);
+      if (!releaseValidation.ok) {
+        return {
+          finalized: false,
+          status: "rejected",
+          intentId,
+          paymentHash: paymentEvidence.observation.txid,
+          failure_code: releaseValidation.failure_code,
+          error: releaseValidation.error,
+        };
+      }
+      release = releaseValidation.result;
+    } else {
+      return {
+        finalized: false,
+        status: lookup.status === "unavailable" ? "unavailable" : "rejected",
+        intentId,
+        paymentHash: paymentEvidence.observation.txid,
+        failure_code: lookup.failure_code ?? "key_release_lookup_failed",
+        error: lookup.error ?? "Durable key-release lookup did not establish release state",
+      };
+    }
+
+    if (release.status !== "released") {
       return {
         finalized: false,
         status: release.status === "unavailable" ? "unavailable" : "rejected",
@@ -1479,30 +1932,72 @@ export class ZKCPBridge {
       };
     }
 
-    const releaseEvidence: StoredKeyReleaseEvidence = {
-      result: release,
-      released_at: releaseCommitContext.released_at,
-    };
-    if (this.keyReleaseEvidence.has(intentId)) {
+    const productionRelease = isProductionKeyRelease(release, releaseBackend, releaseRequest);
+    if (!productionRelease.ok) {
       return {
-        finalized: true,
-        status: "finalized",
+        finalized: false,
+        status: "rejected",
         intentId,
-        paymentHash: releaseCommitContext.payment_hash,
-        decryptionKey: release.decryptionKey,
+        paymentHash: paymentEvidence.observation.txid,
+        failure_code: productionRelease.failure_code,
+        error: productionRelease.error,
       };
     }
-    this.keyReleaseEvidence.set(intentId, releaseEvidence);
-    intent.status = "finalized";
-    intent.decryptionKey = release.decryptionKey;
-    intent.updatedAt = releaseCommitContext.released_at;
-    this.lifecycleGenerations.set(intentId, operation.generation + 1);
-    this.emit({
-      type: "settlement_finalized",
-      intentId,
-      timestamp: intent.updatedAt,
-      data: { paymentHash: releaseCommitContext.payment_hash },
+
+    const releaseEvidence: StoredKeyReleaseEvidence = immutableCopy({
+      result: release,
+      released_at: releaseCommitContext.released_at,
+      idempotency_key: releaseRequest.idempotency_key,
+      binding: releaseRequest.binding,
     });
+
+    try {
+      if (!this.isCurrentOperation(operation, ["paid"])) {
+        return {
+          finalized: false,
+          status: "rejected",
+          intentId,
+          paymentHash: releaseCommitContext.payment_hash,
+          failure_code: "internal_error",
+          error: "ZKCP finalization became stale before durable release commit",
+        };
+      }
+      const retained = this.keyReleaseEvidence.get(intentId);
+      if (retained !== undefined && retained.idempotency_key !== releaseRequest.idempotency_key) {
+        return {
+          finalized: false,
+          status: "rejected",
+          intentId,
+          paymentHash: releaseCommitContext.payment_hash,
+          failure_code: "key_release_idempotency_mismatch",
+          error: "Local key-release evidence is bound to a different immutable idempotency key",
+        };
+      }
+      if (retained === undefined) this.keyReleaseEvidence.set(intentId, releaseEvidence);
+      intent.status = "finalized";
+      intent.decryptionKey = release.decryptionKey;
+      intent.updatedAt = releaseCommitContext.released_at;
+      this.lifecycleGenerations.set(intentId, operation.generation + 1);
+      this.emit({
+        type: "settlement_finalized",
+        intentId,
+        timestamp: intent.updatedAt,
+        data: {
+          paymentHash: releaseCommitContext.payment_hash,
+          idempotencyKey: releaseRequest.idempotency_key,
+        },
+      });
+    } catch (error: unknown) {
+      const normalized = normalizeBoundaryError(error, "Durable key-release evidence commit failed");
+      return {
+        finalized: false,
+        status: "rejected",
+        intentId,
+        paymentHash: releaseCommitContext.payment_hash,
+        failure_code: normalized.truncated ? "resource_limit_exceeded" : "internal_error",
+        error: normalized.message,
+      };
+    }
 
     return {
       finalized: true,

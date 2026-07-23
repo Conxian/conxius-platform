@@ -54,9 +54,19 @@ must reject simulated, malformed, invalid, unknown, or caller-only evidence.
 - Retain bounded BitVM3 request-identity tombstones after terminal expiry so
   conflicting same-id reuse fails closed during the explicit window; require a
   durable Gateway/Core identity registry for permanent global uniqueness.
+- Define a versioned external ZKCP key-release capability contract requiring
+  durable idempotency, lookup-by-idempotency-key, and an idempotent release
+  guarantee owned by the backend rather than BFF memory.
+- Derive one bounded idempotency key from immutable canonical intent,
+  statement/domain, encrypted-data, observed-payment, backend, and release
+  policy bindings; validate that every durable evidence artifact binds the same
+  key, terms, payment, backend identity, and backend artifact.
 - Capture and validate ZKCP finalization timestamps and bounded release inputs
-  before external key release, latch dispatch exactly once, and make deferred,
-  malformed, thrown, and retry paths fail closed without duplicate release.
+  before external key release. Under the intent lock, lookup durable evidence
+  first, release only when the lookup is absent, and reuse the same key after
+  timeouts or ambiguous outcomes without a non-idempotent fallback. Local
+  latches/evidence remain optimization-only and cannot claim cross-restart
+  exactly-once behavior.
 - Extend Python and PowerShell contamination guards to detect the exact
   dangerous classes without scanning test-only fixtures as production code.
 - Add negative-vector tests for unavailable backends, simulation, key/proof/input
@@ -89,7 +99,9 @@ those cross-repository backends are available and independently accepted.
    alone cannot finalize settlement and no synthetic key is emitted. Returned
    intent/lifecycle objects are immutable snapshots, and finalization
    revalidates retained proof/payment evidence rather than mutable labels;
-   terminal finalization is idempotent and concurrent release is serialized.
+   terminal finalization is idempotent and concurrent release is serialized;
+   exactly-once irreversible release depends on the external durable backend
+   contract, not process-local BFF memory.
 6. Unknown settlement actions and all rejected outcomes leave settlement state
    unchanged and return non-success HTTP responses.
 7. BitVM2 aggregation rejects duplicate/unauthorized signers, arbitrary
@@ -109,5 +121,17 @@ those cross-repository backends are available and independently accepted.
     prevention.
 12. ZKCP validates a monotonic finite safe Date-range timestamp and prebuilds
     bounded release inputs before key-releaser dispatch; invalid clocks make
-    zero external calls, successful/retry paths make exactly one call, and no
-    post-call clock/serialization failure can cause a duplicate release.
+    zero external calls, and no post-call clock/serialization failure can
+    cause a duplicate release.
+13. A supported key-release backend must advertise the versioned durable
+    idempotency/lookup contract and guarantee at most one irreversible release
+    for each bounded deterministic key across retries, replicas, and process
+    restarts. Finalization performs durable lookup before release, validates
+    found evidence against the immutable binding, and calls release only for
+    an absent lookup using that same key.
+14. Ambiguous backend timeouts, lookup failures, missing capabilities, and
+    mismatched key/intent/statement/encrypted-data/payment/backend/artifact
+    evidence fail closed without alternate-key or non-idempotent fallback;
+    restart/crash tests prove one shared durable fixture side effect and
+    normal retry reconciliation, while the production adapter remains
+    unavailable-by-default.

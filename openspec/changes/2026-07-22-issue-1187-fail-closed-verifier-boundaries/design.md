@@ -196,20 +196,37 @@ identity/replay guarantees.
 
 ### 2.7 ZKCP release finalization boundary
 
-Before invoking an external key releaser, ZKCP captures and validates one
-monotonic, finite, safe, non-negative timestamp in the inclusive
-`0..8.64e15` ECMAScript Date range. It preconstructs immutable bounded intent
-and payment snapshots plus the release commit timestamp, then latches the
-intent id as dispatched exactly once. No clock read, timestamp serialization,
-unbounded copy, or fallible lifecycle compare-and-swap occurs after the
-external call. The returned adapter value is normalized through a total,
-bounded result validator; successful release evidence is recorded once with
-the prevalidated timestamp and the lifecycle is finalized synchronously. A
-throwing, malformed, rejected, or unexpectedly interrupted release remains
-latched and retry returns typed reconciliation failure rather than dispatching
-the releaser twice. A retained successful evidence latch can repair an
-interrupted in-memory terminal update without another external call. Invalid,
-thrown, rolled-back, or out-of-range clocks fail before key-release dispatch.
+Before invoking an external key releaser, ZKCP requires exact versioned
+capability metadata for `conxian.zkcp.key-release.v1`,
+`conxian.zkcp.key-release.idempotency.v1`, and
+`conxian.zkcp.key-release.policy.v1`. The backend must advertise durable
+idempotency, lookup-by-idempotency-key, idempotent release, and the
+`exactly_once_per_idempotency_key` guarantee. This is an admission contract:
+the external backend owns the durable record and must atomically bind the
+canonical key to the irreversible release so replicas, retries, and process
+restarts cannot release twice.
+
+Finalization captures and validates one monotonic, finite, safe, non-negative
+timestamp in the inclusive `0..8.64e15` ECMAScript Date range. It preconstructs
+immutable bounded intent/payment snapshots and a release binding containing
+only immutable intent terms, statement/domain and encrypted-data digests,
+observed payment terms, backend identity/artifact, and release policy. The
+bounded deterministic key is derived from that binding; timestamps and process
+state are excluded. Before release, the intent lock performs durable lookup
+with the exact key and binding. A found record is validated against every
+binding and committed without another release. An absent record invokes the
+idempotent release method with the same key and binding. Lookup failures,
+unavailable/rejected responses, missing capabilities, and ambiguous release
+timeouts fail closed; retries lookup the same key and never select another key
+or a non-idempotent fallback.
+
+No clock read, timestamp serialization, unbounded copy, or fallible lifecycle
+compare-and-swap occurs after the external call. The returned adapter value is
+normalized through a total, bounded validator, and successful evidence is
+committed with the prevalidated timestamp. Local attempt/evidence maps may
+speed diagnostics or repair a local terminal snapshot, but they are never the
+authority for cross-restart exactly-once behavior. Invalid, thrown, rolled-back,
+or out-of-range clocks fail before durable lookup/release dispatch.
 
 ### 2.8 Bounded ZKCP retention and listing
 
@@ -266,13 +283,12 @@ captures the intent object and generation, then performs an identity/generation
 compare-and-swap check before every evidence or terminal-state commit. Verify,
 watch, and finalize replays therefore have deterministic ordering: a replay
 after a successful transition is read-only or typed non-success, terminal
-finalization is idempotent, and the release-attempt latch rejects any second
-key-release dispatch even if an unexpected post-call condition occurs. The
-release timestamp and bounded release inputs are prepared before dispatch, so
-the external call cannot be followed by a fallible clock/serialization commit
-step. BitVM2 signature submissions are serialized per proof, reserve a signer
-before async verification, release that reservation on all failure/throw paths,
-and re-check uniqueness at commit.
+finalization reconciles through the durable key-release lookup before any
+possible release. The release timestamp and bounded release inputs are prepared
+before dispatch, so the external call cannot be followed by a fallible
+clock/serialization commit step. BitVM2 signature submissions are serialized
+per proof, reserve a signer before async verification, release that reservation
+on all failure/throw paths, and re-check uniqueness at commit.
 BitVM2 floor initialization and signature submission share that same per-proof
 FIFO guard. A successful floor initialization is recorded by request digest,
 backend identity, and tap profile; an identical replay is read-only and cannot
@@ -299,12 +315,15 @@ the same contract and must be selected by explicit dependency injection.
   authoritative backend identities matching the retained observation/result;
   `production` provenance alone is never sufficient.
 - Finalization requires the stored observed payment and a real externally
-  supplied decryption-key release adapter. Until that backend exists,
-  finalization returns `decryption_key_unavailable` and leaves the intent in
-  `paid`/`verified` state. No synthetic key is constructed.
+  supplied decryption-key release adapter that advertises the durable
+  idempotency/lookup contract. Until that backend exists, finalization returns
+  `decryption_key_unavailable` or `key_release_capability_missing` and leaves
+  the intent in `paid`/`verified` state. No synthetic key is constructed.
 - Repeated finalization of an already-finalized intent is read-only and
-  idempotent; concurrent key-release attempts return typed `internal_error`
-  without invoking the releaser twice.
+  idempotent; retries after an ambiguous outcome reuse the same deterministic
+  key and reconcile through durable lookup. Concurrent key-release attempts
+  remain serialized, and local BFF memory never claims cross-restart exactly
+  once.
 - Adapter exceptions or malformed top-level responses are normalized to typed
   non-success outcomes; they never escape as an apparent authorization.
 - Unknown actions are explicit 400 non-success responses.

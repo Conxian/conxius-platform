@@ -16,6 +16,19 @@ The Conxian knowledge base (AGENTS.md) should be a **living system** that:
 
 ## Data Sources
 
+### Readiness rule: durable side effects
+
+Knowledge-base entries about settlement authorization MUST distinguish local
+orchestration state from externally durable authority. For ZKCP key release,
+exactly-once is a backend contract: the selected backend must publish the
+versioned capability metadata, durable lookup-by-idempotency-key semantics, and
+idempotent release guarantee, while the BFF derives a bounded key from
+immutable canonical bindings and reconciles ambiguous retries through lookup.
+Process-local latches, caches, or evidence are optimization signals only and
+must not be recorded as proof of cross-restart exactly-once behavior. The
+checked-in unavailable adapter remains the source-of-truth default until an
+external backend is independently accepted.
+
 ### Internal Sources (Repository)
 
 | Source | Frequency | Data Points |

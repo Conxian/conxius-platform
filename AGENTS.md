@@ -1832,3 +1832,26 @@ AGENTS.md (this update)
 - PowerShell runtime execution remains unavailable in this devbox; lifecycle parity remains static/self-test based.
 **Gotchas**:
 - Re-run focused/full tests, strict issue #1187 OpenSpec validation, lifecycle/contamination checks, and `git diff --check` after this final session-log edit; inspect hosted PR checks after pushing the single commit.
+
+### 2026-07-23 — PR #1198 Durable ZKCP Key-Release Idempotency
+**Trigger**: P1 review `4759710914` on PR #1198.
+**What was done**:
+- Added versioned `conxian.zkcp.key-release.v1`, idempotency, and release-policy capability metadata requiring durable lookup, idempotent release, and an `exactly_once_per_idempotency_key` backend guarantee before dispatch.
+- Derived a bounded `zkcp-release-v1:<sha256>` key from immutable intent, statement/domain, encrypted-data, observed-payment, backend/artifact, and release-policy bindings; validated durable evidence against the complete binding.
+- Changed finalization to durable-lookup-first under the intent lock: found evidence commits without release, absent evidence calls idempotent release with the same key, and lookup errors/ambiguous timeouts never select an alternate key or non-idempotent fallback. Local attempt/evidence state remains optimization-only.
+- Added shared durable-fixture restart/crash, ambiguous-timeout, normal-retry, lookup-error, missing-capability, and key/statement/encrypted/backend/artifact-mismatch regressions; the production adapter remains unavailable-by-default.
+- Updated the issue #1187 OpenSpec proposal/design/spec/tasks, production boundary, Phase 7 risk, debt, gaps, scoring, universal-settlement architecture, self-evolving KB, and this session log.
+**Key discoveries**:
+- Cross-restart exactly-once cannot be proven by `keyReleaseAttempts` or `keyReleaseEvidence`; the external backend must durably bind the deterministic key and irreversible side effect and expose lookup semantics for reconciliation.
+- A backend timeout after commit is intentionally ambiguous: the next attempt must look up the identical key before any release, and malformed or mismatched evidence must fail closed.
+**Files touched**:
+- `services/admin-dashboard/src/lib/support/{verifier-contract.ts,zkcp.ts}`
+- `services/admin-dashboard/src/app/api/v1/settlement-engine/route.ts`
+- `services/admin-dashboard/src/tests/zkcp.test.ts`
+- `openspec/changes/2026-07-22-issue-1187-fail-closed-verifier-boundaries/{proposal.md,design.md,tasks.md,specs/fail-closed-verifier-boundaries/spec.md}`
+- `docs/{PRODUCTION_BOUNDARY.md,PHASE_7_RISK_REGISTER.md,DEBT_INVENTORY.md,GAPS.md,SCORING_MATRIX.md,SELF_EVOLVING_KB.md}` and `docs/architecture/PHASE_7_PROPOSAL_UNIVERSAL_SETTLEMENT.md`
+**Gaps identified**:
+- No production cryptographic verifier, payment observer, or durable key-release backend is selected or accepted; Gateway/Core/Nexus integration remains a launch dependency.
+- PowerShell runtime execution remains unavailable in this devbox; contamination validation is static/self-test based.
+**Gotchas**:
+- Re-run focused/full tests, strict issue #1187 OpenSpec validation, lifecycle/contamination checks, dependency checks, and `git diff --check` after this session-log append; inspect hosted PR checks only after pushing the focused commit.

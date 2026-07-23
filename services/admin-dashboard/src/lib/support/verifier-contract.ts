@@ -10,6 +10,9 @@ export const VERIFIER_SIGNATURE_ENCODING_VERSION = "conxian.verifier.signature.v
 export const VERIFIER_ATTESTATION_LIMITS_VERSION = "conxian.verifier.attestation.v1" as const;
 export const VERIFIER_ZKCP_RETENTION_POLICY_VERSION = "conxian.zkcp.retention.v1" as const;
 export const VERIFIER_ZKCP_LIST_POLICY_VERSION = "conxian.zkcp.list.v1" as const;
+export const VERIFIER_ZKCP_KEY_RELEASE_CONTRACT_VERSION = "conxian.zkcp.key-release.v1" as const;
+export const VERIFIER_ZKCP_KEY_RELEASE_IDEMPOTENCY_VERSION = "conxian.zkcp.key-release.idempotency.v1" as const;
+export const VERIFIER_ZKCP_KEY_RELEASE_POLICY_VERSION = "conxian.zkcp.key-release.policy.v1" as const;
 export const VERIFIER_BITVM2_RETENTION_POLICY_VERSION = "conxian.bitvm2.retention.v1" as const;
 export const VERIFIER_BITVM3_RETENTION_POLICY_VERSION = "conxian.bitvm3.retention.v1" as const;
 export const VERIFIER_BITVM3_TOMBSTONE_POLICY_VERSION = "conxian.bitvm3.tombstone.v1" as const;
@@ -41,6 +44,7 @@ export const VERIFIER_RESOURCE_LIMITS = Object.freeze({
   maxTimestampChars: 64,
   maxActionChars: 64,
   maxDecryptionKeyChars: 4096,
+  maxIdempotencyKeyChars: 128,
   maxZkcpActiveIntents: 1024,
   maxZkcpTotalIntents: 2048,
   maxZkcpListPageSize: 100,
@@ -193,6 +197,12 @@ export type VerificationFailureCode =
   | "payment_mismatch"
   | "payment_hash_not_authority"
   | "decryption_key_unavailable"
+  | "key_release_capability_missing"
+  | "key_release_lookup_failed"
+  | "key_release_evidence_mismatch"
+  | "key_release_idempotency_mismatch"
+  | "key_release_backend_mismatch"
+  | "key_release_ambiguous"
   | "internal_error"
   | "unknown_action";
 
@@ -670,6 +680,12 @@ export function isVerificationFailureCode(value: unknown): value is Verification
     || value === "payment_mismatch"
     || value === "payment_hash_not_authority"
     || value === "decryption_key_unavailable"
+    || value === "key_release_capability_missing"
+    || value === "key_release_lookup_failed"
+    || value === "key_release_evidence_mismatch"
+    || value === "key_release_idempotency_mismatch"
+    || value === "key_release_backend_mismatch"
+    || value === "key_release_ambiguous"
     || value === "internal_error"
     || value === "unknown_action";
 }

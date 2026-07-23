@@ -156,3 +156,26 @@
 - [ ] Re-run focused/full Vitest, dashboard typecheck, lifecycle/control and
   contamination guards, strict OpenSpec validation, dependency checks, diff
   hygiene, and hosted PR checks after the single focused commit is pushed.
+
+## Phase 11 — P1 durable ZKCP release idempotency (PR #1198 review 4759710914)
+
+- [x] Define versioned key-release capability metadata requiring durable
+  idempotency, lookup-by-idempotency-key, idempotent release, and an
+  exactly-once-per-key backend guarantee; reject unsupported adapters before
+  dispatch while keeping the production default unavailable.
+- [x] Derive a bounded deterministic key from immutable intent, statement,
+  encrypted-data, observed-payment, backend/artifact, and release-policy
+  bindings; validate durable evidence against every binding.
+- [x] Implement lookup-first finalization under the intent lock. Release only
+  after an absent lookup, reuse the same key after ambiguity, and keep local
+  attempt/evidence state as an optimization rather than the authority.
+- [x] Add shared durable-adapter restart/crash regressions for process loss
+  before local commit, backend-commit timeout, normal retry, lookup errors,
+  missing capability metadata, and mismatched key/statement/encrypted-data/
+  backend/artifact evidence; keep fixtures test-only.
+- [x] Update the issue #1187 proposal/design/spec, production boundary, risk,
+  debt, gaps, scoring, architecture, and knowledge-base/session records to
+  state that exactly-once depends on the external durable backend contract.
+- [ ] Re-run focused/full Vitest, dashboard typecheck, lifecycle/control and
+  contamination guards, strict OpenSpec validation, dependency checks, diff
+  hygiene, and hosted PR checks after the focused commit is pushed.

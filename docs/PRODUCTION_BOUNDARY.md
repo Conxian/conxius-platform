@@ -101,17 +101,35 @@ thrown-value stringification. These controls prevent stale adapter completions
 and concurrent duplicate signers from regressing or duplicating authoritative
 state.
 
-ZKCP finalization captures a monotonic, finite, safe-integer timestamp inside
-the valid ECMAScript `Date` range and preconstructs bounded immutable release
-snapshots plus commit data before calling the external key releaser. A
-per-intent release-attempt latch is set immediately before dispatch. After
-dispatch, result interpretation is total and bounded; no clock read,
+ZKCP finalization requires exact versioned key-release capability metadata for
+the contract, idempotency, and release-policy versions. A supported backend
+must advertise durable idempotency, lookup-by-idempotency-key, idempotent
+release, and the `exactly_once_per_idempotency_key` guarantee. That guarantee is
+owned by the external backend: its durable record must bind the irreversible
+release to one canonical key so retries, replicas, and process restarts cannot
+release twice. The checked-in unavailable adapter intentionally advertises no
+such capability and remains fail-closed.
+
+Under the per-intent lock, finalization validates a monotonic, finite,
+safe-integer timestamp inside the valid ECMAScript `Date` range, snapshots
+bounded immutable release inputs, and derives a bounded deterministic key from
+immutable intent, statement/domain, encrypted-data, observed-payment,
+backend/artifact, and release-policy bindings. Timestamps and process-local
+state are excluded from the key. Durable lookup runs first. Found evidence is
+validated against the exact key, intent, statement, encrypted data, payment,
+backend identity, and backend artifact before committing without release. Only
+an absent lookup may call idempotent release, using the same key and binding.
+Lookup errors, ambiguous timeouts, unavailable/rejected outcomes, missing
+capabilities, and mismatched evidence fail closed; retries reuse the same key
+and never use an alternate key or non-idempotent fallback.
+
+After dispatch, result interpretation is total and bounded; no clock read,
 serialization, or throwing state-validation/compare-and-swap step is required
-to finalize the already prepared evidence. Successful release evidence is
-latched exactly once, and retries repair the terminal intent from that evidence
-without dispatching the key releaser again. Invalid, thrown, rolled-back, or
-out-of-range clocks therefore fail before dispatch, while a clock failure or
-unexpected condition after dispatch cannot cause a second release attempt.
+to finalize the prepared evidence. Local release-attempt/evidence maps may
+optimize diagnostics or repair a local terminal snapshot, but they are never
+the authority for cross-restart exactly-once behavior. Invalid, thrown,
+rolled-back, or out-of-range clocks fail before lookup/release dispatch, while
+a post-dispatch failure is reconciled through the durable backend record.
 
 BitVM3 uses the same per-proof FIFO discipline around the full asynchronous
 backend call and commit. Identical request-digest/height/backend replays are

@@ -54,6 +54,7 @@ To prevent "universal" claim drift, the USI will maintain a capability registry:
 - **Orchestration boundary**: The Settlement-Engine-BFF (`/api/v1/settlement-engine`) exposes a fail-closed contract and requires an explicitly injected Gateway/Core/Nexus verifier. It does not generate or cryptographically verify taps in this repository.
 - **Profile-specific layout**: One research profile describes 364 taps; that number is not universal and is not a verification predicate.
 - **Evidence Trail**: A future backend may produce a canonical, backend-bound evidence artifact. Until then, unavailable, malformed, invalid, and simulated results cannot advance settlement.
+- **ZKCP release boundary**: A future key-release backend must advertise the versioned durable lookup/idempotency contract and guarantee at most one irreversible release for each bounded deterministic key across retries and process restarts. The BFF derives that key from immutable intent/statement/payment/release-policy bindings, looks up durable evidence before release, and never treats local memory as exactly-once authority.
 
 Issue [#1187](https://github.com/Conxian/conxius-platform/issues/1187) is the
 current readiness correction for this boundary. Strategic USI alignment and

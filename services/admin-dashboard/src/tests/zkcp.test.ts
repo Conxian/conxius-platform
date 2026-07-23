@@ -3,11 +3,16 @@ import {
   UnavailableDecryptionKeyReleaser,
   UnavailableOnChainMonitor,
   UnavailableZKVerifier,
+  ZKCP_KEY_RELEASE_CAPABILITIES,
   ZKCP_LIST_POLICY,
   ZKCP_RETENTION_POLICY,
   ZKCP_TIMESTAMP_MAX_MS,
   ZKCPBridge,
   type DecryptionKeyReleaser,
+  type DecryptionKeyReleaseEvidence,
+  type DecryptionKeyReleaseLookupRequest,
+  type DecryptionKeyReleaseRequest,
+  type DecryptionKeyReleaseResult,
   type OnChainMonitor,
   type ZKProofVerifier,
 } from "../lib/support/zkcp";
@@ -166,18 +171,189 @@ class DeferredPaymentMonitor extends AuthoritativeFixtureMonitor {
   }
 }
 
-class AuthoritativeFixtureKeyReleaser implements DecryptionKeyReleaser {
-  public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
+function releaseEvidenceFor(request: Readonly<DecryptionKeyReleaseRequest>): DecryptionKeyReleaseEvidence {
+  return {
+    contract_version: request.contract_version,
+    idempotency_key: request.idempotency_key,
+    binding: request.binding,
+    backend: request.binding.backend,
+    backend_artifact_digest: request.binding.backend.artifact_digest,
+  };
+}
+
+abstract class DurableFixtureKeyReleaser implements DecryptionKeyReleaser {
+  public readonly capabilities = ZKCP_KEY_RELEASE_CAPABILITIES;
+
+  public constructor(
+    public readonly backendIdentity: BackendIdentity = AUTHORITATIVE_TEST_BACKEND,
+    protected readonly records: Map<string, DecryptionKeyReleaseResult> = new Map(),
+  ) {}
+
+  public readonly lookupKeys: string[] = [];
+  public readonly releaseKeys: string[] = [];
+
+  protected storedRelease(idempotencyKey: string): DecryptionKeyReleaseResult | undefined {
+    return this.records.get(idempotencyKey);
+  }
+
+  protected storeRelease(idempotencyKey: string, result: DecryptionKeyReleaseResult): void {
+    this.records.set(idempotencyKey, result);
+  }
+
+  protected successfulRelease(
+    request: Readonly<DecryptionKeyReleaseRequest>,
+    decryptionKey = "fixture-release-key",
+  ): DecryptionKeyReleaseResult {
+    return {
+      status: "released",
+      backend: this.backendIdentity,
+      provenance: "production",
+      decryptionKey,
+      evidence: releaseEvidenceFor(request),
+    };
+  }
+
+  public abstract release(
+    request: Readonly<DecryptionKeyReleaseRequest>,
+  ): Promise<DecryptionKeyReleaseResult>;
+
+  public async getByIdempotencyKey(
+    request: Readonly<DecryptionKeyReleaseLookupRequest>,
+  ) {
+    this.lookupKeys.push(request.idempotency_key);
+    const release = this.storedRelease(request.idempotency_key);
+    return release === undefined
+      ? {
+        status: "absent" as const,
+        backend: this.backendIdentity,
+        provenance: "production" as const,
+      }
+      : {
+        status: "found" as const,
+        backend: this.backendIdentity,
+        provenance: "production" as const,
+        release,
+      };
+  }
+}
+
+class AuthoritativeFixtureKeyReleaser extends DurableFixtureKeyReleaser {
   public releaseCount = 0;
 
-  public async release() {
+  public constructor(records: Map<string, DecryptionKeyReleaseResult> = new Map()) {
+    super(AUTHORITATIVE_TEST_BACKEND, records);
+  }
+
+  public override async release(request: Readonly<DecryptionKeyReleaseRequest>) {
+    const retained = this.storedRelease(request.idempotency_key);
+    if (retained !== undefined) return retained;
     this.releaseCount += 1;
-    return {
-      status: "released" as const,
-      backend: AUTHORITATIVE_TEST_BACKEND,
-      provenance: "production" as const,
-      decryptionKey: "fixture-release-key",
+    this.releaseKeys.push(request.idempotency_key);
+    const release = this.successfulRelease(request);
+    this.storeRelease(request.idempotency_key, release);
+    return release;
+  }
+}
+
+class CommitThenMalformedKeyReleaser extends AuthoritativeFixtureKeyReleaser {
+  public override async release(request: Readonly<DecryptionKeyReleaseRequest>): Promise<never> {
+    const retained = this.storedRelease(request.idempotency_key);
+    if (retained === undefined) {
+      this.releaseCount += 1;
+      this.releaseKeys.push(request.idempotency_key);
+      this.storeRelease(request.idempotency_key, this.successfulRelease(request));
+    }
+    return null as never;
+  }
+}
+
+class CommitThenTimeoutKeyReleaser extends AuthoritativeFixtureKeyReleaser {
+  public override async release(request: Readonly<DecryptionKeyReleaseRequest>): Promise<never> {
+    const retained = this.storedRelease(request.idempotency_key);
+    if (retained === undefined) {
+      this.releaseCount += 1;
+      this.releaseKeys.push(request.idempotency_key);
+      this.storeRelease(request.idempotency_key, this.successfulRelease(request));
+    }
+    throw new Error("fixture timeout after durable release commit");
+  }
+}
+
+class LookupErrorKeyReleaser extends AuthoritativeFixtureKeyReleaser {
+  public lookupCalls = 0;
+
+  public override async getByIdempotencyKey(
+    _request: Readonly<DecryptionKeyReleaseLookupRequest>,
+  ): Promise<never> {
+    this.lookupCalls += 1;
+    throw new Error("fixture durable lookup unavailable");
+  }
+}
+
+class MissingDurableCapabilityKeyReleaser implements DecryptionKeyReleaser {
+  public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
+  public readonly capabilities = undefined;
+  public lookupCalls = 0;
+  public releaseCalls = 0;
+
+  public async getByIdempotencyKey(
+    _request: Readonly<DecryptionKeyReleaseLookupRequest>,
+  ): Promise<never> {
+    this.lookupCalls += 1;
+    throw new Error("durable lookup must not run without capability metadata");
+  }
+
+  public async release(_request: Readonly<DecryptionKeyReleaseRequest>): Promise<never> {
+    this.releaseCalls += 1;
+    throw new Error("release must not run without capability metadata");
+  }
+}
+
+type CorruptReleaseEvidenceMode = "key" | "statement" | "encrypted" | "backend" | "artifact";
+
+class CorruptingLookupKeyReleaser extends DurableFixtureKeyReleaser {
+  public constructor(private readonly mode: CorruptReleaseEvidenceMode) {
+    super();
+  }
+
+  public override async getByIdempotencyKey(
+    request: Readonly<DecryptionKeyReleaseLookupRequest>,
+  ) {
+    const wrongDigest = "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as const;
+    const wrongBackend: BackendIdentity = {
+      ...AUTHORITATIVE_TEST_BACKEND,
+      id: "different-release-backend",
     };
+    const evidence: DecryptionKeyReleaseEvidence = {
+      contract_version: request.contract_version,
+      idempotency_key: this.mode === "key" ? `zkcp-release-v1:${"0".repeat(64)}` : request.idempotency_key,
+      binding: {
+        ...request.binding,
+        statement_digest: this.mode === "statement" ? wrongDigest : request.binding.statement_digest,
+        encrypted_data_digest: this.mode === "encrypted" ? wrongDigest : request.binding.encrypted_data_digest,
+      },
+      backend: this.mode === "backend" ? wrongBackend : request.backend,
+      backend_artifact_digest: this.mode === "artifact"
+        ? wrongDigest
+        : request.backend.artifact_digest,
+    };
+    const release: DecryptionKeyReleaseResult = {
+      status: "released",
+      backend: this.mode === "backend" ? wrongBackend : request.backend,
+      provenance: "production",
+      decryptionKey: "corrupt-release-key",
+      evidence,
+    };
+    return {
+      status: "found" as const,
+      backend: this.mode === "backend" ? wrongBackend : request.backend,
+      provenance: "production" as const,
+      release,
+    };
+  }
+
+  public override async release(_request: Readonly<DecryptionKeyReleaseRequest>): Promise<never> {
+    throw new Error("release must not run when durable evidence is mismatched");
   }
 }
 
@@ -240,23 +416,20 @@ class ThrowingOversizedPaymentMonitor implements OnChainMonitor {
   }
 }
 
-class NullKeyReleaser implements DecryptionKeyReleaser {
-  public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
+class NullKeyReleaser extends DurableFixtureKeyReleaser {
   public releaseCount = 0;
 
-  public async release(): Promise<never> {
+  public override async release(_request: Readonly<DecryptionKeyReleaseRequest>): Promise<never> {
     this.releaseCount += 1;
     return null as never;
   }
 }
 
-class OversizedKeyReleaser implements DecryptionKeyReleaser {
-  public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
-
-  public async release() {
+class OversizedKeyReleaser extends DurableFixtureKeyReleaser {
+  public override async release(_request: Readonly<DecryptionKeyReleaseRequest>) {
     return {
       status: "rejected" as const,
-      backend: AUTHORITATIVE_TEST_BACKEND,
+      backend: this.backendIdentity,
       provenance: "production" as const,
       failure_code: "internal_error" as const,
       error: "k".repeat(VERIFIER_RESOURCE_LIMITS.maxErrorChars + 1),
@@ -264,10 +437,8 @@ class OversizedKeyReleaser implements DecryptionKeyReleaser {
   }
 }
 
-class ThrowingOversizedKeyReleaser implements DecryptionKeyReleaser {
-  public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
-
-  public async release(): Promise<never> {
+class ThrowingOversizedKeyReleaser extends DurableFixtureKeyReleaser {
+  public override async release(_request: Readonly<DecryptionKeyReleaseRequest>): Promise<never> {
     throw new Error("k".repeat(VERIFIER_RESOURCE_LIMITS.maxErrorChars + 1));
   }
 }
@@ -282,16 +453,15 @@ class BlockingKeyReleaser extends AuthoritativeFixtureKeyReleaser {
     this.resolveReleaseGate = resolve;
   });
 
-  public override async release() {
+  public override async release(request: Readonly<DecryptionKeyReleaseRequest>) {
+    const retained = this.storedRelease(request.idempotency_key);
+    if (retained !== undefined) return retained;
     this.releaseCount += 1;
     this.resolveReleaseStarted();
     await this.releaseGate;
-    return {
-      status: "released" as const,
-      backend: AUTHORITATIVE_TEST_BACKEND,
-      provenance: "production" as const,
-      decryptionKey: "fixture-release-key",
-    };
+    const release = this.successfulRelease(request);
+    this.storeRelease(request.idempotency_key, release);
+    return release;
   }
 
   public unblock(): void {
@@ -304,15 +474,14 @@ class ClockInvalidatingKeyReleaser extends AuthoritativeFixtureKeyReleaser {
     super();
   }
 
-  public override async release() {
+  public override async release(request: Readonly<DecryptionKeyReleaseRequest>) {
+    const retained = this.storedRelease(request.idempotency_key);
+    if (retained !== undefined) return retained;
     this.releaseCount += 1;
     this.invalidateClock();
-    return {
-      status: "released" as const,
-      backend: AUTHORITATIVE_TEST_BACKEND,
-      provenance: "production" as const,
-      decryptionKey: "fixture-release-key",
-    };
+    const release = this.successfulRelease(request);
+    this.storeRelease(request.idempotency_key, release);
+    return release;
   }
 }
 
@@ -351,15 +520,18 @@ class SentinelProductionMonitor implements OnChainMonitor {
   }
 }
 
-class SentinelProductionKeyReleaser implements DecryptionKeyReleaser {
-  public readonly backendIdentity = UNAVAILABLE_BACKEND;
+class SentinelProductionKeyReleaser extends DurableFixtureKeyReleaser {
+  public constructor() {
+    super(UNAVAILABLE_BACKEND);
+  }
 
-  public async release() {
+  public override async release(request: Readonly<DecryptionKeyReleaseRequest>) {
     return {
       status: "released" as const,
       backend: UNAVAILABLE_BACKEND,
       provenance: "production" as const,
       decryptionKey: "sentinel-must-not-release",
+      evidence: releaseEvidenceFor(request),
     };
   }
 }
@@ -591,6 +763,7 @@ describe("ZKCPBridge fail-closed boundary", () => {
     expect(replayResult.status).toBe("observed");
     expect(finalized.finalized).toBe(true);
     expect(keyReleaser.releaseCount).toBe(1);
+    expect(keyReleaser.lookupKeys[0]).toBe(keyReleaser.releaseKeys[0]);
     expect(bridge.getIntent(input.id)?.status).toBe("finalized");
   });
 
@@ -671,8 +844,8 @@ describe("ZKCPBridge fail-closed boundary", () => {
     expect(keyBridge.getIntent(keyInput.id)?.status).toBe("paid");
   });
 
-  it("latches a dispatched release when post-call result handling rejects it", async () => {
-    const keyReleaser = new NullKeyReleaser();
+  it("reconciles a durable release after local result handling loses the response", async () => {
+    const keyReleaser = new CommitThenMalformedKeyReleaser();
     const { bridge, input } = await setupAuthoritativeSettlement(
       "zkcp-post-dispatch-malformed-release",
       () => 1_800_000_000_000,
@@ -684,9 +857,99 @@ describe("ZKCPBridge fail-closed boundary", () => {
 
     expect(first.finalized).toBe(false);
     expect(first.failure_code).toBe("internal_error");
-    expect(retry.finalized).toBe(false);
-    expect(retry.failure_code).toBe("internal_error");
+    expect(retry.finalized).toBe(true);
+    expect(retry.decryptionKey).toBe("fixture-release-key");
     expect(keyReleaser.releaseCount).toBe(1);
+    expect(keyReleaser.lookupKeys.length).toBe(2);
+    expect(keyReleaser.lookupKeys[0]).toBe(keyReleaser.lookupKeys[1]);
+    expect(bridge.getIntent(input.id)?.status).toBe("finalized");
+  });
+
+  it("reconstructs after process loss and reuses the same durable key exactly once", async () => {
+    const records = new Map<string, DecryptionKeyReleaseResult>();
+    const firstReleaser = new CommitThenTimeoutKeyReleaser(records);
+    const firstSetup = await setupAuthoritativeSettlement(
+      "zkcp-process-loss-before-local-commit",
+      () => 1_800_000_000_000,
+      firstReleaser,
+    );
+
+    const first = await firstSetup.bridge.finalizeSettlement(firstSetup.input.id);
+    expect(first.finalized).toBe(false);
+    expect(first.failure_code).toBe("key_release_ambiguous");
+    expect(firstSetup.bridge.getIntent(firstSetup.input.id)?.status).toBe("paid");
+    expect(firstReleaser.releaseCount).toBe(1);
+    expect(firstReleaser.lookupKeys[0]).toBe(firstReleaser.releaseKeys[0]);
+
+    const secondReleaser = new AuthoritativeFixtureKeyReleaser(records);
+    const secondSetup = await setupAuthoritativeSettlement(
+      "zkcp-process-loss-before-local-commit",
+      () => 1_900_000_000_000,
+      secondReleaser,
+    );
+    const second = await secondSetup.bridge.finalizeSettlement(secondSetup.input.id);
+
+    expect(second.finalized).toBe(true);
+    expect(second.decryptionKey).toBe("fixture-release-key");
+    expect(secondReleaser.releaseCount).toBe(0);
+    expect(firstReleaser.lookupKeys[0]).toBe(secondReleaser.lookupKeys[0]);
+    expect(firstReleaser.lookupKeys[0]).toMatch(/^zkcp-release-v1:[0-9a-f]{64}$/);
+    expect(secondSetup.bridge.getIntent(secondSetup.input.id)?.status).toBe("finalized");
+  });
+
+  it("fails before release when durable lookup errors", async () => {
+    const keyReleaser = new LookupErrorKeyReleaser();
+    const { bridge, input } = await setupAuthoritativeSettlement(
+      "zkcp-durable-lookup-error",
+      () => 1_800_000_000_000,
+      keyReleaser,
+    );
+
+    const result = await bridge.finalizeSettlement(input.id);
+
+    expect(result.finalized).toBe(false);
+    expect(result.failure_code).toBe("key_release_lookup_failed");
+    expect(keyReleaser.lookupCalls).toBe(1);
+    expect(keyReleaser.releaseCount).toBe(0);
+    expect(bridge.getIntent(input.id)?.status).toBe("paid");
+  });
+
+  it("rejects a key-release backend without durable capability metadata", async () => {
+    const keyReleaser = new MissingDurableCapabilityKeyReleaser();
+    const { bridge, input } = await setupAuthoritativeSettlement(
+      "zkcp-missing-durable-capability",
+      () => 1_800_000_000_000,
+      keyReleaser,
+    );
+
+    const result = await bridge.finalizeSettlement(input.id);
+
+    expect(result.finalized).toBe(false);
+    expect(result.status).toBe("unavailable");
+    expect(result.failure_code).toBe("key_release_capability_missing");
+    expect(keyReleaser.lookupCalls).toBe(0);
+    expect(keyReleaser.releaseCalls).toBe(0);
+    expect(bridge.getIntent(input.id)?.status).toBe("paid");
+  });
+
+  it.each([
+    ["key", "key_release_idempotency_mismatch"],
+    ["statement", "key_release_evidence_mismatch"],
+    ["encrypted", "key_release_evidence_mismatch"],
+    ["backend", "key_release_backend_mismatch"],
+    ["artifact", "key_release_backend_mismatch"],
+  ] as const)("rejects durable evidence with a mismatched %s binding", async (mode, failureCode) => {
+    const keyReleaser = new CorruptingLookupKeyReleaser(mode);
+    const { bridge, input } = await setupAuthoritativeSettlement(
+      `zkcp-mismatched-release-${mode}`,
+      () => 1_800_000_000_000,
+      keyReleaser,
+    );
+
+    const result = await bridge.finalizeSettlement(input.id);
+
+    expect(result.finalized).toBe(false);
+    expect(result.failure_code).toBe(failureCode);
     expect(bridge.getIntent(input.id)?.status).toBe("paid");
   });
 

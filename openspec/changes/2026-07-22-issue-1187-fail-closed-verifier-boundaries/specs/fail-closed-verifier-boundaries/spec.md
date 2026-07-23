@@ -379,19 +379,39 @@ settlement authorization.
 
 ### Requirement: One-shot ZKCP key-release finalization
 
-Before invoking an external ZKCP key releaser, the bridge MUST capture and
-validate one monotonic, finite, safe, non-negative timestamp in the inclusive
-ECMAScript Date range `0..8.64e15`. It MUST preconstruct bounded immutable
-intent/payment inputs and the release commit timestamp, and MUST latch the
-release attempt before dispatch. Invalid, thrown, rolled-back, or out-of-range
-clock readings MUST return a typed failure before the releaser is invoked.
-After dispatch, finalization MUST NOT read the clock, serialize an unbounded
-value, or run a fallible lifecycle compare-and-swap that can leave a successful
-external release unrecorded. Adapter results MUST be normalized to a bounded
-typed value; successful evidence MUST be latched exactly once with the
-prevalidated timestamp. If dispatch throws, returns malformed/rejected output,
-or an unexpected post-call condition occurs, retries MUST fail closed or repair
-from the retained successful evidence without invoking the releaser again.
+Before invoking an external ZKCP key releaser, the bridge MUST require exact
+versioned capability metadata for the key-release contract, idempotency
+contract, and release policy. The metadata MUST declare durable idempotency,
+lookup-by-idempotency-key, idempotent release, and an
+`exactly_once_per_idempotency_key` backend guarantee. The backend MUST own the
+durable idempotency record and MUST ensure that one deterministic key cannot
+perform the irreversible release twice across retries, replicas, or process
+restarts. A backend without this metadata or lookup method MUST be rejected
+before lookup or release dispatch.
+
+The bridge MUST capture and validate one monotonic, finite, safe,
+non-negative timestamp in the inclusive ECMAScript Date range `0..8.64e15`.
+It MUST preconstruct bounded immutable intent/payment inputs and a canonical
+release binding containing the immutable intent terms, statement/domain and
+encrypted-data digests, observed payment, backend identity/artifact, and
+release policy. It MUST derive one bounded deterministic idempotency key from
+that binding only; mutable timestamps and process-local state MUST NOT enter
+the key. Before dispatch, the intent lock MUST query durable evidence by that
+same key and binding. A found record MUST be validated against the exact key,
+intent, statement, encrypted data, payment, backend identity, and backend
+artifact, then committed without release. Only an absent lookup MAY call
+idempotent release, and it MUST use the same key and binding.
+
+Invalid, thrown, rolled-back, or out-of-range clock readings MUST return a
+typed failure before lookup/release dispatch. After dispatch, finalization MUST
+NOT read the clock, serialize an unbounded value, or run a fallible lifecycle
+compare-and-swap that can leave a successful external release unrecorded.
+Adapter results MUST be normalized to a bounded typed value. Ambiguous release
+timeouts, lookup errors, unavailable/rejected lookup results, and malformed or
+mismatched evidence MUST fail closed; retries MUST lookup/reuse the same key
+and MUST NOT select an alternate key or non-idempotent fallback. Local latches
+and evidence MAY optimize diagnostics or local repair, but MUST NOT be treated
+as authority for cross-restart exactly-once behavior.
 
 #### Scenario: Invalid clock prevents key-release dispatch
 
@@ -407,15 +427,45 @@ from the retained successful evidence without invoking the releaser again.
   external call is in flight
 - **THEN** the release completes using the prevalidated timestamp, the intent
   finalizes without a post-call clock/serialization failure, and repeated
-  finalization remains idempotent with one releaser call
+  finalization remains idempotent with one irreversible backend release
 
 #### Scenario: Unexpected post-call conditions cannot replay release
 
 - **WHEN** an external release has been dispatched and a malformed result or
   unexpected terminal-update condition occurs
-- **THEN** the release-attempt latch prevents a second dispatch and returns a
-  typed reconciliation failure unless successful release evidence was already
-  latched and can repair the terminal snapshot
+- **THEN** the durable backend record remains the authority; retry performs a
+  lookup with the same deterministic key, validates successful evidence, and
+  commits without a second irreversible release. No local latch or alternate
+  key is sufficient to authorize a retry.
+
+#### Scenario: Durable lookup reconciles a process restart
+
+- **WHEN** the backend commits the release and the first bridge is lost before
+  its local terminal commit, then a second bridge reconstructs the same
+  immutable intent/payment/proof binding
+- **THEN** the second bridge derives the same bounded key, finds and validates
+  the durable evidence, finalizes without invoking release, and the shared
+  backend records exactly one irreversible side effect
+
+#### Scenario: Ambiguous timeout reuses the same key
+
+- **WHEN** release times out after the backend may have committed
+- **THEN** finalization returns a typed ambiguous failure without fallback, and
+  a later retry performs lookup with the identical key before any release
+
+#### Scenario: Lookup error blocks release
+
+- **WHEN** durable lookup throws or returns an unavailable/rejected outcome
+- **THEN** finalization returns a typed lookup failure and makes zero release
+  calls
+
+#### Scenario: Durable evidence binding mismatch fails closed
+
+- **WHEN** found evidence changes the key, immutable intent, statement,
+  encrypted-data digest, observed payment, backend identity, or backend
+  artifact
+- **THEN** finalization returns the corresponding typed mismatch and makes no
+  release call
 
 ### Requirement: Fail-closed settlement transitions
 

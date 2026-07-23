@@ -1646,6 +1646,52 @@ AGENTS.md (this update)
 **Gotchas**:
 - Do not rewrite the existing mainline or #1163 session-log entries; this entry is appended after both histories are preserved.
 
+### 2026-07-22 — Founder-Rights Revenue Observation Contract (#1168)
+**Trigger**: Selected safe Phase 4 candidate from [conxius-platform#1168](https://github.com/Conxian/conxius-platform/issues/1168) comment `5050732992`.
+**What was done**:
+- Added the OpenSpec-governed protocol revenue/founder-rights observation contract, Draft 2020-12 schema, pure TypeScript validator, focused tests, and CI/package test wiring.
+- Added the active research/evidence report, G-56 through G-59 gap/scoring entries, and fail-closed authority, unit, deployment, routing, freshness, schedule, payout, and custody boundaries.
+- Corrected the illustrative sustainability arithmetic: a 2.5% share of a 1% fee requires $336M annual gross volume for $84K, not $3.4M gross volume.
+**Key discoveries**:
+- Protocol sources currently expose conflicting observed/proposed fee and allocation models; issue #538 remains the protocol handoff and issue #488 remains unresolved.
+- Mainnet manifests/plans and founder-vault source are not sufficient evidence of confirmed deployment, live interface, complete vesting, or payout authorization.
+- Gateway treasury values include synthetic/stub proxies, so the new contract records evidence without treating Gateway fallbacks as protocol authority.
+**Files touched**:
+- `openspec/changes/2026-07-22-founder-rights-revenue-observation/`
+- `openspec/specs/protocol-revenue-observation-v1.spec.md`
+- `schemas/protocol-revenue-observation.schema.json`
+- `scripts/protocol-revenue-observation.ts`, `scripts/protocol-revenue-observation.test.ts`
+- `package.json`, `.github/workflows/reusable-ci.yml`
+- `docs/architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md`
+- `docs/GAPS.md`, `docs/SCORING_MATRIX.md`
+**Gaps identified**:
+- Protocol governance must decide any founder/economic policy and provide canonical tests and deployment evidence; no such decision is made here.
+- A Gateway/Nexus read-only adapter, qualified legal/compliance review, and any payout operation remain future work.
+**Gotchas**:
+- The fully evidenced active fixture is synthetic test data only; it must not be described as a mainnet or beneficiary assertion.
+- Keep historical AGENTS entries and evidence documents immutable; future integrations require a separate OpenSpec change and must remain protocol-owned.
+
+### 2026-07-22 — PR #1197 Formal Review Repair
+**Trigger**: Formal review `4758577860` on [conxius-platform#1197](https://github.com/Conxian/conxius-platform/pull/1197).
+**What was done**:
+- Required explicit `approval` evidence for approved/ratified authority and rejected source, proposal, and generic governance records used as ratification.
+- Required non-empty, domain-specific evidence for verified routes and enabled payouts, with schema-level conditional minimums and validator allowlists.
+- Replaced `Date.parse` freshness handling with strict, calendar-valid UTC timestamp parsing and added leap-day/impossible-date/timezone regression coverage.
+- Clarified the repaired contract in the canonical OpenSpec, change-local spec/design, schema, and research report.
+**Key discoveries**:
+- The existing vocabulary already has an explicit `approval` kind, so no new evidence kind was needed; generic `governance` remains insufficient for ratification.
+- JSON Schema can enforce non-empty conditional references and RFC3339 format, while cross-record evidence-kind semantics remain validator responsibilities.
+**Files touched**:
+- `scripts/protocol-revenue-observation.ts`, `scripts/protocol-revenue-observation.test.ts`
+- `schemas/protocol-revenue-observation.schema.json`
+- `openspec/specs/protocol-revenue-observation-v1.spec.md`
+- `openspec/changes/2026-07-22-founder-rights-revenue-observation/{design.md,specs/protocol-revenue-observation/spec.md}`
+- `docs/architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md`
+- `AGENTS.md`
+**Gaps identified**:
+- Hosted checks must be re-evaluated after the repair commit is pushed.
+**Gotchas**:
+- Keep timestamp acceptance narrower than generic JavaScript date parsing: only millisecond UTC `Z` timestamps with valid Gregorian calendar components are contract-valid.
 ### 2026-07-22 — Fail-Closed Verifier Boundaries (#1187)
 **Trigger**: Issue #1187 — replace BitVM/ZKCP simulation defaults with fail-closed verifier boundaries.
 **What was done**:
@@ -1921,3 +1967,34 @@ AGENTS.md (this update)
 - No independently authenticated, server-bound Gateway/Core atomic claim-or-get coordinator exists; production key release remains unavailable.
 **Gotchas**:
 - Hosted checks are inspected after the new commit is pushed without waiting indefinitely.
+### 2026-07-22 — PR #1197 Mainline Merge Conflict Resolution
+**Trigger**: PR #1197 request to merge the current `origin/main` into `feat/1168-founder-rights-observation`.
+**What was done**:
+- Fetched `origin/main` at `11b43c5a86bd839688fddc6f918d1b389a1fac6f`, checked out the PR head at `6908d0866bf3f0b29e250d9d2f463ee372990342`, and performed a normal non-rebase merge.
+- Resolved the sole content conflict in `AGENTS.md` by preserving both the founder-rights observation entry and the mainline fail-closed verifier-boundary entry.
+- Ran focused and full repository verification, including both affected OpenSpec changes in strict mode.
+**Key discoveries**:
+- Founder-rights artifacts and #1187 production-boundary changes merged cleanly; only the append-only session log required reconciliation.
+- The PR remains observation-only: no protocol economics, custody, payout routing, or governance authority was added.
+**Files touched**:
+- `AGENTS.md`
+- Mainline #1187 fail-closed verifier-boundary files brought into the merge.
+**Gaps identified**:
+- Hosted PR checks and GitHub mergeability must be re-evaluated after the merge commit is pushed.
+**Gotchas**:
+- Keep the PR source branch unchanged and push the merge commit without force-pushing.
+
+### 2026-07-23 — PR #1197 Review Remediation Verification
+**Trigger**: Follow-up comment `5055468962` on [conxius-platform#1197](https://github.com/Conxian/conxius-platform/pull/1197).
+**What was done**:
+- Verified the exact PR branch at `2885474122398521aa12d0465f1254e6f296528d` and independently confirmed the explicit approval-evidence allowlist, non-empty/domain-specific verified route and payout evidence gates, and strict real-Gregorian UTC timestamp parser/schema/tests.
+- Ran focused, full repository, and targeted strict OpenSpec/schema validation; confirmed the three review findings were fixed and the corresponding review threads were cleaned up after validation.
+**Key discoveries**:
+- No implementation or schema change was necessary on the starting head; the existing remediation commit already covered all three findings with 21 focused regression tests.
+- The PR remains observation-only and protocol-owned: no ratification, custody, payout instruction, or protocol economics were added.
+**Files touched**:
+- `AGENTS.md` (append-only session continuity entry).
+**Gaps identified**:
+- Hosted checks on the final documentation-only head still depend on GitHub; production protocol adapters and canonical ratification evidence remain out of scope.
+**Gotchas**:
+- A failed tracking checkout temporarily populated the index with the exact fetched PR tree; after verifying no unrelated or unstaged work, the clean main state was restored before creating the local PR branch without force-pushing.

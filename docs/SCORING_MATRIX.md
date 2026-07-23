@@ -42,6 +42,10 @@ This matrix scores the identified gaps based on Strategic Alignment, Implementat
 | **G-53** | **Lightning Async Payments** | 8 | 7 | 9 | **24** | [Async Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#53) |
 | **G-54** | **OP_VAULT (BIP-345)** | 9 | 8 | 6 | **23** | [Vault Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#54) |
 | **G-55** | **Enterprise ERP Simulation** | 9 | 7 | 8 | **24** | [Enterprise ERP Simulation](./architecture/ENTERPRISE_ERP_SIMULATION_RESEARCH.md) |
+| **G-56** | **Founder-rights observation/evidence boundary** | 10 | 4 | 10 | **24** | [Founder-rights observation](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md) |
+| **G-57** | **Cross-repository revenue model drift** | 10 | 6 | 9 | **25** | [Contradictions and ownership](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#contradictions-and-safe-interpretation) |
+| **G-58** | **Deployment evidence/live-interface verification** | 10 | 5 | 9 | **24** | [Evidence matrix](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#verified-evidence-matrix) |
+| **G-59** | **Gateway/Nexus observation integration** | 9 | 7 | 8 | **24** | [Phase plan](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#phase-plan) |
 
 ## Scoring Rubric (1-10)
 - **Strategic Alignment**: How critical is this to the "Full Bitcoin Stack" vision?
@@ -60,3 +64,18 @@ not a universal constant or proof of verification.
 
 ---
 *Updated by Jules (Sovereign Engineering Agent) - June 2026*
+
+## Phase 4 Candidate Update (2026-07-22)
+
+The selected #1168 candidate is the founder-rights revenue observation and
+evidence contract. Its score is a prioritization signal, not protocol
+approval. This platform work implements the observation schema, pure
+fail-closed validator, tests, and evidence report; it does not select a fee,
+allocation, beneficiary, custody model, payout route, or deployment state.
+
+- **G-56** is implemented as the observation boundary; ratification remains a
+  protocol governance question.
+- **G-57** and **G-58** remain active cross-repository ownership and deployment
+  evidence gaps.
+- **G-59** remains a future read-only Gateway/Nexus integration, requiring a
+  separate OpenSpec change.

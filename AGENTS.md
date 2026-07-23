@@ -1729,3 +1729,18 @@ AGENTS.md (this update)
 - Hosted PR checks and GitHub mergeability must be re-evaluated after the merge commit is pushed.
 **Gotchas**:
 - Keep the PR source branch unchanged and push the merge commit without force-pushing.
+
+### 2026-07-23 — PR #1197 Review Remediation Verification
+**Trigger**: Follow-up comment `5055468962` on [conxius-platform#1197](https://github.com/Conxian/conxius-platform/pull/1197).
+**What was done**:
+- Verified the exact PR branch at `2885474122398521aa12d0465f1254e6f296528d` and independently confirmed the explicit approval-evidence allowlist, non-empty/domain-specific verified route and payout evidence gates, and strict real-Gregorian UTC timestamp parser/schema/tests.
+- Ran focused, full repository, and targeted strict OpenSpec/schema validation; confirmed the three review findings were fixed and the corresponding review threads were cleaned up after validation.
+**Key discoveries**:
+- No implementation or schema change was necessary on the starting head; the existing remediation commit already covered all three findings with 21 focused regression tests.
+- The PR remains observation-only and protocol-owned: no ratification, custody, payout instruction, or protocol economics were added.
+**Files touched**:
+- `AGENTS.md` (append-only session continuity entry).
+**Gaps identified**:
+- Hosted checks on the final documentation-only head still depend on GitHub; production protocol adapters and canonical ratification evidence remain out of scope.
+**Gotchas**:
+- A failed tracking checkout temporarily populated the index with the exact fetched PR tree; after verifying no unrelated or unstaged work, the clean main state was restored before creating the local PR branch without force-pushing.

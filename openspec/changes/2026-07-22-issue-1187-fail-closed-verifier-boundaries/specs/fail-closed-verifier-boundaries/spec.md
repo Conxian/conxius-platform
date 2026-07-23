@@ -377,41 +377,62 @@ settlement authorization.
 - **THEN** the bridge and settlement route return a typed rejection and retain
   the intent/floor in a non-authoritative state
 
-### Requirement: One-shot ZKCP key-release finalization
+### Requirement: Stable-obligation ZKCP key-release finalization
 
 Before invoking an external ZKCP key releaser, the bridge MUST require exact
-versioned capability metadata for the key-release contract, idempotency
-contract, and release policy. The metadata MUST declare durable idempotency,
-lookup-by-idempotency-key, idempotent release, and an
-`exactly_once_per_idempotency_key` backend guarantee. The backend MUST own the
-durable idempotency record and MUST ensure that one deterministic key cannot
+versioned capability metadata for the key-release contract, idempotency,
+obligation, registry, and release-policy contracts. The metadata MUST declare
+durable idempotency, lookup-by-obligation, atomic obligation claim, idempotent
+release, the expected registry version/namespace, and an
+`exactly_once_per_obligation` backend guarantee. The backend MUST own the
+durable obligation record and MUST ensure that one stable obligation cannot
 perform the irreversible release twice across retries, replicas, or process
-restarts. A backend without this metadata or lookup method MUST be rejected
-before lookup or release dispatch.
+restarts. A backend without this metadata, registry binding, or lookup method
+MUST be rejected before lookup or release dispatch.
+
+The bridge MUST derive one versioned, domain-separated obligation id from the
+canonical encrypted-data commitment plus stable seller/buyer identity. Intent
+ids, amount, network, statement/proof terms, payment txid, timestamps, and
+backend artifact/version MUST NOT enter the obligation id. Those mutable terms
+MUST be represented by a separate canonical binding digest and idempotency key.
+The bridge MUST pin the expected registry namespace independently of the
+releaser artifact and MUST reject missing or drifted registry metadata before
+lookup/release. An artifact/version change using the same registry MUST consult
+the same obligation store; a changed binding for an existing obligation MUST
+return a typed obligation conflict and MUST NOT release.
 
 The bridge MUST capture and validate one monotonic, finite, safe,
 non-negative timestamp in the inclusive ECMAScript Date range `0..8.64e15`.
 It MUST preconstruct bounded immutable intent/payment inputs and a canonical
 release binding containing the immutable intent terms, statement/domain and
 encrypted-data digests, observed payment, backend identity/artifact, and
-release policy. It MUST derive one bounded deterministic idempotency key from
-that binding only; mutable timestamps and process-local state MUST NOT enter
-the key. Before dispatch, the intent lock MUST query durable evidence by that
-same key and binding. A found record MUST be validated against the exact key,
-intent, statement, encrypted data, payment, backend identity, and backend
-artifact, then committed without release. Only an absent lookup MAY call
-idempotent release, and it MUST use the same key and binding.
+release policy. It MUST derive one bounded deterministic binding digest and
+idempotency key from that binding only; mutable timestamps and process-local
+state MUST NOT enter either identity. Before dispatch, the intent lock MUST
+query durable evidence by obligation id with the pinned registry, binding
+digest, and key. A found record with matching binding/evidence MUST be
+committed without release. A found record with a different binding digest or
+key MUST return `key_release_obligation_conflict` and MUST NOT release. Only
+an absent lookup MAY call the atomic obligation claim/release method, and it
+MUST include the same obligation id, binding digest, and key.
+
+Key-release evidence MUST cross the adapter boundary as a bounded canonical
+JSON string. The accepted schema MUST be an exact flat allow-list of primitive
+fields for the contract, registry, obligation, binding digest, idempotency
+key, and backend identity/artifact. Objects, arrays, nested values, accessors,
+proxies, cycles, recursive copies, extra properties, non-canonical encodings,
+and over-limit payloads MUST be rejected before evidence is retained.
 
 Invalid, thrown, rolled-back, or out-of-range clock readings MUST return a
 typed failure before lookup/release dispatch. After dispatch, finalization MUST
 NOT read the clock, serialize an unbounded value, or run a fallible lifecycle
 compare-and-swap that can leave a successful external release unrecorded.
 Adapter results MUST be normalized to a bounded typed value. Ambiguous release
-timeouts, lookup errors, unavailable/rejected lookup results, and malformed or
-mismatched evidence MUST fail closed; retries MUST lookup/reuse the same key
-and MUST NOT select an alternate key or non-idempotent fallback. Local latches
-and evidence MAY optimize diagnostics or local repair, but MUST NOT be treated
-as authority for cross-restart exactly-once behavior.
+timeouts, lookup errors, unavailable/rejected lookup results, registry drift,
+and malformed or mismatched evidence MUST fail closed; retries MUST lookup the
+same obligation and MUST NOT select an alternate key or non-idempotent
+fallback. Local latches and evidence MAY optimize diagnostics or local repair,
+but MUST NOT be treated as authority for cross-restart exactly-once behavior.
 
 #### Scenario: Invalid clock prevents key-release dispatch
 
@@ -434,7 +455,7 @@ as authority for cross-restart exactly-once behavior.
 - **WHEN** an external release has been dispatched and a malformed result or
   unexpected terminal-update condition occurs
 - **THEN** the durable backend record remains the authority; retry performs a
-  lookup with the same deterministic key, validates successful evidence, and
+  lookup with the same obligation id, validates successful evidence, and
   commits without a second irreversible release. No local latch or alternate
   key is sufficient to authorize a retry.
 
@@ -443,15 +464,40 @@ as authority for cross-restart exactly-once behavior.
 - **WHEN** the backend commits the release and the first bridge is lost before
   its local terminal commit, then a second bridge reconstructs the same
   immutable intent/payment/proof binding
-- **THEN** the second bridge derives the same bounded key, finds and validates
-  the durable evidence, finalizes without invoking release, and the shared
-  backend records exactly one irreversible side effect
+- **THEN** the second bridge derives the same stable obligation and binding,
+  finds and validates the durable evidence, finalizes without invoking
+  release, and the shared backend records exactly one irreversible side effect
 
 #### Scenario: Ambiguous timeout reuses the same key
 
 - **WHEN** release times out after the backend may have committed
 - **THEN** finalization returns a typed ambiguous failure without fallback, and
-  a later retry performs lookup with the identical key before any release
+  a later retry performs lookup with the identical obligation before any
+  release
+
+#### Scenario: Rehydrated mutable terms conflict with one obligation
+
+- **WHEN** a rehydrated intent changes amount, network, statement, payment txid,
+  or backend artifact/version while preserving the encrypted-data commitment
+  and stable seller/buyer identity
+- **THEN** the bridge looks up the original obligation in the same pinned
+  registry, returns `key_release_obligation_conflict`, and performs zero new
+  irreversible releases
+
+#### Scenario: Registry drift is rejected before dispatch
+
+- **WHEN** the key releaser advertises a missing, unsupported, or different
+  durable registry namespace
+- **THEN** the bridge returns `key_release_registry_mismatch` before lookup or
+  release and leaves the paid intent available for a deliberate retry
+
+#### Scenario: Hostile key-release evidence is bounded
+
+- **WHEN** a key releaser returns an object/proxy/cycle, an array/nested value,
+  an extra property, a deep or oversized JSON payload, or a non-canonical
+  evidence string
+- **THEN** the bridge rejects the evidence without recursively traversing or
+  retaining adapter-owned data and performs no second release
 
 #### Scenario: Lookup error blocks release
 

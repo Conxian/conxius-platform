@@ -19,11 +19,16 @@ import {
   isUnavailableBackend,
   isVerificationFailureCode,
   normalizeBoundaryError,
+  parseBoundedJsonPayload,
+  VERIFIER_ATTESTATION_LIMITS,
   rejectNonProductionVerification,
   VERIFIER_RESOURCE_LIMITS,
   VERIFIER_ZKCP_KEY_RELEASE_CONTRACT_VERSION,
   VERIFIER_ZKCP_KEY_RELEASE_IDEMPOTENCY_VERSION,
   VERIFIER_ZKCP_KEY_RELEASE_POLICY_VERSION,
+  VERIFIER_ZKCP_KEY_RELEASE_OBLIGATION_VERSION,
+  VERIFIER_ZKCP_KEY_RELEASE_REGISTRY_VERSION,
+  VERIFIER_ZKCP_KEY_RELEASE_REGISTRY_NAMESPACE,
   VERIFIER_ZKCP_LIST_POLICY_VERSION,
   VERIFIER_ZKCP_RETENTION_POLICY_VERSION,
   type BackendIdentity,
@@ -54,6 +59,19 @@ export const ZKCP_STATEMENT_BINDING_VERSION = "conxian.zkcp.statement.v1" as con
 export const ZKCP_KEY_RELEASE_CONTRACT_VERSION = VERIFIER_ZKCP_KEY_RELEASE_CONTRACT_VERSION;
 export const ZKCP_KEY_RELEASE_IDEMPOTENCY_VERSION = VERIFIER_ZKCP_KEY_RELEASE_IDEMPOTENCY_VERSION;
 export const ZKCP_KEY_RELEASE_POLICY_VERSION = VERIFIER_ZKCP_KEY_RELEASE_POLICY_VERSION;
+export const ZKCP_KEY_RELEASE_OBLIGATION_VERSION = VERIFIER_ZKCP_KEY_RELEASE_OBLIGATION_VERSION;
+export const ZKCP_KEY_RELEASE_REGISTRY_VERSION = VERIFIER_ZKCP_KEY_RELEASE_REGISTRY_VERSION;
+export const ZKCP_KEY_RELEASE_REGISTRY_NAMESPACE = VERIFIER_ZKCP_KEY_RELEASE_REGISTRY_NAMESPACE;
+
+export interface ZKCPKeyReleaseRegistry {
+  registry_version: typeof ZKCP_KEY_RELEASE_REGISTRY_VERSION;
+  registry_namespace: string;
+}
+
+export const ZKCP_KEY_RELEASE_REGISTRY: ZKCPKeyReleaseRegistry = Object.freeze({
+  registry_version: ZKCP_KEY_RELEASE_REGISTRY_VERSION,
+  registry_namespace: ZKCP_KEY_RELEASE_REGISTRY_NAMESPACE,
+});
 
 export type ZKCPStatus = "pending" | "verified" | "paid" | "finalized" | "failed" | "unsupported";
 export type ZKProofSystem = "groth16" | "plonk" | "stark";
@@ -92,16 +110,25 @@ export type ZKVerificationResult = VerificationResult;
 /**
 * Admission metadata for a durable key-release backend. These declarations
 * are not a local latch: the backend owns the durable record and MUST make
-* every irreversible release for one key atomic with its idempotency record,
-* so retries, replicas, and process restarts cannot release twice.
+* every irreversible release for one stable obligation atomic with its
+* binding/idempotency record, so retries, replicas, and process restarts
+* cannot release the same encrypted payload twice.
 */
 export interface DecryptionKeyReleaseCapabilities {
   contract_version: typeof ZKCP_KEY_RELEASE_CONTRACT_VERSION;
   idempotency_version: typeof ZKCP_KEY_RELEASE_IDEMPOTENCY_VERSION;
   release_policy_version: typeof ZKCP_KEY_RELEASE_POLICY_VERSION;
-  release_guarantee: "exactly_once_per_idempotency_key";
+  obligation_version: typeof ZKCP_KEY_RELEASE_OBLIGATION_VERSION;
+  registry_version: typeof ZKCP_KEY_RELEASE_REGISTRY_VERSION;
+  registry_namespace: string;
+  /** Legacy compatibility metadata; obligation guarantee is authoritative. */
+  release_guarantee?: "exactly_once_per_idempotency_key";
+  obligation_guarantee: "exactly_once_per_obligation";
   durable_idempotency: true;
-  get_by_idempotency_key: true;
+  /** Legacy compatibility metadata; lookup-by-obligation is authoritative. */
+  get_by_idempotency_key?: true;
+  get_by_obligation_id: true;
+  atomic_obligation_claim: true;
   idempotent_release: true;
 }
 
@@ -109,11 +136,24 @@ export const ZKCP_KEY_RELEASE_CAPABILITIES: DecryptionKeyReleaseCapabilities = O
   contract_version: ZKCP_KEY_RELEASE_CONTRACT_VERSION,
   idempotency_version: ZKCP_KEY_RELEASE_IDEMPOTENCY_VERSION,
   release_policy_version: ZKCP_KEY_RELEASE_POLICY_VERSION,
+  obligation_version: ZKCP_KEY_RELEASE_OBLIGATION_VERSION,
+  registry_version: ZKCP_KEY_RELEASE_REGISTRY_VERSION,
+  registry_namespace: ZKCP_KEY_RELEASE_REGISTRY_NAMESPACE,
   release_guarantee: "exactly_once_per_idempotency_key",
+  obligation_guarantee: "exactly_once_per_obligation",
   durable_idempotency: true,
   get_by_idempotency_key: true,
+  get_by_obligation_id: true,
+  atomic_obligation_claim: true,
   idempotent_release: true,
 });
+
+export interface ZKCPKeyReleaseObligation {
+  obligation_version: typeof ZKCP_KEY_RELEASE_OBLIGATION_VERSION;
+  encrypted_data_digest: Digest;
+  seller_address: string;
+  buyer_address: string;
+}
 
 export interface ZKCPKeyReleasePaymentBinding {
   address: string;
@@ -126,6 +166,7 @@ export interface ZKCPKeyReleasePaymentBinding {
 export interface ZKCPKeyReleaseBinding {
   binding_version: typeof ZKCP_KEY_RELEASE_IDEMPOTENCY_VERSION;
   release_policy_version: typeof ZKCP_KEY_RELEASE_POLICY_VERSION;
+  obligation_id: string;
   intent_id: string;
   amount: number;
   seller_address: string;
@@ -141,6 +182,9 @@ export interface ZKCPKeyReleaseBinding {
 
 export interface DecryptionKeyReleaseRequest {
   contract_version: typeof ZKCP_KEY_RELEASE_CONTRACT_VERSION;
+  registry: ZKCPKeyReleaseRegistry;
+  obligation_id: string;
+  binding_digest: Digest;
   idempotency_key: string;
   binding: ZKCPKeyReleaseBinding;
   intent: Readonly<ZKCPIntent>;
@@ -149,16 +193,24 @@ export interface DecryptionKeyReleaseRequest {
 
 export interface DecryptionKeyReleaseEvidence {
   contract_version: typeof ZKCP_KEY_RELEASE_CONTRACT_VERSION;
+  registry_version: typeof ZKCP_KEY_RELEASE_REGISTRY_VERSION;
+  registry_namespace: string;
+  obligation_id: string;
+  binding_digest: Digest;
   idempotency_key: string;
-  binding: ZKCPKeyReleaseBinding;
-  backend: BackendIdentity;
+  backend_id: string;
+  backend_version: string;
   backend_artifact_digest: Digest;
+  backend_authority: BackendIdentity["authority"];
 }
 
-export type DecryptionKeyReleaseLookupStatus = "found" | "absent" | "unavailable" | "rejected";
+export type DecryptionKeyReleaseLookupStatus = "found" | "absent" | "conflict" | "unavailable" | "rejected";
 
 export interface DecryptionKeyReleaseLookupRequest {
   contract_version: typeof ZKCP_KEY_RELEASE_CONTRACT_VERSION;
+  registry: ZKCPKeyReleaseRegistry;
+  obligation_id: string;
+  binding_digest: Digest;
   idempotency_key: string;
   binding: ZKCPKeyReleaseBinding;
   backend: BackendIdentity;
@@ -323,13 +375,18 @@ export interface DecryptionKeyReleaseResult {
   backend: BackendIdentity;
   provenance: Provenance;
   decryptionKey?: string;
-  evidence?: DecryptionKeyReleaseEvidence;
+  /** Canonical bounded JSON text; adapter-owned objects are not accepted. */
+  evidence?: string;
   failure_code?: VerificationFailureCode;
   error?: string;
 }
 
 export interface DecryptionKeyReleaseLookupResult {
   status: DecryptionKeyReleaseLookupStatus;
+  registry: ZKCPKeyReleaseRegistry;
+  obligation_id: string;
+  binding_digest?: Digest;
+  idempotency_key?: string;
   backend: BackendIdentity;
   provenance: Provenance;
   release?: DecryptionKeyReleaseResult;
@@ -340,11 +397,19 @@ export interface DecryptionKeyReleaseLookupResult {
 export interface DecryptionKeyReleaser {
   readonly backendIdentity: BackendIdentity;
   readonly capabilities?: DecryptionKeyReleaseCapabilities;
-  /** Returns the durable release record for the exact canonical key/binding. */
-  getByIdempotencyKey(request: Readonly<DecryptionKeyReleaseLookupRequest>): Promise<DecryptionKeyReleaseLookupResult>;
   /**
-   * The external backend MUST atomically persist the key/binding and perform
-   * at most one irreversible release for that idempotency key.
+   * Returns the durable obligation record before any release is dispatched.
+   * The registry MUST return `conflict` when the obligation is already bound
+   * to a different binding digest or idempotency key.
+   */
+  getByObligationId(request: Readonly<DecryptionKeyReleaseLookupRequest>): Promise<DecryptionKeyReleaseLookupResult>;
+  /** Legacy lookup is retained for adapter migration but is not authoritative. */
+  getByIdempotencyKey?(request: Readonly<DecryptionKeyReleaseLookupRequest>): Promise<DecryptionKeyReleaseLookupResult>;
+  /**
+   * The external backend MUST atomically claim the obligation, persist its
+   * binding/idempotency key, and perform at most one irreversible release.
+   * A retry with the same obligation/binding/key is idempotent; a different
+   * binding for an existing obligation is a typed conflict.
    */
   release(request: Readonly<DecryptionKeyReleaseRequest>): Promise<DecryptionKeyReleaseResult>;
 }
@@ -353,9 +418,23 @@ export class UnavailableDecryptionKeyReleaser implements DecryptionKeyReleaser {
   public readonly backendIdentity = UNAVAILABLE_BACKEND;
   public readonly capabilities = undefined;
 
-  public async getByIdempotencyKey(_request: Readonly<DecryptionKeyReleaseLookupRequest>): Promise<DecryptionKeyReleaseLookupResult> {
+  public async getByIdempotencyKey(request: Readonly<DecryptionKeyReleaseLookupRequest>): Promise<DecryptionKeyReleaseLookupResult> {
     return {
       status: "unavailable",
+      registry: request.registry,
+      obligation_id: request.obligation_id,
+      backend: UNAVAILABLE_BACKEND,
+      provenance: "unknown",
+      failure_code: "decryption_key_unavailable",
+      error: "Decryption-key release backend is not configured",
+    };
+  }
+
+  public async getByObligationId(request: Readonly<DecryptionKeyReleaseLookupRequest>): Promise<DecryptionKeyReleaseLookupResult> {
+    return {
+      status: "unavailable",
+      registry: request.registry,
+      obligation_id: request.obligation_id,
       backend: UNAVAILABLE_BACKEND,
       provenance: "unknown",
       failure_code: "decryption_key_unavailable",
@@ -429,6 +508,7 @@ export interface ZKCPBridgeOptions {
   maxActiveIntents?: number;
   maxTotalIntents?: number;
   terminalRetentionMs?: number;
+  keyReleaseRegistry?: ZKCPKeyReleaseRegistry;
 }
 
 export class ZKCPBoundaryError extends Error {
@@ -762,14 +842,45 @@ function isBoundedIdempotencyKey(value: unknown): value is string {
     && /^zkcp-release-v1:[0-9a-f]{64}$/.test(value);
 }
 
-function isDurableKeyReleaseCapabilities(value: unknown): value is DecryptionKeyReleaseCapabilities {
+function isBoundedObligationId(value: unknown): value is string {
+  return typeof value === "string"
+    && value.length <= VERIFIER_RESOURCE_LIMITS.maxIdempotencyKeyChars
+    && /^zkcp-obligation-v1:[0-9a-f]{64}$/.test(value);
+}
+
+function isKeyReleaseRegistry(value: unknown): value is ZKCPKeyReleaseRegistry {
+  return isRecord(value)
+    && value.registry_version === ZKCP_KEY_RELEASE_REGISTRY_VERSION
+    && isBoundedNonEmptyString(value.registry_namespace, VERIFIER_RESOURCE_LIMITS.maxRegistryNamespaceChars);
+}
+
+function keyReleaseRegistryEquals(
+  left: ZKCPKeyReleaseRegistry,
+  right: ZKCPKeyReleaseRegistry,
+): boolean {
+  return left.registry_version === right.registry_version
+    && left.registry_namespace === right.registry_namespace;
+}
+
+function isCanonicalKeyReleaseRegistry(value: ZKCPKeyReleaseRegistry): boolean {
+  return keyReleaseRegistryEquals(value, ZKCP_KEY_RELEASE_REGISTRY);
+}
+
+function isDurableKeyReleaseCapabilities(
+  value: unknown,
+  expectedRegistry: ZKCPKeyReleaseRegistry,
+): value is DecryptionKeyReleaseCapabilities {
   return isRecord(value)
     && value.contract_version === ZKCP_KEY_RELEASE_CONTRACT_VERSION
     && value.idempotency_version === ZKCP_KEY_RELEASE_IDEMPOTENCY_VERSION
     && value.release_policy_version === ZKCP_KEY_RELEASE_POLICY_VERSION
-    && value.release_guarantee === "exactly_once_per_idempotency_key"
+    && value.obligation_version === ZKCP_KEY_RELEASE_OBLIGATION_VERSION
+    && value.registry_version === ZKCP_KEY_RELEASE_REGISTRY_VERSION
+    && value.registry_namespace === expectedRegistry.registry_namespace
+    && value.obligation_guarantee === "exactly_once_per_obligation"
     && value.durable_idempotency === true
-    && value.get_by_idempotency_key === true
+    && value.get_by_obligation_id === true
+    && value.atomic_obligation_claim === true
     && value.idempotent_release === true;
 }
 
@@ -791,6 +902,7 @@ function isKeyReleaseBinding(value: unknown, authority?: BackendIdentity): value
   return isRecord(value)
     && value.binding_version === ZKCP_KEY_RELEASE_IDEMPOTENCY_VERSION
     && value.release_policy_version === ZKCP_KEY_RELEASE_POLICY_VERSION
+    && isBoundedObligationId(value.obligation_id)
     && isBoundedNonEmptyString(value.intent_id, VERIFIER_RESOURCE_LIMITS.maxIdentifierChars)
     && typeof value.amount === "number"
     && Number.isSafeInteger(value.amount)
@@ -807,13 +919,43 @@ function isKeyReleaseBinding(value: unknown, authority?: BackendIdentity): value
     && (authority === undefined || backendIdentityEquals(value.backend, authority));
 }
 
-function isKeyReleaseEvidenceShape(value: unknown): value is DecryptionKeyReleaseEvidence {
-  return isRecord(value)
-    && value.contract_version === ZKCP_KEY_RELEASE_CONTRACT_VERSION
-    && isBoundedIdempotencyKey(value.idempotency_key)
-    && isKeyReleaseBinding(value.binding)
-    && isBackendIdentity(value.backend)
-    && isDigest(value.backend_artifact_digest);
+export async function deriveZKCPKeyReleaseObligationId(
+  intent: Pick<ZKCPIntentInput, "encryptedDataHash" | "sellerAddress" | "buyerAddress">,
+): Promise<string> {
+  if (!isDigest(intent.encryptedDataHash)
+    || !isBoundedNonEmptyString(intent.sellerAddress, VERIFIER_RESOURCE_LIMITS.maxAddressChars)
+    || !isBoundedNonEmptyString(intent.buyerAddress, VERIFIER_RESOURCE_LIMITS.maxAddressChars)) {
+    throw new Error("ZKCP key-release obligation identity is malformed");
+  }
+  const obligation: ZKCPKeyReleaseObligation = {
+    obligation_version: ZKCP_KEY_RELEASE_OBLIGATION_VERSION,
+    encrypted_data_digest: intent.encryptedDataHash,
+    seller_address: intent.sellerAddress,
+    buyer_address: intent.buyerAddress,
+  };
+  const digest = await digestCanonical({
+    contract_version: ZKCP_KEY_RELEASE_CONTRACT_VERSION,
+    purpose: "zkcp-key-release-obligation",
+    obligation,
+  });
+  const id = `zkcp-obligation-v1:${digestHex(digest)}`;
+  if (!isBoundedObligationId(id)) {
+    throw new Error("ZKCP key-release obligation identity exceeds the v1 resource limit");
+  }
+  return id;
+}
+
+export async function deriveZKCPKeyReleaseBindingDigest(
+  binding: ZKCPKeyReleaseBinding,
+): Promise<Digest> {
+  if (!isKeyReleaseBinding(binding)) {
+    throw new Error("ZKCP key-release binding is malformed");
+  }
+  return digestCanonical({
+    contract_version: ZKCP_KEY_RELEASE_CONTRACT_VERSION,
+    purpose: "zkcp-key-release-binding",
+    binding,
+  });
 }
 
 export async function deriveZKCPKeyReleaseIdempotencyKey(
@@ -837,6 +979,7 @@ export async function deriveZKCPKeyReleaseIdempotencyKey(
 
 function keyReleaseBindingMatchesRequest(
   binding: ZKCPKeyReleaseBinding,
+  obligationId: string,
   intent: Readonly<ZKCPIntent>,
   payment: Readonly<PaymentObservation>,
   statementDigest: Digest,
@@ -844,6 +987,7 @@ function keyReleaseBindingMatchesRequest(
   authority: BackendIdentity,
 ): boolean {
   return isKeyReleaseBinding(binding, authority)
+    && binding.obligation_id === obligationId
     && binding.intent_id === intent.id
     && binding.amount === intent.amount
     && binding.seller_address === intent.sellerAddress
@@ -875,33 +1019,106 @@ type KeyReleaseEvidenceValidation =
   | KeyReleaseEvidenceValidationSuccess
   | KeyReleaseEvidenceValidationFailure;
 
+const KEY_RELEASE_EVIDENCE_KEYS = [
+  "backend_artifact_digest",
+  "backend_authority",
+  "backend_id",
+  "backend_version",
+  "binding_digest",
+  "contract_version",
+  "idempotency_key",
+  "obligation_id",
+  "registry_namespace",
+  "registry_version",
+] as const;
+
+function parseKeyReleaseEvidence(value: unknown):
+  | { ok: true; evidence: DecryptionKeyReleaseEvidence }
+  | { ok: false; failure_code: VerificationFailureCode; error: string } {
+  const parsed = parseBoundedJsonPayload(value);
+  if (!parsed.ok) return parsed;
+  if (!isRecord(parsed.snapshot) || Object.getPrototypeOf(parsed.snapshot) !== null) {
+    return { ok: false, failure_code: "key_release_evidence_mismatch", error: "Key-release evidence must be a flat JSON object" };
+  }
+
+  const keys = Object.keys(parsed.snapshot).sort();
+  if (keys.length !== KEY_RELEASE_EVIDENCE_KEYS.length
+    || keys.some((key, index) => key !== KEY_RELEASE_EVIDENCE_KEYS[index])) {
+    return { ok: false, failure_code: "key_release_evidence_mismatch", error: "Key-release evidence contains an unknown or missing field" };
+  }
+
+  const candidate = parsed.snapshot;
+  const evidence: DecryptionKeyReleaseEvidence = {
+    contract_version: candidate.contract_version as DecryptionKeyReleaseEvidence["contract_version"],
+    registry_version: candidate.registry_version as DecryptionKeyReleaseEvidence["registry_version"],
+    registry_namespace: candidate.registry_namespace as string,
+    obligation_id: candidate.obligation_id as string,
+    binding_digest: candidate.binding_digest as Digest,
+    idempotency_key: candidate.idempotency_key as string,
+    backend_id: candidate.backend_id as string,
+    backend_version: candidate.backend_version as string,
+    backend_artifact_digest: candidate.backend_artifact_digest as Digest,
+    backend_authority: candidate.backend_authority as BackendIdentity["authority"],
+  };
+
+  if (evidence.contract_version !== ZKCP_KEY_RELEASE_CONTRACT_VERSION
+    || evidence.registry_version !== ZKCP_KEY_RELEASE_REGISTRY_VERSION
+    || !isBoundedNonEmptyString(evidence.registry_namespace, VERIFIER_RESOURCE_LIMITS.maxRegistryNamespaceChars)
+    || !isBoundedObligationId(evidence.obligation_id)
+    || !isDigest(evidence.binding_digest)
+    || !isBoundedIdempotencyKey(evidence.idempotency_key)
+    || !isBoundedNonEmptyString(evidence.backend_id, VERIFIER_RESOURCE_LIMITS.maxIdentifierChars)
+    || !isBoundedNonEmptyString(evidence.backend_version, VERIFIER_RESOURCE_LIMITS.maxVersionChars)
+    || !isDigest(evidence.backend_artifact_digest)
+    || (evidence.backend_authority !== "authoritative" && evidence.backend_authority !== "non_authoritative")) {
+    return { ok: false, failure_code: "key_release_evidence_mismatch", error: "Key-release evidence contains invalid primitive fields" };
+  }
+
+  if (canonicalJson(evidence) !== parsed.canonical) {
+    return { ok: false, failure_code: "key_release_evidence_mismatch", error: "Key-release evidence is not canonically serialized" };
+  }
+  return { ok: true, evidence: Object.freeze(evidence) };
+}
+
 function validateKeyReleaseEvidence(
   value: unknown,
   request: Readonly<DecryptionKeyReleaseRequest>,
   authority: BackendIdentity,
 ): KeyReleaseEvidenceValidation {
-  if (!isKeyReleaseEvidenceShape(value)) {
-    return { ok: false, failure_code: "key_release_evidence_mismatch", error: "Key-release evidence is not a canonical v1 binding" };
+  const parsed = parseKeyReleaseEvidence(value);
+  if (!parsed.ok) return parsed;
+  const evidence = parsed.evidence;
+  if (evidence.registry_version !== request.registry.registry_version
+    || evidence.registry_namespace !== request.registry.registry_namespace) {
+    return { ok: false, failure_code: "key_release_registry_mismatch", error: "Key-release evidence uses a different durable registry" };
   }
-  if (value.idempotency_key !== request.idempotency_key) {
+  if (evidence.obligation_id !== request.obligation_id) {
+    return { ok: false, failure_code: "key_release_obligation_conflict", error: "Key-release evidence belongs to a different release obligation" };
+  }
+  if (evidence.binding_digest !== request.binding_digest) {
+    return { ok: false, failure_code: "key_release_obligation_conflict", error: "Key-release evidence is bound to different settlement terms for this obligation" };
+  }
+  if (evidence.idempotency_key !== request.idempotency_key) {
     return { ok: false, failure_code: "key_release_idempotency_mismatch", error: "Key-release evidence uses a different idempotency key" };
   }
-  if (!backendIdentityEquals(value.backend, authority)
-    || !backendIdentityEquals(value.binding.backend, authority)
-    || value.backend_artifact_digest !== authority.artifact_digest) {
+  if (evidence.backend_id !== authority.id
+    || evidence.backend_version !== authority.version
+    || evidence.backend_artifact_digest !== authority.artifact_digest
+    || evidence.backend_authority !== authority.authority) {
     return { ok: false, failure_code: "key_release_backend_mismatch", error: "Key-release evidence is not bound to the configured backend artifact" };
   }
   if (!keyReleaseBindingMatchesRequest(
-    value.binding,
+    request.binding,
+    request.obligation_id,
     request.intent,
     request.payment,
     request.binding.statement_digest,
     request.binding.domain_digest,
     authority,
-  ) || canonicalJson(value.binding) !== canonicalJson(request.binding)) {
+  ) || !isKeyReleaseRegistry(request.registry)) {
     return { ok: false, failure_code: "key_release_evidence_mismatch", error: "Key-release evidence is not bound to the immutable settlement request" };
   }
-  return { ok: true, evidence: immutableCopy(value) };
+  return { ok: true, evidence };
 }
 
 function isProductionKeyRelease(
@@ -929,7 +1146,7 @@ function isKeyReleaseResult(value: unknown): value is DecryptionKeyReleaseResult
     && (value.failure_code === undefined || isVerificationFailureCode(value.failure_code))
     && (value.decryptionKey === undefined
       || typeof value.decryptionKey === "string")
-    && (value.evidence === undefined || isKeyReleaseEvidenceShape(value.evidence))
+    && (value.evidence === undefined || typeof value.evidence === "string")
     && (value.error === undefined
       || typeof value.error === "string");
 }
@@ -949,6 +1166,32 @@ function normalizeKeyReleaseResult(value: unknown): KeyReleaseBoundaryValidation
       const normalized = normalizeBoundaryError(value.error, "Key-release evidence exceeds the v1 resource limit");
       return { ok: false, failure_code: "resource_limit_exceeded", error: normalized.message };
     }
+    if (typeof value.evidence === "string") {
+      if (value.evidence.length > VERIFIER_ATTESTATION_LIMITS.maxTotalEncodedChars) {
+        return {
+          ok: false,
+          failure_code: "resource_limit_exceeded",
+          error: "Key-release evidence exceeds the v1 encoded-character limit",
+        };
+      }
+      let evidenceBytes: number;
+      try {
+        evidenceBytes = new TextEncoder().encode(value.evidence).byteLength;
+      } catch {
+        return {
+          ok: false,
+          failure_code: "malformed_request",
+          error: "Key-release evidence could not be encoded",
+        };
+      }
+      if (evidenceBytes > VERIFIER_ATTESTATION_LIMITS.maxTotalEncodedBytes) {
+        return {
+          ok: false,
+          failure_code: "resource_limit_exceeded",
+          error: "Key-release evidence exceeds the v1 encoded-byte limit",
+        };
+      }
+    }
     return {
       ok: true,
       result: {
@@ -956,7 +1199,7 @@ function normalizeKeyReleaseResult(value: unknown): KeyReleaseBoundaryValidation
         backend: { ...value.backend },
         provenance: value.provenance,
         decryptionKey: value.decryptionKey,
-        evidence: value.evidence === undefined ? undefined : immutableCopy(value.evidence),
+        evidence: value.evidence,
         failure_code: value.failure_code,
         error: value.error,
       },
@@ -978,8 +1221,13 @@ function normalizeKeyReleaseLookupResult(value: unknown):
     if (!isRecord(value)
       || (value.status !== "found"
         && value.status !== "absent"
+        && value.status !== "conflict"
         && value.status !== "unavailable"
         && value.status !== "rejected")
+      || !isKeyReleaseRegistry(value.registry)
+      || !isBoundedObligationId(value.obligation_id)
+      || (value.binding_digest !== undefined && !isDigest(value.binding_digest))
+      || (value.idempotency_key !== undefined && !isBoundedIdempotencyKey(value.idempotency_key))
       || !isBackendIdentity(value.backend)
       || !isProvenance(value.provenance)
       || (value.failure_code !== undefined && !isVerificationFailureCode(value.failure_code))
@@ -994,12 +1242,19 @@ function normalizeKeyReleaseLookupResult(value: unknown):
       if (value.failure_code !== undefined || value.error !== undefined) {
         return { ok: false, failure_code: "key_release_lookup_failed", error: "A found durable lookup cannot carry failure evidence" };
       }
+      if (value.binding_digest === undefined || value.idempotency_key === undefined) {
+        return { ok: false, failure_code: "key_release_lookup_failed", error: "A found durable lookup must identify its canonical obligation binding" };
+      }
       const release = normalizeKeyReleaseResult(value.release);
       if (!release.ok) return release;
       return {
         ok: true,
         result: {
           status: "found",
+          registry: { ...value.registry },
+          obligation_id: value.obligation_id,
+          binding_digest: value.binding_digest,
+          idempotency_key: value.idempotency_key,
           backend: { ...value.backend },
           provenance: value.provenance,
           release: release.result,
@@ -1007,15 +1262,42 @@ function normalizeKeyReleaseLookupResult(value: unknown):
       };
     }
     if (value.release !== undefined) {
-      return { ok: false, failure_code: "key_release_lookup_failed", error: "An absent or failed durable lookup cannot carry release evidence" };
+      return { ok: false, failure_code: "key_release_lookup_failed", error: "An absent, conflicting, or failed durable lookup cannot carry release evidence" };
     }
     if (value.status === "absent" && (value.failure_code !== undefined || value.error !== undefined)) {
       return { ok: false, failure_code: "key_release_lookup_failed", error: "A durable lookup is absent only when it carries no failure evidence" };
+    }
+    if (value.status === "conflict") {
+      if (value.binding_digest === undefined || value.idempotency_key === undefined) {
+        return {
+          ok: false,
+          failure_code: "key_release_lookup_failed",
+          error: "A conflicting durable lookup must identify the canonical obligation binding",
+        };
+      }
+      return {
+        ok: true,
+        result: {
+          status: "conflict",
+          registry: { ...value.registry },
+          obligation_id: value.obligation_id,
+          binding_digest: value.binding_digest,
+          idempotency_key: value.idempotency_key,
+          backend: { ...value.backend },
+          provenance: value.provenance,
+          failure_code: "key_release_obligation_conflict",
+          error: value.error ?? "Durable registry obligation is already bound to different release terms",
+        },
+      };
     }
     return {
       ok: true,
       result: {
         status: value.status,
+        registry: { ...value.registry },
+        obligation_id: value.obligation_id,
+        binding_digest: value.binding_digest,
+        idempotency_key: value.idempotency_key,
         backend: { ...value.backend },
         provenance: value.provenance,
         failure_code: value.failure_code,
@@ -1037,10 +1319,17 @@ async function buildKeyReleaseRequest(
   payment: Readonly<PaymentObservation>,
   proofRequest: Readonly<VerifierRequest>,
   authority: BackendIdentity,
+  registry: ZKCPKeyReleaseRegistry,
 ): Promise<Readonly<DecryptionKeyReleaseRequest>> {
+  const obligation_id = await deriveZKCPKeyReleaseObligationId({
+    encryptedDataHash: intent.encryptedDataHash,
+    sellerAddress: intent.sellerAddress,
+    buyerAddress: intent.buyerAddress,
+  });
   const binding: ZKCPKeyReleaseBinding = immutableCopy({
     binding_version: ZKCP_KEY_RELEASE_IDEMPOTENCY_VERSION,
     release_policy_version: ZKCP_KEY_RELEASE_POLICY_VERSION,
+    obligation_id,
     intent_id: intent.id,
     amount: intent.amount,
     seller_address: intent.sellerAddress,
@@ -1062,6 +1351,7 @@ async function buildKeyReleaseRequest(
 
   if (!keyReleaseBindingMatchesRequest(
     binding,
+    obligation_id,
     intent,
     payment,
     proofRequest.statement_digest,
@@ -1071,9 +1361,13 @@ async function buildKeyReleaseRequest(
     throw new Error("ZKCP key-release binding is not aligned with retained settlement evidence");
   }
 
+  const binding_digest = await deriveZKCPKeyReleaseBindingDigest(binding);
   const idempotency_key = await deriveZKCPKeyReleaseIdempotencyKey(binding);
   return immutableCopy({
     contract_version: ZKCP_KEY_RELEASE_CONTRACT_VERSION,
+    registry,
+    obligation_id,
+    binding_digest,
     idempotency_key,
     binding,
     intent,
@@ -1095,6 +1389,7 @@ export class ZKCPBridge {
   private readonly maxActiveIntents: number;
   private readonly maxTotalIntents: number;
   private readonly terminalRetentionMs: number;
+  private readonly keyReleaseRegistry: ZKCPKeyReleaseRegistry;
   private lastObservedTimeMs: number | undefined;
 
   public constructor(
@@ -1104,6 +1399,14 @@ export class ZKCPBridge {
     options: ZKCPBridgeOptions = {},
   ) {
     this.now = options.now ?? (() => Date.now());
+    const configuredRegistry = options.keyReleaseRegistry ?? ZKCP_KEY_RELEASE_REGISTRY;
+    if (!isKeyReleaseRegistry(configuredRegistry) || !isCanonicalKeyReleaseRegistry(configuredRegistry)) {
+      throw new ZKCPBoundaryError(
+        "malformed_request",
+        "ZKCP key-release registry metadata must match the canonical v1 registry",
+      );
+    }
+    this.keyReleaseRegistry = Object.freeze({ ...configuredRegistry });
     this.maxActiveIntents = this.policyOption(
       options.maxActiveIntents,
       ZKCP_RETENTION_POLICY.maxActiveIntents,
@@ -1743,8 +2046,32 @@ export class ZKCPBridge {
       };
     }
 
-    if (!isDurableKeyReleaseCapabilities(this.keyReleaser.capabilities)
-      || typeof this.keyReleaser.getByIdempotencyKey !== "function"
+    const capabilities = this.keyReleaser.capabilities;
+    if (!isRecord(capabilities)) {
+      return {
+        finalized: false,
+        status: "unavailable",
+        intentId,
+        paymentHash: paymentEvidence.observation.txid,
+        failure_code: "key_release_capability_missing",
+        error: "Key-release backend must provide the versioned durable obligation and lookup contract",
+      };
+    }
+    if (!isKeyReleaseRegistry({
+      registry_version: capabilities.registry_version,
+      registry_namespace: capabilities.registry_namespace,
+    }) || capabilities.registry_namespace !== this.keyReleaseRegistry.registry_namespace) {
+      return {
+        finalized: false,
+        status: "unavailable",
+        intentId,
+        paymentHash: paymentEvidence.observation.txid,
+        failure_code: "key_release_registry_mismatch",
+        error: "Key-release backend is not bound to the pinned durable obligation registry",
+      };
+    }
+    if (!isDurableKeyReleaseCapabilities(capabilities, this.keyReleaseRegistry)
+      || typeof this.keyReleaser.getByObligationId !== "function"
       || typeof this.keyReleaser.release !== "function") {
       return {
         finalized: false,
@@ -1752,7 +2079,7 @@ export class ZKCPBridge {
         intentId,
         paymentHash: paymentEvidence.observation.txid,
         failure_code: "key_release_capability_missing",
-        error: "Key-release backend must provide the versioned durable idempotency and lookup contract",
+        error: "Key-release backend must provide the versioned durable obligation and lookup contract",
       };
     }
 
@@ -1777,6 +2104,7 @@ export class ZKCPBridge {
         releasePaymentSnapshot,
         proofEvidence.evidence.request,
         releaseBackend,
+        this.keyReleaseRegistry,
       );
     } catch (error: unknown) {
       const normalized = normalizeBoundaryError(error, "Unable to prepare bounded key-release input");
@@ -1795,15 +2123,18 @@ export class ZKCPBridge {
       payment_hash: paymentEvidence.observation.txid,
     });
 
-    // This local marker is diagnostic/cache state only. Durable backend lookup
-    // and idempotent release keyed by `releaseRequest.idempotency_key` remain
+    // This local marker is diagnostic/cache state only. Durable obligation
+    // lookup and atomic claim keyed by the stable obligation remain
     // authoritative across retries, replicas, and process restarts.
     this.keyReleaseAttempts.add(intentId);
 
     let rawLookup: unknown;
     try {
-      rawLookup = await this.keyReleaser.getByIdempotencyKey({
+      rawLookup = await this.keyReleaser.getByObligationId({
         contract_version: releaseRequest.contract_version,
+        registry: releaseRequest.registry,
+        obligation_id: releaseRequest.obligation_id,
+        binding_digest: releaseRequest.binding_digest,
         idempotency_key: releaseRequest.idempotency_key,
         binding: releaseRequest.binding,
         backend: releaseBackend,
@@ -1844,6 +2175,46 @@ export class ZKCPBridge {
     }
 
     const lookup = lookupValidation.result;
+    if (!keyReleaseRegistryEquals(lookup.registry, this.keyReleaseRegistry)) {
+      return {
+        finalized: false,
+        status: "rejected",
+        intentId,
+        paymentHash: paymentEvidence.observation.txid,
+        failure_code: "key_release_registry_mismatch",
+        error: "Durable key-release lookup returned a different obligation registry",
+      };
+    }
+    if (lookup.obligation_id !== releaseRequest.obligation_id) {
+      return {
+        finalized: false,
+        status: "rejected",
+        intentId,
+        paymentHash: paymentEvidence.observation.txid,
+        failure_code: "key_release_obligation_conflict",
+        error: "Durable key-release lookup returned a different release obligation",
+      };
+    }
+    if (lookup.binding_digest !== undefined && lookup.binding_digest !== releaseRequest.binding_digest) {
+      return {
+        finalized: false,
+        status: "rejected",
+        intentId,
+        paymentHash: paymentEvidence.observation.txid,
+        failure_code: "key_release_obligation_conflict",
+        error: "Durable registry obligation is already bound to different settlement terms",
+      };
+    }
+    if (lookup.idempotency_key !== undefined && lookup.idempotency_key !== releaseRequest.idempotency_key) {
+      return {
+        finalized: false,
+        status: "rejected",
+        intentId,
+        paymentHash: paymentEvidence.observation.txid,
+        failure_code: "key_release_obligation_conflict",
+        error: "Durable registry obligation is already bound to a different release key",
+      };
+    }
     if (!backendIdentityEquals(lookup.backend, releaseBackend)) {
       return {
         finalized: false,
@@ -1882,9 +2253,10 @@ export class ZKCPBridge {
     } else if (lookup.status === "absent") {
       let rawRelease: unknown;
       try {
-        // The same deterministic key and complete immutable binding are reused
-        // after an absent lookup. No timestamp or process-local state enters
-        // this request, and no non-idempotent fallback is permitted.
+        // The stable obligation, canonical binding digest, and deterministic
+        // key are claimed atomically by the durable backend. No timestamp or
+        // process-local state enters this request, and no non-idempotent
+        // fallback is permitted.
         rawRelease = await this.keyReleaser.release(releaseRequest);
       } catch (error: unknown) {
         const normalized = normalizeBoundaryError(error, "Key-release backend outcome is ambiguous");
@@ -1916,7 +2288,8 @@ export class ZKCPBridge {
         status: lookup.status === "unavailable" ? "unavailable" : "rejected",
         intentId,
         paymentHash: paymentEvidence.observation.txid,
-        failure_code: lookup.failure_code ?? "key_release_lookup_failed",
+        failure_code: lookup.failure_code
+          ?? (lookup.status === "conflict" ? "key_release_obligation_conflict" : "key_release_lookup_failed"),
         error: lookup.error ?? "Durable key-release lookup did not establish release state",
       };
     }

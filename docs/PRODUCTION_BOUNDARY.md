@@ -102,26 +102,38 @@ and concurrent duplicate signers from regressing or duplicating authoritative
 state.
 
 ZKCP finalization requires exact versioned key-release capability metadata for
-the contract, idempotency, and release-policy versions. A supported backend
-must advertise durable idempotency, lookup-by-idempotency-key, idempotent
-release, and the `exactly_once_per_idempotency_key` guarantee. That guarantee is
-owned by the external backend: its durable record must bind the irreversible
-release to one canonical key so retries, replicas, and process restarts cannot
-release twice. The checked-in unavailable adapter intentionally advertises no
-such capability and remains fail-closed.
+the contract, idempotency, obligation, registry, and release-policy versions.
+A supported backend must advertise durable idempotency, lookup-by-obligation,
+atomic obligation claim, idempotent release, the pinned registry namespace,
+and the `exactly_once_per_obligation` guarantee. That guarantee is owned by the
+external backend: its durable record must bind one stable obligation to one
+canonical binding digest, idempotency key, and irreversible release so retries,
+replicas, and process restarts cannot release the same encrypted payload twice.
+The checked-in unavailable adapter intentionally advertises no such capability
+and remains fail-closed.
 
 Under the per-intent lock, finalization validates a monotonic, finite,
 safe-integer timestamp inside the valid ECMAScript `Date` range, snapshots
-bounded immutable release inputs, and derives a bounded deterministic key from
-immutable intent, statement/domain, encrypted-data, observed-payment,
-backend/artifact, and release-policy bindings. Timestamps and process-local
-state are excluded from the key. Durable lookup runs first. Found evidence is
-validated against the exact key, intent, statement, encrypted data, payment,
-backend identity, and backend artifact before committing without release. Only
-an absent lookup may call idempotent release, using the same key and binding.
-Lookup errors, ambiguous timeouts, unavailable/rejected outcomes, missing
-capabilities, and mismatched evidence fail closed; retries reuse the same key
-and never use an alternate key or non-idempotent fallback.
+bounded immutable release inputs, and derives a versioned obligation id from
+the encrypted-data commitment plus stable seller/buyer identity. Intent id,
+amount, network, statement/proof terms, payment txid, timestamps, and backend
+artifact/version are excluded from that obligation id. A separate binding
+digest/idempotency key carries those mutable settlement terms. The bridge pins
+`conxian.zkcp.key-release.obligations.v1` independently of the releaser
+artifact; missing or drifted registry metadata is rejected before lookup.
+Durable lookup runs first by obligation. Matching binding/evidence reconciles
+without release; a different binding returns a typed obligation conflict; only
+an absent obligation may call atomic idempotent release with the same
+obligation, binding digest, and key. Lookup errors, ambiguous timeouts,
+unavailable/rejected outcomes, registry drift, missing capabilities, and
+mismatched evidence fail closed; retries reuse the same obligation and never
+use an alternate key or non-idempotent fallback.
+
+Key-release evidence crosses the boundary only as a bounded canonical JSON
+string with an exact flat primitive allow-list. Adapter objects, proxies,
+arrays, nested values, cycles, recursive copies, accessors, extra properties,
+non-canonical encodings, and over-limit payloads are rejected before evidence
+is retained.
 
 After dispatch, result interpretation is total and bounded; no clock read,
 serialization, or throwing state-validation/compare-and-swap step is required

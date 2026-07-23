@@ -47,11 +47,12 @@ function statusForFailure(failureCode: unknown): number {
     || failureCode === "decryption_key_unavailable"
     || failureCode === "unsupported_backend"
     || failureCode === "key_release_capability_missing"
+    || failureCode === "key_release_registry_mismatch"
     || failureCode === "key_release_lookup_failed"
     || failureCode === "key_release_ambiguous") return 503;
   if (failureCode === "resource_limit_exceeded") return 413;
   if (failureCode === "internal_error") return 500;
-  if (failureCode === "payment_not_observed") return 409;
+  if (failureCode === "payment_not_observed" || failureCode === "key_release_obligation_conflict") return 409;
   return 422;
 }
 

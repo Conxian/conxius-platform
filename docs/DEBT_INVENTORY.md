@@ -69,8 +69,8 @@ Last updated: 2026-07-22.
 
 | ID | Item | Risk Class | Status |
 |----|------|-----------|--------|
-| D-20 | BitVM2/BitVM3/ZKCP production verifier, payment-observer, and key-release backends are not available in this repository | Security / Correctness | 🛡️ **Quarantined by issue #1187** — adapter-owned authority, pre-parse canonical string attestations, versioned BitVM2 hard retention/reservation policy, bounded BitVM3 terminal retention plus finite-window tombstones, same-proof/per-intent replay protection, versioned ZKCP intent binding, bounded retention/pagination, immutable evidence revalidation, and unavailable defaults fail closed. ZKCP now requires an external versioned durable key-release lookup/idempotency contract with deterministic immutable bindings; durable Gateway/Core/Nexus identity/backend implementation and independent acceptance remain pending |
-| D-21 | Historical BitVM2/ZKCP helper behavior could present simulation as authoritative success | Security / Correctness | ✅ **Remediated in #1187 follow-up** — proof-length checks, unconditional/contradictory success, unavailable or placeholder backend authority, duplicate/format-only aggregation, mutable lifecycle snapshots, hostile/proxy attestation graphs, unbounded BitVM2/BitVM3/ZKCP retention/listing, raw identifier logging, caller-only payment hashes, synthetic keys, post-release clock failures, and process-local-only key-release exactly-once claims are rejected or removed |
+| D-20 | BitVM2/BitVM3/ZKCP production verifier, payment-observer, and key-release backends are not available in this repository | Security / Correctness | 🛡️ **Quarantined by issue #1187** — adapter-owned authority, pre-parse canonical string attestations, versioned BitVM2 hard retention/reservation policy, bounded BitVM3 terminal retention plus finite-window tombstones, same-proof/per-intent replay protection, versioned ZKCP intent binding, bounded retention/pagination, immutable evidence revalidation, and unavailable defaults fail closed. ZKCP now requires an external versioned durable obligation/registry contract: stable encrypted-data obligation identity, pinned namespace, lookup-first atomic claim, typed binding conflict, and bounded flat canonical evidence. Durable Gateway/Core/Nexus identity/backend implementation and independent acceptance remain pending |
+| D-21 | Historical BitVM2/ZKCP helper behavior could present simulation as authoritative success | Security / Correctness | ✅ **Remediated in #1187 follow-up** — proof-length checks, unconditional/contradictory success, unavailable or placeholder backend authority, duplicate/format-only aggregation, mutable lifecycle snapshots, hostile/proxy attestation graphs, unbounded BitVM2/BitVM3/ZKCP retention/listing, raw identifier logging, caller-only payment hashes, synthetic keys, post-release clock failures, process-local-only key-release exactly-once claims, mutable-term obligation drift, registry drift, and recursive key-release evidence are rejected or removed |
 
 ## Burn-Down Priority
 
@@ -95,7 +95,7 @@ Last updated: 2026-07-22.
 
 ### Backlog
 - [ ] D-19: Test logger and idgen utilities
-- [ ] D-20: Integrate and independently accept Gateway/Core/Nexus verifier, payment-observer, key-release, and durable proof/intent identity-retention backends, including the external key-release exactly-once and lookup contract
+- [ ] D-20: Integrate and independently accept Gateway/Core/Nexus verifier, payment-observer, key-release, and durable proof/intent identity-retention backends, including the external stable-obligation registry, atomic claim, and exactly-once contract
 - [ ] Full cross-repo debt inventory (gateway, nexus, wallet, orbit, enclave-sdk, conxian_ui, conxian-labs-site)
 - [ ] D-05: Consider structured error reporting for client-side pages
 

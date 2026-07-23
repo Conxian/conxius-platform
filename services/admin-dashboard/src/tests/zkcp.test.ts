@@ -4,25 +4,34 @@ import {
   UnavailableOnChainMonitor,
   UnavailableZKVerifier,
   ZKCP_KEY_RELEASE_CAPABILITIES,
+  ZKCP_KEY_RELEASE_REGISTRY,
   ZKCP_LIST_POLICY,
   ZKCP_RETENTION_POLICY,
   ZKCP_TIMESTAMP_MAX_MS,
   ZKCPBridge,
+  deriveZKCPKeyReleaseObligationId,
   type DecryptionKeyReleaser,
   type DecryptionKeyReleaseEvidence,
+  type DecryptionKeyReleaseLookupResult,
   type DecryptionKeyReleaseLookupRequest,
   type DecryptionKeyReleaseRequest,
   type DecryptionKeyReleaseResult,
   type OnChainMonitor,
+  type ZKCPBridgeOptions,
+  type ZKCPIntentInput,
+  type ZKCPKeyReleaseRegistry,
   type ZKProofVerifier,
 } from "../lib/support/zkcp";
 import {
+  canonicalJson,
   createPaymentObservation,
   createVerificationResult,
   digestVerifierRequest,
   UNAVAILABLE_BACKEND,
+  VERIFIER_ATTESTATION_LIMITS,
   VERIFIER_RESOURCE_LIMITS,
   type BackendIdentity,
+  type Digest,
   type PaymentObservationResult,
   type VerifierRequest,
 } from "../lib/support/verifier-contract";
@@ -38,6 +47,18 @@ const AUTHORITATIVE_TEST_BACKEND: BackendIdentity = {
   version: "test-authority-v1",
   artifact_digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   authority: "authoritative",
+};
+
+const ROTATED_RELEASE_BACKEND: BackendIdentity = {
+  id: "explicit-test-authority",
+  version: "test-authority-v2",
+  artifact_digest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  authority: "authoritative",
+};
+
+const DRIFTED_REGISTRY_CAPABILITIES: typeof ZKCP_KEY_RELEASE_CAPABILITIES = {
+  ...ZKCP_KEY_RELEASE_CAPABILITIES,
+  registry_namespace: "conxian.zkcp.key-release.obligations.drifted.v1",
 };
 
 async function setup(verifier: ZKProofVerifier = new DeterministicFixtureVerifier()) {
@@ -57,23 +78,29 @@ async function setupAuthoritativeSettlement(
   id: string,
   now: () => number,
   keyReleaser: DecryptionKeyReleaser,
+  options: {
+    input?: Partial<ZKCPIntentInput>;
+    monitor?: OnChainMonitor;
+    bridgeOptions?: ZKCPBridgeOptions;
+  } = {},
 ) {
   const genericRequest = await makeVerifierRequest({
     backend: AUTHORITATIVE_TEST_BACKEND,
     provenance: "production",
   });
-  const input = await makeIntentInput(genericRequest, id);
+  const defaultInput = await makeIntentInput(genericRequest, id);
+  const input = { ...defaultInput, ...options.input };
   const request = await bindZKCPRequestToIntent(genericRequest, input);
   const bridge = new ZKCPBridge(
     new AuthoritativeFixtureVerifier(),
-    new AuthoritativeFixtureMonitor(),
+    options.monitor ?? new AuthoritativeFixtureMonitor(),
     keyReleaser,
-    { now },
+    { ...options.bridgeOptions, now },
   );
   bridge.initializeIntent(input);
   expect((await bridge.verifyProof(input.id, request)).status).toBe("valid");
   expect((await bridge.watchForPayment(input.id)).status).toBe("observed");
-  return { bridge, input };
+  return { bridge, input, request };
 }
 
 class AuthoritativeFixtureVerifier implements ZKProofVerifier {
@@ -121,10 +148,12 @@ class DeferredZKVerifier extends AuthoritativeFixtureVerifier {
 class AuthoritativeFixtureMonitor implements OnChainMonitor {
   public readonly backendIdentity = AUTHORITATIVE_TEST_BACKEND;
 
+  public constructor(private readonly txid = "tx-authoritative-fixture") {}
+
   public async watchForPayment(request: Parameters<OnChainMonitor["watchForPayment"]>[0]): Promise<PaymentObservationResult> {
     const observation = await createPaymentObservation({
       request,
-      txid: "tx-authoritative-fixture",
+      txid: this.txid,
       amount: request.expected_amount,
       confirmations: 6,
       observer: AUTHORITATIVE_TEST_BACKEND,
@@ -171,33 +200,64 @@ class DeferredPaymentMonitor extends AuthoritativeFixtureMonitor {
   }
 }
 
-function releaseEvidenceFor(request: Readonly<DecryptionKeyReleaseRequest>): DecryptionKeyReleaseEvidence {
-  return {
+function releaseEvidenceFor(
+  request: Readonly<DecryptionKeyReleaseRequest | DecryptionKeyReleaseLookupRequest>,
+  overrides: Partial<DecryptionKeyReleaseEvidence> = {},
+): string {
+  const backend = "intent" in request ? request.binding.backend : request.backend;
+  const evidence: DecryptionKeyReleaseEvidence = {
     contract_version: request.contract_version,
+    registry_version: request.registry.registry_version,
+    registry_namespace: request.registry.registry_namespace,
+    obligation_id: request.obligation_id,
+    binding_digest: request.binding_digest,
     idempotency_key: request.idempotency_key,
-    binding: request.binding,
-    backend: request.binding.backend,
-    backend_artifact_digest: request.binding.backend.artifact_digest,
+    backend_id: backend.id,
+    backend_version: backend.version,
+    backend_artifact_digest: backend.artifact_digest,
+    backend_authority: backend.authority,
   };
+  return canonicalJson({ ...evidence, ...overrides });
+}
+
+interface FixtureDurableReleaseRecord {
+  binding_digest: DecryptionKeyReleaseRequest["binding_digest"];
+  idempotency_key: string;
+  release: DecryptionKeyReleaseResult;
 }
 
 abstract class DurableFixtureKeyReleaser implements DecryptionKeyReleaser {
-  public readonly capabilities = ZKCP_KEY_RELEASE_CAPABILITIES;
+  public readonly capabilities: typeof ZKCP_KEY_RELEASE_CAPABILITIES;
 
   public constructor(
     public readonly backendIdentity: BackendIdentity = AUTHORITATIVE_TEST_BACKEND,
-    protected readonly records: Map<string, DecryptionKeyReleaseResult> = new Map(),
-  ) {}
-
-  public readonly lookupKeys: string[] = [];
-  public readonly releaseKeys: string[] = [];
-
-  protected storedRelease(idempotencyKey: string): DecryptionKeyReleaseResult | undefined {
-    return this.records.get(idempotencyKey);
+    protected readonly records: Map<string, FixtureDurableReleaseRecord> = new Map(),
+    capabilities: typeof ZKCP_KEY_RELEASE_CAPABILITIES = ZKCP_KEY_RELEASE_CAPABILITIES,
+  ) {
+    this.capabilities = capabilities;
   }
 
-  protected storeRelease(idempotencyKey: string, result: DecryptionKeyReleaseResult): void {
-    this.records.set(idempotencyKey, result);
+  public readonly lookupKeys: string[] = [];
+  public readonly obligationLookupKeys: string[] = [];
+  public readonly releaseKeys: string[] = [];
+
+  protected storedRecord(obligationId: string): FixtureDurableReleaseRecord | undefined {
+    return this.records.get(obligationId);
+  }
+
+  protected storedRelease(obligationId: string): DecryptionKeyReleaseResult | undefined {
+    return this.storedRecord(obligationId)?.release;
+  }
+
+  protected storeRelease(
+    request: Readonly<DecryptionKeyReleaseRequest>,
+    result: DecryptionKeyReleaseResult,
+  ): void {
+    this.records.set(request.obligation_id, {
+      binding_digest: request.binding_digest,
+      idempotency_key: request.idempotency_key,
+      release: result,
+    });
   }
 
   protected successfulRelease(
@@ -219,49 +279,99 @@ abstract class DurableFixtureKeyReleaser implements DecryptionKeyReleaser {
 
   public async getByIdempotencyKey(
     request: Readonly<DecryptionKeyReleaseLookupRequest>,
-  ) {
+  ): Promise<DecryptionKeyReleaseLookupResult> {
+    return this.getByObligationId(request);
+  }
+
+  public async getByObligationId(
+    request: Readonly<DecryptionKeyReleaseLookupRequest>,
+  ): Promise<DecryptionKeyReleaseLookupResult> {
     this.lookupKeys.push(request.idempotency_key);
-    const release = this.storedRelease(request.idempotency_key);
-    return release === undefined
-      ? {
+    this.obligationLookupKeys.push(request.obligation_id);
+    const record = this.storedRecord(request.obligation_id);
+    if (record === undefined) {
+      return {
         status: "absent" as const,
+        registry: request.registry,
+        obligation_id: request.obligation_id,
         backend: this.backendIdentity,
         provenance: "production" as const,
-      }
-      : {
-        status: "found" as const,
-        backend: this.backendIdentity,
-        provenance: "production" as const,
-        release,
       };
+    }
+    if (record.binding_digest !== request.binding_digest
+      || record.idempotency_key !== request.idempotency_key) {
+      return {
+        status: "conflict" as const,
+        registry: request.registry,
+        obligation_id: request.obligation_id,
+        binding_digest: record.binding_digest,
+        idempotency_key: record.idempotency_key,
+        backend: this.backendIdentity,
+        provenance: "production" as const,
+        failure_code: "key_release_obligation_conflict" as const,
+        error: "fixture registry obligation is bound to a different release request",
+      };
+    }
+    return {
+        status: "found" as const,
+        registry: request.registry,
+        obligation_id: request.obligation_id,
+        binding_digest: record.binding_digest,
+        idempotency_key: record.idempotency_key,
+        backend: this.backendIdentity,
+        provenance: "production" as const,
+        release: record.release,
+    };
+  }
+
+  protected existingOrConflict(
+    request: Readonly<DecryptionKeyReleaseRequest>,
+  ): DecryptionKeyReleaseResult | undefined {
+    const record = this.storedRecord(request.obligation_id);
+    if (record === undefined) return undefined;
+    if (record.binding_digest !== request.binding_digest
+      || record.idempotency_key !== request.idempotency_key) {
+      return {
+        status: "rejected",
+        backend: this.backendIdentity,
+        provenance: "production",
+        failure_code: "key_release_obligation_conflict",
+        error: "fixture registry obligation is already bound to different release terms",
+      };
+    }
+    return record.release;
   }
 }
 
 class AuthoritativeFixtureKeyReleaser extends DurableFixtureKeyReleaser {
   public releaseCount = 0;
 
-  public constructor(records: Map<string, DecryptionKeyReleaseResult> = new Map()) {
-    super(AUTHORITATIVE_TEST_BACKEND, records);
+  public constructor(
+    records: Map<string, FixtureDurableReleaseRecord> = new Map(),
+    backendIdentity: BackendIdentity = AUTHORITATIVE_TEST_BACKEND,
+    capabilities: typeof ZKCP_KEY_RELEASE_CAPABILITIES = ZKCP_KEY_RELEASE_CAPABILITIES,
+  ) {
+    super(backendIdentity, records, capabilities);
   }
 
   public override async release(request: Readonly<DecryptionKeyReleaseRequest>) {
-    const retained = this.storedRelease(request.idempotency_key);
+    const retained = this.existingOrConflict(request);
     if (retained !== undefined) return retained;
     this.releaseCount += 1;
     this.releaseKeys.push(request.idempotency_key);
     const release = this.successfulRelease(request);
-    this.storeRelease(request.idempotency_key, release);
+    this.storeRelease(request, release);
     return release;
   }
 }
 
 class CommitThenMalformedKeyReleaser extends AuthoritativeFixtureKeyReleaser {
   public override async release(request: Readonly<DecryptionKeyReleaseRequest>): Promise<never> {
-    const retained = this.storedRelease(request.idempotency_key);
+    const retained = this.existingOrConflict(request);
     if (retained === undefined) {
       this.releaseCount += 1;
       this.releaseKeys.push(request.idempotency_key);
-      this.storeRelease(request.idempotency_key, this.successfulRelease(request));
+      this.storeRelease(request, this.successfulRelease(request));
     }
     return null as never;
   }
@@ -269,11 +379,11 @@ class CommitThenMalformedKeyReleaser extends AuthoritativeFixtureKeyReleaser {
 
 class CommitThenTimeoutKeyReleaser extends AuthoritativeFixtureKeyReleaser {
   public override async release(request: Readonly<DecryptionKeyReleaseRequest>): Promise<never> {
-    const retained = this.storedRelease(request.idempotency_key);
+    const retained = this.existingOrConflict(request);
     if (retained === undefined) {
       this.releaseCount += 1;
       this.releaseKeys.push(request.idempotency_key);
-      this.storeRelease(request.idempotency_key, this.successfulRelease(request));
+      this.storeRelease(request, this.successfulRelease(request));
     }
     throw new Error("fixture timeout after durable release commit");
   }
@@ -282,11 +392,33 @@ class CommitThenTimeoutKeyReleaser extends AuthoritativeFixtureKeyReleaser {
 class LookupErrorKeyReleaser extends AuthoritativeFixtureKeyReleaser {
   public lookupCalls = 0;
 
-  public override async getByIdempotencyKey(
+  public override async getByObligationId(
     _request: Readonly<DecryptionKeyReleaseLookupRequest>,
   ): Promise<never> {
     this.lookupCalls += 1;
     throw new Error("fixture durable lookup unavailable");
+  }
+}
+
+class MisclassifiedConflictKeyReleaser extends DurableFixtureKeyReleaser {
+  public override async getByObligationId(
+    request: Readonly<DecryptionKeyReleaseLookupRequest>,
+  ): Promise<DecryptionKeyReleaseLookupResult> {
+    return {
+      status: "conflict" as const,
+      registry: request.registry,
+      obligation_id: request.obligation_id,
+      binding_digest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Digest,
+      idempotency_key: `zkcp-release-v1:${"b".repeat(64)}`,
+      backend: request.backend,
+      provenance: "production" as const,
+      failure_code: "internal_error" as const,
+      error: "fixture conflict with misclassified backend code",
+    };
+  }
+
+  public override async release(_request: Readonly<DecryptionKeyReleaseRequest>): Promise<never> {
+    throw new Error("release must not run for a durable obligation conflict");
   }
 }
 
@@ -297,6 +429,13 @@ class MissingDurableCapabilityKeyReleaser implements DecryptionKeyReleaser {
   public releaseCalls = 0;
 
   public async getByIdempotencyKey(
+    _request: Readonly<DecryptionKeyReleaseLookupRequest>,
+  ): Promise<never> {
+    this.lookupCalls += 1;
+    throw new Error("durable lookup must not run without capability metadata");
+  }
+
+  public async getByObligationId(
     _request: Readonly<DecryptionKeyReleaseLookupRequest>,
   ): Promise<never> {
     this.lookupCalls += 1;
@@ -316,7 +455,7 @@ class CorruptingLookupKeyReleaser extends DurableFixtureKeyReleaser {
     super();
   }
 
-  public override async getByIdempotencyKey(
+  public override async getByObligationId(
     request: Readonly<DecryptionKeyReleaseLookupRequest>,
   ) {
     const wrongDigest = "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as const;
@@ -326,26 +465,31 @@ class CorruptingLookupKeyReleaser extends DurableFixtureKeyReleaser {
     };
     const evidence: DecryptionKeyReleaseEvidence = {
       contract_version: request.contract_version,
+      registry_version: request.registry.registry_version,
+      registry_namespace: request.registry.registry_namespace,
+      obligation_id: request.obligation_id,
+      binding_digest: this.mode === "statement" || this.mode === "encrypted" ? wrongDigest : request.binding_digest,
       idempotency_key: this.mode === "key" ? `zkcp-release-v1:${"0".repeat(64)}` : request.idempotency_key,
-      binding: {
-        ...request.binding,
-        statement_digest: this.mode === "statement" ? wrongDigest : request.binding.statement_digest,
-        encrypted_data_digest: this.mode === "encrypted" ? wrongDigest : request.binding.encrypted_data_digest,
-      },
-      backend: this.mode === "backend" ? wrongBackend : request.backend,
+      backend_id: this.mode === "backend" ? wrongBackend.id : request.backend.id,
+      backend_version: this.mode === "backend" ? wrongBackend.version : request.backend.version,
       backend_artifact_digest: this.mode === "artifact"
         ? wrongDigest
         : request.backend.artifact_digest,
+      backend_authority: request.backend.authority,
     };
     const release: DecryptionKeyReleaseResult = {
       status: "released",
       backend: this.mode === "backend" ? wrongBackend : request.backend,
       provenance: "production",
       decryptionKey: "corrupt-release-key",
-      evidence,
+      evidence: canonicalJson(evidence),
     };
     return {
       status: "found" as const,
+      registry: request.registry,
+      obligation_id: request.obligation_id,
+      binding_digest: request.binding_digest,
+      idempotency_key: request.idempotency_key,
       backend: this.mode === "backend" ? wrongBackend : request.backend,
       provenance: "production" as const,
       release,
@@ -354,6 +498,88 @@ class CorruptingLookupKeyReleaser extends DurableFixtureKeyReleaser {
 
   public override async release(_request: Readonly<DecryptionKeyReleaseRequest>): Promise<never> {
     throw new Error("release must not run when durable evidence is mismatched");
+  }
+}
+
+type ForgedLookupMode = "obligation" | "binding" | "evidence";
+
+class ForgedLookupKeyReleaser extends DurableFixtureKeyReleaser {
+  public releaseCalls = 0;
+
+  public constructor(private readonly mode: ForgedLookupMode) {
+    super();
+  }
+
+  public override async getByObligationId(
+    request: Readonly<DecryptionKeyReleaseLookupRequest>,
+  ) {
+    const forgedObligationId = `zkcp-obligation-v1:${"0".repeat(64)}`;
+    const forgedBindingDigest = "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Digest;
+    const release: DecryptionKeyReleaseResult = {
+      status: "released",
+      backend: request.backend,
+      provenance: "production",
+      decryptionKey: "forged-release-key",
+      evidence: releaseEvidenceFor(request, this.mode === "evidence"
+        ? { obligation_id: forgedObligationId }
+        : undefined),
+    };
+    return {
+      status: "found" as const,
+      registry: request.registry,
+      obligation_id: this.mode === "obligation" ? forgedObligationId : request.obligation_id,
+      binding_digest: this.mode === "binding" ? forgedBindingDigest : request.binding_digest,
+      idempotency_key: request.idempotency_key,
+      backend: request.backend,
+      provenance: "production" as const,
+      release,
+    };
+  }
+
+  public override async release(_request: Readonly<DecryptionKeyReleaseRequest>): Promise<never> {
+    this.releaseCalls += 1;
+    throw new Error("release must not run after forged durable evidence");
+  }
+}
+
+class HostileEvidenceLookupKeyReleaser extends DurableFixtureKeyReleaser {
+  public lookupCalls = 0;
+  public releaseCalls = 0;
+
+  public constructor(
+    private readonly hostileEvidence: unknown | ((request: Readonly<DecryptionKeyReleaseLookupRequest>) => unknown),
+  ) {
+    super();
+  }
+
+  public override async getByObligationId(
+    request: Readonly<DecryptionKeyReleaseLookupRequest>,
+  ) {
+    this.lookupCalls += 1;
+    const evidence = typeof this.hostileEvidence === "function"
+      ? this.hostileEvidence(request)
+      : this.hostileEvidence;
+    return {
+      status: "found" as const,
+      registry: request.registry,
+      obligation_id: request.obligation_id,
+      binding_digest: request.binding_digest,
+      idempotency_key: request.idempotency_key,
+      backend: request.backend,
+      provenance: "production" as const,
+      release: {
+        status: "released" as const,
+        backend: request.backend,
+        provenance: "production" as const,
+        decryptionKey: "hostile-release-key",
+        evidence: evidence as string,
+      },
+    };
+  }
+
+  public override async release(_request: Readonly<DecryptionKeyReleaseRequest>): Promise<never> {
+    this.releaseCalls += 1;
+    throw new Error("release must not run for hostile evidence");
   }
 }
 
@@ -454,13 +680,13 @@ class BlockingKeyReleaser extends AuthoritativeFixtureKeyReleaser {
   });
 
   public override async release(request: Readonly<DecryptionKeyReleaseRequest>) {
-    const retained = this.storedRelease(request.idempotency_key);
+    const retained = this.existingOrConflict(request);
     if (retained !== undefined) return retained;
     this.releaseCount += 1;
     this.resolveReleaseStarted();
     await this.releaseGate;
     const release = this.successfulRelease(request);
-    this.storeRelease(request.idempotency_key, release);
+    this.storeRelease(request, release);
     return release;
   }
 
@@ -475,12 +701,12 @@ class ClockInvalidatingKeyReleaser extends AuthoritativeFixtureKeyReleaser {
   }
 
   public override async release(request: Readonly<DecryptionKeyReleaseRequest>) {
-    const retained = this.storedRelease(request.idempotency_key);
+    const retained = this.existingOrConflict(request);
     if (retained !== undefined) return retained;
     this.releaseCount += 1;
     this.invalidateClock();
     const release = this.successfulRelease(request);
-    this.storeRelease(request.idempotency_key, release);
+    this.storeRelease(request, release);
     return release;
   }
 }
@@ -537,6 +763,33 @@ class SentinelProductionKeyReleaser extends DurableFixtureKeyReleaser {
 }
 
 describe("ZKCPBridge fail-closed boundary", () => {
+  it("derives one stable obligation across mutable terms but separates payload or recipient changes", async () => {
+    const genericRequest = await makeVerifierRequest();
+    const base = await makeIntentInput(genericRequest, "zkcp-obligation-original");
+    const original = await deriveZKCPKeyReleaseObligationId(base);
+    const rehydrated = await deriveZKCPKeyReleaseObligationId({
+      id: "zkcp-obligation-rehydrated",
+      encryptedDataHash: base.encryptedDataHash,
+      sellerAddress: base.sellerAddress,
+      buyerAddress: base.buyerAddress,
+      amount: 2_000,
+      network: "bitcoin-testnet",
+    } as Parameters<typeof deriveZKCPKeyReleaseObligationId>[0]);
+    const changedPayload = await deriveZKCPKeyReleaseObligationId({
+      ...base,
+      encryptedDataHash: "sha256:7777777777777777777777777777777777777777777777777777777777777777" as Digest,
+    });
+    const changedRecipient = await deriveZKCPKeyReleaseObligationId({
+      ...base,
+      buyerAddress: "bc1qfixture-other-buyer",
+    });
+
+    expect(original).toMatch(/^zkcp-obligation-v1:[0-9a-f]{64}$/);
+    expect(rehydrated).toBe(original);
+    expect(changedPayload).not.toBe(original);
+    expect(changedRecipient).not.toBe(original);
+  });
+
   it("requires an explicitly injected backend and returns unavailable", async () => {
     const genericRequest = await makeVerifierRequest();
     const input = await makeIntentInput(genericRequest, "zkcp-unavailable");
@@ -866,7 +1119,7 @@ describe("ZKCPBridge fail-closed boundary", () => {
   });
 
   it("reconstructs after process loss and reuses the same durable key exactly once", async () => {
-    const records = new Map<string, DecryptionKeyReleaseResult>();
+    const records = new Map<string, FixtureDurableReleaseRecord>();
     const firstReleaser = new CommitThenTimeoutKeyReleaser(records);
     const firstSetup = await setupAuthoritativeSettlement(
       "zkcp-process-loss-before-local-commit",
@@ -894,7 +1147,136 @@ describe("ZKCPBridge fail-closed boundary", () => {
     expect(secondReleaser.releaseCount).toBe(0);
     expect(firstReleaser.lookupKeys[0]).toBe(secondReleaser.lookupKeys[0]);
     expect(firstReleaser.lookupKeys[0]).toMatch(/^zkcp-release-v1:[0-9a-f]{64}$/);
+    expect(firstReleaser.obligationLookupKeys[0]).toBe(secondReleaser.obligationLookupKeys[0]);
+    expect(firstReleaser.obligationLookupKeys[0]).toMatch(/^zkcp-obligation-v1:[0-9a-f]{64}$/);
     expect(secondSetup.bridge.getIntent(secondSetup.input.id)?.status).toBe("finalized");
+  });
+
+  it("uses one shared obligation across changed terms, payment txid, and network without a second effect", async () => {
+    const records = new Map<string, FixtureDurableReleaseRecord>();
+    const firstReleaser = new CommitThenTimeoutKeyReleaser(records);
+    const firstSetup = await setupAuthoritativeSettlement(
+      "zkcp-rehydrated-obligation-first",
+      () => 1_800_000_000_000,
+      firstReleaser,
+      { monitor: new AuthoritativeFixtureMonitor("tx-original-payment") },
+    );
+
+    const first = await firstSetup.bridge.finalizeSettlement(firstSetup.input.id);
+    expect(first.finalized).toBe(false);
+    expect(first.failure_code).toBe("key_release_ambiguous");
+    expect(firstReleaser.releaseCount).toBe(1);
+
+    const secondReleaser = new AuthoritativeFixtureKeyReleaser(records);
+    const secondSetup = await setupAuthoritativeSettlement(
+      "zkcp-rehydrated-obligation-second",
+      () => 1_900_000_000_000,
+      secondReleaser,
+      {
+        input: {
+          amount: 2_000,
+          network: "bitcoin-testnet",
+        },
+        monitor: new AuthoritativeFixtureMonitor("tx-rehydrated-payment"),
+      },
+    );
+
+    const second = await secondSetup.bridge.finalizeSettlement(secondSetup.input.id);
+
+    expect(second.finalized).toBe(false);
+    expect(second.failure_code).toBe("key_release_obligation_conflict");
+    expect(secondReleaser.releaseCount).toBe(0);
+    expect(firstReleaser.obligationLookupKeys[0]).toBe(secondReleaser.obligationLookupKeys[0]);
+    expect(firstReleaser.lookupKeys[0]).not.toBe(secondReleaser.lookupKeys[0]);
+    expect(firstSetup.request.statement_digest).not.toBe(secondSetup.request.statement_digest);
+    expect(secondSetup.bridge.getIntent(secondSetup.input.id)?.status).toBe("paid");
+  });
+
+  it("fails closed on backend artifact rotation while keeping the pinned registry namespace", async () => {
+    const records = new Map<string, FixtureDurableReleaseRecord>();
+    const firstReleaser = new AuthoritativeFixtureKeyReleaser(records);
+    const firstSetup = await setupAuthoritativeSettlement(
+      "zkcp-backend-rotation",
+      () => 1_800_000_000_000,
+      firstReleaser,
+    );
+    expect((await firstSetup.bridge.finalizeSettlement(firstSetup.input.id)).finalized).toBe(true);
+
+    const rotatedReleaser = new AuthoritativeFixtureKeyReleaser(records, ROTATED_RELEASE_BACKEND);
+    const rotatedSetup = await setupAuthoritativeSettlement(
+      "zkcp-backend-rotation",
+      () => 1_900_000_000_000,
+      rotatedReleaser,
+    );
+    const rotated = await rotatedSetup.bridge.finalizeSettlement(rotatedSetup.input.id);
+
+    expect(rotated.finalized).toBe(false);
+    expect(rotated.failure_code).toBe("key_release_obligation_conflict");
+    expect(rotatedReleaser.releaseCount).toBe(0);
+    expect(rotatedSetup.bridge.getIntent(rotatedSetup.input.id)?.status).toBe("paid");
+  });
+
+  it("allows two bridge instances to reconcile one shared atomic obligation claim", async () => {
+    const records = new Map<string, FixtureDurableReleaseRecord>();
+    const firstReleaser = new AuthoritativeFixtureKeyReleaser(records);
+    const secondReleaser = new AuthoritativeFixtureKeyReleaser(records);
+    const firstSetup = await setupAuthoritativeSettlement(
+      "zkcp-shared-registry-bridge-one",
+      () => 1_800_000_000_000,
+      firstReleaser,
+    );
+    const secondSetup = await setupAuthoritativeSettlement(
+      "zkcp-shared-registry-bridge-one",
+      () => 1_900_000_000_000,
+      secondReleaser,
+    );
+
+    const [first, second] = await Promise.all([
+      firstSetup.bridge.finalizeSettlement(firstSetup.input.id),
+      secondSetup.bridge.finalizeSettlement(secondSetup.input.id),
+    ]);
+
+    expect(first.finalized).toBe(true);
+    expect(second.finalized).toBe(true);
+    expect(firstReleaser.releaseCount + secondReleaser.releaseCount).toBe(1);
+    expect(firstReleaser.obligationLookupKeys[0]).toBe(secondReleaser.obligationLookupKeys[0]);
+    expect(firstReleaser.lookupKeys[0]).toBe(secondReleaser.lookupKeys[0]);
+  });
+
+  it("rejects a releaser with drifted registry metadata before durable lookup or release", async () => {
+    const keyReleaser = new AuthoritativeFixtureKeyReleaser(
+      new Map(),
+      AUTHORITATIVE_TEST_BACKEND,
+      DRIFTED_REGISTRY_CAPABILITIES,
+    );
+    const { bridge, input } = await setupAuthoritativeSettlement(
+      "zkcp-drifted-registry",
+      () => 1_800_000_000_000,
+      keyReleaser,
+      { bridgeOptions: { keyReleaseRegistry: ZKCP_KEY_RELEASE_REGISTRY } },
+    );
+
+    const result = await bridge.finalizeSettlement(input.id);
+
+    expect(result.finalized).toBe(false);
+    expect(result.status).toBe("unavailable");
+    expect(result.failure_code).toBe("key_release_registry_mismatch");
+    expect(keyReleaser.lookupKeys).toHaveLength(0);
+    expect(keyReleaser.releaseCount).toBe(0);
+  });
+
+  it("rejects a bridge configured with a noncanonical registry namespace", () => {
+    expect(() => new ZKCPBridge(
+      new AuthoritativeFixtureVerifier(),
+      new AuthoritativeFixtureMonitor(),
+      new AuthoritativeFixtureKeyReleaser(),
+      {
+        keyReleaseRegistry: {
+          registry_version: ZKCP_KEY_RELEASE_REGISTRY.registry_version,
+          registry_namespace: "conxian.zkcp.key-release.obligations.drifted.v1",
+        },
+      },
+    )).toThrow("canonical v1 registry");
   });
 
   it("fails before release when durable lookup errors", async () => {
@@ -911,6 +1293,21 @@ describe("ZKCPBridge fail-closed boundary", () => {
     expect(result.failure_code).toBe("key_release_lookup_failed");
     expect(keyReleaser.lookupCalls).toBe(1);
     expect(keyReleaser.releaseCount).toBe(0);
+    expect(bridge.getIntent(input.id)?.status).toBe("paid");
+  });
+
+  it("normalizes any durable conflict status to the typed obligation conflict", async () => {
+    const keyReleaser = new MisclassifiedConflictKeyReleaser();
+    const { bridge, input } = await setupAuthoritativeSettlement(
+      "zkcp-misclassified-conflict",
+      () => 1_800_000_000_000,
+      keyReleaser,
+    );
+
+    const result = await bridge.finalizeSettlement(input.id);
+
+    expect(result.finalized).toBe(false);
+    expect(result.failure_code).toBe("key_release_obligation_conflict");
     expect(bridge.getIntent(input.id)?.status).toBe("paid");
   });
 
@@ -934,8 +1331,8 @@ describe("ZKCPBridge fail-closed boundary", () => {
 
   it.each([
     ["key", "key_release_idempotency_mismatch"],
-    ["statement", "key_release_evidence_mismatch"],
-    ["encrypted", "key_release_evidence_mismatch"],
+    ["statement", "key_release_obligation_conflict"],
+    ["encrypted", "key_release_obligation_conflict"],
     ["backend", "key_release_backend_mismatch"],
     ["artifact", "key_release_backend_mismatch"],
   ] as const)("rejects durable evidence with a mismatched %s binding", async (mode, failureCode) => {
@@ -951,6 +1348,166 @@ describe("ZKCPBridge fail-closed boundary", () => {
     expect(result.finalized).toBe(false);
     expect(result.failure_code).toBe(failureCode);
     expect(bridge.getIntent(input.id)?.status).toBe("paid");
+  });
+
+  it.each([
+    ["obligation", "key_release_obligation_conflict"],
+    ["binding", "key_release_obligation_conflict"],
+    ["evidence", "key_release_obligation_conflict"],
+  ] as const)("rejects forged durable %s identity without dispatch", async (mode, failureCode) => {
+    const keyReleaser = new ForgedLookupKeyReleaser(mode);
+    const { bridge, input } = await setupAuthoritativeSettlement(
+      `zkcp-forged-release-${mode}`,
+      () => 1_800_000_000_000,
+      keyReleaser,
+    );
+
+    const result = await bridge.finalizeSettlement(input.id);
+
+    expect(result.finalized).toBe(false);
+    expect(result.failure_code).toBe(failureCode);
+    expect(keyReleaser.releaseCalls).toBe(0);
+    expect(bridge.getIntent(input.id)?.status).toBe("paid");
+  });
+
+  it("rejects hostile proxy and cyclic evidence without traversing adapter-owned objects", async () => {
+    let trapCalls = 0;
+    const hostileProxy = new Proxy({}, {
+      get() {
+        trapCalls += 1;
+        throw new Error("hostile evidence getter invoked");
+      },
+      ownKeys() {
+        trapCalls += 1;
+        throw new Error("hostile evidence ownKeys invoked");
+      },
+      getOwnPropertyDescriptor() {
+        trapCalls += 1;
+        throw new Error("hostile evidence descriptor invoked");
+      },
+    });
+    const proxyReleaser = new HostileEvidenceLookupKeyReleaser(hostileProxy);
+    const proxySetup = await setupAuthoritativeSettlement(
+      "zkcp-hostile-proxy-evidence",
+      () => 1_800_000_000_000,
+      proxyReleaser,
+    );
+    const proxyResult = await proxySetup.bridge.finalizeSettlement(proxySetup.input.id);
+
+    const cyclicEvidence: Record<string, unknown> = {};
+    cyclicEvidence.self = cyclicEvidence;
+    const cyclicReleaser = new HostileEvidenceLookupKeyReleaser(cyclicEvidence);
+    const cyclicSetup = await setupAuthoritativeSettlement(
+      "zkcp-hostile-cyclic-evidence",
+      () => 1_800_000_000_000,
+      cyclicReleaser,
+    );
+    const cyclicResult = await cyclicSetup.bridge.finalizeSettlement(cyclicSetup.input.id);
+
+    const accessorEvidence: Record<string, unknown> = {};
+    Object.defineProperty(accessorEvidence, "secret", {
+      enumerable: true,
+      get() {
+        trapCalls += 1;
+        throw new Error("hostile evidence accessor invoked");
+      },
+    });
+    const accessorReleaser = new HostileEvidenceLookupKeyReleaser(accessorEvidence);
+    const accessorSetup = await setupAuthoritativeSettlement(
+      "zkcp-hostile-accessor-evidence",
+      () => 1_800_000_000_000,
+      accessorReleaser,
+    );
+    const accessorResult = await accessorSetup.bridge.finalizeSettlement(accessorSetup.input.id);
+
+    expect(proxyResult.failure_code).toBe("internal_error");
+    expect(cyclicResult.failure_code).toBe("internal_error");
+    expect(accessorResult.failure_code).toBe("internal_error");
+    expect(proxyReleaser.releaseCalls).toBe(0);
+    expect(cyclicReleaser.releaseCalls).toBe(0);
+    expect(accessorReleaser.releaseCalls).toBe(0);
+    expect(trapCalls).toBe(0);
+  });
+
+  it("bounds canonical evidence before parsing and rejects deep or extra fields", async () => {
+    const extraReleaser = new HostileEvidenceLookupKeyReleaser((request: Readonly<DecryptionKeyReleaseLookupRequest>) => {
+      const evidence = JSON.parse(releaseEvidenceFor(request)) as Record<string, unknown>;
+      evidence.extra = "must-not-cross";
+      return canonicalJson(evidence);
+    });
+    const extraSetup = await setupAuthoritativeSettlement(
+      "zkcp-extra-evidence-field",
+      () => 1_800_000_000_000,
+      extraReleaser,
+    );
+
+    const arrayReleaser = new HostileEvidenceLookupKeyReleaser((request: Readonly<DecryptionKeyReleaseLookupRequest>) => {
+      const evidence = JSON.parse(releaseEvidenceFor(request)) as Record<string, unknown>;
+      evidence.extra = ["arrays-must-not-cross"];
+      return canonicalJson(evidence);
+    });
+    const arraySetup = await setupAuthoritativeSettlement(
+      "zkcp-array-evidence",
+      () => 1_800_000_000_000,
+      arrayReleaser,
+    );
+
+    const deepReleaser = new HostileEvidenceLookupKeyReleaser((request: Readonly<DecryptionKeyReleaseLookupRequest>) => {
+      const evidence = JSON.parse(releaseEvidenceFor(request)) as Record<string, unknown>;
+      let nested: unknown = "leaf";
+      for (let index = 0; index <= VERIFIER_ATTESTATION_LIMITS.maxDepth; index += 1) {
+        nested = { nested };
+      }
+      evidence.nested = nested;
+      return canonicalJson(evidence);
+    });
+    const deepSetup = await setupAuthoritativeSettlement(
+      "zkcp-deep-evidence",
+      () => 1_800_000_000_000,
+      deepReleaser,
+    );
+
+    const largeReleaser = new HostileEvidenceLookupKeyReleaser(
+      "x".repeat(VERIFIER_ATTESTATION_LIMITS.maxTotalEncodedChars + 1),
+    );
+    const largeSetup = await setupAuthoritativeSettlement(
+      "zkcp-large-evidence",
+      () => 1_800_000_000_000,
+      largeReleaser,
+    );
+
+    const [extraResult, arrayResult, deepResult, largeResult] = await Promise.all([
+      extraSetup.bridge.finalizeSettlement(extraSetup.input.id),
+      arraySetup.bridge.finalizeSettlement(arraySetup.input.id),
+      deepSetup.bridge.finalizeSettlement(deepSetup.input.id),
+      largeSetup.bridge.finalizeSettlement(largeSetup.input.id),
+    ]);
+
+    expect(extraResult.failure_code).toBe("key_release_evidence_mismatch");
+    expect(arrayResult.failure_code).toBe("key_release_evidence_mismatch");
+    expect(deepResult.failure_code).toBe("resource_limit_exceeded");
+    expect(largeResult.failure_code).toBe("resource_limit_exceeded");
+  });
+
+  it("detaches evidence at the canonical string boundary before adapter mutation can persist", async () => {
+    let mutableEvidence: Record<string, unknown> | undefined;
+    const keyReleaser = new HostileEvidenceLookupKeyReleaser((request: Readonly<DecryptionKeyReleaseLookupRequest>) => {
+      mutableEvidence = JSON.parse(releaseEvidenceFor(request)) as Record<string, unknown>;
+      const canonical = canonicalJson(mutableEvidence);
+      mutableEvidence.backend_id = "mutated-after-serialization";
+      return canonical;
+    });
+    const { bridge, input } = await setupAuthoritativeSettlement(
+      "zkcp-mutated-evidence",
+      () => 1_800_000_000_000,
+      keyReleaser,
+    );
+
+    const result = await bridge.finalizeSettlement(input.id);
+
+    expect(result.finalized).toBe(true);
+    expect(result.decryptionKey).toBe("hostile-release-key");
+    expect(mutableEvidence?.backend_id).toBe("mutated-after-serialization");
   });
 
   it("bounds over-limit verifier, payment, and key-release adapter errors", async () => {

@@ -198,27 +198,52 @@ identity/replay guarantees.
 
 Before invoking an external key releaser, ZKCP requires exact versioned
 capability metadata for `conxian.zkcp.key-release.v1`,
-`conxian.zkcp.key-release.idempotency.v1`, and
+`conxian.zkcp.key-release.idempotency.v1`,
+`conxian.zkcp.key-release.obligation.v1`,
+`conxian.zkcp.key-release.registry.v1`, and
 `conxian.zkcp.key-release.policy.v1`. The backend must advertise durable
-idempotency, lookup-by-idempotency-key, idempotent release, and the
-`exactly_once_per_idempotency_key` guarantee. This is an admission contract:
-the external backend owns the durable record and must atomically bind the
-canonical key to the irreversible release so replicas, retries, and process
-restarts cannot release twice.
+idempotency, lookup-by-obligation, atomic obligation claim, idempotent
+release, the pinned registry namespace, and the
+`exactly_once_per_obligation` guarantee. This is an admission contract: the
+external backend owns the durable record and must atomically bind one stable
+obligation to one canonical binding digest, idempotency key, and irreversible
+release so replicas, retries, and process restarts cannot release the same
+encrypted payload twice.
+
+The stable obligation identity is a domain-separated digest of the canonical
+encrypted-data commitment plus stable seller and buyer identity. It excludes
+intent ids, amount, network, statement/proof terms, payment txid, timestamps,
+and backend artifact/version. Those mutable settlement terms are represented by
+a separate binding digest and idempotency key. The bridge pins registry version
+`conxian.zkcp.key-release.registry.v1` and namespace
+`conxian.zkcp.key-release.obligations.v1`; a backend with missing or drifted
+registry metadata is rejected before lookup or release. Backend artifact
+rotation may continue only when it uses that same durable registry namespace;
+the existing obligation then returns a typed conflict if its binding changes.
 
 Finalization captures and validates one monotonic, finite, safe, non-negative
 timestamp in the inclusive `0..8.64e15` ECMAScript Date range. It preconstructs
 immutable bounded intent/payment snapshots and a release binding containing
 only immutable intent terms, statement/domain and encrypted-data digests,
 observed payment terms, backend identity/artifact, and release policy. The
-bounded deterministic key is derived from that binding; timestamps and process
-state are excluded. Before release, the intent lock performs durable lookup
-with the exact key and binding. A found record is validated against every
-binding and committed without another release. An absent record invokes the
-idempotent release method with the same key and binding. Lookup failures,
-unavailable/rejected responses, missing capabilities, and ambiguous release
-timeouts fail closed; retries lookup the same key and never select another key
-or a non-idempotent fallback.
+binding digest and bounded deterministic key are derived from that binding;
+timestamps and process state are excluded. Before release, the intent lock
+performs durable lookup by obligation id with the exact registry, obligation,
+binding digest, and key. A found record with matching binding/evidence is
+committed without another release. A found record with a different binding or
+key returns `key_release_obligation_conflict` and never releases. An absent
+record invokes the atomic claim/release method with the obligation, binding
+digest, and key. Lookup failures, unavailable/rejected responses, missing
+capabilities, registry drift, and ambiguous release timeouts fail closed;
+retries look up the same obligation and never select another key or a
+non-idempotent fallback.
+
+Key-release evidence crosses the adapter boundary only as a bounded canonical
+JSON string. The allow-list is an exact flat object of primitive fields for
+the contract, registry, obligation, binding digest, idempotency key, and
+backend identity/artifact. Objects, arrays, nested values, accessors, proxies,
+cycles, recursive copies, extra properties, non-canonical serialization, and
+over-limit payloads are rejected before evidence is retained.
 
 No clock read, timestamp serialization, unbounded copy, or fallible lifecycle
 compare-and-swap occurs after the external call. The returned adapter value is
@@ -320,10 +345,9 @@ the same contract and must be selected by explicit dependency injection.
   `decryption_key_unavailable` or `key_release_capability_missing` and leaves
   the intent in `paid`/`verified` state. No synthetic key is constructed.
 - Repeated finalization of an already-finalized intent is read-only and
-  idempotent; retries after an ambiguous outcome reuse the same deterministic
-  key and reconcile through durable lookup. Concurrent key-release attempts
-  remain serialized, and local BFF memory never claims cross-restart exactly
-  once.
+  idempotent; retries after an ambiguous outcome reuse the same obligation and
+  reconcile through durable lookup. Concurrent key-release attempts remain
+  serialized, and local BFF memory never claims cross-restart exactly once.
 - Adapter exceptions or malformed top-level responses are normalized to typed
   non-success outcomes; they never escape as an apparent authorization.
 - Unknown actions are explicit 400 non-success responses.

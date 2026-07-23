@@ -1855,3 +1855,27 @@ AGENTS.md (this update)
 - PowerShell runtime execution remains unavailable in this devbox; contamination validation is static/self-test based.
 **Gotchas**:
 - Re-run focused/full tests, strict issue #1187 OpenSpec validation, lifecycle/contamination checks, dependency checks, and `git diff --check` after this session-log append; inspect hosted PR checks only after pushing the focused commit.
+
+### 2026-07-23 — PR #1198 Altered-Binding and Evidence-Boundary Remediation
+**Trigger**: P1/P2 review `4759805105` on PR #1198.
+**What was done**:
+- Added a versioned, domain-separated `zkcp-obligation-v1:<sha256>` identity over the canonical encrypted-data commitment plus stable seller/buyer identity; mutable amount, network, statement/proof terms, payment txid, timestamps, and backend artifact/version remain outside the obligation identity.
+- Extended the key-release coordinator contract with pinned registry version/namespace metadata, lookup-by-obligation, atomic obligation claim semantics, matching reconciliation, typed obligation conflicts, and same-obligation retry behavior after ambiguous outcomes or process loss.
+- Rejected missing or drifted registry metadata before lookup/release and added shared-registry regressions for changed terms/payment txid/network/statement, backend artifact rotation, crash/timeout, matching reconciliation, forged obligation/binding/evidence, and exactly one external effect.
+- Replaced recursive adapter-owned key-release evidence copying with a bounded canonical JSON string and exact flat primitive allow-list; hostile proxy/cycle, deep/oversized, array/nested, extra-property, and mutation tests prove no recursive traversal or retained adapter object graph.
+- Updated the issue #1187 OpenSpec proposal/design/spec/tasks, production boundary, risk, debt, gaps, scoring, universal-settlement architecture, and this knowledge base entry without selecting or claiming a production coordinator.
+**Key discoveries**:
+- Exactly-once identity must be stable at the encrypted-payload obligation layer; a binding/idempotency digest that includes mutable settlement terms is still necessary for conflict detection but cannot be the primary deduplication identity.
+- Registry namespace is a separate trust boundary from releaser artifact/version: artifact rotation can only reconcile through the same durable registry or must fail closed before dispatch.
+- Canonical-string evidence lets the boundary check byte length before parsing and copy only the ten required primitive fields, avoiding adapter `ownKeys`, accessors, proxy traps, cycles, and recursive-copy amplification.
+**Files touched**:
+- `services/admin-dashboard/src/lib/support/{verifier-contract.ts,zkcp.ts}`
+- `services/admin-dashboard/src/app/api/v1/settlement-engine/route.ts`
+- `services/admin-dashboard/src/tests/zkcp.test.ts`
+- `openspec/changes/2026-07-22-issue-1187-fail-closed-verifier-boundaries/{proposal.md,design.md,tasks.md,specs/fail-closed-verifier-boundaries/spec.md}`
+- `docs/{PRODUCTION_BOUNDARY.md,PHASE_7_RISK_REGISTER.md,DEBT_INVENTORY.md,GAPS.md,SCORING_MATRIX.md,SELF_EVOLVING_KB.md}` and `docs/architecture/PHASE_7_PROPOSAL_UNIVERSAL_SETTLEMENT.md`
+**Gaps identified**:
+- No production cryptographic verifier, payment observer, or durable key-release coordinator is selected or accepted; Gateway/Core/Nexus integration and independent acceptance remain launch dependencies.
+- PowerShell runtime execution remains unavailable in this devbox; contamination validation is static/self-test based.
+**Gotchas**:
+- Re-run focused/full tests, strict issue #1187 OpenSpec validation, lifecycle/contamination checks, dependency checks, `git diff --check`, and hosted PR checks after the focused commit is pushed.

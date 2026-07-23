@@ -54,13 +54,21 @@ must reject simulated, malformed, invalid, unknown, or caller-only evidence.
 - Retain bounded BitVM3 request-identity tombstones after terminal expiry so
   conflicting same-id reuse fails closed during the explicit window; require a
   durable Gateway/Core identity registry for permanent global uniqueness.
-- Define a versioned external ZKCP key-release capability contract requiring
-  durable idempotency, lookup-by-idempotency-key, and an idempotent release
-  guarantee owned by the backend rather than BFF memory.
-- Derive one bounded idempotency key from immutable canonical intent,
-  statement/domain, encrypted-data, observed-payment, backend, and release
-  policy bindings; validate that every durable evidence artifact binds the same
-  key, terms, payment, backend identity, and backend artifact.
+- Define a versioned external ZKCP key-release capability contract requiring a
+  stable obligation identity, a pinned durable registry namespace, lookup by
+  obligation, atomic obligation claim, and an idempotent release guarantee
+  owned by the backend rather than BFF memory.
+- Derive one bounded versioned obligation identity from the canonical encrypted
+  data commitment plus stable seller/buyer identity. Keep mutable amount,
+  network, statement, payment txid, timestamps, and backend artifact/version
+  out of that identity; bind those terms separately so an altered retry is a
+  typed conflict rather than a second obligation.
+- Derive one bounded binding digest/idempotency key for the current settlement
+  terms; validate every durable evidence artifact against the same obligation,
+  registry, binding, payment, backend identity, and backend artifact.
+- Accept key-release evidence only as a bounded canonical JSON string with an
+  exact flat primitive allow-list; reject objects, proxies, arrays, nested
+  values, recursive copies, and extra properties at the boundary.
 - Capture and validate ZKCP finalization timestamps and bounded release inputs
   before external key release. Under the intent lock, lookup durable evidence
   first, release only when the lookup is absent, and reuse the same key after
@@ -124,14 +132,17 @@ those cross-repository backends are available and independently accepted.
     zero external calls, and no post-call clock/serialization failure can
     cause a duplicate release.
 13. A supported key-release backend must advertise the versioned durable
-    idempotency/lookup contract and guarantee at most one irreversible release
-    for each bounded deterministic key across retries, replicas, and process
-    restarts. Finalization performs durable lookup before release, validates
-    found evidence against the immutable binding, and calls release only for
-    an absent lookup using that same key.
-14. Ambiguous backend timeouts, lookup failures, missing capabilities, and
-    mismatched key/intent/statement/encrypted-data/payment/backend/artifact
-    evidence fail closed without alternate-key or non-idempotent fallback;
-    restart/crash tests prove one shared durable fixture side effect and
-    normal retry reconciliation, while the production adapter remains
+    obligation/registry contract and guarantee at most one irreversible release
+    for each obligation across retries, replicas, and process restarts. The
+    registry atomically binds one obligation to one binding digest,
+    idempotency key, and release evidence. Finalization looks up the obligation
+    first, reconciles matching evidence without release, returns a typed
+    obligation conflict for different evidence, and calls release only for an
+    absent obligation using the obligation, binding digest, and key.
+14. Ambiguous backend timeouts, lookup failures, missing capabilities, registry
+    drift, and mismatched obligation/binding/payment/backend/artifact evidence
+    fail closed without alternate-key or non-idempotent fallback. Backend
+    artifact changes must reuse the pinned registry namespace or fail before
+    dispatch. Restart/crash tests prove one shared durable fixture side effect
+    and altered-term conflict behavior, while the production adapter remains
     unavailable-by-default.

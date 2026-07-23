@@ -157,12 +157,39 @@
   contamination guards, strict OpenSpec validation, dependency checks, diff
   hygiene, and hosted PR checks after the single focused commit is pushed.
 
-## Phase 11 — P1 durable ZKCP release idempotency (PR #1198 review 4759710914)
+## Phase 12 — P1 altered-binding/backend drift and P2 evidence bounds (PR #1198 review 4759805105)
 
-- [x] Define versioned key-release capability metadata requiring durable
-  idempotency, lookup-by-idempotency-key, idempotent release, and an
-  exactly-once-per-key backend guarantee; reject unsupported adapters before
-  dispatch while keeping the production default unavailable.
+- [x] Replace idempotency-key-only obligation identity with a versioned,
+  domain-separated encrypted-data obligation id that excludes mutable terms,
+  payment txids, timestamps, and backend artifact/version while retaining
+  stable seller/buyer identity where it defines the payload authority.
+- [x] Extend the durable coordinator contract with pinned registry metadata,
+  lookup-by-obligation, atomic obligation claim, matching reconciliation,
+  typed binding conflict, and lookup-by-obligation retry semantics for
+  ambiguous outcomes and process loss.
+- [x] Reject missing or drifted registry namespaces before lookup/release and
+  keep backend artifact rotation on the same durable registry namespace or
+  fail closed before dispatch.
+- [x] Replace recursive adapter evidence copying with a bounded canonical JSON
+  string and exact flat primitive allow-list; add hostile proxy, cycle, deep,
+  oversized, array/nested, extra-property, mutation, forged identity, and
+  backend/registry drift regressions.
+- [x] Update the issue #1187 proposal/design/spec, production boundary, risk,
+  debt, gaps, scoring, architecture, and knowledge-base/session records to
+  document stable obligation identity, registry pinning, typed conflicts, and
+  the absence of a production durable coordinator.
+- [ ] Re-run focused/full Vitest, dashboard typecheck, lifecycle/control and
+  contamination guards, strict OpenSpec validation, dependency checks, diff
+  hygiene, and hosted PR checks after the focused commit is pushed.
+
+## Phase 11 — P1 durable ZKCP release idempotency (PR #1198 review 4759710914; superseded by Phase 12 obligation identity)
+
+- [x] Define the initial versioned key-release capability metadata requiring
+  durable idempotency, legacy lookup-by-idempotency-key compatibility,
+  idempotent release, and an exactly-once-per-key binding guarantee; reject
+  unsupported adapters before dispatch while keeping the production default
+  unavailable. Phase 12 makes lookup-by-obligation and exactly-once-per-
+  obligation authoritative.
 - [x] Derive a bounded deterministic key from immutable intent, statement,
   encrypted-data, observed-payment, backend/artifact, and release-policy
   bindings; validate durable evidence against every binding.

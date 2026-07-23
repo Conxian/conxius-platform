@@ -20,14 +20,17 @@ The Conxian knowledge base (AGENTS.md) should be a **living system** that:
 
 Knowledge-base entries about settlement authorization MUST distinguish local
 orchestration state from externally durable authority. For ZKCP key release,
-exactly-once is a backend contract: the selected backend must publish the
-versioned capability metadata, durable lookup-by-idempotency-key semantics, and
-idempotent release guarantee, while the BFF derives a bounded key from
-immutable canonical bindings and reconciles ambiguous retries through lookup.
-Process-local latches, caches, or evidence are optimization signals only and
-must not be recorded as proof of cross-restart exactly-once behavior. The
-checked-in unavailable adapter remains the source-of-truth default until an
-external backend is independently accepted.
+exactly-once is a backend contract: the selected backend must publish versioned
+obligation/registry capability metadata, lookup-by-obligation and atomic claim
+semantics, a pinned registry namespace, and an idempotent release guarantee.
+The obligation id is derived from the canonical encrypted-data commitment plus
+stable seller/buyer identity; mutable settlement terms use a separate bounded
+binding digest/key and conflict rather than creating a second obligation. Key-
+release evidence is recorded only as bounded canonical JSON with an exact flat
+primitive schema. Process-local latches, caches, or evidence are optimization
+signals only and must not be recorded as proof of cross-restart exactly-once
+behavior. The checked-in unavailable adapter remains the source-of-truth
+default until an external backend is independently accepted.
 
 ### Internal Sources (Repository)
 

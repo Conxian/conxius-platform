@@ -30,12 +30,20 @@ $RULES = @(
 $VERIFIER_RULES = @(
     @{ Id = "unconditional-verifier-success"; Pattern = '\b(?:verified|isVerified)\s*[:=]\s*true\b' }
     @{ Id = "proof-length-predicate"; Pattern = '\b(?:proof|rawProof)\s*\.length\s*(?:===|!==|>=|<=|>|<)' }
-    @{ Id = "production-simulator-construction"; Pattern = '\b(?:class\s+Default\w*(?:Verifier|Monitor)|new\s+Default\w*(?:Verifier|Monitor)|new\s+\w*(?:Simulator|Simulation)\s*\(|new\s+(?:BitVMBridge|BitVM3Orchestrator|ZKCPBridge)\s*\(\s*\))' }
+    @{ Id = "production-simulator-construction"; Pattern = '\b(?:class\s+Default\w*(?:Verifier|Monitor|Releaser|Backend)|new\s+Default\w*(?:Verifier|Monitor|Releaser|Backend)|new\s+\w*(?:Simulator|Simulation|Fixture|Mock|Fake|Dummy)\w*\s*\(|\b(?:const|let|var)\s+\w*(?:Verifier|Monitor|Releaser|Backend)\w*\s*=\s*(?:new\s+)?(?:Default\w*(?:Verifier|Monitor|Releaser|Backend)|\w*(?:Simulator|Simulation|Fixture|Mock|Fake|Dummy)\w*)|\b(?:const|let|var)\s+Default\w*(?:Verifier|Monitor|Releaser|Backend)\w*\s*=\s*\w+)' }
+    @{ Id = "production-fixture-import"; Pattern = '(?:from\s*|import\s*)["''][^"'']*(?:src/tests|tests/fixtures)[^"'']*["'']' }
     @{ Id = "synthetic-decryption-key"; Pattern = '(?:key-\$\{|(?:decryptionKey|decryption_key)\s*[:=]\s*[`"''](?:key-|synthetic|fake|dummy))' }
+    @{ Id = "production-key-release-adapter"; Pattern = '\b(?:DecryptionKeyReleaser|UnavailableDecryptionKeyReleaser|keyReleaser|keyRelease(?:Registry|Evidence|Attempts|Request)|deriveZKCPKeyRelease|buildKeyReleaseRequest)\b' }
+    @{ Id = "production-key-release-output"; Pattern = '\bdecryptionKey\b|\bstatus\s*[:=]\s*["'']finalized["'']' }
+    @{ Id = "production-key-release-dispatch"; Pattern = '\b(?:getByObligationId|releaseDecryptionKey)\s*\(|\bkeyReleaser\s*\.\s*(?:getByObligationId|release)\s*\(' }
+    @{ Id = "production-bridge-construction"; Pattern = 'new\s+BitVMBridge\s*\((?!\s*new\s+UnavailableBitVMVerifier\s*\(\s*\)\s*\))' }
+    @{ Id = "production-bridge-construction"; Pattern = 'new\s+BitVM3Orchestrator\s*\((?!\s*new\s+UnavailableBitVM3Verifier\s*\(\s*\)\s*\))' }
+    @{ Id = "production-bridge-construction"; Pattern = 'new\s+ZKCPBridge\s*\((?!\s*new\s+UnavailableZKVerifier\s*\(\s*\)\s*,\s*new\s+UnavailableOnChainMonitor\s*\(\s*\)\s*,?\s*\))' }
 )
 
 $SETTLEMENT_RULES = @(
     @{ Id = "settlement-success-default"; Pattern = '\b(?:success\s*:\s*true|status\s*:\s*["''](?:idle|success|ok)["''])' }
+    @{ Id = "settlement-zkcp-finalize-dispatch"; Pattern = '\bzkcpBridge\s*\.\s*finalizeSettlement\s*\(' }
 )
 
 function ScanFile([string]$relPath) {
@@ -43,31 +51,30 @@ function ScanFile([string]$relPath) {
     $findings = @()
 
     try {
-        $lines = Get-Content $absPath -Encoding UTF8 -ErrorAction Stop
+        $content = Get-Content $absPath -Raw -Encoding UTF8 -ErrorAction Stop
     } catch {
         return $findings
     }
 
-    for ($i = 0; $i -lt $lines.Count; $i++) {
-        $line = $lines[$i]
-        $lineNum = $i + 1
-        $rules = @($RULES)
-        if ($relPath -match '^services/admin-dashboard/src/lib/support/(bitvm|bitvm3|zkcp)\.ts$') {
-            $rules += $VERIFIER_RULES
-        }
-        if ($relPath -match '^services/admin-dashboard/src/app/api/v1/settlement-engine/route\.ts$') {
-            $rules += $SETTLEMENT_RULES
-        }
-        foreach ($rule in $rules) {
-            if ($line -match $rule.Pattern) {
-                $snippet = $line.Trim()
-                if ($snippet.Length -gt 200) { $snippet = $snippet.Substring(0, 200) }
-                $findings += [PSCustomObject]@{
-                    Path = $relPath
-                    Rule = $rule.Id
-                    Line = $lineNum
-                    Snippet = $snippet
-                }
+    $rules = @($RULES)
+    if ($relPath -match '^services/admin-dashboard/src/lib/support/(bitvm|bitvm3|zkcp)\.ts$') {
+        $rules += $VERIFIER_RULES
+    }
+    if ($relPath -match '^services/admin-dashboard/src/app/api/v1/settlement-engine/route\.ts$') {
+        $rules += $SETTLEMENT_RULES
+    }
+
+    foreach ($rule in $rules) {
+        $matches = [regex]::Matches($content, $rule.Pattern, [System.Text.RegularExpressions.RegexOptions]::Singleline)
+        foreach ($match in $matches) {
+            $lineNum = ($content.Substring(0, $match.Index) -split "`n").Count
+            $snippet = [regex]::Replace($match.Value.Trim(), '\s+', ' ')
+            if ($snippet.Length -gt 200) { $snippet = $snippet.Substring(0, 200) }
+            $findings += [PSCustomObject]@{
+                Path = $relPath
+                Rule = $rule.Id
+                Line = $lineNum
+                Snippet = $snippet
             }
         }
     }

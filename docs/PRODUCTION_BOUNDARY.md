@@ -45,10 +45,133 @@ statement/domain digests, backend identity/version/artifact digest, payment
 observations, provenance, and typed failures. They do not implement proof
 arithmetic, chain observation, or key-release cryptography.
 
-Production construction explicitly injects verifier, payment-observer, and
-key-release dependencies. The checked-in construction uses unavailable
-adapters, so missing Gateway/Core/Nexus backends return typed non-success
-results. Test-only deterministic fixtures live under
+Production authority is adapter-owned, not caller- or provenance-owned. Backend
+identity includes explicit authority and every production-valid verification or
+payment result must match the configured adapter identity. The unavailable
+sentinel and non-authoritative placeholders cannot authorize state. This
+platform has no production key-release authority at all.
+ZKCP additionally binds encrypted data, payment condition, parties, amount,
+network, proof terms, and ordered public inputs through the versioned
+`conxian.zkcp.statement.v1` statement/domain digests.
+
+ZKCP getters/list methods return defensive immutable snapshots. Authoritative
+proof/payment evidence remains private to the bridge and is revalidated against
+the exact stored bindings before lifecycle transitions; no key release follows
+payment. BitVM2 aggregation is
+also gated by authorized unique signers and explicit injected signature
+attestations; hex formatting alone is not evidence. Floor initialization/replay
+and signature submission share a per-proof guard, identical floor replays are
+read-only, conflicting reinitialization is rejected, and signature commits use
+aggregation identity compare-and-swap checks. Payment watches cannot regress
+paid evidence, and throwing or malformed injected adapters become typed
+non-success results. Finalization is deliberately unavailable and cannot
+produce a terminal release state.
+
+The boundary also publishes `conxian.verifier.limits.v1` resource limits. The
+settlement body is capped at 512 KiB; proofs at 128 KiB decoded bytes; public
+inputs at 32 entries, 16 KiB per value, and 128 KiB total; identifiers at 128
+characters; backend versions at 64; addresses and transaction ids at 256;
+signatures use `conxian.verifier.signature.v1` canonical even-length hex with
+64–512 decoded bytes and at most 1,024 characters; signer sets are capped at
+64; taps at 1,024; BitVM3 proof ids at 128 characters and recursive heights at
+safe integer `0..1,024`; confirmations at 1,000,000; and adapter/route error
+text at 1,024 characters.
+Digest/domain strings remain exact SHA-256 forms. Odd, short, long, or malformed
+signatures and invalid recursive metadata are rejected before backend dispatch.
+Oversized fields and normalized over-limit adapter errors return
+`resource_limit_exceeded`; the settlement route returns HTTP 413.
+
+Adapter attestations use the versioned `conxian.verifier.attestation.v1`
+profile as canonical JSON strings: 4,096 characters and 16 KiB UTF-8 are
+checked before `JSON.parse`. Object/proxy attestations are rejected without
+own-key enumeration. Parsed content is limited to depth 8, objects with 16
+keys, arrays with 16 entries, keys at 64 characters, and strings at 1,024
+characters. Only JSON-like primitives, plain objects, and dense arrays are
+accepted. Cycles, accessors, hidden/symbol properties, custom or polluted
+prototypes, forbidden prototype keys, sparse arrays, and non-finite numbers
+fail closed. The boundary applies bounded iterative validation, requires exact
+canonical reserialization (the authoritative duplicate-key defense without a
+second parser), and stores only a detached deeply frozen snapshot.
+Invalid or oversized proof/intent identifiers use the fixed `unknown` sentinel
+in direct-library failures, route responses, and logs rather than raw input.
+
+ZKCP lifecycle operations are FIFO-serialized per intent and use generation /
+object-identity compare-and-swap checks before every asynchronous evidence or
+terminal-state commit. BitVM2 submissions reserve signer ids under a per-proof
+lock, release reservations on all failure paths, and re-check uniqueness at
+commit. Adapter and route-catch errors are normalized without invoking arbitrary
+thrown-value stringification. These controls prevent stale adapter completions
+and concurrent duplicate signers from regressing or duplicating authoritative
+state.
+
+Production key release is fully quarantined. `ZKCPBridge` accepts only proof
+verification and payment-observation dependencies; it has no key-releaser,
+release registry, obligation lookup, release evidence, or irreversible dispatch
+path. `finalizeSettlement` always returns typed unavailable/
+`unsupported_backend` with `finalized: false`, without reading bridge state,
+mutating an intent, calling an injected-looking adapter, or returning a
+decryption key. The `zkcp-finalize` route applies the same unconditional hard
+stop for every payload and returns a non-success response.
+
+The platform treats `paid` as payment evidence, not finalization. No production
+transition can create `finalized` from `paid`, and no payment/proof result can
+release encrypted data. Test-only deterministic proof/payment fixtures are
+explicitly `simulated` and cannot be imported through production paths. No
+executable release coordinator is retained in production or test fixtures.
+
+Any future release implementation is a separate launch gate and requires an
+independently authenticated, server-bound Gateway/Core atomic claim-or-get
+coordinator plus a durable registry. Dependency injection, capability strings,
+registry strings, and adapter self-attestation alone must never enable release.
+If a future coordinator needs an obligation identity, it must use only the
+canonical encrypted-data commitment plus version/domain. The commitment bytes
+are the exact UTF-8 encoding of the validated ASCII token `sha256:` followed by
+64 lowercase hexadecimal characters, with no whitespace, Unicode
+normalization, seller/buyer strings, or mutable settlement terms.
+
+BitVM3 uses the same per-proof FIFO discipline around the full asynchronous
+backend call and commit. Identical request-digest/height/backend replays are
+read-only, conflicting same-id requests fail closed, and generation/state checks
+prevent returned and stored state from diverging. Queue cleanup runs on success,
+failure, and adapter throw. The versioned `conxian.bitvm3.retention.v1` policy
+caps retained terminal states at 1,024 by default and expires idle terminal
+records after 15 minutes. Capacity is reserved before backend dispatch, so a
+full cap returns a typed resource failure without dispatch. In-flight
+reservations and queues are never evicted; TTL cleanup atomically removes state,
+initialization metadata, generation counters, and idle queue metadata. An
+identical request after expiry is safely re-verified under the bounded policy.
+The separate `conxian.bitvm3.tombstone.v1` policy retains up to 2,048 expired
+proof identities for 15 minutes; conflicting same-id requests fail closed while
+the tombstone is retained, and the cap deliberately preserves expired state
+rather than permitting unsafe reuse. The bounded window cannot provide global
+permanent uniqueness, so production enablement requires a durable Gateway/Core
+identity registry. The clock is injectable for deterministic lifecycle tests.
+
+BitVM2 publishes `conxian.bitvm2.retention.v1` with a hard cap of 1,024
+retained floor identities and a default 15-minute terminal TTL. Reservations
+are acquired before verifier dispatch, so capacity failures make zero backend
+calls. Active challenges, in-flight verification/signature operations, and
+reserved signers are never evicted; terminal cleanup removes state,
+aggregation, initialization, reservation, signer, and queue maps atomically.
+This process-local policy is an availability tradeoff until durable Gateway/Core
+retention owns long-lived verification identity and evidence.
+
+ZKCP publishes `conxian.zkcp.retention.v1` with 1,024 active (`pending` and
+`verified`) and 2,048 total retained-intent limits plus a default 15-minute
+terminal TTL. Under the permanent key-release quarantine, `paid` is terminal
+payment evidence rather than an active state: it remains queryable through the
+TTL and then becomes eligible for cleanup. Capacity handling never silently
+evicts active or pending intents. Expired terminal cleanup atomically removes
+the intent and proof/payment evidence plus generation, lock, and queue
+bookkeeping, but skips any in-flight or queued lifecycle operation, including a
+paid watch replay. `conxian.zkcp.list.v1` exposes only a
+deterministically ordered bounded page (default 50, maximum 100, offset maximum
+2,048); invalid pagination is typed and the route never returns the full map.
+
+Production construction explicitly injects verifier and payment-observer
+dependencies only. The checked-in construction uses unavailable adapters, so
+missing Gateway/Core/Nexus backends return typed non-success results. Test-only
+deterministic fixtures live under
 `services/admin-dashboard/src/tests/` and carry `simulated` provenance; they
 are not production adapters and settlement rejects them.
 

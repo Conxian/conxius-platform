@@ -175,7 +175,7 @@ All services use multi-layered M2M auth per `docs/M2M_AUTHENTICATION.md`:
 - **Gateway clients**: `services/admin-dashboard/src/lib/sidl/gateway.ts`, `services/elizaos-plugin-conxian/src/conxianClient.ts` now include M2M auth headers
 
 ### Key Gaps Still Open
-- **BitVM/ZKCP verifier readiness (#1187)** — `services/admin-dashboard` now has versioned proof/payment contracts, unavailable defaults, simulation quarantine, and typed settlement failures; no production cryptographic verifier, payment observer, or key-release backend is selected or claimed here.
+- **BitVM/ZKCP verifier readiness (#1187)** — `services/admin-dashboard` has versioned proof/payment contracts, unavailable defaults, simulation quarantine, and typed settlement failures. Production key release is completely quarantined: no releaser, registry/obligation execution, decryption-key output, or finalized success is selected or claimed here. Any future irreversible coordinator requires independent authentication, server binding, Gateway/Core atomic claim-or-get, and a durable registry; dependency injection alone is insufficient.
 - **Revenue automation handoff** — the protocol-owned `Conxian/Conxian` repository contains `contracts/treasury/revenue-automation.clar` with a current observed 100 bps / 1% baseline; platform specification and handoff are tracked in #1164/#1167, while protocol hardening and integration remain tracked in `Conxian/Conxian#538`
 - **JWT-based M2M token auth** — platform-side JWT issuance/verification is implemented; coordinated Rust Gateway verification remains open (#1160)
 - **Key rotation mechanism** — M2M keys are static, no rotation API (#1161)
@@ -1713,6 +1713,260 @@ AGENTS.md (this update)
 - `364` is a research/profile-specific tap layout and must not be used as a universal verification predicate.
 - `Web Crypto` is used only for contract digest binding; it is not a proof verifier.
 
+### 2026-07-22 — PR #1196 Formal Review Remediation
+**Trigger**: Formal review `4758534682` on PR #1196.
+**What was done**:
+- Required adapter-owned authoritative backend identities for production verification, payment observation, and key release; the unavailable sentinel and non-authoritative placeholders remain fail closed.
+- Added versioned deterministic ZKCP statement/domain binding across encrypted data, payment terms, parties, amount, network, proof metadata, and ordered public inputs.
+- Returned deep immutable intent snapshots, retained authoritative proof/payment evidence privately, rejected duplicate intent IDs, and revalidated exact evidence before finalization.
+- Reworked BitVM2 aggregation to require unique authorized signers and explicit injected signature attestations; malformed, duplicate, unavailable, and format-only submissions cannot complete aggregation.
+- Normalized contradictory verifier/payment responses and expanded Python/PowerShell contamination scanning to full-content multiline constructs, aliases, fixture imports, and bridge construction, with Python self-tests.
+- Totalized throwing/null adapter responses, bounded settlement amounts to safe integers, returned defensive BitVM3 state copies, and made terminal ZKCP finalization idempotent/serialized so payment watches cannot regress state or trigger duplicate key release.
+- Updated the issue #1187 OpenSpec design/spec/tasks and truthful production-boundary, gap, debt, and risk documentation without adding a cryptographic backend.
+**Key discoveries**:
+- Production authority must be an adapter-owned identity predicate rather than a caller-controlled request field or provenance label.
+- ZKCP proof binding and later payment evidence are separate versioned checks: the proof statement reserves a null pre-payment hash slot, while the observed transaction ID is retained and revalidated as payment evidence before release.
+- The checked-in production construction still uses unavailable adapters; explicit authoritative fixtures are test-only validation adapters and do not represent production cryptographic readiness.
+**Files touched**:
+- `services/admin-dashboard/src/lib/support/{verifier-contract.ts,bitvm.ts,bitvm3.ts,zkcp.ts}` and focused verifier tests/fixtures
+- `scripts/verify_contamination_guard.py`, `scripts/verify_contamination_guard.ps1`, `scripts/test_contamination_guard.py`
+- Issue #1187 OpenSpec proposal/design/spec/tasks and `docs/{PRODUCTION_BOUNDARY.md,GAPS.md,DEBT_INVENTORY.md,PHASE_7_RISK_REGISTER.md}`
+- `AGENTS.md`
+**Gaps identified**:
+- Gateway/Core/Nexus still need independently accepted production verifier, payment-observer, and key-release adapters; this remediation intentionally does not select or implement them.
+- PowerShell execution could not be run because `pwsh` is not installed in the verification devbox; the full-content parity update and Python source fixtures were validated.
+**Gotchas**:
+- A valid-looking result with `verified: true` is still rejected when it carries a failure code, non-authoritative backend, unavailable sentinel, or mismatched adapter identity.
+- `git diff --check` and the strict issue #1187 OpenSpec validator must be rerun after session-log edits.
+
+### 2026-07-22 — PR #1198 Independent Review Hardening
+**Trigger**: Second independent review `4758857346` on PR #1198.
+**What was done**:
+- Serialized ZKCP verify/watch/finalize operations per intent with FIFO queues plus generation/object-identity compare-and-swap checks before every asynchronous evidence or terminal-state commit; added deferred verifier/observer race tests covering replay and watch/finalize ordering.
+- Serialized BitVM2 signature submissions per proof, reserved signer ids before async verification, released reservations on verifier failure/throw/unavailable paths, rechecked uniqueness at commit, and added same-signer, distinct-signer, and throw/retry race tests.
+- Added versioned `conxian.verifier.limits.v1` bounds for request bodies, encoded proof/public-input bytes, identifiers/digests/domains, signatures, signer sets, tap counts, payments, errors, and key-release evidence; route overages return HTTP 413 before backend dispatch.
+- Fixed the PowerShell canonical unavailable ZKCP bridge matcher and extended Python self-tests with static alias/default/simulator parity fixtures without claiming PowerShell runtime execution.
+- Updated the issue #1187 OpenSpec design/spec/tasks plus production-boundary and Phase 7 risk documentation to record the new lifecycle and resource guarantees.
+- Added verifier contract and settlement route boundary tests; full admin-dashboard regression tests and dashboard typecheck passed.
+**Key discoveries**:
+- The strict OpenSpec CLI is not installed globally, but `pnpm dlx @fission-ai/openspec@1.6.0 validate ... --strict --no-interactive --json` validates the issue #1187 change successfully.
+- `pwsh` is unavailable in the devbox; static parity checks can exercise canonical matcher cases after normalizing the checked-in PowerShell regex literals, but cannot replace runtime PowerShell validation.
+- The production boundary has no cryptographic verifier, payment observer, or key-release backend; all new synchronization and limits remain fail-closed orchestration controls.
+**Files touched**:
+- `services/admin-dashboard/src/lib/support/{verifier-contract.ts,bitvm.ts,zkcp.ts}` and settlement route
+- `services/admin-dashboard/src/tests/{bitvm.test.ts,zkcp.test.ts,verifierContract.test.ts,routeAuth.test.ts}`
+- `scripts/{verify_contamination_guard.ps1,test_contamination_guard.py}`
+- `openspec/changes/2026-07-22-issue-1187-fail-closed-verifier-boundaries/{design.md,tasks.md,specs/fail-closed-verifier-boundaries/spec.md}`
+- `docs/{PRODUCTION_BOUNDARY.md,PHASE_7_RISK_REGISTER.md}` and `AGENTS.md`
+**Gaps identified**:
+- Hosted PR checks must be rechecked on the pushed commit; no merge or hosted-check wait was performed.
+- PowerShell runtime execution remains unverified until a `pwsh` environment is available.
+**Gotchas**:
+- Run `git diff --check` and strict issue #1187 OpenSpec validation again after this session-log append.
+
+### 2026-07-22 — PR #1198 Formal Review Follow-up
+**Trigger**: Formal review `4759065132` on PR #1198.
+**What was done**:
+- Serialized BitVM2 floor initialization/replay with the same per-proof FIFO guard as signature submission, recorded successful initialization identity, made identical replays read-only, rejected conflicts, and added aggregation object-identity compare-and-swap checks before signature commit.
+- Centralized bounded adapter-error normalization across verifier, signature-verifier, payment-observer, key-release, and settlement-route catch paths; over-limit returned and thrown errors now truncate to `maxErrorChars` and return typed resource failures.
+- Added the explicit `conxian.verifier.signature.v1` canonical even-length hex contract with 64–512 decoded-byte limits and pre-dispatch rejection for odd, short, and long signatures.
+- Enforced BitVM3 proof-id and recursive-height limits, including finite safe-integer, overflow, negative, and NaN-style validation before recursive verifier dispatch.
+- Updated the issue #1187 OpenSpec design/spec/tasks and added deferred race, adapter-error, signature-boundary, recursive-boundary, and route-catch regression coverage.
+**Key discoveries**:
+- Successful BitVM floor initialization must be retained separately from the mutable aggregation so an identical replay can be idempotent without replacing an aggregation that may contain committed signatures.
+- Shared normalization must handle arbitrary thrown values without invoking `toString()`; only bounded `Error.message` or string values are eligible for response text.
+- The strict OpenSpec CLI accepts the change identifier as a positional item with `--type change`; `--change` is not a supported flag in version 1.6.0.
+**Files touched**:
+- `services/admin-dashboard/src/lib/support/{verifier-contract.ts,bitvm.ts,bitvm3.ts,zkcp.ts}` and settlement route
+- `services/admin-dashboard/src/tests/{bitvm.test.ts,bitvm3.test.ts,zkcp.test.ts,routeAuth.test.ts,verifierContract.test.ts}`
+- `openspec/changes/2026-07-22-issue-1187-fail-closed-verifier-boundaries/{design.md,tasks.md,specs/fail-closed-verifier-boundaries/spec.md}`
+- `AGENTS.md`
+**Gaps identified**:
+- Hosted PR checks must be inspected after the focused commit is pushed; no merge or hosted-check wait is performed.
+- PowerShell runtime execution remains unavailable in this devbox; lifecycle parity checks are static/self-test based.
+**Gotchas**:
+- The strict validator command is `pnpm dlx @fission-ai/openspec@1.6.0 validate <change> --type change --strict --no-interactive --json`.
+
+### 2026-07-22 — PR #1198 P2 Review Remediation
+**Trigger**: Formal review `4759182306` on PR #1198.
+**What was done**:
+- Collapsed oversized BitVM proof identifiers to the fixed `unknown` sentinel in direct-library and route failures; added oversized-response coverage.
+- Added versioned `conxian.verifier.attestation.v1` bounds, iterative hostile-graph validation, detached deeply frozen snapshots, exact attestation-shape checks, and adapter-mutation/cycle/accessor/prototype/size tests.
+- Added BitVM3 per-proof FIFO replay/conflict protection with generation/state commit checks, deterministic identical replays, deferred same-proof race tests, conflicting-request rejection, and queue cleanup after throws.
+- Added versioned ZKCP active/total quotas, injectable-clock terminal TTL cleanup, atomic private-evidence removal, deterministic bounded pagination, capacity/no-active-eviction/cleanup/pagination tests, and route limit validation.
+- Sanitized direct-library verifier/settlement logging and added a spy test proving oversized intent ids are never logged verbatim.
+- Updated the issue #1187 OpenSpec design/spec/tasks and production-boundary, risk, gap, debt, and session continuity documentation without selecting a production backend.
+- Passed focused and full dashboard Vitest, dashboard typecheck, lifecycle/control gates, contamination self-tests, BOS production-boundary verification, strict issue #1187 OpenSpec validation, and `git diff --check`.
+**Key discoveries**:
+- A bounded attestation snapshot must reject accessors, hidden/symbol properties, sparse arrays, custom/prototype-polluted objects, cycles, and non-finite numbers before canonical digesting; storing only the detached snapshot prevents post-return adapter mutation from changing aggregation state.
+- ZKCP cleanup must skip active/queued/locked intents and remove proof, payment, key-release, generation, lock, and queue records together; list pagination must be bounded independently of the retained-intent quota.
+- The current production construction remains unavailable-by-default; all concurrency, retention, and resource controls are orchestration hardening, not cryptographic backend readiness.
+**Files touched**:
+- `services/admin-dashboard/src/lib/support/{verifier-contract.ts,bitvm.ts,bitvm3.ts,zkcp.ts}` and `services/admin-dashboard/src/app/api/v1/settlement-engine/route.ts`
+- `services/admin-dashboard/src/tests/{bitvm.test.ts,bitvm3.test.ts,zkcp.test.ts,routeAuth.test.ts,verifierContract.test.ts}`
+- `openspec/changes/2026-07-22-issue-1187-fail-closed-verifier-boundaries/{design.md,tasks.md,specs/fail-closed-verifier-boundaries/spec.md}`
+- `docs/{PRODUCTION_BOUNDARY.md,PHASE_7_RISK_REGISTER.md,GAPS.md,DEBT_INVENTORY.md}` and `AGENTS.md`
+**Gaps identified**:
+- Hosted PR checks must be inspected after the focused commit is pushed; no merge or hosted-check wait is performed.
+- PowerShell runtime execution remains unavailable in this devbox; static parity/self-tests remain the available validation.
+**Gotchas**:
+- Strict OpenSpec validation uses the positional change identifier with `--type change`; rerun it and `git diff --check` after any final session-log edit.
+
+### 2026-07-22 — PR #1198 Final P2 Resource Follow-up
+**Trigger**: Formal review `4759335450` on PR #1198.
+**What was done**:
+- Changed BitVM2 signature-verifier attestations from adapter-owned objects to bounded canonical JSON string payloads; encoded limits run before `JSON.parse`, object/proxy values are rejected without own-key enumeration, parsed values are detached and validated, and canonical reserialization is authoritative for duplicate-key ambiguity.
+- Added hostile proxy/own-key, over-limit pre-parse, malformed JSON, deep/large content, canonical snapshot/digest, and valid signature-attestation regressions.
+- Added versioned `conxian.bitvm3.retention.v1` state retention with an injectable clock, hard retained-state cap, pre-dispatch capacity reservations, terminal TTL cleanup, atomic state/metadata/generation/queue cleanup, in-flight preservation, and safe re-verification after expiry.
+- Added BitVM3 cap/no-dispatch, no-in-flight-eviction, map-cleanup, and replay-after-expiry tests.
+- Updated the issue #1187 OpenSpec design/spec/tasks and production-boundary, risk, gap, and debt documentation without selecting or claiming a production backend.
+**Key discoveries**:
+- A canonical string contract removes adapter-owned `ownKeys` amplification from the signature-attestation trust boundary while retaining the existing bounded detached JSON validator for parsed content.
+- BitVM3 capacity requires a reservation held across the asynchronous backend call; counting only terminal maps would allow concurrent unique proofs to overcommit the hard cap.
+- Expiry is implemented as safe re-verification rather than a new public expired result: idle terminal records are removed before a new request reserves capacity, while queued/in-flight proofs remain untouched.
+**Files touched**:
+- `services/admin-dashboard/src/lib/support/{verifier-contract.ts,bitvm.ts,bitvm3.ts}`
+- `services/admin-dashboard/src/tests/{verifierContract.test.ts,bitvm.test.ts,bitvm3.test.ts}`
+- `openspec/changes/2026-07-22-issue-1187-fail-closed-verifier-boundaries/{design.md,tasks.md,specs/fail-closed-verifier-boundaries/spec.md}`
+- `docs/{PRODUCTION_BOUNDARY.md,PHASE_7_RISK_REGISTER.md,GAPS.md,DEBT_INVENTORY.md}` and `AGENTS.md`
+**Gaps identified**:
+- The production cryptographic verifier, payment observer, and key-release backends remain unavailable and must still be independently accepted in Gateway/Core/Nexus before enablement.
+- PowerShell runtime execution remains unavailable in this devbox; contamination parity remains static/self-test based.
+**Gotchas**:
+- The strict OpenSpec validator and `git diff --check` must be rerun after this session-log append; hosted PR checks must be inspected after pushing the single focused commit.
+
+### 2026-07-22 — PR #1198 Retention and Clock Boundary Follow-up
+**Trigger**: Formal review `4759442687` on PR #1198.
+**What was done**:
+- Enforced the published `conxian.bitvm3.retention.v1` defaults exactly at 1,024 retained states and 15 minutes, with typed `BitVM3ConfigurationError` rejection for invalid or above-policy constructor overrides; lower test overrides remain supported.
+- Centralized BitVM3 timestamp validation before `toISOString()`, accepting only monotonic finite safe non-negative milliseconds through the inclusive ECMAScript boundary `0..8.64e15`; negative, non-finite, unsafe, out-of-range, rolled-back, and thrown clock values now become bounded typed failures without adapter-state commits.
+- Added default/override/cap/invalid-configuration tests plus exact-boundary, just-over-boundary, invalid-value, rollback, and thrown-clock commit tests.
+- Updated the issue #1187 OpenSpec requirement/design to record constructor caps, clock range, monotonicity, and typed failure guarantees.
+**Key discoveries**:
+- A successful BitVM3 adapter commit needs its own safe timestamp read after asynchronous verification; validating only the cleanup/pre-dispatch read still permits a clock failure to escape from terminal-state serialization.
+- Monotonic clock tracking must advance only after a fully validated reading; failed or rolled-back readings leave the last accepted value unchanged and release any in-flight reservation through the existing `finally` path.
+**Files touched**:
+- `services/admin-dashboard/src/lib/support/bitvm3.ts`
+- `services/admin-dashboard/src/tests/bitvm3.test.ts`
+- `openspec/changes/2026-07-22-issue-1187-fail-closed-verifier-boundaries/{design.md,specs/fail-closed-verifier-boundaries/spec.md}`
+- `AGENTS.md`
+**Gaps identified**:
+- The production cryptographic verifier, payment observer, and key-release backends remain unavailable and require independent Gateway/Core/Nexus acceptance.
+- PowerShell runtime execution remains unavailable in this devbox; static contamination parity/self-tests remain the available validation.
+**Gotchas**:
+- The strict OpenSpec validator and `git diff --check` must be rerun after this session-log append; hosted PR checks must be inspected after pushing the focused commit.
+
+### 2026-07-22 — PR #1198 P1/P2 Review Hardening
+**Trigger**: Formal review `4759557321` on PR #1198.
+**What was done**:
+- Closed the ZKCP post-release failure window by validating a monotonic finite safe Date-range timestamp and preconstructing bounded release inputs/commit data before key-release dispatch; latching the attempt prevents duplicate dispatch, successful evidence is committed once, and retry repairs terminal state without a second external call.
+- Added deferred, invalid-clock, post-release clock invalidation, and release-count regressions proving zero dispatch on bad clocks and one dispatch across successful retries.
+- Added versioned `conxian.bitvm3.tombstone.v1` retention for expired proof identities with a 2,048-entry/15-minute bounded window, deterministic same-request replay, fail-closed conflicting reuse, atomic cleanup, cap behavior, and explicit durable Gateway/Core registry requirements for permanent uniqueness.
+- Added versioned `conxian.bitvm2.retention.v1` hard floor cap/reservations, terminal-only cleanup, active challenge/in-flight/signature preservation, associated-map cleanup, and capacity/replay/conflict regressions.
+- Updated the issue #1187 OpenSpec, production boundary, risk, gap, debt, and session documentation for the three review findings without selecting a production backend.
+**Key discoveries**:
+- Process-local BitVM3 tombstones can only preserve proof-id conflict safety for a finite, explicitly versioned window; permanent reuse prevention belongs to a durable Gateway/Core identity registry.
+- BitVM2 retention capacity must count reservations before verifier dispatch, while cleanup must leave queued, reserved, challenged, and signature-active operations untouched.
+- ZKCP release finalization must never depend on a post-dispatch clock read or throwing commit helper; the external release attempt remains latched even when result handling is rejected or throws.
+**Files touched**:
+- `services/admin-dashboard/src/lib/support/{verifier-contract.ts,bitvm.ts,bitvm3.ts,zkcp.ts}`
+- `services/admin-dashboard/src/tests/{bitvm.test.ts,bitvm3.test.ts,zkcp.test.ts}`
+- `openspec/changes/2026-07-22-issue-1187-fail-closed-verifier-boundaries/{proposal.md,design.md,tasks.md,specs/fail-closed-verifier-boundaries/spec.md}`
+- `docs/{PRODUCTION_BOUNDARY.md,PHASE_7_RISK_REGISTER.md,GAPS.md,DEBT_INVENTORY.md}` and `AGENTS.md`
+**Gaps identified**:
+- Production cryptographic verifier, payment observer, key-release backends, and durable Gateway/Core identity retention remain unavailable and require independent acceptance.
+- PowerShell runtime execution remains unavailable in this devbox; lifecycle parity remains static/self-test based.
+**Gotchas**:
+- Re-run focused/full tests, strict issue #1187 OpenSpec validation, lifecycle/contamination checks, and `git diff --check` after this final session-log edit; inspect hosted PR checks after pushing the single commit.
+
+### 2026-07-23 — PR #1198 Durable ZKCP Key-Release Idempotency
+**Trigger**: P1 review `4759710914` on PR #1198.
+**What was done**:
+- Added versioned `conxian.zkcp.key-release.v1`, idempotency, and release-policy capability metadata requiring durable lookup, idempotent release, and an `exactly_once_per_idempotency_key` backend guarantee before dispatch.
+- Derived a bounded `zkcp-release-v1:<sha256>` key from immutable intent, statement/domain, encrypted-data, observed-payment, backend/artifact, and release-policy bindings; validated durable evidence against the complete binding.
+- Changed finalization to durable-lookup-first under the intent lock: found evidence commits without release, absent evidence calls idempotent release with the same key, and lookup errors/ambiguous timeouts never select an alternate key or non-idempotent fallback. Local attempt/evidence state remains optimization-only.
+- Added shared durable-fixture restart/crash, ambiguous-timeout, normal-retry, lookup-error, missing-capability, and key/statement/encrypted/backend/artifact-mismatch regressions; the production adapter remains unavailable-by-default.
+- Updated the issue #1187 OpenSpec proposal/design/spec/tasks, production boundary, Phase 7 risk, debt, gaps, scoring, universal-settlement architecture, self-evolving KB, and this session log.
+**Key discoveries**:
+- Cross-restart exactly-once cannot be proven by `keyReleaseAttempts` or `keyReleaseEvidence`; the external backend must durably bind the deterministic key and irreversible side effect and expose lookup semantics for reconciliation.
+- A backend timeout after commit is intentionally ambiguous: the next attempt must look up the identical key before any release, and malformed or mismatched evidence must fail closed.
+**Files touched**:
+- `services/admin-dashboard/src/lib/support/{verifier-contract.ts,zkcp.ts}`
+- `services/admin-dashboard/src/app/api/v1/settlement-engine/route.ts`
+- `services/admin-dashboard/src/tests/zkcp.test.ts`
+- `openspec/changes/2026-07-22-issue-1187-fail-closed-verifier-boundaries/{proposal.md,design.md,tasks.md,specs/fail-closed-verifier-boundaries/spec.md}`
+- `docs/{PRODUCTION_BOUNDARY.md,PHASE_7_RISK_REGISTER.md,DEBT_INVENTORY.md,GAPS.md,SCORING_MATRIX.md,SELF_EVOLVING_KB.md}` and `docs/architecture/PHASE_7_PROPOSAL_UNIVERSAL_SETTLEMENT.md`
+**Gaps identified**:
+- No production cryptographic verifier, payment observer, or durable key-release backend is selected or accepted; Gateway/Core/Nexus integration remains a launch dependency.
+- PowerShell runtime execution remains unavailable in this devbox; contamination validation is static/self-test based.
+**Gotchas**:
+- Re-run focused/full tests, strict issue #1187 OpenSpec validation, lifecycle/contamination checks, dependency checks, and `git diff --check` after this session-log append; inspect hosted PR checks only after pushing the focused commit.
+
+### 2026-07-23 — PR #1198 Altered-Binding and Evidence-Boundary Remediation
+**Trigger**: P1/P2 review `4759805105` on PR #1198.
+**What was done**:
+- Added a versioned, domain-separated `zkcp-obligation-v1:<sha256>` identity over the canonical encrypted-data commitment plus stable seller/buyer identity; mutable amount, network, statement/proof terms, payment txid, timestamps, and backend artifact/version remain outside the obligation identity.
+- Extended the key-release coordinator contract with pinned registry version/namespace metadata, lookup-by-obligation, atomic obligation claim semantics, matching reconciliation, typed obligation conflicts, and same-obligation retry behavior after ambiguous outcomes or process loss.
+- Rejected missing or drifted registry metadata before lookup/release and added shared-registry regressions for changed terms/payment txid/network/statement, backend artifact rotation, crash/timeout, matching reconciliation, forged obligation/binding/evidence, and exactly one external effect.
+- Replaced recursive adapter-owned key-release evidence copying with a bounded canonical JSON string and exact flat primitive allow-list; hostile proxy/cycle, deep/oversized, array/nested, extra-property, and mutation tests prove no recursive traversal or retained adapter object graph.
+- Updated the issue #1187 OpenSpec proposal/design/spec/tasks, production boundary, risk, debt, gaps, scoring, universal-settlement architecture, and this knowledge base entry without selecting or claiming a production coordinator.
+**Key discoveries**:
+- Exactly-once identity must be stable at the encrypted-payload obligation layer; a binding/idempotency digest that includes mutable settlement terms is still necessary for conflict detection but cannot be the primary deduplication identity.
+- Registry namespace is a separate trust boundary from releaser artifact/version: artifact rotation can only reconcile through the same durable registry or must fail closed before dispatch.
+- Canonical-string evidence lets the boundary check byte length before parsing and copy only the ten required primitive fields, avoiding adapter `ownKeys`, accessors, proxy traps, cycles, and recursive-copy amplification.
+**Files touched**:
+- `services/admin-dashboard/src/lib/support/{verifier-contract.ts,zkcp.ts}`
+- `services/admin-dashboard/src/app/api/v1/settlement-engine/route.ts`
+- `services/admin-dashboard/src/tests/zkcp.test.ts`
+- `openspec/changes/2026-07-22-issue-1187-fail-closed-verifier-boundaries/{proposal.md,design.md,tasks.md,specs/fail-closed-verifier-boundaries/spec.md}`
+- `docs/{PRODUCTION_BOUNDARY.md,PHASE_7_RISK_REGISTER.md,DEBT_INVENTORY.md,GAPS.md,SCORING_MATRIX.md,SELF_EVOLVING_KB.md}` and `docs/architecture/PHASE_7_PROPOSAL_UNIVERSAL_SETTLEMENT.md`
+**Gaps identified**:
+- No production cryptographic verifier, payment observer, or durable key-release coordinator is selected or accepted; Gateway/Core/Nexus integration and independent acceptance remain launch dependencies.
+- PowerShell runtime execution remains unavailable in this devbox; contamination validation is static/self-test based.
+**Gotchas**:
+- Re-run focused/full tests, strict issue #1187 OpenSpec validation, lifecycle/contamination checks, dependency checks, `git diff --check`, and hosted PR checks after the focused commit is pushed.
+
+### 2026-07-23 — PR #1198 Complete Production ZKCP Key-Release Quarantine
+**Trigger**: P1/P2 review `4759956526` on PR #1198.
+**What was done**:
+- Removed the production `DecryptionKeyReleaser`/registry/obligation execution surface, release evidence/maps, constructor injection, finalized status, decryption-key output, and synthetic/adapter-dispatch paths from `ZKCPBridge` and the settlement route.
+- Made direct-library `finalizeSettlement` and route `zkcp-finalize` unconditional typed unavailable/`unsupported_backend` results with `finalized: false`, no state read/mutation, and zero bridge or external adapter calls for every payload.
+- Preserved proof/payment fail-closed transitions while making `paid` payment evidence only; replaced release-heavy tests with test-only proof/payment fixtures and malicious/conforming-looking adapter, arbitrary payload, replay, restart-shaped, drift-shaped, route, and zero-call regressions.
+- Extended Python and PowerShell contamination guards for production release adapters, dispatch, decryption-key output, finalized status, and prohibited bridge finalization calls.
+- Updated the issue #1187 proposal/design/spec/tasks and production-boundary, risk, debt, gaps, scoring, architecture, and knowledge-base documents. Future obligation identity is documented as exact canonical encrypted-data commitment bytes plus version/domain only; raw seller/buyer representations are excluded.
+**Key discoveries**:
+- Dependency injection and self-attested capability/registry strings cannot establish an independently authenticated, server-bound Gateway/Core atomic claim-or-get coordinator; the safe platform behavior is hard quarantine, not a configurable adapter.
+- The current platform contains no executable obligation identity or release coordinator. If one is proposed later, the commitment input is the exact UTF-8 bytes of `sha256:` plus 64 lowercase hexadecimal characters, with no normalization or party-string inputs.
+**Files touched**:
+- `services/admin-dashboard/src/lib/support/{zkcp.ts,verifier-contract.ts}` and `services/admin-dashboard/src/app/api/v1/settlement-engine/route.ts`
+- `services/admin-dashboard/src/tests/{zkcp.test.ts,routeAuth.test.ts}`
+- `scripts/{verify_contamination_guard.py,verify_contamination_guard.ps1,test_contamination_guard.py}`
+- `openspec/changes/2026-07-22-issue-1187-fail-closed-verifier-boundaries/{proposal.md,design.md,tasks.md,specs/fail-closed-verifier-boundaries/spec.md}`
+- `docs/{PRODUCTION_BOUNDARY.md,GAPS.md,DEBT_INVENTORY.md,PHASE_7_RISK_REGISTER.md,SCORING_MATRIX.md,SELF_EVOLVING_KB.md}` and `docs/architecture/{PHASE_7_PROPOSAL_UNIVERSAL_SETTLEMENT.md,FULL_STACK_BITCOIN_RESEARCH.md}`
+**Gaps identified**:
+- No independently authenticated, server-bound Gateway/Core atomic claim-or-get coordinator or durable registry exists; production key release remains unsupported until a separate implementation is reviewed and accepted.
+- The devbox has no `pwsh` runtime, so PowerShell contamination parity remains static/self-test based.
+**Gotchas**:
+- Historical Phase 10–12 release-coordinator sketches in the change are explicitly superseded by Phase 13 and do not authorize production execution; rerun strict OpenSpec, full tests, lifecycle/contamination, dependency, and diff checks after this append.
+
+### 2026-07-23 — PR #1198 Final P2 Response Closure
+**Trigger**: Review `4760057624` on PR #1198.
+**What was done**:
+- Preserved the `zkcp-watch` payment-operation status and exposed intent lifecycle state as `lifecycle_status`, with regressions for unavailable, invalid, simulated, and observed outcomes.
+- Treated `paid` as terminal evidence under bounded retention, added atomic evidence/metadata cleanup, capacity recovery, and in-flight watch preservation tests, and updated the quarantine retention documentation.
+- Updated the PR description to state that production key release and finalization remain quarantined.
+**Key discoveries**:
+- `paid` is terminal payment evidence rather than an active lifecycle state; cleanup must retain it through the TTL but skip queued or in-flight watch operations.
+**Files touched**:
+- `services/admin-dashboard/src/app/api/v1/settlement-engine/route.ts`
+- `services/admin-dashboard/src/lib/support/zkcp.ts`
+- `services/admin-dashboard/src/tests/{routeAuth.test.ts,zkcp.test.ts}`
+- `openspec/changes/2026-07-22-issue-1187-fail-closed-verifier-boundaries/{proposal.md,design.md,tasks.md,specs/fail-closed-verifier-boundaries/spec.md}`
+- `docs/PRODUCTION_BOUNDARY.md` and PR #1198 metadata
+**Gaps identified**:
+- No independently authenticated, server-bound Gateway/Core atomic claim-or-get coordinator exists; production key release remains unavailable.
+**Gotchas**:
+- Hosted checks are inspected after the new commit is pushed without waiting indefinitely.
 ### 2026-07-22 — PR #1197 Mainline Merge Conflict Resolution
 **Trigger**: PR #1197 request to merge the current `origin/main` into `feat/1168-founder-rights-observation`.
 **What was done**:
@@ -1744,3 +1998,21 @@ AGENTS.md (this update)
 - Hosted checks on the final documentation-only head still depend on GitHub; production protocol adapters and canonical ratification evidence remain out of scope.
 **Gotchas**:
 - A failed tracking checkout temporarily populated the index with the exact fetched PR tree; after verifying no unrelated or unstaged work, the clean main state was restored before creating the local PR branch without force-pushing.
+
+### 2026-07-23 — PR #1198 Mainline Merge and Code-Quality Cleanup
+**Trigger**: PR #1198 branch refresh after Code Quality Copilot findings `3633842732`, `3634272145`, and `3634954748`.
+**What was done**:
+- Fetched `origin/main` at `28ce51d194c844f84a8fc52278b73b2ce2417dec`, merged it without rewriting the PR history, and preserved both append-only `AGENTS.md` log branches in signed-off merge `b5ed6c2a38c5e169a51c0fb4ae9387e3187e1636`.
+- Made the contamination scanner generator use explicit returns consistently, removed the impossible `undefined` comparison from bounded attestation validation, and deleted the unused ZKCP string helper.
+**Key discoveries**:
+- The repository reports `web_commit_signoff_required: true`; the merge commit therefore includes a verified `Signed-off-by` trailer.
+- The three findings are behavior-preserving cleanup and do not require a new OpenSpec capability or checklist phase.
+**Files touched**:
+- `scripts/verify_contamination_guard.py`
+- `services/admin-dashboard/src/lib/support/verifier-contract.ts`
+- `services/admin-dashboard/src/lib/support/zkcp.ts`
+- `AGENTS.md`
+**Gaps identified**:
+- Hosted full CI and PR mergeability remain to be evaluated on the pushed head.
+**Gotchas**:
+- The PR remote-tracking ref required an explicit local fetch refspec before checkout; no remote history was rewritten or force-pushed.

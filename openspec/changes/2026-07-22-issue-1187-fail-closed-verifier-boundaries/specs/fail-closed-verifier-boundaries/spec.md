@@ -12,9 +12,27 @@ are unavailable.
 The platform MUST validate a versioned verifier request and result that bind the
 proof system, curve, encoding, circuit identity and digest, verification-key
 identity and digest, ordered/named public inputs, proof bytes and digest,
-statement/domain digests, backend identity/version/artifact digest, provenance,
-and typed failure codes. Digest equality MUST NOT be treated as cryptographic
-verification by itself.
+statement/domain digests, backend identity/version/artifact digest, explicit
+backend authority, provenance, and typed failure codes. Digest equality MUST
+NOT be treated as cryptographic verification by itself. A production-valid
+result MUST match the adapter-owned configured backend identity and carry
+authoritative authority; the unavailable sentinel and non-authoritative
+placeholders MUST NOT satisfy production authority. Settlement amounts and
+confirmation counts MUST be bounded safe integers.
+
+The boundary MUST enforce the versioned `conxian.verifier.limits.v1` resource
+contract before decoding, hashing, or invoking an adapter. It MUST bound the
+request body, encoded proof bytes, public-input count and per/total input bytes,
+identifiers, digests/domains, backend versions, addresses, transaction ids,
+signatures, signer sets, tap counts, confirmation counts, timestamps, actions,
+and error strings. BitVM signature submission MUST use the explicit versioned
+`conxian.verifier.signature.v1` hex encoding, require an even number of nibbles,
+and accept only the configured minimum/maximum decoded byte range. BitVM3
+recursive metadata MUST bound `proof_id` by the identifier limit and require
+`recursive_height` to be a finite non-negative safe integer no greater than the
+versioned recursive-height maximum. These checks MUST occur before the relevant
+signature or recursive verifier adapter is invoked. A resource overage MUST return the typed
+`resource_limit_exceeded` failure; the settlement route MUST return HTTP 413.
 
 #### Scenario: Contract mutations fail closed
 
@@ -22,6 +40,328 @@ verification by itself.
   proof digest, public-input order, or statement/domain digest
 - **THEN** validation returns a typed non-success result and no verifier state
   advances
+
+#### Scenario: Versioned signature and recursive metadata bounds fail closed
+
+- **WHEN** a BitVM signature has odd-length hex, a decoded byte length below or
+  above the configured range, or non-hex characters, or a BitVM3 request has an
+  oversized proof id, negative/NaN/infinite/unsafe recursive height, or a height
+  above the versioned maximum
+- **THEN** the boundary returns `invalid_signature`, `malformed_request`, or
+  `resource_limit_exceeded` as appropriate, does not invoke the signature or
+  recursive verifier adapter, and does not advance state
+
+#### Scenario: Malformed or throwing adapters fail closed
+
+- **WHEN** an injected verifier, observer, or signature verifier throws, returns
+  null, or returns a malformed/contradictory result, or a release-shaped value
+  is supplied to a production boundary
+- **THEN** the boundary returns a typed non-success result with error text
+  normalized to `maxErrorChars` and does not advance or regress authoritative
+  state; an over-limit error is `resource_limit_exceeded` and the settlement
+  route maps it to HTTP 413
+
+#### Scenario: Adapter identity is authoritative
+
+- **WHEN** a result claims `production` validity but its backend is unavailable,
+  non-authoritative, or does not match the configured adapter identity
+- **THEN** validation returns a typed backend failure and no verified state is
+  created
+
+#### Scenario: Oversized input fails before expensive work
+
+- **WHEN** an untrusted request contains an oversized body, proof, public input,
+  identifier, digest/domain string, signature, signer set, or other bounded
+  route field
+- **THEN** the boundary returns `resource_limit_exceeded` (or a typed
+  malformed failure for invalid shape), performs no unbounded decode/hash, and
+  does not invoke a verifier, observer, or settlement backend
+
+### Requirement: Bounded adapter attestations and detached evidence
+
+Adapter-owned attestation values MUST cross the signature-verifier boundary as
+a canonical JSON string under the versioned `conxian.verifier.attestation.v1`
+profile. The encoded character and UTF-8 byte limits MUST be checked before
+`JSON.parse`; non-string object/proxy values MUST be rejected without
+reflection or own-key enumeration. The parsed value MUST then pass the
+existing bounded iterative validator before canonicalization, digesting, or
+storage. The profile MUST bound total encoded characters and bytes, traversal
+depth, object-key count, array length, key length, and string length. It MUST
+permit only JSON-like null, boolean, finite-number, string, plain-object, and
+dense-array values. Accessors, hidden properties, symbols, cycles, sparse
+arrays, custom/prototype-polluted objects, forbidden prototype keys, and
+non-finite numbers MUST be rejected. Validation MUST create a detached deeply
+immutable canonical snapshot; adapter-owned objects MUST NOT remain
+authoritative after return. Because no second JSON parser is introduced, the
+input MUST equal the canonical reserialization of the parsed snapshot, making
+that reserialization authoritative and rejecting duplicate-key and other
+standard-parser representation ambiguities.
+
+#### Scenario: Hostile attestation graphs fail closed
+
+- **WHEN** a signature adapter returns an object/proxy, oversized, malformed,
+  deep, cyclic, accessor, sparse, custom-prototype, polluted, duplicate-key,
+  or mutable-after-return attestation payload
+- **THEN** the boundary returns a typed malformed/resource failure, performs no
+  digest or aggregation commit from the hostile payload, invokes no own-key
+  trap for object/proxy values, and any later mutation of adapter-owned data
+  cannot change stored aggregation state
+
+#### Scenario: Attestation bounds are enforced before storage
+
+- **WHEN** an attestation exceeds the versioned total, depth, key, array, key
+  length, or string length quota
+- **THEN** the boundary returns `resource_limit_exceeded`, retains no private
+  evidence from that value, and leaves aggregation completeness unchanged
+
+#### Scenario: Canonical payload bounds precede parsing
+
+- **WHEN** an attestation string exceeds the encoded character/byte ceiling or
+  parses to content beyond the depth, key, array, or string quotas
+- **THEN** an over-limit result is returned before JSON decoding for the raw
+  string case, otherwise the parsed content fails with
+  `resource_limit_exceeded`, and no adapter-owned evidence is retained
+
+### Requirement: Same-proof BitVM3 replay and concurrency protection
+
+BitVM3 recursive verification MUST serialize operations per proof id with a
+FIFO or equivalent compare-and-swap guard spanning the asynchronous backend
+call and state commit. An identical request digest, recursive height, and
+backend identity MUST be deterministic and read-only after initialization. A
+conflicting same-id request MUST fail closed without a second backend dispatch.
+Generation/state checks MUST prevent stale completions from making returned
+state disagree with stored state, and queue cleanup MUST occur after success,
+failure, and adapter throw.
+
+#### Scenario: Same-proof deferred requests are deterministic
+
+- **WHEN** identical BitVM3 requests overlap while the backend is deferred
+- **THEN** only one backend call occurs, both callers receive the same
+  committed state, and the replay cannot replace or mutate stored state
+
+#### Scenario: Conflicting same-proof requests fail closed
+
+- **WHEN** a request with the same proof id but a different digest, height, or
+  backend arrives before or after initialization
+- **THEN** the conflicting request returns `malformed_request`, no second
+  backend call occurs, and stored state remains bound to the first request
+
+#### Scenario: Adapter throws do not poison the proof queue
+
+- **WHEN** a BitVM3 backend throws or a deferred operation completes out of
+  order relative to a queued replay
+- **THEN** the thrown operation is typed `internal_error`, queue cleanup runs,
+  and subsequent deliberate operations cannot deadlock or commit stale state
+
+### Requirement: Versioned bounded BitVM3 terminal retention
+
+BitVM3 MUST publish the versioned `conxian.bitvm3.retention.v1` lifecycle
+policy with a hard cap on retained terminal states and a terminal TTL. Capacity
+MUST be reserved before asynchronous verifier dispatch so concurrent unique
+proof ids cannot exceed the cap; a full cap MUST return
+`resource_limit_exceeded` without backend dispatch. In-flight reservations and
+proof queues MUST never be evicted.
+
+Every `BitVM3Orchestrator` instance MUST use the policy defaults of 1,024
+retained states and 15 minutes exactly. Constructor overrides MAY lower either
+value for deterministic tests, but invalid, non-positive, non-integer, unsafe,
+or above-policy values MUST be rejected with a typed configuration error.
+
+When an idle terminal record reaches the TTL, cleanup MUST atomically remove
+the state, initialization metadata, generation counter, and idle queue metadata
+for that proof id. Cleanup MUST skip any proof with an in-flight or queued
+operation. The clock MUST be injectable for deterministic tests and MUST return
+finite, safe, non-negative integer milliseconds within the inclusive
+ECMAScript Date serialization range `0..8.64e15`. Accepted readings MUST be
+monotonic; a negative, non-finite, unsafe, out-of-range, or rolled-back reading
+MUST return a typed failure without an uncaught serialization error or state
+commit. An identical request before expiry MUST be a read-only replay. After
+expiry, the identity MUST remain in a bounded tombstone window: an identical
+request MAY safely re-verify, while a conflicting request MUST remain a typed
+conflict. Once the explicit tombstone window expires, process-local memory MAY
+permit reuse, but permanent global proof-id uniqueness MUST be owned by a
+durable Gateway/Core identity registry.
+
+#### Scenario: BitVM3 capacity fails before backend dispatch
+
+- **WHEN** retained terminal states plus in-flight reservations reach the
+  versioned cap and a new unique proof id is submitted
+- **THEN** the request returns `resource_limit_exceeded`, the configured
+  verifier is not invoked, and existing state remains unchanged
+
+#### Scenario: BitVM3 cleanup preserves in-flight operations
+
+- **WHEN** TTL cleanup runs while a proof verification is deferred or queued
+- **THEN** its reservation and queue metadata remain present, no in-flight
+  operation is evicted, and the operation may commit or release normally
+
+#### Scenario: BitVM3 expiry cleans all maps and permits safe replay
+
+- **WHEN** an idle verified proof exceeds the terminal TTL and the same request
+  is submitted again
+- **THEN** the state, initialization, generation, and queue records are removed
+  together before the replay dispatch, and the request is safely re-verified
+  under the bounded policy
+
+#### Scenario: BitVM3 retention and clock configuration stay within policy
+
+- **WHEN** an orchestrator is constructed with an invalid/above-policy retention
+  override or an injected clock returns an invalid, out-of-range, or rolled-back
+  value
+- **THEN** construction fails with a typed configuration error, or verification
+  returns a typed bounded failure without backend dispatch or an uncaught
+  `toISOString()` exception
+
+#### Scenario: BitVM3 tombstones reject conflicting reuse after state cleanup
+
+- **WHEN** an idle terminal proof reaches its state TTL and cleanup removes its
+  state, initialization, generation, and queue records
+- **THEN** cleanup retains a versioned bounded tombstone containing the original
+  request digest, recursive height, and backend identity; an identical request
+  follows deterministic safe re-verification, while a conflicting same-id
+  request returns `malformed_request` without backend dispatch
+
+#### Scenario: BitVM3 tombstone cap trades availability for identity safety
+
+- **WHEN** the explicit tombstone cap is full while another terminal state
+  expires
+- **THEN** cleanup retains the expired state rather than dropping its identity
+  binding, new unique requests fail `resource_limit_exceeded` without dispatch,
+  and atomic cleanup resumes after a tombstone expires or is removed
+
+#### Scenario: BitVM3 tombstone expiry is explicit and not global uniqueness
+
+- **WHEN** a tombstone reaches its configured TTL
+- **THEN** cleanup removes the tombstone atomically and process-local memory may
+  accept a new request for that id; documentation MUST require a durable
+  Gateway/Core identity registry before production claims permanent reuse
+  prevention
+
+### Requirement: Versioned bounded BitVM2 floor retention
+
+BitVM2 MUST publish the versioned `conxian.bitvm2.retention.v1` policy with a
+hard cap on retained floor, aggregation, and initialization state plus a
+terminal TTL. A floor reservation MUST be acquired before asynchronous verifier
+dispatch; capacity failure MUST return `resource_limit_exceeded` without
+invoking the verifier. Cleanup MUST remove related state, aggregation,
+initialization, reservation, signer-reservation, and idle queue maps atomically
+only for definitively terminal and idle floors. Active challenges, in-flight
+verifier calls, queued operations, and signature verification reservations MUST
+NOT be evicted. The bounded in-memory policy MUST be documented as a local
+availability control, not permanent cross-process retention or identity
+guarantee; future durable Gateway/Core ownership is required.
+
+#### Scenario: BitVM2 capacity fails before verifier dispatch
+
+- **WHEN** retained floors plus reservations reach the versioned cap and a new
+  unique floor is submitted
+- **THEN** the request returns `resource_limit_exceeded`, no verifier call
+  occurs, and existing state remains unchanged
+
+#### Scenario: BitVM2 active operations survive cleanup
+
+- **WHEN** cleanup runs while a floor verifier, challenge, queued operation, or
+  signature verification is in flight
+- **THEN** active state and all reservation/queue metadata remain present until
+  the operation commits or releases its reservation
+
+#### Scenario: BitVM2 terminal cleanup removes associated maps together
+
+- **WHEN** a terminal floor exceeds its TTL and has no active queue, challenge,
+  signer, or floor reservation
+- **THEN** state, aggregation, initialization, reservation, signer, and idle
+  queue entries are removed in one cleanup critical section
+
+#### Scenario: BitVM2 replay and conflict semantics remain deterministic
+
+- **WHEN** the same floor request is replayed or a same-id request changes its
+  digest, backend, or tap profile
+- **THEN** the identical replay is read-only, the conflicting request returns a
+  typed non-success result, and no second verifier dispatch occurs
+
+### Requirement: Bounded ZKCP retention and paginated listing
+
+ZKCP MUST publish the versioned `conxian.zkcp.retention.v1` policy with hard
+active and total retained-intent quotas and a terminal-record TTL. Capacity
+handling MUST never silently evict an active or pending intent; it MUST either
+clean expired terminal records or return a typed `resource_limit_exceeded`
+capacity response. Terminal cleanup MUST atomically remove the intent and all
+associated proof, payment, lock, generation, and queue evidence.
+`pending` and `verified` are active states. `paid` is terminal payment evidence
+under the key-release quarantine: it remains queryable until the terminal TTL,
+then becomes eligible for cleanup. Cleanup MUST skip any intent with an
+in-flight or queued lifecycle operation, including a watch replay, even when
+the intent is `paid`.
+The clock MUST be injectable for deterministic lifecycle tests.
+
+ZKCP list operations MUST publish `conxian.zkcp.list.v1`, validate positive
+integer `limit` and non-negative integer `offset`, order deterministically, and
+return at most the bounded page size with page metadata. The route MUST NOT
+serialize an unbounded retained-intent map.
+
+#### Scenario: Capacity never evicts active state
+
+- **WHEN** active or pending intents fill the active/total quota, including
+  after the terminal TTL has elapsed
+- **THEN** initialization fails with `resource_limit_exceeded` and all existing
+  active/pending intents remain available and unchanged
+
+#### Scenario: Paid terminal evidence is retained, then removed atomically
+
+- **WHEN** a paid intent exceeds the configured retention TTL and is not locked
+  or queued
+- **THEN** the paid intent remains queryable before expiry, and after expiry the
+  intent and every associated private proof/payment evidence, lock, generation,
+  and queue bookkeeping entry are removed together
+
+#### Scenario: In-flight ZKCP watch operations are never evicted
+
+- **WHEN** terminal cleanup runs while a payment watch or queued watch replay
+  is in flight, including after the terminal TTL has elapsed
+- **THEN** the intent, evidence, lifecycle lock, generation, and queue metadata
+  remain available until the operation completes
+
+#### Scenario: ZKCP listing is bounded and deterministic
+
+- **WHEN** a caller requests a valid page, an invalid limit/offset, or a page
+  beyond the retained set
+- **THEN** the response contains only the requested bounded page in stable
+  order, invalid pagination returns a typed malformed/resource failure, and no
+  full unbounded set is returned
+
+### Requirement: Bounded untrusted identifiers in logs and failures
+
+Direct-library verifier and settlement failures MUST NOT interpolate raw
+attacker-controlled identifiers into logs or response fields. Invalid and
+oversized identifiers MUST use the fixed bounded sentinel or a summary whose
+size is checked without copying or hashing the entire input. The rule MUST
+apply consistently to BitVM2, BitVM3, ZKCP, and settlement-route failures.
+
+#### Scenario: Oversized identifiers are not echoed or logged
+
+- **WHEN** a direct-library or route request supplies an oversized proof or
+  intent id
+- **THEN** the typed failure contains only a bounded sentinel/summary, the
+  oversized value is absent from the response and logger arguments, and the
+  verifier/settlement adapter is not invoked
+
+### Requirement: Versioned ZKCP statement and domain binding
+
+ZKCP MUST derive and validate a versioned deterministic statement/domain
+binding before invoking a verifier or advancing intent state. The binding MUST
+include the encrypted-data digest, intent/payment condition, parties, amount,
+network, pre-payment hash condition, proof digest/system, circuit/key bindings,
+and ordered public-input terms. A proof digest alone MUST NOT authorize proof
+verification.
+
+#### Scenario: ZKCP term or input mutation fails before transition
+
+- **WHEN** encrypted data, payment terms, seller/buyer, amount, network,
+  statement/domain digest, public-input value/order, or any bound proof term is
+  changed without recomputing the exact canonical intent binding
+- **THEN** verification returns `public_input_mismatch`, `statement_mismatch`,
+  `domain_mismatch`, or another typed binding failure and the intent remains
+  non-authoritative
 
 ### Requirement: Explicit verifier and payment dependency injection
 
@@ -51,6 +391,72 @@ settlement authorization.
 - **THEN** the bridge and settlement route return a typed rejection and retain
   the intent/floor in a non-authoritative state
 
+### Requirement: Quarantined ZKCP key release
+
+Production ZKCP MUST NOT expose, construct, invoke, or trust a key-release
+adapter, release registry, obligation lookup, release evidence, or irreversible
+coordinator. `ZKCPBridge` MUST accept only verifier and payment-observer
+adapters. Its production construction MUST use unavailable sentinels unless an
+independently reviewed non-release backend is explicitly supplied.
+
+`finalizeSettlement` MUST always return a typed unavailable/unsupported result
+with `finalized: false` and `failure_code: unsupported_backend`. It MUST NOT
+read bridge state, mutate an intent, call any injected-looking adapter, or
+return a decryption key. The `zkcp-finalize` route MUST apply the same hard stop
+for every caller payload and MUST return a non-success HTTP response. A caller-
+supplied payment hash, capability string, registry string, or adapter-shaped
+field MUST have no effect.
+
+The platform MUST treat `paid` as payment evidence only. No production
+transition may create a `finalized` status from `paid`, and no payment or proof
+result may release encrypted data. Deterministic proof/payment fixtures, if
+retained for evaluation, MUST be test-only, carry explicit `simulated`
+provenance, and be impossible to import from production paths. No executable
+release coordinator is retained in the current test fixtures.
+
+A future release proposal MUST require an independently authenticated,
+server-bound Gateway/Core atomic claim-or-get coordinator and durable registry.
+Dependency injection, self-attested capability metadata, or a registry string
+alone MUST NOT enable an irreversible effect. If that future contract needs an
+obligation identity, it MUST derive it only from the canonical encrypted-data
+commitment plus an explicit version/domain. The commitment bytes MUST be the
+exact UTF-8 encoding of the validated ASCII token `sha256:` followed by 64
+lowercase hexadecimal characters, with no whitespace, Unicode normalization,
+raw seller/buyer strings, or mutable settlement terms. A future domain-separated
+preimage MAY encode a fixed UTF-8 ASCII domain/version label, one zero-byte
+separator, and those commitment bytes; this rule is not executable in the
+current platform boundary.
+
+#### Scenario: Paid evidence cannot finalize
+
+- **WHEN** an intent reaches `paid` from authoritative proof and independently
+  observed payment evidence, and a caller invokes direct or route finalization
+- **THEN** the intent remains `paid`, the result is typed unavailable with
+  `unsupported_backend`, `finalized` is false, and no key material is present
+
+#### Scenario: Injected-looking release adapters receive zero calls
+
+- **WHEN** a conforming-looking or malicious release object is supplied through
+  a runtime-shaped constructor argument or caller payload
+- **THEN** the production bridge and route make zero calls to it, do not inspect
+  its release methods, and cannot create finalized state or key output
+
+#### Scenario: Payload, restart, and drift cases remain unsupported
+
+- **WHEN** finalization is requested with valid, malformed, replayed, restart,
+  altered-binding, registry-drift, or arbitrary payment-hash-shaped input
+- **THEN** the direct library and route return the same typed unavailable result,
+  preserve existing state, and perform zero external dispatch
+
+#### Scenario: Future obligation identity has no party bypass
+
+- **WHEN** a future coordinator derives an obligation for the same canonical
+  encrypted-data commitment using different seller/buyer string
+  representations
+- **THEN** the commitment/version/domain bytes are the only identity input, so
+  the representations cannot create separate obligations or bypass a durable
+  claim; the current platform contains no executable derivation
+
 ### Requirement: Fail-closed settlement transitions
 
 Settlement MUST reject unsupported, simulated, malformed, invalid, and unknown
@@ -66,10 +472,68 @@ state mutation.
 - **THEN** the route returns a typed non-success response, does not emit a
   decryption key, and leaves settlement state unchanged
 
+#### Scenario: Lifecycle snapshots cannot bypass the quarantine
+
+- **WHEN** a caller mutates an object returned by an intent getter/list method,
+  or a status string conflicts with retained proof/payment evidence
+- **THEN** the caller changes no authoritative state and finalization returns
+  typed `unsupported_backend` without reading mutable caller state or dispatch
+
+#### Scenario: Terminal payment evidence cannot become finalization
+
+- **WHEN** a caller finalizes a paid intent, retries the request, invokes it
+  concurrently, or supplies an arbitrary payment hash
+- **THEN** the intent remains `paid`, every result is unavailable/
+  `unsupported_backend`, and no key-release invocation or key output occurs
+
+#### Scenario: Async lifecycle commits cannot regress state
+
+- **WHEN** verification or payment observation awaits an
+  adapter while another lifecycle operation or replay is queued for the same
+  intent
+- **THEN** operations execute in deterministic per-intent order and every
+  evidence/terminal commit re-checks operation identity, generation, and
+  expected status so a stale operation cannot overwrite `verified` or `paid`
+  state; finalization has no lifecycle commit path
+
+### Requirement: Attested unique BitVM2 aggregation
+
+BitVM2 aggregation MUST require a profile-scoped authorized signer set, unique
+signer ids, and explicit injected signature-verification/attestation evidence.
+The default/unavailable signature verifier MUST return typed unsupported
+without accepting a signature. Simulated or unknown provenance MUST NOT count
+toward completion. Signature formatting alone MUST NOT complete aggregation.
+
+#### Scenario: Duplicate or unverified signatures do not count twice
+
+- **WHEN** a signer submits twice, an unauthorized signer submits, an
+  unavailable verifier is configured, or an adapter returns malformed or
+  contradictory attestation evidence
+- **THEN** the submission is rejected with a typed failure and aggregation
+  completeness remains unchanged
+
+#### Scenario: Concurrent signer reservations are atomic
+
+- **WHEN** the same signer submits concurrently, a distinct signer submits
+  concurrently, or signature verification fails/throws after reservation
+- **THEN** the same signer is counted at most once, distinct authorized signers
+  may each commit once, failed reservations are released for retry, and the
+  commit re-checks signer uniqueness
+
+#### Scenario: Floor initialization cannot detach an active aggregation
+
+- **WHEN** a signature verifier is awaiting an async result while an identical
+  `verifyFloor` replay arrives for the same proof, or a conflicting floor
+  initialization arrives
+- **THEN** the replay waits on the same per-proof guard and is read-only (or is
+  rejected as a conflict), the live aggregation object and committed signatures
+  remain unchanged, and a stale signature result cannot commit to a detached
+  aggregation
+
 ### Requirement: Threat-class guard and regression coverage
 
-The repository MUST provide equivalent Python and PowerShell contamination
-checks for dangerous production-boundary patterns and focused tests for
+The repository MUST provide equivalent Python and PowerShell full-content
+contamination checks for dangerous production-boundary patterns and focused tests for
 unavailable backends, simulation rejection, wrong keys, mutated proof/inputs,
 malformed encoding, curve/circuit mismatch, invalid tap/challenge/signature,
 arbitrary payment hashes, and unknown actions. Tests/docs MUST be excluded from
@@ -78,8 +542,17 @@ production-pattern scanning without weakening runtime boundaries.
 #### Scenario: Guard catches production regressions without fixture false positives
 
 - **WHEN** a production verifier reintroduces an unconditional success,
-  proof-length predicate, simulator default, synthetic key, or unknown-action
+  proof-length predicate, multiline simulator/default alias or test-fixture
+  import, non-canonical bridge construction, synthetic key, or unknown-action
   success response
 - **THEN** both supported guard implementations fail with a specific rule,
   while equivalent test-only fixture code is not reported as production
   contamination
+
+#### Scenario: PowerShell and Python canonical cases remain in parity
+
+- **WHEN** the canonical explicit unavailable ZKCP construction, a default
+  alias, or a simulator alias is evaluated against the guard fixtures
+- **THEN** the unavailable construction is allowed and aliases are rejected in
+  both rule definitions; a static parity checker may be used when `pwsh` is
+  unavailable but MUST NOT claim runtime PowerShell execution

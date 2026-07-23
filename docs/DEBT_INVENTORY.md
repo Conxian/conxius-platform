@@ -69,8 +69,8 @@ Last updated: 2026-07-22.
 
 | ID | Item | Risk Class | Status |
 |----|------|-----------|--------|
-| D-20 | BitVM2/BitVM3/ZKCP production verifier, payment-observer, and key-release backends are not available in this repository | Security / Correctness | 🛡️ **Quarantined by issue #1187** — typed contracts and unavailable adapters fail closed; Gateway/Core/Nexus implementation and independent acceptance remain pending |
-| D-21 | Historical BitVM2/ZKCP helper behavior could present simulation as authoritative success | Security / Correctness | ✅ **Remediated in #1187** — proof-length checks, unconditional success, caller-only payment hashes, and synthetic keys are rejected or removed |
+| D-20 | BitVM2/BitVM3/ZKCP production verifier, payment-observer, and key-release backends are not available in this repository | Security / Correctness | 🛡️ **Quarantined by issue #1187** — adapter-owned proof/payment authority, bounded attestations/retention, versioned ZKCP intent binding, immutable evidence, and unavailable defaults fail closed. Production key release is completely removed from the bridge and route: no releaser, obligation execution, registry lookup, decryption-key output, or finalized success exists. A future independently authenticated, server-bound Gateway/Core atomic claim-or-get coordinator and durable registry remain a separate launch gate |
+| D-21 | Historical BitVM2/ZKCP helper behavior could present simulation as authoritative success | Security / Correctness | ✅ **Remediated in #1187 follow-up** — proof-length checks, unconditional/contradictory success, unavailable or placeholder backend authority, duplicate/format-only aggregation, mutable lifecycle snapshots, hostile/proxy attestation graphs, unbounded BitVM2/BitVM3/ZKCP retention/listing, raw identifier logging, caller-only payment hashes, synthetic keys, production key-release dispatch/output, and finalized-state claims are rejected or removed |
 
 ## Burn-Down Priority
 
@@ -95,7 +95,7 @@ Last updated: 2026-07-22.
 
 ### Backlog
 - [ ] D-19: Test logger and idgen utilities
-- [ ] D-20: Integrate and independently accept Gateway/Core/Nexus verifier, payment-observer, and key-release backends
+- [ ] D-20: Integrate and independently accept Gateway/Core/Nexus verifier and payment-observer backends. A separate future proposal must provide an independently authenticated, server-bound Gateway/Core atomic claim-or-get coordinator and durable registry before any key-release design can be reconsidered; dependency injection alone is insufficient
 - [ ] Full cross-repo debt inventory (gateway, nexus, wallet, orbit, enclave-sdk, conxian_ui, conxian-labs-site)
 - [ ] D-05: Consider structured error reporting for client-side pages
 

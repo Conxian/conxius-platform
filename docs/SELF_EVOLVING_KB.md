@@ -16,6 +16,25 @@ The Conxian knowledge base (AGENTS.md) should be a **living system** that:
 
 ## Data Sources
 
+### Readiness rule: durable side effects
+
+Knowledge-base entries about settlement authorization MUST distinguish local
+orchestration state from externally durable authority. Production ZKCP key
+release is currently quarantined: the platform has no releaser, obligation
+execution, registry lookup, decryption-key output, or finalized success. `paid`
+is payment evidence only. Any future irreversible coordinator must be
+independently authenticated and server-bound, provide a Gateway/Core atomic
+claim-or-get operation, and use a durable registry; dependency injection or
+self-attested capability strings are never sufficient. If a future obligation
+id is needed, its only content input is the canonical encrypted-data commitment
+plus version/domain. The commitment bytes are the exact UTF-8 encoding of the
+validated ASCII token `sha256:` followed by 64 lowercase hexadecimal
+characters, with no whitespace, Unicode normalization, seller/buyer strings,
+or mutable terms. Process-local latches, caches, or evidence must never be
+recorded as proof of irreversible authority or cross-restart uniqueness.
+The checked-in unavailable finalization boundary remains the source-of-truth
+default until a separately reviewed coordinator exists.
+
 ### Internal Sources (Repository)
 
 | Source | Frequency | Data Points |

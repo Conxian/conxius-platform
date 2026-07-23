@@ -310,10 +310,6 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function isBoundedNonEmptyString(value: unknown, maxLength: number): value is string {
-  return isNonEmptyString(value) && value.length <= maxLength;
-}
-
 function validateIntentIdentifier(value: unknown):
   | { ok: true; id: string }
   | { ok: false; failure_code: "malformed_request" | "resource_limit_exceeded"; id: string; error: string } {

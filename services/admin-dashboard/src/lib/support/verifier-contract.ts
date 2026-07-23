@@ -498,7 +498,7 @@ export function snapshotBoundedJson(value: unknown): BoundedJsonSnapshotResult {
         continue;
       }
 
-      if (typeof current !== "object" || current === undefined) {
+      if (typeof current !== "object") {
         return fail("malformed_request", "Attestation contains a value outside the JSON-like type set");
       }
       if (frame.depth > VERIFIER_ATTESTATION_LIMITS.maxDepth) {

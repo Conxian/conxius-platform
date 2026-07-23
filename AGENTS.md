@@ -1998,3 +1998,21 @@ AGENTS.md (this update)
 - Hosted checks on the final documentation-only head still depend on GitHub; production protocol adapters and canonical ratification evidence remain out of scope.
 **Gotchas**:
 - A failed tracking checkout temporarily populated the index with the exact fetched PR tree; after verifying no unrelated or unstaged work, the clean main state was restored before creating the local PR branch without force-pushing.
+
+### 2026-07-23 — PR #1198 Mainline Merge and Code-Quality Cleanup
+**Trigger**: PR #1198 branch refresh after Code Quality Copilot findings `3633842732`, `3634272145`, and `3634954748`.
+**What was done**:
+- Fetched `origin/main` at `28ce51d194c844f84a8fc52278b73b2ce2417dec`, merged it without rewriting the PR history, and preserved both append-only `AGENTS.md` log branches in signed-off merge `b5ed6c2a38c5e169a51c0fb4ae9387e3187e1636`.
+- Made the contamination scanner generator use explicit returns consistently, removed the impossible `undefined` comparison from bounded attestation validation, and deleted the unused ZKCP string helper.
+**Key discoveries**:
+- The repository reports `web_commit_signoff_required: true`; the merge commit therefore includes a verified `Signed-off-by` trailer.
+- The three findings are behavior-preserving cleanup and do not require a new OpenSpec capability or checklist phase.
+**Files touched**:
+- `scripts/verify_contamination_guard.py`
+- `services/admin-dashboard/src/lib/support/verifier-contract.ts`
+- `services/admin-dashboard/src/lib/support/zkcp.ts`
+- `AGENTS.md`
+**Gaps identified**:
+- Hosted full CI and PR mergeability remain to be evaluated on the pushed head.
+**Gotchas**:
+- The PR remote-tracking ref required an explicit local fetch refspec before checkout; no remote history was rewritten or force-pushed.

@@ -130,7 +130,7 @@ def _snippet(content: str, start: int, end: int) -> str:
 
 def _bridge_construction_findings(rel_path: str, content: str) -> Iterable[Finding]:
     if not VERIFIER_PATH.fullmatch(rel_path):
-        return []
+        return
 
     allowed = {
         "BitVMBridge": re.compile(r"new\s+UnavailableBitVMVerifier\s*\(\s*\)\s*"),
@@ -178,6 +178,7 @@ def _bridge_construction_findings(rel_path: str, content: str) -> Iterable[Findi
                 line=_line_number(content, match.start()),
                 snippet=_snippet(content, match.start(), min(close_index + 1, match.start() + 240)),
             )
+    return
 
 
 def scan_content(rel_path: str, content: str) -> list[Finding]:

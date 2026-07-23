@@ -1,0 +1,741 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Conxian/conxius-platform/schemas/protocol-revenue-observation.schema.json",
+  "title": "Observed Protocol Revenue and Founder-Rights Status Snapshot",
+  "description": "Versioned, fail-closed observation contract for protocol revenue, compensation, routing, deployment, and evidence state. This schema records observations; it does not ratify protocol economics or grant payout authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "observation_id",
+    "observation",
+    "policy_authority",
+    "provenance",
+    "fee_policy",
+    "compensation",
+    "deployment",
+    "routing",
+    "anchor",
+    "payout",
+    "custody_claim",
+    "evidence"
+  ],
+  "properties": {
+    "schema": {
+      "const": "conxian.protocol-revenue-observation.v1"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "observation_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "observation": {
+      "$ref": "#/$defs/observation"
+    },
+    "policy_authority": {
+      "$ref": "#/$defs/policyAuthority"
+    },
+    "provenance": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/provenance"
+      }
+    },
+    "fee_policy": {
+      "$ref": "#/$defs/feePolicy"
+    },
+    "compensation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["founder", "builder"],
+      "properties": {
+        "founder": {
+          "$ref": "#/$defs/compensationTrack"
+        },
+        "builder": {
+          "$ref": "#/$defs/compensationTrack"
+        }
+      }
+    },
+    "deployment": {
+      "$ref": "#/$defs/deployment"
+    },
+    "routing": {
+      "$ref": "#/$defs/routing"
+    },
+    "anchor": {
+      "$ref": "#/$defs/anchor"
+    },
+    "payout": {
+      "$ref": "#/$defs/payout"
+    },
+    "custody_claim": {
+      "const": false
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 128,
+      "pattern": "^[a-z0-9][a-z0-9._:-]+$"
+    },
+    "dateTime": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "commitSha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+"
+    },
+    "evidenceId": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 128,
+      "pattern": "^ev-[a-z0-9][a-z0-9._:-]+$"
+    },
+    "provenanceId": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 128,
+      "pattern": "^prov-[a-z0-9][a-z0-9._:-]+$"
+    },
+    "integer": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "basisPoints": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000
+    },
+    "evidenceReferences": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/evidenceId"
+      }
+    },
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["observed_at", "expires_at", "evidence_ids"],
+      "properties": {
+        "observed_at": {
+          "$ref": "#/$defs/dateTime"
+        },
+        "expires_at": {
+          "$ref": "#/$defs/dateTime"
+        },
+        "evidence_ids": {
+          "$ref": "#/$defs/evidenceReferences",
+          "type": "array",
+          "minItems": 1
+        }
+      }
+    },
+    "policyAuthority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "approval_status", "owner_scope", "provenance_id", "approval_evidence_ids"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["source", "proposal", "approved"]
+        },
+        "approval_status": {
+          "type": "string",
+          "enum": ["not-applicable", "unratified", "ratified", "revoked", "unresolved"]
+        },
+        "owner_scope": {
+          "const": "protocol"
+        },
+        "provenance_id": {
+          "$ref": "#/$defs/provenanceId"
+        },
+        "approval_evidence_ids": {
+          "$ref": "#/$defs/evidenceReferences"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "source"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "approval_status": {
+                "const": "not-applicable"
+              },
+              "approval_evidence_ids": {
+                "type": "array",
+                "maxItems": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "proposal"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "approval_status": {
+                "enum": ["unratified", "unresolved", "revoked"]
+              },
+              "approval_evidence_ids": {
+                "type": "array",
+                "maxItems": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "approved"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "approval_status": {
+                "const": "ratified"
+              },
+              "approval_evidence_ids": {
+                "type": "array",
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provenance_id", "repository", "ref", "commit_sha", "artifact_path", "role", "evidence_ids"],
+      "properties": {
+        "provenance_id": {
+          "$ref": "#/$defs/provenanceId"
+        },
+        "repository": {
+          "$ref": "#/$defs/repository"
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "commit_sha": {
+          "$ref": "#/$defs/commitSha"
+        },
+        "artifact_path": {
+          "$ref": "#/$defs/relativePath"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["protocol-source", "governance-proposal", "governance-approval", "deployment-record", "gateway-observation", "interface-observation"]
+        },
+        "evidence_ids": {
+          "$ref": "#/$defs/evidenceReferences"
+        }
+      }
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["asset_id", "decimals"],
+      "properties": {
+        "asset_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "decimals": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 38
+        }
+      }
+    },
+    "feeBase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "unit", "asset"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["gross-volume", "eligible-fee-base", "transaction-amount"]
+        },
+        "unit": {
+          "const": "asset-smallest-units"
+        },
+        "asset": {
+          "$ref": "#/$defs/asset"
+        }
+      }
+    },
+    "effectiveWindow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "start_burn_block_height", "end_burn_block_height"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["exact", "unresolved"]
+        },
+        "start_burn_block_height": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "end_burn_block_height": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "exact"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "start_burn_block_height": {
+                "type": "integer"
+              },
+              "end_burn_block_height": {
+                "type": "integer"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "unresolved"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "start_burn_block_height": {
+                "const": null
+              },
+              "end_burn_block_height": {
+                "const": null
+              }
+            }
+          }
+        }
+      ]
+    },
+    "feeRate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "rate_bps", "denominator_bps", "effective_window"],
+      "properties": {
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rate_bps": {
+          "$ref": "#/$defs/basisPoints"
+        },
+        "denominator_bps": {
+          "const": 10000
+        },
+        "effective_window": {
+          "$ref": "#/$defs/effectiveWindow"
+        }
+      }
+    },
+    "feePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fee_base", "denominator_bps", "rates", "schedule_status"],
+      "properties": {
+        "fee_base": {
+          "$ref": "#/$defs/feeBase"
+        },
+        "denominator_bps": {
+          "const": 10000
+        },
+        "rates": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/feeRate"
+          }
+        },
+        "schedule_status": {
+          "type": "string",
+          "enum": ["observed", "resolved", "unresolved"]
+        }
+      }
+    },
+    "beneficiaryDisclosure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reference_kind", "reference"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["disclosed", "not-disclosed", "unresolved"]
+        },
+        "reference_kind": {
+          "type": "string",
+          "enum": ["evidence-id", "repository-path", "governance-record", "on-chain-reference", "not-applicable"]
+        },
+        "reference": {
+          "type": ["string", "null"],
+          "minLength": 1
+        }
+      }
+    },
+    "scheduleEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schedule_id", "rate_bps", "denominator_bps", "rate_basis", "effective_window"],
+      "properties": {
+        "schedule_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "rate_bps": {
+          "$ref": "#/$defs/basisPoints"
+        },
+        "denominator_bps": {
+          "const": 10000
+        },
+        "rate_basis": {
+          "type": "string",
+          "enum": ["protocol-fee", "gross-volume"]
+        },
+        "effective_window": {
+          "$ref": "#/$defs/effectiveWindow"
+        }
+      }
+    },
+    "schedule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "entries"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["resolved", "unresolved"]
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/scheduleEntry"
+          }
+        }
+      }
+    },
+    "compensationTrack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "beneficiary_disclosure", "schedule", "route_state"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["none-observed", "proposed", "approved", "active", "disabled", "unresolved"]
+        },
+        "beneficiary_disclosure": {
+          "$ref": "#/$defs/beneficiaryDisclosure"
+        },
+        "schedule": {
+          "$ref": "#/$defs/schedule"
+        },
+        "route_state": {
+          "type": "string",
+          "enum": ["not-configured", "declared", "verified", "blocked", "unresolved"]
+        }
+      }
+    },
+    "deployment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stage", "environment", "source_provenance_id", "transaction_id", "confirmed_burn_block_height", "evidence_ids", "interface_evidence_ids"],
+      "properties": {
+        "stage": {
+          "type": "string",
+          "enum": ["source-only", "plan", "preflight", "broadcast", "confirmed", "live-interface-verified"]
+        },
+        "environment": {
+          "type": "string",
+          "enum": ["mainnet", "testnet", "simnet", "unknown"]
+        },
+        "source_provenance_id": {
+          "$ref": "#/$defs/provenanceId"
+        },
+        "transaction_id": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "confirmed_burn_block_height": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "evidence_ids": {
+          "$ref": "#/$defs/evidenceReferences"
+        },
+        "interface_evidence_ids": {
+          "$ref": "#/$defs/evidenceReferences"
+        }
+      }
+    },
+    "routeEndpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference", "owner_scope", "authorization", "evidence_ids"],
+      "properties": {
+        "reference": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner_scope": {
+          "const": "protocol"
+        },
+        "authorization": {
+          "type": "string",
+          "enum": ["declared", "verified", "unverified", "missing"]
+        },
+        "evidence_ids": {
+          "$ref": "#/$defs/evidenceReferences"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "authorization": {
+                "const": "verified"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence_ids": {
+                "type": "array",
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "authorizedSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference", "owner_scope", "authorization", "evidence_ids"],
+      "properties": {
+        "reference": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner_scope": {
+          "const": "protocol"
+        },
+        "authorization": {
+          "type": "string",
+          "enum": ["declared", "verified", "unverified", "missing"]
+        },
+        "evidence_ids": {
+          "$ref": "#/$defs/evidenceReferences"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "authorization": {
+                "const": "verified"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence_ids": {
+                "type": "array",
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "routing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["collector", "distributor", "authorized_sources", "platform_substitution"],
+      "properties": {
+        "collector": {
+          "$ref": "#/$defs/routeEndpoint"
+        },
+        "distributor": {
+          "$ref": "#/$defs/routeEndpoint"
+        },
+        "authorized_sources": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/authorizedSource"
+          }
+        },
+        "platform_substitution": {
+          "const": false
+        }
+      }
+    },
+    "anchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bitcoin_burn_block_height", "observed_at", "evidence_id"],
+      "properties": {
+        "bitcoin_burn_block_height": {
+          "$ref": "#/$defs/integer"
+        },
+        "observed_at": {
+          "$ref": "#/$defs/dateTime"
+        },
+        "evidence_id": {
+          "$ref": "#/$defs/evidenceId"
+        }
+      }
+    },
+    "payout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["route_state", "payout_enabled", "evidence_ids", "reason"],
+      "properties": {
+        "route_state": {
+          "type": "string",
+          "enum": ["not-configured", "declared", "verified", "blocked", "unresolved"]
+        },
+        "payout_enabled": {
+          "type": "boolean"
+        },
+        "evidence_ids": {
+          "$ref": "#/$defs/evidenceReferences"
+        },
+        "reason": {
+          "type": ["string", "null"],
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "payout_enabled": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence_ids": {
+                "type": "array",
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidence_id", "kind", "observed_at", "claim"],
+      "properties": {
+        "evidence_id": {
+          "$ref": "#/$defs/evidenceId"
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["source", "proposal", "approval", "deployment-plan", "deployment-preflight", "deployment-broadcast", "deployment-confirmation", "interface-verification", "collector-authorization", "source-authorization", "route-verification", "burn-anchor", "governance", "gateway-observation"]
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "external_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "repository": {
+          "$ref": "#/$defs/repository"
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "commit_sha": {
+          "$ref": "#/$defs/commitSha"
+        },
+        "observed_at": {
+          "$ref": "#/$defs/dateTime"
+        },
+        "claim": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "anyOf": [
+        {
+          "required": ["url"],
+          "properties": {
+            "url": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        },
+        {
+          "required": ["external_id"],
+          "properties": {
+            "external_id": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ]
+    }
+  }
+}

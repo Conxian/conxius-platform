@@ -24,7 +24,14 @@ import { POST as postSettlementEngine } from "../app/api/v1/settlement-engine/ro
 import { bitvmBridge } from "../lib/support/bitvm";
 import { zkcpBridge } from "../lib/support/zkcp";
 import { M2MAuthenticator, M2MConfig, type Scope } from "../lib/support/m2m";
-import { VERIFIER_RESOURCE_LIMITS } from "../lib/support/verifier-contract";
+import {
+  createPaymentFailure,
+  createPaymentObservation,
+  VERIFIER_CONTRACT_VERSION,
+  VERIFIER_RESOURCE_LIMITS,
+  type BackendIdentity,
+  type PaymentObservationResult,
+} from "../lib/support/verifier-contract";
 
 const NOW_SECONDS = 1_800_000_000;
 const STRONG_SECRET = "route-test-secret-with-at-least-32-bytes-for-hs256";
@@ -204,6 +211,93 @@ describe("route-level M2M authorization", () => {
       expect(finalizeSpy).not.toHaveBeenCalled();
     } finally {
       finalizeSpy.mockRestore();
+    }
+  });
+
+  it("preserves payment-operation status separately from lifecycle status", async () => {
+    const treasuryToken = await issueToken(["write:treasury", "m2m:internal"]);
+    const observer: BackendIdentity = {
+      id: "route-watch-observer",
+      version: "route-watch-v1",
+      artifact_digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      authority: "authoritative",
+    };
+    const paymentRequest = {
+      intent_id: "route-watch-status",
+      address: "bc1qroute-watch-seller",
+      expected_amount: 1000,
+      network: "bitcoin-regtest" as const,
+    };
+    const observation = await createPaymentObservation({
+      request: paymentRequest,
+      txid: "route-watch-observed-txid",
+      amount: 1000,
+      confirmations: 6,
+      observer,
+      provenance: "production",
+      observed_at: "2026-07-23T00:00:00.000Z",
+    });
+    const cases: ReadonlyArray<{
+      result: PaymentObservationResult;
+      status: string;
+      httpStatus: number;
+      failure_code?: string;
+    }> = [
+      {
+        result: createPaymentFailure("observer_unavailable", "observer is unavailable"),
+        status: "unavailable",
+        httpStatus: 503,
+        failure_code: "observer_unavailable",
+      },
+      {
+        result: createPaymentFailure("payment_mismatch", "payment evidence is invalid"),
+        status: "mismatch",
+        httpStatus: 422,
+        failure_code: "payment_mismatch",
+      },
+      {
+        result: createPaymentFailure("simulated_result", "synthetic payment evidence", "simulated"),
+        status: "rejected",
+        httpStatus: 422,
+        failure_code: "simulated_result",
+      },
+      {
+        result: {
+          contract_version: VERIFIER_CONTRACT_VERSION,
+          status: "observed",
+          detected: true,
+          provenance: "production",
+          observation,
+        },
+        status: "observed",
+        httpStatus: 200,
+      },
+    ];
+    const watchSpy = vi.spyOn(zkcpBridge, "watchForPayment");
+    const lifecycleSnapshot = { status: "verified" } as unknown as NonNullable<ReturnType<typeof zkcpBridge.getIntent>>;
+    const getIntentSpy = vi.spyOn(zkcpBridge, "getIntent").mockReturnValue(lifecycleSnapshot);
+
+    try {
+      for (const testCase of cases) {
+        watchSpy.mockResolvedValueOnce(testCase.result);
+        const response = await postSettlementEngine(
+          bearerRequest("POST", treasuryToken, { action: "zkcp-watch", id: paymentRequest.intent_id }),
+        );
+        const body = await response.json() as {
+          status?: string;
+          lifecycle_status?: string;
+          failure_code?: string;
+        };
+
+        expect(response.status).toBe(testCase.httpStatus);
+        expect(body.status).toBe(testCase.status);
+        expect(body.lifecycle_status).toBe("verified");
+        expect(body.failure_code).toBe(testCase.failure_code);
+      }
+      expect(getIntentSpy).toHaveBeenCalledTimes(cases.length);
+    } finally {
+      getIntentSpy.mockRestore();
+      watchSpy.mockRestore();
     }
   });
 

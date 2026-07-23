@@ -1902,3 +1902,22 @@ AGENTS.md (this update)
 - The devbox has no `pwsh` runtime, so PowerShell contamination parity remains static/self-test based.
 **Gotchas**:
 - Historical Phase 10–12 release-coordinator sketches in the change are explicitly superseded by Phase 13 and do not authorize production execution; rerun strict OpenSpec, full tests, lifecycle/contamination, dependency, and diff checks after this append.
+
+### 2026-07-23 — PR #1198 Final P2 Response Closure
+**Trigger**: Review `4760057624` on PR #1198.
+**What was done**:
+- Preserved the `zkcp-watch` payment-operation status and exposed intent lifecycle state as `lifecycle_status`, with regressions for unavailable, invalid, simulated, and observed outcomes.
+- Treated `paid` as terminal evidence under bounded retention, added atomic evidence/metadata cleanup, capacity recovery, and in-flight watch preservation tests, and updated the quarantine retention documentation.
+- Updated the PR description to state that production key release and finalization remain quarantined.
+**Key discoveries**:
+- `paid` is terminal payment evidence rather than an active lifecycle state; cleanup must retain it through the TTL but skip queued or in-flight watch operations.
+**Files touched**:
+- `services/admin-dashboard/src/app/api/v1/settlement-engine/route.ts`
+- `services/admin-dashboard/src/lib/support/zkcp.ts`
+- `services/admin-dashboard/src/tests/{routeAuth.test.ts,zkcp.test.ts}`
+- `openspec/changes/2026-07-22-issue-1187-fail-closed-verifier-boundaries/{proposal.md,design.md,tasks.md,specs/fail-closed-verifier-boundaries/spec.md}`
+- `docs/PRODUCTION_BOUNDARY.md` and PR #1198 metadata
+**Gaps identified**:
+- No independently authenticated, server-bound Gateway/Core atomic claim-or-get coordinator exists; production key release remains unavailable.
+**Gotchas**:
+- Hosted checks are inspected after the new commit is pushed without waiting indefinitely.

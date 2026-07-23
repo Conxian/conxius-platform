@@ -156,11 +156,15 @@ aggregation, initialization, reservation, signer, and queue maps atomically.
 This process-local policy is an availability tradeoff until durable Gateway/Core
 retention owns long-lived verification identity and evidence.
 
-ZKCP publishes `conxian.zkcp.retention.v1` with 1,024 active and 2,048 total
-retained-intent limits plus a default 15-minute terminal TTL. Capacity handling
-never silently evicts active or pending intents. Expired terminal cleanup
-atomically removes the intent and proof/payment evidence plus generation, lock,
-and queue bookkeeping. `conxian.zkcp.list.v1` exposes only a
+ZKCP publishes `conxian.zkcp.retention.v1` with 1,024 active (`pending` and
+`verified`) and 2,048 total retained-intent limits plus a default 15-minute
+terminal TTL. Under the permanent key-release quarantine, `paid` is terminal
+payment evidence rather than an active state: it remains queryable through the
+TTL and then becomes eligible for cleanup. Capacity handling never silently
+evicts active or pending intents. Expired terminal cleanup atomically removes
+the intent and proof/payment evidence plus generation, lock, and queue
+bookkeeping, but skips any in-flight or queued lifecycle operation, including a
+paid watch replay. `conxian.zkcp.list.v1` exposes only a
 deterministically ordered bounded page (default 50, maximum 100, offset maximum
 2,048); invalid pagination is typed and the route never returns the full map.
 

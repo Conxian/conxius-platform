@@ -672,7 +672,7 @@ export class ZKCPBridge {
   }
 
   private isActiveIntent(intent: ZKCPIntent): boolean {
-    return intent.status === "pending" || intent.status === "verified" || intent.status === "paid";
+    return intent.status === "pending" || intent.status === "verified";
   }
 
   private deleteIntentEvidence(intentId: string): void {

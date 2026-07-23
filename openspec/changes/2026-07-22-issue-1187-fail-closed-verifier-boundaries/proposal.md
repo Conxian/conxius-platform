@@ -126,8 +126,9 @@ those cross-repository backends are available and independently accepted.
     calls to injected-looking adapters and never create `finalized` state or
     decryption-key output.
 13. Proof and independently observed payment transitions remain fail closed;
-    `paid` is the terminal payment-evidence state exposed by this boundary and
-    cannot release data. Test-only deterministic proof/payment fixtures carry
+    `paid` is the terminal payment-evidence state exposed by this boundary,
+    remains queryable only for the bounded terminal-retention TTL, and cannot
+    release data. Test-only deterministic proof/payment fixtures carry
     `simulated` provenance and cannot authorize settlement.
 14. A future release proposal must provide an independently authenticated,
     server-bound Gateway/Core atomic claim-or-get coordinator and durable

@@ -278,8 +278,9 @@ export async function POST(req: Request) {
         return failureResponse("resource_limit_exceeded", "ZKCP intent id exceeds the v1 resource limit");
       }
       const result = await zkcpBridge.watchForPayment(payload.id);
+      const intent = zkcpBridge.getIntent(payload.id);
       return responseFor(
-        { id: payload.id, ...result, status: zkcpBridge.getIntent(payload.id)?.status ?? "failed" },
+        { id: payload.id, ...result, lifecycle_status: intent?.status ?? "failed" },
         result.status === "observed" && result.detected,
         result.failure_code,
       );

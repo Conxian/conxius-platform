@@ -234,3 +234,21 @@ production adapter, registry, obligation lookup, or irreversible dispatch.
 - [ ] Re-run focused/full Vitest, dashboard typecheck, lifecycle/control and
   contamination guards, strict OpenSpec validation, dependency checks, diff
   hygiene, and hosted PR checks after the focused commit is pushed.
+
+## Phase 14 — Final P2 response and paid-evidence retention closure (PR #1198 review 4760057624)
+
+- [x] Preserve the payment-observation operation `status` in `zkcp-watch` and
+  expose the intent lifecycle state separately as `lifecycle_status`; retain
+  failure-code HTTP mapping for unavailable, invalid, simulated, and observed
+  responses.
+- [x] Treat `paid` as terminal payment evidence for bounded retention while
+  keeping `pending`/`verified` active; retain paid intents through the TTL and
+  atomically purge intent, proof/payment evidence, generation, lock, and queue
+  metadata after expiry.
+- [x] Preserve in-flight and queued watch operations during terminal cleanup;
+  add paid-TTL, evidence-cleanup, capacity-recovery, and in-flight regressions.
+- [x] Update the production-boundary and OpenSpec retention documentation to
+  describe the permanent key-release quarantine and bounded paid evidence.
+- [x] Re-run focused/full Vitest, dashboard typecheck, lifecycle/control and
+  contamination guards, strict OpenSpec validation, diff hygiene, and hosted PR
+  checks after the focused commit is pushed.

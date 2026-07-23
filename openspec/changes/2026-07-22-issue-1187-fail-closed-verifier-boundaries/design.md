@@ -232,14 +232,19 @@ zero dispatch.
 
 ### 2.8 Bounded ZKCP retention and listing
 
-ZKCP publishes `conxian.zkcp.retention.v1`: at most 1,024 active intents and
-2,048 total retained intents, with terminal records retained for at most 15
-minutes by default. Capacity checks run after terminal cleanup but active or
-pending intents are never silently evicted; a full active/retained capacity is
-a typed `resource_limit_exceeded` response. Terminal eviction atomically removes
-the intent and all private proof, payment, generation, lock, and queue
-bookkeeping. The bridge accepts an injectable clock for deterministic
-cleanup tests.
+ZKCP publishes `conxian.zkcp.retention.v1`: at most 1,024 active intents
+(`pending` and `verified`) and 2,048 total retained intents, with terminal
+records retained for at most 15 minutes by default. `paid` is terminal payment
+evidence under the permanent key-release quarantine, not an active lifecycle
+state: it remains queryable through the TTL, then becomes eligible for cleanup.
+Capacity checks run after terminal cleanup but active or pending intents are
+never silently evicted; a full active/retained capacity is a typed
+`resource_limit_exceeded` response. Terminal eviction atomically removes the
+intent and all private proof, payment, generation, lock, and queue bookkeeping.
+Cleanup skips every intent with an in-flight or queued lifecycle operation,
+including a paid watch replay, so a terminal record cannot be evicted while its
+operation is still using the evidence. The bridge accepts an injectable clock
+for deterministic cleanup tests.
 
 `conxian.zkcp.list.v1` requires deterministic creation-time/id ordering and a
 bounded page: default 50, maximum 100, and offset maximum 2,048. Invalid limits

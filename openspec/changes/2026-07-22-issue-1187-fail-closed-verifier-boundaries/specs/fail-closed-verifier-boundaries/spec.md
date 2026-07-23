@@ -287,6 +287,11 @@ handling MUST never silently evict an active or pending intent; it MUST either
 clean expired terminal records or return a typed `resource_limit_exceeded`
 capacity response. Terminal cleanup MUST atomically remove the intent and all
 associated proof, payment, lock, generation, and queue evidence.
+`pending` and `verified` are active states. `paid` is terminal payment evidence
+under the key-release quarantine: it remains queryable until the terminal TTL,
+then becomes eligible for cleanup. Cleanup MUST skip any intent with an
+in-flight or queued lifecycle operation, including a watch replay, even when
+the intent is `paid`.
 The clock MUST be injectable for deterministic lifecycle tests.
 
 ZKCP list operations MUST publish `conxian.zkcp.list.v1`, validate positive
@@ -301,12 +306,20 @@ serialize an unbounded retained-intent map.
 - **THEN** initialization fails with `resource_limit_exceeded` and all existing
   active/pending intents remain available and unchanged
 
-#### Scenario: Expired terminal evidence is removed atomically
+#### Scenario: Paid terminal evidence is retained, then removed atomically
 
-- **WHEN** a terminal intent exceeds the configured retention TTL and is not
-  locked or queued
-- **THEN** the intent and every associated private evidence/lock bookkeeping
-  entry are removed together, while active intents are retained
+- **WHEN** a paid intent exceeds the configured retention TTL and is not locked
+  or queued
+- **THEN** the paid intent remains queryable before expiry, and after expiry the
+  intent and every associated private proof/payment evidence, lock, generation,
+  and queue bookkeeping entry are removed together
+
+#### Scenario: In-flight ZKCP watch operations are never evicted
+
+- **WHEN** terminal cleanup runs while a payment watch or queued watch replay
+  is in flight, including after the terminal TTL has elapsed
+- **THEN** the intent, evidence, lifecycle lock, generation, and queue metadata
+  remain available until the operation completes
 
 #### Scenario: ZKCP listing is bounded and deterministic
 

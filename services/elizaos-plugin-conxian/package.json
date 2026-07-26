@@ -1,6 +1,7 @@
 {
   "name": "@conxian/elizaos-plugin-conxian",
   "version": "0.2.5",
+  "license": "MIT",
   "private": true,
   "type": "module",
   "exports": {

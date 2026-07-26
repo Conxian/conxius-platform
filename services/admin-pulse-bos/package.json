@@ -1,6 +1,7 @@
 {
   "name": "admin-pulse-bos",
   "version": "0.2.5",
+  "license": "MIT",
   "private": true,
   "description": "Admin Pulse (BOS) components for Conxian ecosystem",
   "scripts": {

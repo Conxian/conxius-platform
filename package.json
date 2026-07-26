@@ -1,6 +1,7 @@
 {
   "name": "conxius-platform",
   "version": "0.2.5",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "lint": "pnpm -r --if-present run lint",

@@ -25,7 +25,7 @@ This repo should compose strategic repos rather than become the hidden home of b
 
 ## Lifecycle/control gate ownership (operational role)
 
-- **Ownership authority source of truth:** root [`CODEOWNERS`](./CODEOWNERS)
+- **Ownership authority source of truth:** root [`CODEOWNERS`](../../CODEOWNERS)
 - **Gate owners of record (operational):** `@botshelomokoka`, `@admin-conxian-labs`
 - **Accountable surfaces:** lifecycle/control CI gates, verification evidence standards, release/operate readiness controls.
 - **Escalation:** if lifecycle/control gates fail for release-bound work, escalate in the active PR/issue to `@botshelomokoka`, `@admin-conxian-labs`, and mapped `CODEOWNERS` maintainers, then block promotion until resolution or documented rollback.

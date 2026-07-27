@@ -125,11 +125,11 @@ graph TD
     GW -->|Queries| NX
 ```
 
-## Enhancements & Roadmap Alignment
-- **NixOS Control Plane**: Transitioned from Master Control Center to a declarative, reproducible state model.
-- **BFF Topology**: Gateway refactored into domain-specific BFFs for improved security and isolation.
-- **Local-First Execution**: Clients leverage Wasm-compiled lib-conxian-core for local cryptographic validation.
-- **MEV Protection**: Implementation of Practical Verifiable Delay Encryption (PVDE) to neutralize front-running.
+## Enhancements & Roadmap Alignment (Target/Proposed)
+- **NixOS Control Plane**: Proposed transition from a master control center to a declarative, reproducible state model; no supported NixOS deployment is implemented here.
+- **BFF Topology**: Proposed Gateway decomposition into domain-specific BFFs for improved security and isolation.
+- **Local-First Execution**: Target client use of Wasm-compiled `lib-conxian-core` for local cryptographic validation.
+- **MEV Protection**: Proposed Practical Verifiable Delay Encryption (PVDE) research; not a current production capability.
 
 ## Repository Roles
 | Repository | Role |
@@ -143,4 +143,4 @@ graph TD
 | **conxius-orbit** | TUI Deployment & Monitoring |
 | **conxian-nexus** | Nexus OS / Glass Node / State Sync |
 
-For full details, see [REPOSITORY_TAXONOMY](docs/REPOSITORY_TAXONOMY.md).
+For full details, see [REPOSITORY_TAXONOMY](../REPOSITORY_TAXONOMY.md).

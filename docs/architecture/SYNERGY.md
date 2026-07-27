@@ -2,7 +2,7 @@
 
 This document details the interconnected workflows and synergy between the various repositories under the Conxian organization.
 
-> **Scope note:** This file documents cross-repository interaction patterns. For current execution status, use [README.md](../../README.md) and [GAPS.md](../../GAPS.md). For architecture baseline, use [Sovereign Computing Redesign (2026)](./SOVEREIGN_REPR_2026.md).
+> **Scope note:** This file documents cross-repository interaction patterns. For current execution status, use [README.md](../../README.md) and [GAPS.md](../GAPS.md). For architecture baseline, use [Sovereign Computing Redesign (2026)](./SOVEREIGN_REPR_2026.md).
 
 ## 1. The Core Loop (Phase 5 baseline; referenced during Phase 7 transition)
 The primary flow of state and authority follows this hierarchy:
@@ -25,7 +25,10 @@ The primary flow of state and authority follows this hierarchy:
 
 ## 3. Operational Synergy (conxius-platform)
 - **Spec-Driven Design**: Using **OpenSpec** to ensure that every code change is aligned with the unified proposal, specs, and design artifacts.
-- **Unified Deployment**: Docker Compose orchestrates the entire stack, while GCP/Render handle production scaling for the Gateway and UI respectively.
+- **Local composition**: Docker Compose is a local control-plane/integration
+  harness with placeholder external Gateway/UI slots and optional RPC stubs.
+  Production deployment and scaling are external-owner concerns; this
+  repository does not supply GCP/Render production deployment paths.
 
 ## 4. Vision Alignment: "Full Bitcoin Network Oriented"
 The synergy is driven by a singular goal: **Making Bitcoin a productive asset.**

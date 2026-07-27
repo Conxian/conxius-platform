@@ -6,7 +6,7 @@ This document outlines the support expectations and communication channels for t
 
 ### 1. Community Support (Public)
 For general questions, feature requests, or non-sensitive bug reports:
-- **GitHub Issues**: Use the [Issues](issues) tab for platform-related technical discussion.
+- **GitHub Issues**: Use the [repository issue tracker](https://github.com/Conxian/conxius-platform/issues) for platform-related technical discussion.
 
 ### 2. Institutional & Operator Support
 For Conxian Labs partners and institutional operators using the platform control plane:

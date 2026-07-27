@@ -69,7 +69,9 @@ This repository is maintained by Conxian Labs. It supports development and opera
 - [System Architecture Graph](./docs/architecture/SYSTEM_GRAPH.md)
 - [Alignment Strategy](./docs/architecture/ALIGNMENT.md)
 - [Ecosystem Synergy](./docs/architecture/SYNERGY.md)
-- [Gap Analysis](./GAPS.md)
+- [Local Development](./docs/LOCAL_DEVELOPMENT.md)
+- [Deployment Surfaces](./docs/DEPLOYMENT.md)
+- [Gap Analysis](./docs/GAPS.md)
 - [Repository Taxonomy](./docs/REPOSITORY_TAXONOMY.md)
 - [ADR 001: Repo Ownership](./docs/architecture/ADR-001_REPO_OWNERSHIP_AND_BOUNDARIES.md)
 - [Repository Evolution Plan](./docs/architecture/REPO_EVOLUTION_PLAN.md)
@@ -86,11 +88,25 @@ This repository is maintained by Conxian Labs. It supports development and opera
 ```bash
 make init
 make auth
+# Populate the remaining required development credentials from an approved source.
 make start
 make bench
 ```
 
-Use templates and generated local secrets for development only. Do not commit real credentials.
+This starts the local Compose control-plane/integration harness, not a full
+protocol or production stack. The direct Admin Dashboard defaults to
+`http://localhost:3001`; the Compose dashboard is `http://localhost:3002`,
+while Compose Grafana uses `http://localhost:3001`. See
+[`docs/LOCAL_DEVELOPMENT.md`](./docs/LOCAL_DEVELOPMENT.md) before provisioning
+secrets or selecting external Gateway/UI images.
+
+Use templates and generated local secrets for development only. `make auth`
+does not generate `ADMIN_DASHBOARD_API_KEY` or `SERVICE_KEY_*`, and it does not
+establish production authentication. Do not commit real credentials.
+
+`make deploy` is not a guaranteed deployment path: it delegates to an
+externally installed `conxius-orbit` binary when present and otherwise only
+prints fallback messages. See [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md).
 
 ## Release posture
 

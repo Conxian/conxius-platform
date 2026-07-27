@@ -6,9 +6,9 @@ To avoid status/version drift, this file acts as the canonical index for the cur
 
 ## Canonical references
 
-- **Architecture baseline (Phase 7 redesign):** [docs/architecture/SOVEREIGN_REPR_2026.md](./docs/architecture/SOVEREIGN_REPR_2026.md)
-- **Strategic alignment:** [ALIGNMENT.md](../ALIGNMENT.md)
-- **Execution status and active gaps:** [GAPS.md](../GAPS.md)
+- **Architecture baseline (Phase 7 redesign):** [architecture/SOVEREIGN_REPR_2026.md](./architecture/SOVEREIGN_REPR_2026.md)
+- **Strategic alignment:** [architecture/ALIGNMENT.md](./architecture/ALIGNMENT.md)
+- **Execution status and active gaps:** [GAPS.md](./GAPS.md)
 - **Repository role and operating context:** [README.md](../README.md)
 
 ## Usage

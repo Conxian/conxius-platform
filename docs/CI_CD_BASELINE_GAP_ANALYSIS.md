@@ -1,7 +1,7 @@
 # CI/CD Baseline Gap Analysis
 
 Maps current implementation status against the strict enforcement model
-defined in [#1103](../../issues/1103). Last updated: 2026-07-04 (v2 — post-audit).
+defined in [#1103](https://github.com/Conxian/conxius-platform/issues/1103). Last updated: 2026-07-04 (v2 — post-audit).
 
 ## Gap Summary
 

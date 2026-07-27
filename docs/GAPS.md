@@ -1,5 +1,13 @@
 # Conxius Platform: Gap Analysis & Technical Debt (Phase 6 baseline, Phase 7 transition)
 
+**Status:** Active operational gap register; scores and labels are not production-readiness evidence.
+
+**Last reviewed:** 2026-07-27
+
+**Authority:** [`INFORMATION_HIERARCHY.md`](./INFORMATION_HIERARCHY.md) and the
+canonical sources linked from each entry. Current documentation-alignment
+change: [`2026-07-27-documentation-authority-and-operator-accuracy`](../openspec/changes/2026-07-27-documentation-authority-and-operator-accuracy/).
+
 This document tracks the resolution of gaps and identifies new technical requirements.
 
 ### Readiness interpretation (2026-07-22)
@@ -24,7 +32,9 @@ repository; it does not implement a proof backend.
   - **Deterministic Blueprint**: AI-agent readable deployment metadata.
 
 ### Conxian Gateway & Nexus (Phase 6 Core Alignment)
-- **Status**: ✅ Production-Grade Orchestrator (v0.2.2-aligned).
+- **Status**: Historical Phase 6 alignment claims require owner reconciliation;
+  current authority selection is deferred to issue #1167 and is not a
+  production-readiness claim.
 - **Implemented & Audited**:
   - **Kwil Transactional State**: Full migration from Neon to Kwil as the backing store for Nexus Glass Node state.
   - **Sovereign AI Allocation**: Real-time compute weighting and status monitoring.
@@ -33,14 +43,17 @@ repository; it does not implement a proof backend.
 
 ## 2. Identified Frictions & Roadmap (Phase 7)
 - [x] **Render Deployment Remediation**: Analysis complete. srv-d7b0el3uibrs73b2qjg0 requires removal of the trailing colon in the --listen binding. srv-d8fmr7v40ujc73b7ba8g requires correcting Npm to npm in the build command.
-- [/] **Declarative NixOS Migration**: In progress. provision-secrets.sh is being phased out in favor of sops-nix.
+- [ ] **Declarative NixOS Migration**: Target/proposed. No supported NixOS node
+  deployment is implemented in this repository; `provision-secrets.sh` remains
+  the current local helper.
 - [ ] **Local-First UI Execution**: Transition state transition logic to Wasm for client-side execution.
 - [ ] **Micro-Frontend Federation**: Decompose UI into federated modules (DEX, BitVM, sBTC).
 
 ## 3. Tooling Integration
 - **Supabase**: Financial intelligence and off-chain reporting.
 - **Kwil**: Decentralized transactional state for Nexus.
-- **Render**: Production hosting.
+- **Render**: External/target hosting reference; no supported Render deployment
+  is supplied by this repository.
 - **Nostr**: Decentralized P&L and operational telemetry.
 
 ---

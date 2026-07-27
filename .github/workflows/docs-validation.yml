@@ -6,6 +6,7 @@ on:
     paths:
       - '*.md'
       - '**/*.md'
+      - 'openspec/**/.openspec.yaml'
       - '.agents/manifest.json'
       - 'CODEOWNERS'
       - 'scripts/verify_documentation.py'
@@ -16,6 +17,7 @@ on:
     paths:
       - '*.md'
       - '**/*.md'
+      - 'openspec/**/.openspec.yaml'
       - '.agents/manifest.json'
       - 'CODEOWNERS'
       - 'scripts/verify_documentation.py'

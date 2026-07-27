@@ -2053,10 +2053,11 @@ AGENTS.md (this update)
 ### 2026-07-27 — Issue #1201 Operator-Accuracy Follow-up
 **Trigger**: Issue #1201 follow-up after merged PRs #1202 and #1203.
 **What was done**:
-- Preserved #1202/#1203 as the canonical documentation-validation baseline and extended only `scripts/verify_documentation.py` with local Markdown fragment/anchor validation.
+- Preserved #1202/#1203 as the canonical documentation-validation baseline and extended the canonical `scripts/verify_documentation.py` implementation with local Markdown fragment/anchor validation.
 - Retained all 14 baseline tests and added adversarial Python coverage for headings, explicit anchors, code exclusions, reference forms, encodings, nested destinations, directory README anchors, malformed syntax, URI schemes, diagnostics, and symlink escapes.
 - Added `docs/LOCAL_DEVELOPMENT.md`, reconciled deployment/alignment/operator guidance, and added only semantically required numeric anchors used by the active gap documents.
 - Reconciled the issue #1201 OpenSpec artifacts to the Python implementation and preserved the existing pinned documentation workflow, timeout, least permissions, and reusable secret-scan job.
+- Hardened query/fragment parsing, nested labels and images, blockquoted fenced-code masking, dynamic `docs/archived-*` history handling, and change-local OpenSpec manifest workflow triggers after pre-PR review.
 **Key discoveries**:
 - The active gap and scoring documents used 70 numeric fragment references whose files existed but whose anchors were not validated by the original Python baseline.
 - Direct dashboard, Compose dashboard, and Compose Grafana all use distinct process/port meanings; Compose Gateway/UI defaults remain placeholders and optional protocol profiles remain RPC stubs.
@@ -2064,6 +2065,7 @@ AGENTS.md (this update)
 - `scripts/verify_documentation.py`, `scripts/test_verify_documentation.py`
 - `docs/LOCAL_DEVELOPMENT.md`, `docs/DEPLOYMENT.md`, `docs/GAPS.md`, `docs/SCORING_MATRIX.md`, and scoped architecture documents
 - `README.md`, `CONTRIBUTING.md`, `AGENTS.md`, and the issue #1201 OpenSpec change
+- `.github/workflows/docs-validation.yml`
 **Gaps identified**:
 - External URL availability remains intentionally network-free and out of scope; production deployment selection and cross-repository authority remain separate decisions, with authority deferred to #1167.
 **Gotchas**:

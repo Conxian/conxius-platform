@@ -7,7 +7,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from verify_documentation import (
+from verify_documentation import (  # isort: skip
     collect_anchors,
     extract_links,
     parse_local_destination,
@@ -44,6 +44,17 @@ class DocumentationParserTests(unittest.TestCase):
             resolve_local_target(source, "Guide%20One.md?view=1#start", root),
             root / "docs" / "Guide One.md",
         )
+
+    def test_query_is_removed_only_before_the_fragment(self) -> None:
+        path_query, error = parse_local_destination("target.md?view=full#real")
+        self.assertIsNone(error)
+        self.assertEqual(path_query.path_text, "target.md")
+        self.assertEqual(path_query.fragment, "real")
+
+        fragment_query, error = parse_local_destination("target.md#real?version=1")
+        self.assertIsNone(error)
+        self.assertEqual(fragment_query.path_text, "target.md")
+        self.assertEqual(fragment_query.fragment, "real?version=1")
 
     def test_resolver_ignores_external_anchor_route_and_placeholder(self) -> None:
         root = Path("/repo")
@@ -89,6 +100,76 @@ class DocumentationParserTests(unittest.TestCase):
         self.assertEqual(
             [(link.line, link.target, link.problem) for link in extract_links(text)],
             [(1, "docs/a_(b)c).md", None)],
+        )
+
+    def test_extracts_depth_aware_nested_labels_and_escaped_brackets(self) -> None:
+        text = r"""[outer [inner]](missing.md#nope)
+[escaped \[inner\]](valid.md#present)
+\[literal](ignored.md)
+\\[live](live.md)
+"""
+        self.assertEqual(
+            [(link.line, link.target) for link in extract_links(text)],
+            [
+                (1, "missing.md#nope"),
+                (2, "valid.md#present"),
+                (4, "live.md"),
+            ],
+        )
+
+    def test_extracts_nested_image_and_outer_link_without_collisions(self) -> None:
+        text = r"""[outer ![diagram](image.png)](target.md) ![other](other.png)
+[outer [inner]](another.md)
+[inner]: collision.md
+[outer \![literal](ignored.png)](escaped-image.md)
+[outer \\![diagram](live.png)](live-image.md)
+"""
+        self.assertEqual(
+            [(link.line, link.target) for link in extract_links(text)],
+            [
+                (3, "collision.md"),
+                (1, "image.png"),
+                (1, "target.md"),
+                (1, "other.png"),
+                (2, "another.md"),
+                (4, "escaped-image.md"),
+                (5, "live.png"),
+                (5, "live-image.md"),
+            ],
+        )
+
+    def test_nested_labels_preserve_reference_forms(self) -> None:
+        text = """[outer [inner]][destination]
+[destination]: target.md
+[collapsed][]
+[collapsed]: collapsed.md
+[shortcut]
+[shortcut]: shortcut.md
+"""
+        self.assertEqual(
+            [(link.line, link.target) for link in extract_links(text)],
+            [
+                (2, "target.md"),
+                (4, "collapsed.md"),
+                (6, "shortcut.md"),
+                (1, "target.md"),
+                (3, "collapsed.md"),
+                (5, "shortcut.md"),
+            ],
+        )
+
+    def test_ignores_blockquoted_fences_and_keeps_following_links(self) -> None:
+        text = """>   ```markdown
+>   [ignored](missing.md)
+>   ```
+> >   ~~~~
+> >   [also ignored](other-missing.md)
+> >   ~~~~
+[real](present.md)
+"""
+        self.assertEqual(
+            [(link.line, link.target) for link in extract_links(text)],
+            [(7, "present.md")],
         )
 
     def test_reports_malformed_inline_link(self) -> None:
@@ -215,6 +296,45 @@ class DocumentationValidationTests(unittest.TestCase):
 
             self.assertEqual(validate(root), [])
 
+    def test_dynamic_archived_directory_is_historical_and_governance_may_declare_root(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self._write_required_entries(root)
+            historical = root / "docs" / "archived-legacy"
+            historical.mkdir(parents=True)
+            (historical / "old.md").write_text(
+                "[ignored](missing.md)\n", encoding="utf-8"
+            )
+            (root / "README.md").write_text(
+                "[old](docs/archived-legacy/old.md)\n", encoding="utf-8"
+            )
+            (root / "GOVERNANCE.md").write_text(
+                "[Historical root](docs/archived-legacy/)\n", encoding="utf-8"
+            )
+
+            messages = [diagnostic.message for diagnostic in validate(root)]
+
+            self.assertEqual(len(messages), 1)
+            self.assertIn("links to historical content", messages[0])
+
+    def test_governance_exception_is_limited_to_archive_root(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self._write_required_entries(root)
+            historical = root / "docs" / "archived-legacy"
+            historical.mkdir(parents=True)
+            (historical / "old.md").write_text("old\n", encoding="utf-8")
+            (root / "GOVERNANCE.md").write_text(
+                "[Historical file](docs/archived-legacy/old.md)\n", encoding="utf-8"
+            )
+
+            messages = [diagnostic.message for diagnostic in validate(root)]
+
+            self.assertEqual(len(messages), 1)
+            self.assertIn("links to historical content", messages[0])
+
     def test_rejects_active_markdown_symlink_to_historical_source(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
@@ -230,6 +350,37 @@ class DocumentationValidationTests(unittest.TestCase):
                 messages,
                 ["active documentation symlink resolves to historical content"],
             )
+
+    def test_rejects_symlinks_to_dynamic_archived_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self._write_required_entries(root)
+            historical = root / "docs" / "archived-legacy" / "old.md"
+            historical.parent.mkdir(parents=True)
+            historical.write_text("historical\n", encoding="utf-8")
+            (root / "active.md").symlink_to(historical)
+
+            messages = [diagnostic.message for diagnostic in validate(root)]
+
+            self.assertEqual(
+                messages,
+                ["active documentation symlink resolves to historical content"],
+            )
+
+    def test_rejects_target_symlink_to_dynamic_archived_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self._write_required_entries(root)
+            historical = root / "docs" / "archived-legacy"
+            historical.mkdir(parents=True)
+            (historical / "old.md").write_text("historical\n", encoding="utf-8")
+            (root / "legacy").symlink_to(historical, target_is_directory=True)
+            (root / "README.md").write_text("[old](legacy/old.md)\n", encoding="utf-8")
+
+            messages = [diagnostic.message for diagnostic in validate(root)]
+
+            self.assertEqual(len(messages), 1)
+            self.assertIn("links to historical content", messages[0])
 
     def test_rejects_active_markdown_symlink_outside_repository(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -304,6 +455,27 @@ class DocumentationValidationTests(unittest.TestCase):
                 ],
             )
 
+    def test_rejects_required_entry_symlink_to_dynamic_archived_content(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self._write_required_entries(root)
+            manifest = root / ".agents" / "manifest.json"
+            manifest.unlink()
+            historical = root / "docs" / "archived-legacy" / "manifest.json"
+            historical.parent.mkdir(parents=True)
+            historical.write_text("{}\n", encoding="utf-8")
+            manifest.symlink_to(historical)
+
+            messages = [diagnostic.message for diagnostic in validate(root)]
+
+            self.assertEqual(
+                messages,
+                [
+                    "invalid agent bootstrap entry point .agents/manifest.json: "
+                    "symlink resolves to historical content"
+                ],
+            )
+
     def test_rejects_broken_required_entry_symlink(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
@@ -357,7 +529,7 @@ class DocumentationValidationTests(unittest.TestCase):
             root = Path(temporary_directory)
             self._write_required_entries(root)
             (root / "docs" / "target.md").write_text(
-                "# Cross File\n<a id=\"26\"></a>\n", encoding="utf-8"
+                '# Cross File\n<a id="26"></a>\n', encoding="utf-8"
             )
             (root / "README.md").write_text(
                 "# Same File\n[same](#same-file)\n[cross](docs/target.md#cross-file)\n"
@@ -366,6 +538,65 @@ class DocumentationValidationTests(unittest.TestCase):
             )
 
             self.assertEqual(validate(root), [])
+
+    def test_validates_query_before_fragment_and_literal_query_in_html_id(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self._write_required_entries(root)
+            (root / "docs" / "target.md").write_text(
+                '# Real\n<span id="real?version=1"></span>\n', encoding="utf-8"
+            )
+            (root / "README.md").write_text(
+                "[path query](docs/target.md?view=full#real)\n"
+                "[fragment query](docs/target.md#real?version=1)\n",
+                encoding="utf-8",
+            )
+
+            self.assertEqual(validate(root), [])
+
+    def test_fragment_query_is_not_truncated_to_an_existing_shorter_anchor(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self._write_required_entries(root)
+            (root / "docs" / "target.md").write_text("# Real\n", encoding="utf-8")
+            (root / "README.md").write_text(
+                "[wrong](docs/target.md#real?version=1)\n", encoding="utf-8"
+            )
+
+            messages = [diagnostic.message for diagnostic in validate(root)]
+
+            self.assertEqual(len(messages), 1)
+            self.assertIn("missing local fragment #real?version=1", messages[0])
+
+    def test_validates_nested_labels_images_and_escaped_brackets(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self._write_required_entries(root)
+            (root / "docs" / "target.md").write_text("# Present\n", encoding="utf-8")
+            (root / "docs" / "image.png").write_bytes(b"image")
+            (root / "README.md").write_text(
+                "[outer [inner]](docs/target.md#present)\n"
+                "[escaped \\[inner\\]](docs/target.md#present)\n"
+                "[image ![diagram](docs/image.png)](docs/target.md#present)\n",
+                encoding="utf-8",
+            )
+
+            self.assertEqual(validate(root), [])
+
+    def test_broken_nested_outer_destination_is_reported(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self._write_required_entries(root)
+            (root / "README.md").write_text(
+                "[outer [inner]](missing.md#nope)\n", encoding="utf-8"
+            )
+
+            messages = [diagnostic.message for diagnostic in validate(root)]
+
+            self.assertEqual(len(messages), 1)
+            self.assertIn("missing local link target: missing.md#nope", messages[0])
 
     def test_reports_missing_fragment_with_actionable_diagnostic(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -401,7 +632,9 @@ class DocumentationValidationTests(unittest.TestCase):
             self._write_required_entries(root)
             directory = root / "docs" / "guide"
             directory.mkdir(parents=True)
-            (directory / "README.md").write_text("Guide Home\n==========\n", encoding="utf-8")
+            (directory / "README.md").write_text(
+                "Guide Home\n==========\n", encoding="utf-8"
+            )
             (root / "README.md").write_text(
                 "[guide](docs/guide/#guide-home)\n", encoding="utf-8"
             )
@@ -434,8 +667,15 @@ class DocumentationValidationTests(unittest.TestCase):
             messages = [diagnostic.message for diagnostic in validate(root)]
 
             self.assertEqual(len(messages), 2)
-            self.assertTrue(any("invalid URL encoding in path" in message for message in messages))
-            self.assertTrue(any("unresolved reference label unknown label" in message for message in messages))
+            self.assertTrue(
+                any("invalid URL encoding in path" in message for message in messages)
+            )
+            self.assertTrue(
+                any(
+                    "unresolved reference label unknown label" in message
+                    for message in messages
+                )
+            )
 
     def test_ignores_code_lookalikes_during_validation(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -443,6 +683,26 @@ class DocumentationValidationTests(unittest.TestCase):
             self._write_required_entries(root)
             (root / "README.md").write_text(
                 "`[inline](missing.md)`\n```markdown\n[fenced](missing.md)\n```\n",
+                encoding="utf-8",
+            )
+
+            self.assertEqual(validate(root), [])
+
+    def test_ignores_nested_blockquote_fences_and_validates_link_after_closure(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self._write_required_entries(root)
+            (root / "docs" / "present.md").write_text("# Present\n", encoding="utf-8")
+            (root / "README.md").write_text(
+                ">   ```markdown\n"
+                ">   [ignored](missing.md)\n"
+                ">   ```\n"
+                "> >   ~~~~\n"
+                "> >   [also ignored](other-missing.md)\n"
+                "> >   ~~~~\n"
+                "[real](docs/present.md#present)\n",
                 encoding="utf-8",
             )
 
@@ -487,6 +747,41 @@ class DocumentationValidationTests(unittest.TestCase):
                     for message in messages
                 )
             )
+
+
+class DocumentationWorkflowTests(unittest.TestCase):
+    def _event_paths(self, event: str) -> list[str]:
+        workflow = (
+            Path(__file__).resolve().parents[1]
+            / ".github"
+            / "workflows"
+            / "docs-validation.yml"
+        ).read_text(encoding="utf-8")
+        lines = workflow.splitlines()
+        event_start = lines.index(f"  {event}:")
+        paths_start = lines.index("    paths:", event_start)
+        paths: list[str] = []
+        for line in lines[paths_start + 1 :]:
+            if not line.startswith("      - "):
+                break
+            paths.append(line.removeprefix("      - ").strip("'\""))
+        return paths
+
+    def test_openspec_manifests_trigger_both_events_and_secret_scan_remains(
+        self,
+    ) -> None:
+        pattern = "openspec/**/.openspec.yaml"
+        self.assertIn(pattern, self._event_paths("pull_request"))
+        self.assertIn(pattern, self._event_paths("push"))
+
+        workflow = (
+            Path(__file__).resolve().parents[1]
+            / ".github"
+            / "workflows"
+            / "docs-validation.yml"
+        ).read_text(encoding="utf-8")
+        self.assertIn("  secret-scan:\n", workflow)
+        self.assertIn("uses: ./.github/workflows/reusable-secret-scan.yml", workflow)
 
 
 if __name__ == "__main__":

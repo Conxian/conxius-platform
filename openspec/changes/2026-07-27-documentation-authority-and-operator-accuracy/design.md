@@ -152,15 +152,18 @@ documentation-aware CI path. It retains:
 - `README.md` and other root Markdown files;
 - `docs/**/*.md` excluding immutable historical paths according to the same
   policy as the validator;
-- `openspec/**/*.md` and `.openspec.yaml`; and
+- `openspec/**/*.md` and change-local `openspec/**/.openspec.yaml` manifests;
+  and
 - the validator, its tests, and workflow definition;
 - least `contents: read` permissions;
 - a five-minute timeout;
 - SHA-pinned checkout and Python setup actions; and
 - the reusable documentation secret-scan job.
 
-No workflow change is required for this follow-up because its existing path
-triggers already cover the Python validator, tests, Markdown, and OpenSpec.
+This follow-up adds the missing change-local `.openspec.yaml` path trigger to
+both pull-request and push events. The existing Python commands, branches,
+timeout, permissions, pinned actions, and reusable secret-scan job remain
+unchanged.
 
 ## 9. Implementation sequence and review evidence
 

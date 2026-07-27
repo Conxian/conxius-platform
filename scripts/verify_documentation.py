@@ -23,12 +23,7 @@ EXCLUDED_DIRECTORY_NAMES = {
     "vendor",
 }
 
-HISTORICAL_PREFIXES = (
-    ("docs", "archived-reports"),
-    ("docs", "archived-scripts"),
-    ("docs", "archived-tasks"),
-    ("openspec", "changes", "archive"),
-)
+OPENSPEC_ARCHIVE_PREFIX = ("openspec", "changes", "archive")
 
 IMMUTABLE_EVIDENCE_FILES = {
     "docs/runbooks/ATS_EXECUTION_REPORT_JUNE_2026.md",
@@ -38,9 +33,7 @@ IMMUTABLE_EVIDENCE_FILES = {
 
 # GOVERNANCE.md must identify the historical roots in order to define their
 # non-authoritative status. No other active source receives this exception.
-HISTORICAL_LINK_EXCEPTIONS = {
-    "GOVERNANCE.md": HISTORICAL_PREFIXES,
-}
+HISTORICAL_LINK_EXCEPTION_SOURCE = "GOVERNANCE.md"
 
 # These paths are declared as active entry points by AGENTS.md, the discovery
 # manifest/onboarding contract, docs/INFORMATION_HIERARCHY.md, or GOVERNANCE.md.
@@ -80,13 +73,13 @@ REQUIRED_ENTRY_PATHS = {
     ),
 }
 
-FENCE_RE = re.compile(r"^\s{0,3}(`{3,}|~{3,})")
+FENCE_RE = re.compile(
+    r"^(?P<blockquote>\s{0,3}(?:>\s*)*)\s{0,3}(?P<marker>`{3,}|~{3,})"
+)
 ATX_HEADING_RE = re.compile(r"^\s{0,3}#{1,6}(?:\s+|$)(.*?)\s*$")
 SETEXT_RE = re.compile(r"^\s{0,3}(?:=+|-+)\s*$")
 URI_SCHEME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
-PLACEHOLDER_RE = re.compile(
-    r"\{\{[^}]+\}\}|\$\{[^}]+\}|%\{[^}]+\}|\{[^}/]+\}|\*"
-)
+PLACEHOLDER_RE = re.compile(r"\{\{[^}]+\}\}|\$\{[^}]+\}|%\{[^}]+\}|\{[^}/]+\}|\*")
 REFERENCE_DEFINITION_RE = re.compile(
     r"^\s{0,3}\[([^\]\n]+)\]:\s*(<[^>\n]*>|\S+)"
     r"(?:\s+(?:\"[^\"]*\"|'[^']*'|\([^)]*\)))?\s*$"
@@ -130,14 +123,21 @@ def is_historical(path: Path, root: Path) -> bool:
         parts = path.relative_to(root).parts
     except ValueError:
         return False
-    return any(parts[: len(prefix)] == prefix for prefix in HISTORICAL_PREFIXES)
+    return (
+        len(parts) >= 2 and parts[0] == "docs" and parts[1].startswith("archived-")
+    ) or parts[: len(OPENSPEC_ARCHIVE_PREFIX)] == OPENSPEC_ARCHIVE_PREFIX
 
 
 def is_allowed_historical_link(source: Path, target: Path, root: Path) -> bool:
     source_relative = source.relative_to(root).as_posix()
-    allowed_prefixes = HISTORICAL_LINK_EXCEPTIONS.get(source_relative, ())
+    if source_relative != HISTORICAL_LINK_EXCEPTION_SOURCE:
+        return False
     target_parts = target.relative_to(root).parts
-    return target_parts in allowed_prefixes
+    return (
+        len(target_parts) == 2
+        and target_parts[0] == "docs"
+        and target_parts[1].startswith("archived-")
+    ) or target_parts == OPENSPEC_ARCHIVE_PREFIX
 
 
 def is_immutable_evidence(path: Path, root: Path) -> bool:
@@ -188,12 +188,16 @@ def active_markdown_files(root: Path) -> tuple[list[Path], list[Diagnostic]]:
             resolved = _resolve_existing(path)
             if resolved is None:
                 diagnostics.append(
-                    Diagnostic(path, 1, "active documentation symlink cannot be resolved")
+                    Diagnostic(
+                        path, 1, "active documentation symlink cannot be resolved"
+                    )
                 )
                 continue
             if not _is_within(resolved, root):
                 diagnostics.append(
-                    Diagnostic(path, 1, "active documentation symlink escapes repository")
+                    Diagnostic(
+                        path, 1, "active documentation symlink escapes repository"
+                    )
                 )
                 continue
             if is_historical(resolved, root):
@@ -208,7 +212,9 @@ def active_markdown_files(root: Path) -> tuple[list[Path], list[Diagnostic]]:
             if is_excluded_source(resolved, root):
                 diagnostics.append(
                     Diagnostic(
-                        path, 1, "active documentation symlink resolves to excluded content"
+                        path,
+                        1,
+                        "active documentation symlink resolves to excluded content",
                     )
                 )
                 continue
@@ -227,7 +233,9 @@ def active_markdown_files(root: Path) -> tuple[list[Path], list[Diagnostic]]:
                     continue
             except OSError:
                 diagnostics.append(
-                    Diagnostic(path, 1, "active documentation source cannot be inspected")
+                    Diagnostic(
+                        path, 1, "active documentation source cannot be inspected"
+                    )
                 )
                 continue
 
@@ -241,14 +249,16 @@ def strip_fenced_code(lines: list[str]) -> list[str]:
     result: list[str] = []
     fence_character: str | None = None
     fence_length = 0
+    fence_blockquote_depth = 0
 
     for line in lines:
         match = FENCE_RE.match(line)
         if fence_character is None:
             if match:
-                marker = match.group(1)
+                marker = match.group("marker")
                 fence_character = marker[0]
                 fence_length = len(marker)
+                fence_blockquote_depth = match.group("blockquote").count(">")
                 result.append(" " * len(line))
             else:
                 result.append(line)
@@ -256,10 +266,16 @@ def strip_fenced_code(lines: list[str]) -> list[str]:
 
         result.append(" " * len(line))
         if match:
-            marker = match.group(1)
-            if marker[0] == fence_character and len(marker) >= fence_length:
+            marker = match.group("marker")
+            blockquote_depth = match.group("blockquote").count(">")
+            if (
+                marker[0] == fence_character
+                and len(marker) >= fence_length
+                and blockquote_depth == fence_blockquote_depth
+            ):
                 fence_character = None
                 fence_length = 0
+                fence_blockquote_depth = 0
 
     return result
 
@@ -293,7 +309,9 @@ def strip_inline_code(line: str, *, preserve_contents: bool = False) -> str:
     return "".join(result)
 
 
-def visible_lines(text: str, *, preserve_inline_code_contents: bool = False) -> list[str]:
+def visible_lines(
+    text: str, *, preserve_inline_code_contents: bool = False
+) -> list[str]:
     return [
         strip_inline_code(line, preserve_contents=preserve_inline_code_contents)
         for line in strip_fenced_code(text.splitlines())
@@ -304,14 +322,28 @@ def normalize_reference_label(value: str) -> str:
     return " ".join(value.split()).casefold()
 
 
+def _is_escaped(line: str, index: int) -> bool:
+    backslashes = 0
+    index -= 1
+    while index >= 0 and line[index] == "\\":
+        backslashes += 1
+        index -= 1
+    return backslashes % 2 == 1
+
+
 def _find_closing_bracket(line: str, start: int) -> int:
+    depth = 0
     index = start
     while index < len(line):
         if line[index] == "\\":
             index += 2
             continue
-        if line[index] == "]":
-            return index
+        if line[index] == "[":
+            depth += 1
+        elif line[index] == "]":
+            if depth == 0:
+                return index
+            depth -= 1
         index += 1
     return -1
 
@@ -386,15 +418,23 @@ def extract_links(text: str) -> list[Link]:
             links.append(Link(line_number, target))
         definition_lines.add(line_number)
 
-    for line_number, line in enumerate(lines, start=1):
-        if line_number in definition_lines:
-            continue
+    def extract_line(
+        line: str, line_number: int, *, images_only: bool = False
+    ) -> list[Link]:
+        line_links: list[Link] = []
         index = 0
         while index < len(line):
             opening = line.find("[", index)
             if opening == -1:
                 break
-            if opening > 0 and line[opening - 1] == "\\":
+            if images_only and (
+                opening == 0
+                or line[opening - 1] != "!"
+                or _is_escaped(line, opening - 1)
+            ):
+                index = opening + 1
+                continue
+            if _is_escaped(line, opening):
                 index = opening + 1
                 continue
             text_end = _find_closing_bracket(line, opening + 1)
@@ -407,7 +447,7 @@ def extract_links(text: str) -> list[Link]:
             if following == "(":
                 parsed = _parse_inline_destination(line, text_end + 1)
                 if parsed is None:
-                    links.append(
+                    line_links.append(
                         Link(
                             line_number,
                             "(malformed Markdown link)",
@@ -417,10 +457,13 @@ def extract_links(text: str) -> list[Link]:
                     index = text_end + 2
                     continue
                 target, end = parsed
+                line_links.extend(
+                    extract_line(link_text, line_number, images_only=True)
+                )
                 if target:
-                    links.append(Link(line_number, target))
+                    line_links.append(Link(line_number, target))
                 else:
-                    links.append(
+                    line_links.append(
                         Link(
                             line_number,
                             "(malformed Markdown link)",
@@ -433,7 +476,7 @@ def extract_links(text: str) -> list[Link]:
             if following == "[":
                 label_end = _find_closing_bracket(line, text_end + 2)
                 if label_end == -1:
-                    links.append(
+                    line_links.append(
                         Link(
                             line_number,
                             "(malformed Markdown reference)",
@@ -446,11 +489,14 @@ def extract_links(text: str) -> list[Link]:
                 label = normalize_reference_label(explicit_label or link_text)
                 target = definitions.get(label)
                 if target:
-                    links.append(Link(line_number, target))
+                    line_links.extend(
+                        extract_line(link_text, line_number, images_only=True)
+                    )
+                    line_links.append(Link(line_number, target))
                 elif not (
                     link_text.strip().isdigit() and explicit_label.strip().isdigit()
                 ):
-                    links.append(
+                    line_links.append(
                         Link(
                             line_number,
                             f"[{label or '(empty)'}]",
@@ -462,8 +508,15 @@ def extract_links(text: str) -> list[Link]:
 
             shortcut = definitions.get(normalize_reference_label(link_text))
             if shortcut:
-                links.append(Link(line_number, shortcut))
+                line_links.append(Link(line_number, shortcut))
             index = text_end + 1
+
+        return line_links
+
+    for line_number, line in enumerate(lines, start=1):
+        if line_number in definition_lines:
+            continue
+        links.extend(extract_line(line, line_number))
 
     return links
 
@@ -554,10 +607,8 @@ def parse_local_destination(target: str) -> tuple[LocalDestination | None, str |
     if destination.startswith("/"):
         return None, None
 
-    before_fragment, separator, raw_fragment = destination.partition("#")
+    before_fragment, _, raw_fragment = destination.partition("#")
     raw_path = before_fragment.partition("?")[0]
-    if separator:
-        raw_fragment = raw_fragment.partition("?")[0]
     path_text, path_error = _decode_component(raw_path, "path")
     if path_error:
         return None, path_error

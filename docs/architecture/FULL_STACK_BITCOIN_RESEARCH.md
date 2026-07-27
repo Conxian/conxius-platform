@@ -93,6 +93,7 @@ This document summarizes the research into the components required to achieve a 
 ## 14. Expansion: Operational Resilience
 - **Containerization Hardening**: Resolved issues with `pnpm` built dependencies in Docker environments by explicitly allowlisting `sharp`. This ensures consistent builds across CI, local development, and production targets.
 
+<a id="15"></a>
 ## 15. Universal Settlement Interface (USI) Integration (CON-1197)
 The USI establishes a protocol-agnostic layer for cross-chain settlement.
 - **Signed Intents**: Standardizing on BIP-322 for Bitcoin message signing and Clarity-native signing for Stacks.
@@ -152,6 +153,7 @@ Research into secondary settlement layers to ensure multidimensional redundancy.
 ---
 *Updated by Jules (Sovereign Engineering Agent) - June 20, 2026*
 
+<a id="21"></a>
 ## 21. Technical Deep Dive: BitVM2 Verification Floor (v1.9.2)
 - **Groth16 Chunking (research profile)**: One described layout splits verification into **364 independent taps**; this is profile-specific, not a universal protocol constant.
   - **VALIDATING_TAPS (1)**: Core arithmetic verification logic.
@@ -175,27 +177,33 @@ Research into secondary settlement layers to ensure multidimensional redundancy.
 - **Benefit**: Provides institutional auditability and "Proof of Solvency" signals without centralized cloud dependencies.
 - **Alignment**: Phase 7 BFF Topology (CON-800).
 
+<a id="24"></a>
 ## 24. USI Proof Folding (Nova/Sangria)
 - **Concept**: Utilizing IVC folding schemes to condense multi-step settlement proofs into a single, compact verification artifact.
 - **Orchestration**: Nexus OS performs the folding; UI-BFF provides the "Last Mile" verification endpoint.
 - **Efficiency**: Reduces client-side verification time from ~500ms to <50ms for complex swap sequences.
 
+<a id="25"></a>
 ## 25. Ark V-UTXO Protocol (v1.9.2)
 - **V-UTXO Management**: Deterministic derivation using Blake2s PRF for stateless recovery.
 - **Forfeit Signing**: Automated signing of forfeit transactions during V-UTXO transfers to ensure ASP atomicity.
 - **Roadmap**: Integration into the Wallet-BFF for non-custodial scalability.
 
+<a id="26"></a>
 ## 26. Deep Dive: Discreet Log Contracts (DLC) Maturity (v1.9.2)
 - **Concept**: DLCs allow for private, efficient, and trustless financial contracts on Bitcoin (e.g., derivatives, insurance) using an oracle to sign the outcome without the oracle knowing the contract details.
 - **Implementation (rust-dlc)**: Leveraging  and  for contract execution.
 - **Integration**: Mapped to the USI for "Layer 1 Native Finance".
 - **Roadmap**: Pilot phase for DLC-based stablecoin collateralization (ctUSD alignment).
 
+<a id="27"></a>
 ## 27. Nostr Wallet Connect (NWC) & Remote Signing (NIP-46/47)
 - **Non-Custodial Auth**: Utilizing NWC (NIP-47) for authorizing Lightning payments without sharing macaroons or static keys.
 - **Bunker (NIP-46)**: Remote signing of USI intents. The Conxius Wallet acts as a "Bunker Client", while the user's mobile enclave acts as the "Bunker".
 - **Transport Layer**: Nostr relays provide the censorship-resistant transport for signed USI intents (Kind 20626).
 
+<a id="28"></a>
+<a id="29"></a>
 ## 28. Bitcoin ZK-Rollups: Citrea & Strata (v1.9.2)
 - **Citrea (Clementine Bridge)**:
   - Uses BitVM2 for 1-of-N trust-minimized settlement.
@@ -260,28 +268,33 @@ Research into secondary settlement layers to ensure multidimensional redundancy.
 - **Verification**: `lib-conxian-core` (Wasm) performs BIP-322 signature verification for Bitcoin L1 addresses (P2WPKH, P2TR).
 - **Benefit**: Unified signature format for legacy, segwit, and taproot addresses.
 
+<a id="30"></a>
 ## 30. Silent Payments (BIP-352): Reusable Privacy
 - **Concept**: Reusable donation addresses that don't reveal the recipient's identity on-chain and prevent address reuse without per-transaction interaction.
 - **Implementation**: `lib-conxian-core` implementation for scanning and spending Silent Payments.
 - **Benefit**: Enhances privacy for corporate treasury and payroll without the overhead of BIP-47 Notification transactions.
 
+<a id="31"></a>
 ## 31. MuSig2 (BIP-327): Efficient Multi-Sig
 - **Concept**: Next-generation Schnorr-based multi-signature scheme that allows multiple signers to aggregate their keys and signatures into a single public key and signature.
 - **Integration**: Standardizing USI multi-sig intents on MuSig2 for Taproot (P2TR) script paths.
 - **Performance**: Reduces transaction size and fee cost by ~30-50% compared to legacy `OP_CHECKMULTISIG`.
 
+<a id="32"></a>
 ## 32. BIP-353: DNS Payment Instructions (v1.9.2)
 - **Concept**: Standard for encoding BIP-21 URI schemes in DNS TXT records using DNSSEC for cryptographic verification.
 - **Integration**: Mapping human-readable names (e.g., ₿user@domain) to Conxian payment instructions.
 - **Verification**: UI-BFF and Wallet-BFF perform DNSSEC-validated lookups to resolve intents.
 - **Benefit**: Provides a global, hierarchical namespace for payment discovery that works with existing hardware wallets and maintains relative privacy via ISP/VPN proxies.
 
+<a id="33"></a>
 ## 33. Layer 3 Application-Specific Rollups (v1.9.2)
 - **Concept**: Specialized execution layers (L3s) built on top of Bitcoin L2s (like Stacks or Citrea) to provide tailored environments for specific Conxian DeFi primitives.
 - **Strategic Value**: Allows for hyper-optimized performance for the DEX Factory V2 or high-frequency order books without competing for L1/L2 block space.
 - **Implementation**: Researching the use of "Rollup-as-a-Service" (RaaS) providers that support Bitcoin settlement.
 - **Alignment**: Enhances the "Multidimensional Liquidity" model by providing dedicated execution lanes.
 
+<a id="34"></a>
 ## 34. FROST (Flexible Round-Optimized Schnorr Threshold Signatures)
 - **Concept**: A threshold signature scheme (TSS) that allows $t$-of-$n$ signers to produce a standard Schnorr signature.
 - **Benefits**:
@@ -291,6 +304,7 @@ Research into secondary settlement layers to ensure multidimensional redundancy.
 - **Integration**: Target for Conxian corporate treasury and institutional vault management.
 - **Implementation**: Leveraging `frost-dalek` or `roast` for robust multi-party computation.
 
+<a id="35"></a>
 ## 35. OP_CAT: Recursive Covenants and Beyond
 - **Concept**: A proposed (restored) opcode that concatenates two elements on the stack.
 - **Strategic Impact**:
@@ -299,6 +313,7 @@ Research into secondary settlement layers to ensure multidimensional redundancy.
   - **L2 Scaling**: Provides a foundation for more efficient ZK-rollup bridges (e.g., Starknet on Bitcoin).
 - **Alignment**: Monitoring the BIP-347 progress for integration into the Conxian USI.
 
+<a id="36"></a>
 ## 36. Fedimint: Federated Chaumian Mints
 - **Concept**: A modular framework for building federated Chaumian mints that settle on Bitcoin and Lightning.
 - **Value Proposition**:
@@ -312,88 +327,105 @@ Research into secondary settlement layers to ensure multidimensional redundancy.
 - **Role in USI**: Providing a "High-Assurance" lane for settlement intents where the logic is provably correct.
 - **Integration**: `lib-conxian-core` (Wasm) acting as a Simplicity runtime or bridge to an external verifier.
 
+<a id="38"></a>
 ## 38. BIP-324: Encrypted P2P Transport
 - **Concept**: A new encrypted transport protocol for the Bitcoin P2P network to protect against censorship and eavesdropping.
 - **Strategic Value**: Enhancing the privacy of Gateway-to-Nexus and Nexus-to-Relay communication.
 - **Implementation**: Integrating a Rust-based BIP-324 library into the Nexus transport layer.
 
+<a id="39"></a>
 ## 39. Spider Network: Scalable Routing
 - **Concept**: A proposed scaling layer for Bitcoin that utilizes state-channel-based routing to achieve high throughput.
 - **Alignment**: Providing a decentralized transport for USI "Maneuver" events (Kind 20626).
 - **Research**: Monitoring the integration path for Spider-compatible relays.
 
+<a id="40"></a>
 ## 40. BitVM3: Adaptive Proof Verification
 - **Concept**: The next evolution of BitVM, focusing on reduced on-chain footprint and "Adaptive" fraud proofs.
 - **Benefit**: Significantly lowers the cost of "Disprove" transactions and increases verifier efficiency.
 - **Roadmap**: Planned upgrade for the G-01 BitVM2 Verification Floor once the specification stabilizes.
 
+<a id="41"></a>
 ## 41. Taproot Assets (v1.9.3)
 - **Concept**: A Taproot-native protocol for issuing and transferring assets on the Bitcoin blockchain, utilizing Merkleized Abstract Syntax Trees (MAST).
 - **Integration**: Mapped to the USI as a Tier 2 adapter.
 - **Benefit**: High efficiency and compatibility with the Lightning Network for multi-asset routing.
 
+<a id="42"></a>
 ## 42. PTLCs (Point Time Locked Contracts)
 - **Concept**: Next-generation Lightning payment primitive using adaptor signatures instead of hashes (HTLCs).
 - **Advantage**: Prevents payment correlation across routes and enables more complex multi-hop conditions.
 - **Roadmap**: Planned transition for the Wallet-BFF and Lightning adapters in Phase 8.
 
+<a id="43"></a>
 ## 43. Babylon Bitcoin Staking (CON-712)
 - **Concept**: A trustless Bitcoin staking protocol that allows BTC holders to stake their coins to secure Proof-of-Stake (PoS) chains without giving up custody or using a bridge.
 - **Mechanism**: Utilizes Bitcoin's scripting capabilities (specifically Taproot) to implement slasher conditions and staking contracts.
 - **Integration**: Mapped as a Tier 3 Experimental adapter for USI.
 - **Benefit**: Provides a new yield-generating primitive for Conxian corporate treasury.
 
+<a id="44"></a>
 ## 44. BitVMX: High-Efficiency Computation
 - **Concept**: A successor to the BitVM design that optimizes for general-purpose computation on Bitcoin with significantly reduced on-chain overhead.
 - **Strategic Value**: Providing a more flexible execution environment for the Nexus Glass Node.
 - **Alignment**: Part of the Phase 7 "Verification Floor" evolution path.
 
+<a id="45"></a>
 ## 45. BOLT-12 (Lightning Offers)
 - **Concept**: A proposal for static, reusable Lightning invoices that support refunds, subscriptions, and recurring payments.
 - **Advantage**: Eliminates the need for a backend to generate invoices for every payment, enhancing privacy and reducing infrastructure load.
 - **Integration**: Target for the Wallet-BFF and Merchant-BFF interfaces.
 
+<a id="46"></a>
 ## 46. RGB++ Protocol
 - **Concept**: An extension of the RGB protocol that utilizes a "turing-complete" L2 (like CKB) as a data availability and execution layer for Bitcoin-native assets.
 - **Benefit**: Simplifies the management of RGB assets while maintaining the security of the Bitcoin L1.
 - **Alignment**: Tier 2 Adapter candidate for multi-asset liquidity.
 
+<a id="47"></a>
 ## 47. BIP-119: OP_CHECKTEMPLATEVERIFY (CTV)
 - **Concept**: A proposed opcode that allows a transaction output to restrict the form of the transaction that spends it.
 - **Strategic Value**: Enables non-interactive payment pools, secure vaults without pre-signing, and efficient congestion control.
 - **Alignment**: Tier 1 primitive for Conxian corporate treasury vaults.
 
+<a id="48"></a>
 ## 48. BIP-324: V2 P2P Transport Protocol
 - **Concept**: A new version of the Bitcoin P2P transport protocol that provides opportunistic encryption and better protection against censorship and eavesdropping.
 - **Benefit**: Hardens the transport layer between Gateway, Nexus, and the broader Bitcoin network.
 - **Integration**: Target for Nexus node transport layer.
 
+<a id="49"></a>
 ## 49. Decentralized USI Transport (Waku/Nostr)
 - **Concept**: Utilizing decentralized messaging protocols like Waku or Nostr (Kind 20626) to transport USI "Signed Intents" before they are finalized on-chain.
 - **Benefit**: Prevents single points of failure in intent delivery and provides censorship-resistant coordination.
 - **Implementation**: Active in UI-BFF and Wallet-BFF via Nostr Kind 20626.
 
+<a id="50"></a>
 ## 50. Zero-Knowledge Contingent Payments (ZKCP)
 - **Concept**: A protocol that allows for the trustless exchange of information for Bitcoin, where the buyer only pays if the information is valid according to a ZK-proof.
 - **Strategic Impact**: Foundation for decentralized data markets and trustless "pay-for-proof" services in the Nexus network.
 - **Platform readiness**: The dashboard exposes only canonical request/result/payment contracts with unavailable defaults. It has no pairing verifier, chain observer, or production key-release backend; simulated fixtures are test-only and settlement-rejected. `zkcp-finalize` is hard-disabled and returns typed HTTP 503 `unsupported_backend` without invoking the bridge, dispatching an adapter, returning a key, or creating `finalized` state.
 
+<a id="51"></a>
 ## 51. BitVM2 Optimized Snark Verifier (v1.9.4)
 - **Concept**: Optimizing the Groth16 SNARK verifier specifically for Bitcoin Script limits, focusing on reduction of script size and stack depth.
 - **Research**: Investigating the use of "chunked" pairings and optimized field arithmetic to fit within the 4MB block limit while maintaining security.
 - **Benefit**: Increases the efficiency of G-01 (Verification Floor) and reduces the cost of settlement.
 - **Platform readiness**: No pairing arithmetic or optimized verifier is implemented in this repository, and no production backend is selected by the #1187 remediation.
 
+<a id="52"></a>
 ## 52. BRC-20 & Runes USI Integration
 - **Concept**: Providing native support for Bitcoin-based meta-protocols (BRC-20, Runes) within the Universal Settlement Interface (USI).
 - **Mechanism**: Indexer-aware intent routing that validates asset ownership via external indexer APIs (e.g., Unisat, BestinSlot) before signing intents.
 - **Alignment**: Tier 2 Adapter candidates for the Conxian Multi-Asset Treasury.
 
+<a id="53"></a>
 ## 53. Lightning Async Payments (BIP-351+)
 - **Concept**: Enabling Lightning payments to recipients who are currently offline by utilizing a third-party Lightning Service Provider (LSP) as a temporary holding area.
 - **Advantage**: Significantly improves UX for mobile-first users and reduces the "online requirement" friction of the Lightning Network.
 - **Integration**: Target for the Wallet-BFF asynchronous event handler.
 
+<a id="54"></a>
 ## 54. Bitcoin Covenants: OP_VAULT (BIP-345)
 - **Concept**: A specialized covenant opcode designed for creating secure, multi-stage Bitcoin vaults with recovery paths and spend delays.
 - **Strategic Value**: Providing institutional-grade security for Conxian liquidity pools and treasury management without the complexity of general-purpose covenants.

@@ -82,6 +82,7 @@ Instead of a single, monolithic Gateway, the architecture should utilize the Bac
 - **Wallet BFF:** A hardened, highly restricted, and heavily audited endpoint dedicated exclusively to passing PSBTs and enclave attestations between the Conxius Wallet and the Sovereign Nodes. The newly proposed Conxian Gateway architecture incorporates an institutional B2B API featuring a Zero-Knowledge Compliance (ZKC) module tailored for Conxius Wallet attestation, utilizing cryptographic verification with complete secp256k1 support. The underlying engine is strictly Nakamoto-ready, continuously monitoring states across both Bitcoin and Stacks.
 - **Sovereign Proxy:** An internal routing layer that ensures communication between the RGB, Bisq, and BitVM nodes remains heavily authenticated and entirely isolated from public web traffic, fulfilling the strict deployment recommendations for sovereign infrastructure.
 
+<a id="3"></a>
 ### 3. Client Layer: Local-First Execution and Micro-Frontend Federation
 The Conxian UI and Admin Dashboard must migrate away from cloud-hosted monolithic applications toward a decentralized, "local-first" micro-frontend architecture.
 

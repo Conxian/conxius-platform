@@ -1,5 +1,13 @@
 # Conxius Platform: Gap-to-Research Scoring Matrix (Phase 7)
 
+**Status:** Active operational prioritization matrix; scores do not establish implementation or production readiness.
+
+**Last reviewed:** 2026-07-27
+
+**Authority:** [`INFORMATION_HIERARCHY.md`](./INFORMATION_HIERARCHY.md) and
+[`GAPS.md`](./GAPS.md). Current documentation-alignment change:
+[`2026-07-27-documentation-authority-and-operator-accuracy`](../openspec/changes/2026-07-27-documentation-authority-and-operator-accuracy/).
+
 This matrix scores the identified gaps based on Strategic Alignment, Implementation Complexity, and Customer Validation Signal. Scores are prioritization signals, not production-readiness evidence. For BitVM/ZKCP, issue #1187 records the current platform state: fail-closed proof/payment contracts, bounded canonical evidence, versioned intent binding, and quarantine are implemented. Production key release is fully removed and unavailable; an independently authenticated, server-bound Gateway/Core atomic claim-or-get coordinator and durable registry are future launch gates. Dependency injection or BFF memory is never irreversible authority.
 
 | ID | Gap Description | Strategic Alignment | Complexity | Validation Signal | **Total Score** | Primary Research Link |

@@ -10,6 +10,13 @@ Align active documentation with the repository state that operators and
 contributors can verify, while preserving the governance baseline, the
 information hierarchy, and the routing-only/fail-closed production boundary.
 
+PRs [#1202](https://github.com/Conxian/conxius-platform/pull/1202) and
+[#1203](https://github.com/Conxian/conxius-platform/pull/1203) delivered the
+canonical Python documentation validator, active documentation index, scoped
+workflow, required-entry checks, and repository/symlink containment baseline.
+This follow-up preserves that work and addresses only the remaining fragment
+validation and operator-accuracy gaps.
+
 The issue #1201 audit identified active documentation that can misdirect an
 operator because relative links no longer resolve, local ports are described
 without distinguishing direct execution from Docker Compose, placeholder
@@ -49,8 +56,9 @@ tiers, or deciding unresolved cross-repository authority.
   currently supplies a Kubernetes, GitOps, NixOS, or production deployment.
 - Add minimal freshness metadata to the operational documents whose current
   status or operator instructions are verified by this change.
-- Add a deterministic local Markdown-link validator and wire it to a root
-  package command and a CI path that runs for documentation/OpenSpec changes.
+- Extend the existing deterministic Python Markdown validator with local
+  fragment/anchor validation while preserving every #1202/#1203 guarantee and
+  the existing documentation-aware CI workflow.
 - Append the required `AGENTS.md` session-log entry only in the later
   implementation phase.
 
@@ -74,7 +82,8 @@ tiers, or deciding unresolved cross-repository authority.
 1. Every changed current-state statement is traceable to a repository file,
    executable command, package manifest, or explicitly identified external
    owner; target state is labeled as target/external.
-2. Active local relative links pass the new deterministic validator, while
+2. Active local relative links and fragments pass the canonical Python
+   validator, while
    historical/archive paths remain excluded from repair.
 3. Local operator guidance identifies the correct direct/Compose ports,
    placeholder and stub boundaries, `make auth` limits, and valid package
@@ -93,6 +102,6 @@ tiers, or deciding unresolved cross-repository authority.
 - A link checker could produce unstable results if it depends on the network.
   The validator is local and deterministic; external URLs are not treated as
   locally verifiable targets.
-- CI wiring could miss documentation-only changes because current general CI
-  paths ignore Markdown. The implementation must provide a documentation-aware
-  trigger rather than relying on an ignored path.
+- Fragment parsing could regress the existing path, symlink, history, timeout,
+  permissions, action-pin, or reusable secret-scan guarantees. The follow-up
+  extends the Python validator and tests without replacing the merged workflow.

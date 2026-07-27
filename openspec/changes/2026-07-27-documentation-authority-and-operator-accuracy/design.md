@@ -105,44 +105,62 @@ and timeless reference documents do not receive metadata solely for
 uniformity. Existing stronger metadata formats are preserved rather than
 duplicated.
 
-## 7. Local Markdown-link validator
+## 7. Canonical Python Markdown-link validator
 
-The implementation will add a repository-local, deterministic validator with
-these properties:
+PRs #1202/#1203 established `scripts/verify_documentation.py`,
+`scripts/test_verify_documentation.py`, `docs/README.md`, and
+`.github/workflows/docs-validation.yml` as the canonical baseline. This change
+extends that validator rather than adding a Node implementation, package script,
+or second workflow.
+
+The resulting repository-local validator has these properties:
 
 - scans tracked Markdown in active documentation and non-archived OpenSpec
   paths selected by an explicit path policy;
 - excludes `docs/archived-*`, `openspec/changes/archive/`, generated/vendor
   directories, and immutable history from the repair gate;
 - parses inline links, reference-style links, and local image destinations;
-- resolves relative paths from the source document, including URL-decoding and
-  removal of query strings/fragments before filesystem checks;
+- resolves relative paths from the source document, including strict
+  URL-decoding and removal of query strings before filesystem checks;
 - validates local file/directory targets and, where a local fragment is
   present, validates the corresponding Markdown/HTML anchor deterministically;
 - ignores network-only schemes and does not make HTTP requests;
 - reports the source file, line when available, destination, and reason; and
-- exits non-zero on a broken in-scope local target.
+- validates GitHub-style ATX/Setext heading anchors, deterministic duplicate
+  suffixes, and real explicit HTML `id`/`a[name]` anchors;
+- strips fenced/inline code before link or explicit-anchor extraction;
+- supports full, collapsed, and shortcut references with normalized labels and
+  first-definition resolution, plus nested/escaped inline destinations;
+- validates same-file, cross-file, encoded, and directory-README fragments;
+- preserves lexical and realpath containment for sources, targets, and required
+  entries; and
+- exits non-zero with actionable diagnostics for broken or malformed in-scope
+  local targets.
 
-The validator will be exposed through a root package script such as
-`check:markdown-links`. It will have focused tests for valid links, missing
-targets, reference links, images, encoded paths, fragments, archive exclusion,
-and external URLs.
+The supported commands remain direct Python commands:
+
+```bash
+python3 -m unittest scripts/test_verify_documentation.py
+python3 scripts/verify_documentation.py
+```
 
 ## 8. CI integration
 
-Current general CI and hygiene workflows ignore Markdown/documentation-only
-changes. The implementation must therefore wire the root link-check command to
-a documentation-aware CI path whose triggers include at least:
+The merged `docs-validation.yml` workflow already supplies the
+documentation-aware CI path. It retains:
 
 - `README.md` and other root Markdown files;
 - `docs/**/*.md` excluding immutable historical paths according to the same
   policy as the validator;
 - `openspec/**/*.md` and `.openspec.yaml`; and
-- the validator, its tests, package script, and workflow definition.
+- the validator, its tests, and workflow definition;
+- least `contents: read` permissions;
+- a five-minute timeout;
+- SHA-pinned checkout and Python setup actions; and
+- the reusable documentation secret-scan job.
 
-The workflow must use pinned actions consistent with repository policy and run
-without secrets or network link crawling. CI integration must not weaken or
-rename unrelated required checks.
+No workflow change is required for this follow-up because its existing path
+triggers already cover the Python validator, tests, Markdown, and OpenSpec.
 
 ## 9. Implementation sequence and review evidence
 
@@ -151,7 +169,8 @@ rename unrelated required checks.
 2. Correct active mutable documents only, preserving authority and production
    boundaries.
 3. Add freshness metadata to relevant changed operational documents.
-4. Add and test the local validator, root package command, and CI path.
+4. Extend and test the existing Python validator without adding a competing
+   package command, Node validator, or workflow.
 5. Run targeted link validation, validator tests, package checks, OpenSpec
    validation, and diff hygiene.
 6. Append one implementation session-log entry to `AGENTS.md`; do not rewrite

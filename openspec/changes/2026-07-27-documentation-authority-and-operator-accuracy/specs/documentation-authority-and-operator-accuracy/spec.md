@@ -107,12 +107,20 @@ certification.
 
 ### Requirement: Active local Markdown links are validated deterministically
 
-The repository SHALL provide a local, deterministic Markdown-link validator for
+The repository SHALL preserve and extend the canonical local, deterministic
+Python Markdown-link validator established by PRs #1202/#1203 for
 in-scope active documentation and active OpenSpec artifacts. It SHALL validate
 relative files, directories, images, reference-style destinations, and local
 fragments without making network requests. It SHALL exclude archived/historical
 paths according to an explicit policy and SHALL return actionable non-zero
 failures for broken in-scope targets.
+
+The validator SHALL recognize GitHub-style ATX and Setext headings,
+deterministic duplicate suffixes, explicit HTML `id` and `a[name]` anchors,
+same-file and cross-file fragments, encoded paths/fragments, directory README
+anchors, normalized reference forms, and supported nested/escaped inline
+destinations. It SHALL ignore code lookalikes and generic external URI schemes,
+and SHALL preserve lexical plus realpath containment checks.
 
 #### Scenario: Active document contains a broken relative target
 
@@ -131,9 +139,11 @@ failures for broken in-scope targets.
 #### Scenario: Documentation-only change enters CI
 
 - **WHEN** a pull request changes in-scope Markdown, OpenSpec artifacts, the
-  validator, its tests, package command, or workflow
+  validator, its tests, or workflow
 - **THEN** a pinned documentation-aware CI path runs the local validator
 - **AND** it requires no production secret or external URL availability
+- **AND** it retains the merged timeout, least-permission, and reusable
+  secret-scan behavior
 
 ### Requirement: Session history is appended only during implementation
 

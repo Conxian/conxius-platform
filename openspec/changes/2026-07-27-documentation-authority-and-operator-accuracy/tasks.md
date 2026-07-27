@@ -59,6 +59,12 @@ realpath/symlink containment.
   do not add Node/package-script assumptions.
 - [x] Preserve the merged pinned documentation-aware workflow, timeout, least
   permissions, and reusable secret-scan job without duplicating the workflow.
+- [x] Cover all case variants of the Markdown extension in active discovery and
+  both workflow path lists without scanning non-Markdown files.
+- [x] Require fenced-code closers to match marker/depth/length and contain only
+  trailing horizontal whitespace; diagnose undefined numeric references.
+- [x] Repair intentional active research citations as visible Markdown links
+  instead of preserving a global numeric-reference bypass.
 
 ## Validation and handoff
 

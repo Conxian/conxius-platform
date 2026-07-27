@@ -129,8 +129,14 @@ The resulting repository-local validator has these properties:
 - validates GitHub-style ATX/Setext heading anchors, deterministic duplicate
   suffixes, and real explicit HTML `id`/`a[name]` anchors;
 - strips fenced/inline code before link or explicit-anchor extraction;
+- discovers Markdown extensions case-insensitively while excluding files whose
+  final extension is not Markdown;
+- treats opening and closing fences separately so closing markers must match
+  the opening character and blockquote depth, meet its length, and contain only
+  optional trailing spaces or tabs;
 - supports full, collapsed, and shortcut references with normalized labels and
-  first-definition resolution, plus nested/escaped inline destinations;
+  first-definition resolution, plus nested/escaped inline destinations, and
+  reports undefined numeric full-reference labels like other unresolved labels;
 - validates same-file, cross-file, encoded, and directory-README fragments;
 - preserves lexical and realpath containment for sources, targets, and required
   entries; and
@@ -160,10 +166,10 @@ documentation-aware CI path. It retains:
 - SHA-pinned checkout and Python setup actions; and
 - the reusable documentation secret-scan job.
 
-This follow-up adds the missing change-local `.openspec.yaml` path trigger to
-both pull-request and push events. The existing Python commands, branches,
-timeout, permissions, pinned actions, and reusable secret-scan job remain
-unchanged.
+This follow-up adds the missing change-local `.openspec.yaml` path trigger and
+explicit root/nested `.md`, `.MD`, `.Md`, and `.mD` patterns to both
+pull-request and push events. The existing Python commands, branches, timeout,
+permissions, pinned actions, and reusable secret-scan job remain unchanged.
 
 ## 9. Implementation sequence and review evidence
 

@@ -127,23 +127,23 @@ Based on comprehensive external research + org repo analysis (repos are **far ah
 - Control models for routing
 
 #### Stacks Nakamoto + sBTC (External Research)
-- **Nakamoto Upgrade (Q4 2024)**: ~5 second blocks with Bitcoin-anchored finality [1][2]
-- **sBTC Peg Mechanics**: 70% signing threshold, signers lock STX [2][3]
-- **sBTC Adoption**: $437M TVL by Q1-2026 [3][4]
+- **Nakamoto Upgrade (Q4 2024)**: ~5 second blocks with Bitcoin-anchored finality [[1]](https://docs.stacks.co/learn/block-production/what-was-the-nakamoto-upgrade) [[2]](https://docs.stacks.co/learn/sbtc/security-model-of-sbtc)
+- **sBTC Peg Mechanics**: 70% signing threshold, signers lock STX [[2]](https://docs.stacks.co/learn/sbtc/security-model-of-sbtc) [[3]](https://nansen.ai/post/stacks-2025-ecosystem-report)
+- **sBTC Adoption**: $437M TVL by Q1-2026 [[3]](https://nansen.ai/post/stacks-2025-ecosystem-report) [[4]](https://messari.io/report/stacks-q4-2024-brief)
 
 #### BitVM Family (External Research)
-- **BitVM2**: USENIX Security 2026 validated [7]
-- **BitVM3**: Garbled circuits for efficient bridges [6]
+- **BitVM2**: USENIX Security 2026 validated [[7]](https://www.usenix.org/system/files/conference/usenixsecurity26/sec26_prepub_woll.pdf)
+- **BitVM3**: Garbled circuits for efficient bridges [[6]](https://bitvm.org/bitvm3.pdf)
 - **Readiness distinction**: research validation and cross-repository SDK capability do not make the `conxius-platform` settlement boundary production-ready. Issue #1187 requires explicit Gateway/Core/Nexus backend evidence and keeps the platform default unavailable.
 
 #### Primary Sources (Verified)
-- [1] https://docs.stacks.co/learn/block-production/what-was-the-nakamoto-upgrade
-- [2] https://docs.stacks.co/learn/sbtc/security-model-of-sbtc
-- [3] https://nansen.ai/post/stacks-2025-ecosystem-report
-- [4] https://messari.io/report/stacks-q4-2024-brief
-- [6] https://bitvm.org/bitvm3.pdf
-- [7] https://www.usenix.org/system/files/conference/usenixsecurity26/sec26_prepub_woll.pdf
-- [32] https://spark.money/research/bitcoin-second-layer-scaling-landscape
+- [1 — Stacks: What was the Nakamoto upgrade?](https://docs.stacks.co/learn/block-production/what-was-the-nakamoto-upgrade)
+- [2 — Stacks: Security model of sBTC](https://docs.stacks.co/learn/sbtc/security-model-of-sbtc)
+- [3 — Nansen: Stacks 2025 ecosystem report](https://nansen.ai/post/stacks-2025-ecosystem-report)
+- [4 — Messari: Stacks Q4 2024 brief](https://messari.io/report/stacks-q4-2024-brief)
+- [6 — BitVM3 paper](https://bitvm.org/bitvm3.pdf)
+- [7 — USENIX Security 2026 BitVM2 paper](https://www.usenix.org/system/files/conference/usenixsecurity26/sec26_prepub_woll.pdf)
+- [32 — Bitcoin second-layer scaling landscape](https://spark.money/research/bitcoin-second-layer-scaling-landscape)
 
 #### Strategic Alignment
 | Area | Org Repo Status | Action |
@@ -2058,6 +2058,7 @@ AGENTS.md (this update)
 - Added `docs/LOCAL_DEVELOPMENT.md`, reconciled deployment/alignment/operator guidance, and added only semantically required numeric anchors used by the active gap documents.
 - Reconciled the issue #1201 OpenSpec artifacts to the Python implementation and preserved the existing pinned documentation workflow, timeout, least permissions, and reusable secret-scan job.
 - Hardened query/fragment parsing, nested labels and images, blockquoted fenced-code masking, dynamic `docs/archived-*` history handling, and change-local OpenSpec manifest workflow triggers after pre-PR review.
+- Closed the remaining validator/CI gaps with case-insensitive Markdown discovery and workflow triggers, strict same-marker fenced-code closure, unresolved numeric-reference diagnostics, and active research-citation repairs.
 **Key discoveries**:
 - The active gap and scoring documents used 70 numeric fragment references whose files existed but whose anchors were not validated by the original Python baseline.
 - Direct dashboard, Compose dashboard, and Compose Grafana all use distinct process/port meanings; Compose Gateway/UI defaults remain placeholders and optional protocol profiles remain RPC stubs.

@@ -73,8 +73,11 @@ REQUIRED_ENTRY_PATHS = {
     ),
 }
 
-FENCE_RE = re.compile(
+OPENING_FENCE_RE = re.compile(
     r"^(?P<blockquote>\s{0,3}(?:>\s*)*)\s{0,3}(?P<marker>`{3,}|~{3,})"
+)
+CLOSING_FENCE_RE = re.compile(
+    r"^(?P<blockquote>\s{0,3}(?:>\s*)*)\s{0,3}(?P<marker>`{3,}|~{3,})[ \t]*$"
 )
 ATX_HEADING_RE = re.compile(r"^\s{0,3}#{1,6}(?:\s+|$)(.*?)\s*$")
 SETEXT_RE = re.compile(r"^\s{0,3}(?:=+|-+)\s*$")
@@ -180,7 +183,9 @@ def active_markdown_files(root: Path) -> tuple[list[Path], list[Diagnostic]]:
     sources: list[Path] = []
     diagnostics: list[Diagnostic] = []
 
-    for path in root.rglob("*.md"):
+    for path in root.rglob("*"):
+        if path.suffix.casefold() != ".md":
+            continue
         if is_excluded_source(path, root):
             continue
 
@@ -252,8 +257,8 @@ def strip_fenced_code(lines: list[str]) -> list[str]:
     fence_blockquote_depth = 0
 
     for line in lines:
-        match = FENCE_RE.match(line)
         if fence_character is None:
+            match = OPENING_FENCE_RE.match(line)
             if match:
                 marker = match.group("marker")
                 fence_character = marker[0]
@@ -265,6 +270,7 @@ def strip_fenced_code(lines: list[str]) -> list[str]:
             continue
 
         result.append(" " * len(line))
+        match = CLOSING_FENCE_RE.match(line)
         if match:
             marker = match.group("marker")
             blockquote_depth = match.group("blockquote").count(">")
@@ -493,9 +499,7 @@ def extract_links(text: str) -> list[Link]:
                         extract_line(link_text, line_number, images_only=True)
                     )
                     line_links.append(Link(line_number, target))
-                elif not (
-                    link_text.strip().isdigit() and explicit_label.strip().isdigit()
-                ):
+                else:
                     line_links.append(
                         Link(
                             line_number,

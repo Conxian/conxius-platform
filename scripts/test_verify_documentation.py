@@ -8,6 +8,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from verify_documentation import (  # isort: skip
+    active_markdown_files,
     collect_anchors,
     extract_links,
     parse_local_destination,
@@ -172,6 +173,49 @@ class DocumentationParserTests(unittest.TestCase):
             [(7, "present.md")],
         )
 
+    def test_fence_closures_require_marker_length_and_whitespace_only(self) -> None:
+        text = """````markdown
+[ignored](missing.md)
+~~~~
+``` not-a-valid-close
+[still ignored](also-missing.md)
+`````
+[backtick live](backtick.md)
+~~~~ text
+[tilde ignored](tilde-missing.md)
+````
+~~~
+[tilde still ignored](tilde-also-missing.md)
+~~~~ not-a-valid-close
+[tilde yet ignored](tilde-third-missing.md)
+~~~~~~\t
+[tilde live](tilde.md)
+"""
+        self.assertEqual(
+            [(link.line, link.target) for link in extract_links(text)],
+            [(7, "backtick.md"), (16, "tilde.md")],
+        )
+
+    def test_nested_blockquote_fence_closure_requires_same_depth(self) -> None:
+        text = (
+            "> > ```markdown\n"
+            "> > [ignored](missing.md)\n"
+            "> ```\n"
+            "> > [still ignored](also-missing.md)\n"
+            "> > ````" + "   \n"
+            "[live](present.md)\n"
+        )
+        self.assertEqual(
+            [(link.line, link.target) for link in extract_links(text)],
+            [(6, "present.md")],
+        )
+
+    def test_undefined_numeric_full_reference_is_reported(self) -> None:
+        links = extract_links("Research claim [1][1].\n")
+        self.assertEqual(len(links), 1)
+        self.assertEqual(links[0].target, "[1]")
+        self.assertEqual(links[0].problem, "unresolved reference label 1")
+
     def test_reports_malformed_inline_link(self) -> None:
         links = extract_links("[broken](docs/guide.md\n")
         self.assertEqual(len(links), 1)
@@ -259,6 +303,27 @@ class DocumentationValidationTests(unittest.TestCase):
                 path = root / relative_path
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text("entry\n", encoding="utf-8")
+
+    def test_discovers_markdown_extensions_case_insensitively_only(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            expected = {
+                root / "root.md",
+                root / "root.MD",
+                root / "nested" / "guide.Md",
+                root / "nested" / "other.mD",
+            }
+            for path in expected:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("[broken](missing.md)\n", encoding="utf-8")
+            (root / "not-markdown.md.txt").write_text(
+                "[ignored](missing.md)\n", encoding="utf-8"
+            )
+
+            sources, diagnostics = active_markdown_files(root)
+
+            self.assertEqual(set(sources), expected)
+            self.assertEqual(diagnostics, [])
 
     def test_reports_missing_and_historical_targets_but_not_archived_sources(
         self,
@@ -677,6 +742,18 @@ class DocumentationValidationTests(unittest.TestCase):
                 )
             )
 
+    def test_reports_undefined_numeric_reference_diagnostic(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self._write_required_entries(root)
+            (root / "README.md").write_text(
+                "Research claim [1][1].\n", encoding="utf-8"
+            )
+
+            messages = [diagnostic.message for diagnostic in validate(root)]
+
+            self.assertEqual(messages, ["unresolved reference label 1"])
+
     def test_ignores_code_lookalikes_during_validation(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
@@ -782,6 +859,20 @@ class DocumentationWorkflowTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("  secret-scan:\n", workflow)
         self.assertIn("uses: ./.github/workflows/reusable-secret-scan.yml", workflow)
+
+    def test_all_markdown_extension_cases_trigger_both_events(self) -> None:
+        patterns = {
+            "*.md",
+            "*.MD",
+            "*.Md",
+            "*.mD",
+            "**/*.md",
+            "**/*.MD",
+            "**/*.Md",
+            "**/*.mD",
+        }
+        for event in ("pull_request", "push"):
+            self.assertTrue(patterns.issubset(set(self._event_paths(event))))
 
 
 if __name__ == "__main__":

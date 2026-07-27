@@ -27,7 +27,8 @@ test("scope excludes history and immutable evidence but includes mutable runbook
   assert.equal(isInScope("docs/runbooks/LIFECYCLE_CONTROL_VERIFICATION_EVIDENCE.md"), false);
   assert.equal(isInScope("docs/runbooks/PHASE_3_A_S_READINESS_EVIDENCE_PACK.md"), false);
   assert.equal(isInScope("docs/runbooks/ATS_EXECUTION_REPORT_JUNE_2026.md"), false);
-  assert.equal(isInScope("docs/runbooks/SIDL_RELEASE_READINESS_RUNBOOK.md"), true);
+  assert.equal(isInScope("docs/runbooks/SIDL_RELEASE_READINESS_RUNBOOK.md"), false);
+  assert.equal(isInScope("docs/runbooks/SIDL_ENDPOINT_MONITORING_RUNBOOK.md"), false);
   assert.equal(isInScope("docs/runbooks/LIFECYCLE_CONTROL_GATE_OPERATIONS.md"), true);
   assert.equal(isInScope("services/example/README.md"), true);
   assert.equal(isInScope(".agents/skills/example/SKILL.md"), true);
@@ -119,6 +120,92 @@ test("generates GitHub-style heading anchors for formatting, HTML, Unicode, unde
     "trailing-hashes",
     "legacy-anchor",
   ]);
+});
+
+test("only accepts anchors from real opening HTML tags outside code", () => {
+  const anchors = collectAnchors([
+    "`<a id=\"inline-fake\"></a>`",
+    "text id=\"prose-fake\" and name=\"also-fake\"",
+    "<a id=\"real-id\"></a>",
+    "<a name=\"real-name\"></a>",
+    "<section id=\"section-id\"></section>",
+    "<section name=\"not-an-anchor\"></section>",
+  ].join("\n"));
+  assert.equal(anchors.has("inline-fake"), false);
+  assert.equal(anchors.has("prose-fake"), false);
+  assert.equal(anchors.has("also-fake"), false);
+  assert.equal(anchors.has("real-id"), true);
+  assert.equal(anchors.has("real-name"), true);
+  assert.equal(anchors.has("section-id"), true);
+  assert.equal(anchors.has("not-an-anchor"), false);
+});
+
+test("validates real HTML anchors but rejects inline-code and prose lookalikes", (t) => {
+  const root = fixture(t, {
+    "README.md": [
+      "[Inline fake](docs/guide.md#inline-fake)",
+      "[Prose fake](docs/guide.md#prose-fake)",
+      "[Real id](docs/guide.md#real-id)",
+      "[Real name](docs/guide.md#real-name)",
+      "[Element id](docs/guide.md#section-id)",
+    ].join("\n"),
+    "docs/guide.md": [
+      "`<a id=\"inline-fake\"></a>`",
+      "text id=\"prose-fake\"",
+      "<a id=\"real-id\"></a>",
+      "<a name=\"real-name\"></a>",
+      "<section id=\"section-id\"></section>",
+    ].join("\n"),
+  });
+  const result = validateMarkdownLinks({ root, files: ["README.md", "docs/guide.md"] });
+  assert.equal(result.errors.length, 2);
+  assert.deepEqual(result.errors.map(({ destination }) => destination), [
+    "docs/guide.md#inline-fake",
+    "docs/guide.md#prose-fake",
+  ]);
+});
+
+test("collects Setext H1 and H2 anchors in document order with ATX duplicates", () => {
+  assert.deepEqual([...collectAnchors([
+    "Café *Guide* 東京",
+    "================",
+    "# Duplicate",
+    "Duplicate",
+    "---------",
+    "## Duplicate",
+    "`Code id=\"fake\"`",
+    "----------------",
+    "```md",
+    "Fenced Heading",
+    "==============",
+    "```",
+  ].join("\n"))], [
+    "café-guide-東京",
+    "duplicate",
+    "duplicate-1",
+    "duplicate-2",
+  ]);
+});
+
+test("validates fragments for Setext headings and mixed duplicate suffixes", (t) => {
+  const root = fixture(t, {
+    "README.md": [
+      "[H1](docs/guide.md#primary-guide)",
+      "[H2](docs/guide.md#details)",
+      "[Mixed duplicate](docs/guide.md#repeat-2)",
+    ].join("\n"),
+    "docs/guide.md": [
+      "Primary Guide",
+      "=============",
+      "Details",
+      "-------",
+      "# Repeat",
+      "Repeat",
+      "------",
+      "## Repeat",
+    ].join("\n"),
+  });
+  assert.deepEqual(validateMarkdownLinks({ root, files: ["README.md", "docs/guide.md"] }).errors, []);
 });
 
 test("does not misclassify adjacent numeric citations as unresolved references", (t) => {

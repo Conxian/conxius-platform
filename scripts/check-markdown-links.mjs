@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 
 // Scope follows docs/INFORMATION_HIERARCHY.md. Historical trees and
 // unambiguously named/identified evidence artifacts are immutable. Mutable
-// operational runbooks remain in scope, including SIDL release readiness.
+// operational runbooks remain in scope, but append-only SIDL runbooks do not.
 const EXCLUDED_PREFIXES = [
   "docs/archived-reports/",
   "docs/archived-scripts/",
@@ -31,8 +31,11 @@ export function isInScope(sourcePath) {
   const normalized = normalizedPath(sourcePath);
   const immutableEvidence = normalized.startsWith("docs/runbooks/")
     && /_EVIDENCE[^/]*\.md$/i.test(normalized);
+  const sidlEvidence = normalized.startsWith("docs/runbooks/SIDL_")
+    && normalized.endsWith(".md");
   return normalized.endsWith(".md")
     && !immutableEvidence
+    && !sidlEvidence
     && !EXCLUDED_EVIDENCE_FILES.has(normalized)
     && !EXCLUDED_PREFIXES.some((prefix) => normalized.startsWith(prefix));
 }
@@ -239,20 +242,49 @@ function githubSlug(value) {
 }
 
 export function collectAnchors(markdown) {
-  const visible = stripFencedCode(markdown);
+  // Markdown heading text keeps inline-code contents in its GitHub slug, while
+  // raw HTML anchor discovery must not treat code examples as live tags.
+  const headingVisible = stripFencedCode(markdown);
+  const htmlVisible = stripCode(markdown);
   const anchors = new Set();
   const counts = new Map();
-  for (const line of visible.split("\n")) {
-    const heading = line.match(/^\s{0,3}#{1,6}(?:\s+|$)(.*?)\s*$/);
-    if (!heading) continue;
-    const headingValue = heading[1].replace(/\s+#+\s*$/, "");
-    const base = githubSlug(headingValue);
-    if (!base) continue;
+  const lines = headingVisible.split("\n");
+  const codeStrippedLines = htmlVisible.split("\n");
+
+  function addHeading(value) {
+    const base = githubSlug(value);
+    if (!base) return;
     const count = counts.get(base) ?? 0;
     counts.set(base, count + 1);
     anchors.add(count === 0 ? base : `${base}-${count}`);
   }
-  for (const match of visible.matchAll(/\b(?:id|name)\s*=\s*["']([^"']+)["']/gi)) anchors.add(match[1]);
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const heading = line.match(/^\s{0,3}#{1,6}(?:\s+|$)(.*?)\s*$/);
+    if (heading) {
+      addHeading(heading[1].replace(/\s+#+\s*$/, ""));
+      continue;
+    }
+
+    if (index === 0 || !/^\s{0,3}(?:=+|-+)\s*$/.test(line)) continue;
+    const previous = lines[index - 1];
+    if (!codeStrippedLines[index - 1].trim()
+      || /^\s{0,3}#{1,6}(?:\s+|$)/.test(previous)) continue;
+    addHeading(previous.trim());
+  }
+
+  const openingTag = /<([A-Za-z][A-Za-z0-9:-]*)\b([^<>]*)>/g;
+  for (const match of htmlVisible.matchAll(openingTag)) {
+    const tagName = match[1].toLowerCase();
+    const attributes = match[2];
+    const id = attributes.match(/(?:^|\s)id\s*=\s*["']([^"']+)["']/i);
+    if (id) anchors.add(id[1]);
+    if (tagName === "a") {
+      const name = attributes.match(/(?:^|\s)name\s*=\s*["']([^"']+)["']/i);
+      if (name) anchors.add(name[1]);
+    }
+  }
   return anchors;
 }
 

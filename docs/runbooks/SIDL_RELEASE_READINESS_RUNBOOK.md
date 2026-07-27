@@ -1,7 +1,5 @@
 # SIDL Release Readiness Runbook
 
-**Last verified:** 2026-07-27
-
 ## Objective
 Define the maintainer steps required to roll out and verify the SIDL social interfaces as a **reference implementation**: Farcaster Frames, ElizaOS plugin actions, and x402 Cart Mandate checkout.
 
@@ -9,12 +7,9 @@ Define the maintainer steps required to roll out and verify the SIDL social inte
 - Access to the deployment/environment hosting `services/admin-dashboard`.
 - Access to the release channel used for maintainer updates.
 - CLI tools available: `curl`, `jq`, and `python3` (or equivalent base64 decoder).
-- Social surface base URL identified for the selected execution mode:
-  - Direct Admin Dashboard development: `http://localhost:3001`.
-  - Docker Compose Admin Dashboard: `http://localhost:3002`.
-  - Docker Compose Grafana also uses host port `3001`; it is not the Compose
-    Admin Dashboard.
-  - Set `CONXIAN_SOCIAL_URL` explicitly to the selected Admin Dashboard URL.
+- Social surface base URL identified:
+  - Local default for Admin Dashboard: `http://localhost:3001`
+  - If using ElizaOS plugin defaults, set `CONXIAN_SOCIAL_URL` explicitly when not running on `http://localhost:3002`.
 - If validating live APY in the sBTC frame, ensure `CORE_API_URL` (or `NEXT_PUBLIC_CORE_API_URL`) can reach Gateway `/api/v1/lorenzo/stats`.
 
 ## Rollout Steps
@@ -28,8 +23,7 @@ Define the maintainer steps required to roll out and verify the SIDL social inte
 4. **Publish Readiness Posture**: Communicate that SIDL is a locally runnable reference implementation and not a production settlement rollout.
 
 ## Verification Steps
-Set the base URL once for checks. Use `3001` for direct development or `3002`
-for the Compose dashboard; do not point these checks at Compose Grafana:
+Set base URL once for checks:
 
 ```bash
 export SIDL_SOCIAL_BASE_URL="http://localhost:3001"

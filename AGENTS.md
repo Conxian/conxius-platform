@@ -2034,6 +2034,22 @@ AGENTS.md (this update)
 **Gotchas**:
 - The PR remote-tracking ref required an explicit local fetch refspec before checkout; no remote history was rewritten or force-pushed.
 
+### 2026-07-27 — Active Documentation Validation Slice (#1201 / CON-1584)
+**Trigger**: GitHub issue #1201 and Linear CON-1584 documentation-alignment audit.
+**What was done**:
+- Added a Python standard-library validator and focused tests for active repository-local Markdown paths, required documentation entry points, fenced examples, placeholders, and historical-link boundaries.
+- Added a documentation-scoped CI workflow that runs validation plus the reusable secret scan.
+- Added `docs/README.md`, repaired validator-confirmed active link paths, and marked absent GCP/Render deployment references as unsupported legacy guidance without selecting a production architecture.
+**Key discoveries**:
+- Active policy needs one narrow historical-link exception: `GOVERNANCE.md` must identify archive roots to define their non-authoritative status.
+- Existing docs-only CI path filters skipped the general secret-scan workflow, so the new docs workflow explicitly reuses the hardened scanner.
+**Files touched**:
+- `scripts/verify_documentation.py`, `scripts/test_verify_documentation.py`, `.github/workflows/docs-validation.yml`, `docs/README.md`, scoped active documentation links, and `openspec/changes/2026-07-27-issue-1201-documentation-validation/`.
+**Gaps identified**:
+- Heading-fragment validation, external URL availability, branding/product naming, and broader OpenSpec lifecycle cleanup remain decision-backed follow-ups.
+**Gotchas**:
+- Historical sources are excluded from ordinary remediation; active documents may not be repaired by pointing them into archived change artifacts.
+
 ### 2026-07-27 — Issue #1201 Documentation Authority and Operator Accuracy
 **Trigger**: Issue #1201 approved implementation on `docs/issue-1201-alignment-audit`.
 **What was done**:

@@ -8,13 +8,8 @@ on:
     branches: [ main, develop, dev, 'release/**' ]
     paths:
       - '*.md'
-      - 'docs/**/*.md'
-      - '!docs/archived-reports/**'
-      - '!docs/archived-scripts/**'
-      - '!docs/archived-tasks/**'
-      - 'openspec/**/*.md'
+      - '**/*.md'
       - 'openspec/**/.openspec.yaml'
-      - '!openspec/changes/archive/**'
       - 'scripts/check-markdown-links.mjs'
       - 'scripts/check-markdown-links.test.mjs'
       - 'package.json'
@@ -23,13 +18,8 @@ on:
     branches: [ main, develop, dev, 'release/**' ]
     paths:
       - '*.md'
-      - 'docs/**/*.md'
-      - '!docs/archived-reports/**'
-      - '!docs/archived-scripts/**'
-      - '!docs/archived-tasks/**'
-      - 'openspec/**/*.md'
+      - '**/*.md'
       - 'openspec/**/.openspec.yaml'
-      - '!openspec/changes/archive/**'
       - 'scripts/check-markdown-links.mjs'
       - 'scripts/check-markdown-links.test.mjs'
       - 'package.json'

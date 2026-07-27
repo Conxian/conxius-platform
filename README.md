@@ -85,6 +85,8 @@ This repository is maintained by Conxian Labs. It supports development and opera
 
 ## Quick start
 
+Last verified: 2026-07-27
+
 ```bash
 make init
 make auth

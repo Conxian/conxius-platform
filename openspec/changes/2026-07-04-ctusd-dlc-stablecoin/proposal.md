@@ -112,7 +112,7 @@ Revenue flows to the Conxian treasury:
 
 ## References
 
-- [FULL_STACK_BITCOIN_RESEARCH.md#26](../../docs/architecture/FULL_STACK_BITCOIN_RESEARCH.md) — DLC Maturity
-- [SCORING_MATRIX.md](../../docs/SCORING_MATRIX.md) — G-22 scoring (24/30)
-- [GAPS.md](../../docs/GAPS.md) — G-22 gap definition
+- [FULL_STACK_BITCOIN_RESEARCH.md#26](../../../docs/architecture/FULL_STACK_BITCOIN_RESEARCH.md) — DLC Maturity
+- [SCORING_MATRIX.md](../../../docs/SCORING_MATRIX.md) — G-22 scoring (24/30)
+- [GAPS.md](../../../docs/GAPS.md) — G-22 gap definition
 - RFC: Discreet Log Contracts (https://github.com/discreetlogcontracts/dlcspecs)

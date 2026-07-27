@@ -1,0 +1,53 @@
+name: Documentation Validation
+
+on:
+  pull_request:
+    branches: [main, develop, dev, 'release/**']
+    paths:
+      - '*.md'
+      - '**/*.md'
+      - '.agents/manifest.json'
+      - 'CODEOWNERS'
+      - 'scripts/verify_documentation.py'
+      - 'scripts/test_verify_documentation.py'
+      - '.github/workflows/docs-validation.yml'
+  push:
+    branches: [main, develop, dev, 'release/**']
+    paths:
+      - '*.md'
+      - '**/*.md'
+      - '.agents/manifest.json'
+      - 'CODEOWNERS'
+      - 'scripts/verify_documentation.py'
+      - 'scripts/test_verify_documentation.py'
+      - '.github/workflows/docs-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  documentation:
+    name: Active documentation links
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+
+      - name: Test documentation validator
+        run: python3 -m unittest scripts/test_verify_documentation.py
+
+      - name: Validate active documentation
+        run: python3 scripts/verify_documentation.py
+
+  secret-scan:
+    name: Secret scan for documentation changes
+    uses: ./.github/workflows/reusable-secret-scan.yml
+    permissions:
+      contents: read

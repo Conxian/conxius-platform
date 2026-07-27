@@ -1,6 +1,6 @@
 # Technical Debt Inventory & Burn-Down Plan
 
-Per [#1104](../../issues/1103) — systematic debt reduction across conxius-platform.
+Per [#1104](https://github.com/Conxian/conxius-platform/issues/1104) — systematic debt reduction across conxius-platform.
 Last updated: 2026-07-22.
 
 ## Debt Classification

@@ -143,4 +143,4 @@ graph TD
 | **conxius-orbit** | TUI Deployment & Monitoring |
 | **conxian-nexus** | Nexus OS / Glass Node / State Sync |
 
-For full details, see [REPOSITORY_TAXONOMY](docs/REPOSITORY_TAXONOMY.md).
+For full details, see [REPOSITORY_TAXONOMY](../REPOSITORY_TAXONOMY.md).

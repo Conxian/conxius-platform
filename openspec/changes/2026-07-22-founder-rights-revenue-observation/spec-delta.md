@@ -1,7 +1,7 @@
 # Spec Delta: Protocol Revenue Observation and Founder-Rights Evidence
 
 This change adds the canonical observation contract at
-[`openspec/specs/protocol-revenue-observation-v1.spec.md`](../../../specs/protocol-revenue-observation-v1.spec.md)
+[`openspec/specs/protocol-revenue-observation-v1.spec.md`](../../specs/protocol-revenue-observation-v1.spec.md)
 and the change-local `spec-driven` delta at
 [`specs/protocol-revenue-observation/spec.md`](specs/protocol-revenue-observation/spec.md).
 

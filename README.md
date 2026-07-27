@@ -61,6 +61,7 @@ This repository is maintained by Conxian Labs. It supports development and opera
 
 ## Technical documentation map
 
+- [Documentation Index](./docs/README.md)
 - [Deployment Promotion Model](./docs/DEPLOYMENT_PROMOTION_MODEL.md)
 - [Information Hierarchy & Maintenance Rules](./docs/INFORMATION_HIERARCHY.md)
 - [Conxian Unified Theory v2](./docs/CONXIAN_UNIFIED_THEORY_v2.md)
@@ -69,7 +70,7 @@ This repository is maintained by Conxian Labs. It supports development and opera
 - [System Architecture Graph](./docs/architecture/SYSTEM_GRAPH.md)
 - [Alignment Strategy](./docs/architecture/ALIGNMENT.md)
 - [Ecosystem Synergy](./docs/architecture/SYNERGY.md)
-- [Gap Analysis](./GAPS.md)
+- [Gap Analysis](./docs/GAPS.md)
 - [Repository Taxonomy](./docs/REPOSITORY_TAXONOMY.md)
 - [ADR 001: Repo Ownership](./docs/architecture/ADR-001_REPO_OWNERSHIP_AND_BOUNDARIES.md)
 - [Repository Evolution Plan](./docs/architecture/REPO_EVOLUTION_PLAN.md)

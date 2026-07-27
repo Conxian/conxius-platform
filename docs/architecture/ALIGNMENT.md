@@ -2,7 +2,7 @@
 
 This document serves as the authoritative guide for aligning business logic, design, and authority across all Conxian Labs repositories.
 
-**Note: This project utilizes the OpenSpec framework for specification-driven development. For detailed requirements and designs, see [openspec/changes/system-alignment-v2/](openspec/changes/system-alignment-v2/).**
+**Note: This project uses the OpenSpec framework for specification-driven development. The active system-v2 requirements are recorded in [`system-v2.spec.md`](../../openspec/specs/system-v2.spec.md); archived change artifacts are historical context, not current authority.**
 
 ## 1. Business Logic Alignment (The "Fusion")
 

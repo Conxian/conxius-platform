@@ -20,7 +20,7 @@ The Conxius Platform is transitioning to a purely declarative deployment model u
 ## Legacy Production Deployment (Cloud-Native)
 
 ### Gateway (GCP)
-The Gateway is designed to run on Google Cloud Platform using the provided Kubernetes manifests in `services/lib-conxian-core/gateway/infrastructure/gcp/`.
+Earlier deployment guidance referenced Kubernetes manifests at `services/lib-conxian-core/gateway/infrastructure/gcp/`. That path is not present in this repository. Treat the reference as legacy history, not as a supported production procedure; production architecture requires a separately approved, evidence-backed deployment plan.
 
 ### UI (Render)
-The UI can be deployed to Render using the `render.yaml` file in `services/conxian-ui/`. Ensure `NEXT_PUBLIC_CORE_API_URL` is set to your production Gateway URL.
+Earlier deployment guidance referenced `services/conxian-ui/render.yaml`. That path is not present in this repository. Treat the reference as legacy history, not as a supported production procedure; use the owning UI repository and approved release controls before selecting a production target.

@@ -37,6 +37,10 @@ make init
 
 Use development credentials only. Never commit real secrets. Follow strict environment hygiene: do not commit `.env` files, `.DS_Store`, or generated artifacts. Use provided templates like `.env.example` or service-specific templates (e.g., `services/admin-dashboard/.env.admin.example`) for local configuration.
 
+Follow [`docs/LOCAL_DEVELOPMENT.md`](./docs/LOCAL_DEVELOPMENT.md) for the
+direct-versus-Compose ports, placeholder/stub boundaries, documentation
+validation commands, and the exact limits of `make auth`.
+
 ## Change workflow
 
 1. Create a branch from `main` with a descriptive name.
@@ -51,9 +55,13 @@ Run the checks relevant to your changes before opening a PR:
 pnpm lint
 pnpm typecheck
 pnpm test
+python3 -m unittest scripts/test_verify_documentation.py
+python3 scripts/verify_documentation.py
 ```
 
-You can run targeted checks for a specific package with `pnpm --filter <package> <script>`.
+You can run targeted checks for a specific package with
+`pnpm --filter <package> run <script>`. For example, the Phase 7 dashboard
+selection is `pnpm --filter admin-dashboard run test:phase7`.
 
 ## Security and policy
 

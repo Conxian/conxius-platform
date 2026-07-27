@@ -5,7 +5,10 @@ Welcome, Agent. You are tasked with maintaining and extending the Conxian platfo
 ## Core Directives
 
 1.  **OpenSpec First**: All changes must be preceded by an OpenSpec proposal or follow existing change artifacts in `openspec/changes/`.
-2.  **Source of Truth**: The **Conxian Gateway** (`lib-conxian-core/gateway`) is the authoritative source for protocol state and business logic.
+2.  **Authority Coordination**: Active documents contain conflicting Protocol,
+    Nexus, Gateway, and Platform authority claims. Do not choose a side during
+    maintenance work; follow repository ownership boundaries and defer the
+    cross-repository authority decision to issue #1167.
 3.  **Bitcoin Native**: Always prioritize Bitcoin-anchored height (`burn-block-height`) and Nakamoto (Stacks 3.0/3.1) readiness.
 4. **Sovereign Design Alignment**: Adhere strictly to the **Sovereign Earthy** branding (Forest Green `#2E403B`, Nakamoto Gold `#D4A017`). Follow the **Stitch Pattern** for UI/UX reviews as codified in `DESIGN.md`. All frontend changes must be "vibe-verified" for high-fidelity consistency within the Earthy Corporate identity.
 5.  **Sentinel Security**: Follow zero-trust patterns. Never hardcode secrets. Use `provision-secrets.sh`.
@@ -124,23 +127,23 @@ Based on comprehensive external research + org repo analysis (repos are **far ah
 - Control models for routing
 
 #### Stacks Nakamoto + sBTC (External Research)
-- **Nakamoto Upgrade (Q4 2024)**: ~5 second blocks with Bitcoin-anchored finality [1][2]
-- **sBTC Peg Mechanics**: 70% signing threshold, signers lock STX [2][3]
-- **sBTC Adoption**: $437M TVL by Q1-2026 [3][4]
+- **Nakamoto Upgrade (Q4 2024)**: ~5 second blocks with Bitcoin-anchored finality [[1]](https://docs.stacks.co/learn/block-production/what-was-the-nakamoto-upgrade) [[2]](https://docs.stacks.co/learn/sbtc/security-model-of-sbtc)
+- **sBTC Peg Mechanics**: 70% signing threshold, signers lock STX [[2]](https://docs.stacks.co/learn/sbtc/security-model-of-sbtc) [[3]](https://nansen.ai/post/stacks-2025-ecosystem-report)
+- **sBTC Adoption**: $437M TVL by Q1-2026 [[3]](https://nansen.ai/post/stacks-2025-ecosystem-report) [[4]](https://messari.io/report/stacks-q4-2024-brief)
 
 #### BitVM Family (External Research)
-- **BitVM2**: USENIX Security 2026 validated [7]
-- **BitVM3**: Garbled circuits for efficient bridges [6]
+- **BitVM2**: USENIX Security 2026 validated [[7]](https://www.usenix.org/system/files/conference/usenixsecurity26/sec26_prepub_woll.pdf)
+- **BitVM3**: Garbled circuits for efficient bridges [[6]](https://bitvm.org/bitvm3.pdf)
 - **Readiness distinction**: research validation and cross-repository SDK capability do not make the `conxius-platform` settlement boundary production-ready. Issue #1187 requires explicit Gateway/Core/Nexus backend evidence and keeps the platform default unavailable.
 
 #### Primary Sources (Verified)
-- [1] https://docs.stacks.co/learn/block-production/what-was-the-nakamoto-upgrade
-- [2] https://docs.stacks.co/learn/sbtc/security-model-of-sbtc
-- [3] https://nansen.ai/post/stacks-2025-ecosystem-report
-- [4] https://messari.io/report/stacks-q4-2024-brief
-- [6] https://bitvm.org/bitvm3.pdf
-- [7] https://www.usenix.org/system/files/conference/usenixsecurity26/sec26_prepub_woll.pdf
-- [32] https://spark.money/research/bitcoin-second-layer-scaling-landscape
+- [1 — Stacks: What was the Nakamoto upgrade?](https://docs.stacks.co/learn/block-production/what-was-the-nakamoto-upgrade)
+- [2 — Stacks: Security model of sBTC](https://docs.stacks.co/learn/sbtc/security-model-of-sbtc)
+- [3 — Nansen: Stacks 2025 ecosystem report](https://nansen.ai/post/stacks-2025-ecosystem-report)
+- [4 — Messari: Stacks Q4 2024 brief](https://messari.io/report/stacks-q4-2024-brief)
+- [6 — BitVM3 paper](https://bitvm.org/bitvm3.pdf)
+- [7 — USENIX Security 2026 BitVM2 paper](https://www.usenix.org/system/files/conference/usenixsecurity26/sec26_prepub_woll.pdf)
+- [32 — Bitcoin second-layer scaling landscape](https://spark.money/research/bitcoin-second-layer-scaling-landscape)
 
 #### Strategic Alignment
 | Area | Org Repo Status | Action |
@@ -155,7 +158,7 @@ Based on comprehensive external research + org repo analysis (repos are **far ah
 | Founder Rights | 🔍 Research | Issue #1168 created |
 
 ### UI Pattern Reference
-- **Admin dashboard** (`services/admin-dashboard/`): Next.js 16 + React 19, pnpm workspace, typecheck with `npx tsc --noEmit`, port 3001
+- **Admin dashboard** (`services/admin-dashboard/`): Next.js 15.5.18 + React 19.2.8, pnpm workspace, typecheck with `pnpm --filter admin-dashboard run typecheck`, direct-development port 3001
 - **Admin pulse BOS** (`services/admin-pulse-bos/`): Separate service for SFO rendering
 - **ElizaOS plugin** (`services/elizaos-plugin-conxian/`): AI agent plugin
 - Navigation links live inline in `app/layout.tsx` `<nav>` — flat `<a>` tags, no sidebar component
@@ -178,9 +181,13 @@ All services use multi-layered M2M auth per `docs/M2M_AUTHENTICATION.md`:
 - **BitVM/ZKCP verifier readiness (#1187)** — `services/admin-dashboard` has versioned proof/payment contracts, unavailable defaults, simulation quarantine, and typed settlement failures. Production key release is completely quarantined: no releaser, registry/obligation execution, decryption-key output, or finalized success is selected or claimed here. Any future irreversible coordinator requires independent authentication, server binding, Gateway/Core atomic claim-or-get, and a durable registry; dependency injection alone is insufficient.
 - **Revenue automation handoff** — the protocol-owned `Conxian/Conxian` repository contains `contracts/treasury/revenue-automation.clar` with a current observed 100 bps / 1% baseline; platform specification and handoff are tracked in #1164/#1167, while protocol hardening and integration remain tracked in `Conxian/Conxian#538`
 - **JWT-based M2M token auth** — platform-side JWT issuance/verification is implemented; coordinated Rust Gateway verification remains open (#1160)
-- **Key rotation mechanism** — M2M keys are static, no rotation API (#1161)
+- **M2M rotation boundary** — dashboard-owned legacy `SERVICE_KEY_*` registry
+  rotation and rollback APIs are implemented. Consumer secret distribution,
+  `ADMIN_DASHBOARD_API_KEY` rotation, and JWT/JWKS rotation remain separate
+  deployment/coordination work under #1161.
 - **Swarm runtime transports/scheduling** — The transport-neutral `conxian.swarm` v1 protocol, validators, and tests are implemented for #1163; provider transports, authentication, and runtime scheduling remain out of scope.
-- **"Harvest Sovereign Yield"** — both SFO implementations use `Math.random()` stubs
+- **SFO yield execution** — both SFO views use deterministic local allocation
+  data; no real external yield-harvest execution is implemented.
 - **Yield sources** defined in scoring matrix (Babylon Staking G-43, ctUSD G-22, Lightning Async Payments G-53) have no UI integration
 - **Proof-carrying treasury analytics** (`openspec/changes/2026-05-12-proof-carrying-analytics-treasury-oracle/`) — defined but not implemented
 
@@ -213,7 +220,7 @@ This section maps the agent's available skills and tools to this repository's sp
 | Skill | When to Use | Repo Trigger |
 |---|---|---|
 | `github` | Any GitHub API operation (issues, PRs, workflows, repo metadata) | `GITHUB_TOKEN` is always available |
-| `github-actions` | Debugging CI failures, creating/modifying workflows in `.github/workflows/` | 18 custom workflow files; CI is heavy |
+| `github-actions` | Debugging CI failures, creating/modifying workflows in `.github/workflows/` | 19 tracked workflow definitions; CI is heavy |
 | `agent-memory` | Persisting or retrieving knowledge from AGENTS.md | This file — append to `## Session Log` after every session |
 | `agent-onboarding` | New agent induction, session continuity, swarm coordination | `.agents/skills/agent-onboarding/SKILL.md` — run at session start |
 
@@ -224,7 +231,7 @@ This section maps the agent's available skills and tools to this repository's sp
 | `code-review` | Rigorous PR review with risk assessment | Before merging any PR; use on `fix/*` and `feature/*` branches |
 | `code-simplifier` | Refining recently modified code for clarity and consistency | After any implementation session; catch duplication like steward types |
 | `qa-changes` | Functional testing of PR changes before merge | Playwright E2E configured (`playwright.config.ts`); `scripts/frontend_test.spec.ts` |
-| `frontend-design` | Building UI components, pages, dashboards | Admin dashboard is Next.js + React; `/rewards`, `/steward`, `/launch` pages |
+| `frontend-design` | Building UI components, pages, dashboards | Admin dashboard is Next.js 15.5.18 + React 19.2.8; `/rewards`, `/steward`, `/launch` pages |
 | `npm` | Installing Node packages in non-interactive CI | pnpm monorepo with `pnpm-workspace.yaml`; use `pnpm` not `npm` |
 | `security` | Security review for auth, secrets handling, API routes | `gitleaks.toml` + `secret-scan.yml` workflow; `validateAdminAuth()` pattern |
 
@@ -234,7 +241,7 @@ This section maps the agent's available skills and tools to this repository's sp
 |---|---|---|
 | `release-notes` | Generating changelog entries from git history | `CHANGELOG.md` follows Keep a Changelog; `RELEASING.md` defines process |
 | `github-pr-review` | Posting inline review comments with suggestions on PRs | When conducting code reviews on PRs |
-| `iterate` | Driving a PR through CI → review → QA loop until merge-ready | 18 custom CI workflows; PRs must pass hygiene, secret-scan, dependency-review, tests |
+| `iterate` | Driving a PR through CI → review → QA loop until merge-ready | 19 tracked workflow definitions; PRs must pass applicable required checks |
 
 ### Infrastructure & Deploy Skills
 
@@ -281,7 +288,7 @@ This section maps the agent's available skills and tools to this repository's sp
 | Type | When to Use | Example |
 |---|---|---|
 | `code-explorer` | Understanding unfamiliar code, tracing call paths, finding all references | "Find every file that imports from @/lib/launch and trace the call chain" |
-| `bash-runner` | Running tests, builds, linters, git operations, dependency installs | "Run `npx tsc --noEmit` in admin-dashboard and report any errors" |
+| `bash-runner` | Running tests, builds, linters, git operations, dependency installs | "Run `pnpm --filter admin-dashboard run typecheck` and report any errors" |
 | `general-purpose` | Multi-step tasks mixing code edits, shell commands, and tracking | "Refactor StatCard into a shared component and update all 4 pages" |
 | `web-researcher` | Researching external docs, APIs, changelogs | "Research Stacks Nakamoto Release API changes for Gateway migration" |
 
@@ -329,7 +336,7 @@ This file is a **living knowledge base** that grows with every agent session. Ea
 
 ## Repository Knowledge Graph (Full Synthesis — July 2026)
 
-This section is the canonical cross-reference of every system, type, API, document, and relationship in the repository. Generated from exhaustive deep-reads of all 150+ documentation files, 63 source files, 22 scripts, 18 custom CI workflows + 3 GitHub-native (CodeQL, Dependabot, Dependency Graph), and 7 specs.
+This section is the canonical cross-reference of every system, type, API, document, and relationship in the repository. Current filesystem inventory includes 19 tracked GitHub Actions workflow definitions; GitHub-native CodeQL, Dependabot, and Dependency Graph are separate platform features rather than files in `.github/workflows/`.
 
 ### Complete Type System Map
 
@@ -360,10 +367,17 @@ first-vote, consistent-voter, vote-streak-10, vote-streak-25, delegate, policy-a
 
 Newcomer(0)→Contributor(1)→Regular(2)→Core(3)→Champion(4)→Steward(5)
 
-### 17 Custom CI Workflows + 3 GitHub-native (CodeQL, Dependabot, Dependency Graph)
+### 19 Tracked GitHub Actions Workflow Definitions
 
-5 reusable: ci, dependency-review, hygiene, rust-ci, secret-scan. 12 entrypoint: ci, hygiene, hygiene-drift-guard, secret-scan, dependency-review, lifecycle-control-gates, bos-production-guard, cross-repo-integration-mvp, multi-env-test, synergy-test, release, stale-branch-review, action-version-audit, release-prep.
-Note: CodeQL is GitHub-native (enabled by default, custom workflow removed to avoid conflict). Dependabot and Dependency Graph are also GitHub-native features.
+2 reusable definitions: `reusable-ci.yml` and `reusable-secret-scan.yml`. 17
+entrypoint definitions: action-version-audit, bos-production-guard, ci,
+cross-repo-integration-mvp, dependency-review, docs-validation,
+hygiene-drift-guard, hygiene, kb-evolution, lifecycle-control-gates,
+multi-env-test, org-security-verify, release-prep, release, secret-scan,
+stale-branch-review, and synergy-test.
+
+CodeQL, Dependabot, and Dependency Graph are GitHub-native features and are not
+counted as files under `.github/workflows/`.
 
 ### Documentation Hierarchy (4 tiers)
 
@@ -392,11 +406,11 @@ The knowledge base auto-evolves using `.github/workflows/kb-evolution.yml`:
 
 **Run KB commands**:
 ```bash
-npm run kb:ingest    # Ingest GitHub activity
-npm run kb:patterns  # Detect code patterns
-npm run kb:research  # External research
-npm run kb:update    # Generate AGENTS.md updates
-npm run kb:status    # Show KB stats
+pnpm run kb:ingest    # Ingest GitHub activity
+pnpm run kb:patterns  # Detect code patterns
+pnpm run kb:research  # External research
+pnpm run kb:update    # Generate AGENTS.md updates
+pnpm run kb:status    # Show KB stats
 ```
 
 See `docs/SELF_EVOLVING_KB.md` for full architecture.
@@ -414,10 +428,10 @@ See `docs/SELF_EVOLVING_KB.md` for full architecture.
 | Swarm Coordination | **Implemented (transport-neutral protocol/validation/tests; patterns documented)** | #1163 |
 | **Self-Evolving KB** | **Implemented (scaffolded)** | #1165 |
 | Proof-carrying treasury analytics | Spec-only | — |
-| SFO yield harvesting | Math.random() stubs | — |
+| SFO yield harvesting | Deterministic display data; no external harvest execution | — |
 | Revenue automation ownership/hardening | Platform handoff/spec complete; upstream hardening and integration remain | Conxian #538 / platform #1164 |
 
-### Cross-Repo Dependencies (Conxian Org — 14 repos total)
+### Cross-Repo Dependencies (Conxian Org — 16 repos total, verified 2026-07-27)
 
 | Repo | Language | Role | Status |
 |------|----------|------|--------|
@@ -434,6 +448,9 @@ See `docs/SELF_EVOLVING_KB.md` for full architecture.
 | `.github` | Python | Public defaults and documentation guidance | Active |
 | `.github-private` | — | Internal engineering map/guide | Private |
 | `demo-repository` | HTML | Investor demo | Private |
+| `conxius-platform` | TypeScript/Python | This control-plane and integration-harness repository | Active |
+| `conxian.github.io` | HTML | GitHub Pages surface | Active |
+| `conxian_market` | — | Private market repository | Private |
 
 Note: conxian-labs is NOT a GitHub org — it only exists as conxian-labs.com. conxian.org is unreachable.
 
@@ -2032,3 +2049,25 @@ AGENTS.md (this update)
 - Heading-fragment validation, external URL availability, branding/product naming, and broader OpenSpec lifecycle cleanup remain decision-backed follow-ups.
 **Gotchas**:
 - Historical sources are excluded from ordinary remediation; active documents may not be repaired by pointing them into archived change artifacts.
+
+### 2026-07-27 — Issue #1201 Operator-Accuracy Follow-up
+**Trigger**: Issue #1201 follow-up after merged PRs #1202 and #1203.
+**What was done**:
+- Preserved #1202/#1203 as the canonical documentation-validation baseline and extended the canonical `scripts/verify_documentation.py` implementation with local Markdown fragment/anchor validation.
+- Retained all 14 baseline tests and added adversarial Python coverage for headings, explicit anchors, code exclusions, reference forms, encodings, nested destinations, directory README anchors, malformed syntax, URI schemes, diagnostics, and symlink escapes.
+- Added `docs/LOCAL_DEVELOPMENT.md`, reconciled deployment/alignment/operator guidance, and added only semantically required numeric anchors used by the active gap documents.
+- Reconciled the issue #1201 OpenSpec artifacts to the Python implementation and preserved the existing pinned documentation workflow, timeout, least permissions, and reusable secret-scan job.
+- Hardened query/fragment parsing, nested labels and images, blockquoted fenced-code masking, dynamic `docs/archived-*` history handling, and change-local OpenSpec manifest workflow triggers after pre-PR review.
+- Closed the remaining validator/CI gaps with case-insensitive Markdown discovery and workflow triggers, strict same-marker fenced-code closure, unresolved numeric-reference diagnostics, and active research-citation repairs.
+**Key discoveries**:
+- The active gap and scoring documents used 70 numeric fragment references whose files existed but whose anchors were not validated by the original Python baseline.
+- Direct dashboard, Compose dashboard, and Compose Grafana all use distinct process/port meanings; Compose Gateway/UI defaults remain placeholders and optional protocol profiles remain RPC stubs.
+**Files touched**:
+- `scripts/verify_documentation.py`, `scripts/test_verify_documentation.py`
+- `docs/LOCAL_DEVELOPMENT.md`, `docs/DEPLOYMENT.md`, `docs/GAPS.md`, `docs/SCORING_MATRIX.md`, and scoped architecture documents
+- `README.md`, `CONTRIBUTING.md`, `AGENTS.md`, and the issue #1201 OpenSpec change
+- `.github/workflows/docs-validation.yml`
+**Gaps identified**:
+- External URL availability remains intentionally network-free and out of scope; production deployment selection and cross-repository authority remain separate decisions, with authority deferred to #1167.
+**Gotchas**:
+- Existing #1202/#1203 path, required-entry, history, workflow, and realpath/symlink guarantees must remain the baseline; adding a Node validator, package script, or duplicate workflow would create competing authority.

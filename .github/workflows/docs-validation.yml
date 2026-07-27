@@ -5,7 +5,14 @@ on:
     branches: [main, develop, dev, 'release/**']
     paths:
       - '*.md'
+      - '*.MD'
+      - '*.Md'
+      - '*.mD'
       - '**/*.md'
+      - '**/*.MD'
+      - '**/*.Md'
+      - '**/*.mD'
+      - 'openspec/**/.openspec.yaml'
       - '.agents/manifest.json'
       - 'CODEOWNERS'
       - 'scripts/verify_documentation.py'
@@ -15,7 +22,14 @@ on:
     branches: [main, develop, dev, 'release/**']
     paths:
       - '*.md'
+      - '*.MD'
+      - '*.Md'
+      - '*.mD'
       - '**/*.md'
+      - '**/*.MD'
+      - '**/*.Md'
+      - '**/*.mD'
+      - 'openspec/**/.openspec.yaml'
       - '.agents/manifest.json'
       - 'CODEOWNERS'
       - 'scripts/verify_documentation.py'

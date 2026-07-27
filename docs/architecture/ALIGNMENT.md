@@ -2,11 +2,22 @@
 
 This document serves as the authoritative guide for aligning business logic, design, and authority across all Conxian Labs repositories.
 
-**Note: This project uses the OpenSpec framework for specification-driven development. The active system-v2 requirements are recorded in [`system-v2.spec.md`](../../openspec/specs/system-v2.spec.md); archived change artifacts are historical context, not current authority.**
+**Note:** This project uses the OpenSpec framework for specification-driven
+development. The active system-v2 requirements remain recorded in
+[`system-v2.spec.md`](../../openspec/specs/system-v2.spec.md); current scoped
+changes and designs are under [active OpenSpec changes](../../openspec/changes/).
+Archived change artifacts are historical context, not current authority.
+
+**Authority coordination:** Current documents contain conflicting Protocol,
+Nexus, Gateway, and Platform authority statements. This document does not
+resolve them; owner-level reconciliation remains deferred to issue
+[#1167](https://github.com/Conxian/conxius-platform/issues/1167).
 
 ## 1. Business Logic Alignment (The "Fusion")
 
-- **Single Source of Truth**: The **Conxian Gateway** is being refactored into a domain-specific Backend-for-Frontend (BFF) topology for all protocol state and sovereign services (Bisq, RGB, BitVM, Changelly).
+- **Gateway direction**: The **Conxian Gateway** is described as a target
+  domain-specific Backend-for-Frontend (BFF) topology for routed services. Its
+  exact authority relative to Protocol and Nexus remains deferred to #1167.
 - **Core Primitives**: All shared cryptographic and protocol logic resides in `lib-conxian-core`. No duplication of logic across clients.
 - **Protocol State**: Clients (UI, Wallet) interact with the Gateway for state monitoring and compliance pipes.
 - **Interoperability**: Components are "Root-Up" compliant, following Clarinet SDK and Vitest standards.
@@ -20,9 +31,12 @@ This document serves as the authoritative guide for aligning business logic, des
 
 ## 3. Authority Alignment (Sovereign Autonomous Business)
 
-- **Orchestration**: `conxius-platform` is transitioning to a NixOS-driven declarative control plane.
-- **Secrets**: Moving toward decentralized secret management (DSM); `provision-secrets.sh` is deprecated.
-- **Deployment**: Unified via Render (Pulse), GCP (Sovereign Service), and Conxius Orbit (legacy: Conxius Orbit) (TUI).
+- **Orchestration target**: NixOS-driven declarative control is proposed, not a
+  supported deployment surface in this repository.
+- **Secrets target**: Decentralized secret management is proposed;
+  `scripts/provision-secrets.sh` remains the current local helper.
+- **Deployment boundary**: Render, GCP, and Conxius Orbit are external or target
+  surfaces. This repository does not provide a unified production deployment.
 - **Code is Law**: Decisions are encoded in Rust and Clarity.
 
 - **Anchoring**: All temporal logic is anchored to Bitcoin burn-block-height (Nakamoto Consensus).

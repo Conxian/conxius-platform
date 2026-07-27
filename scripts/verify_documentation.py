@@ -81,6 +81,7 @@ CLOSING_FENCE_RE = re.compile(
 )
 ATX_HEADING_RE = re.compile(r"^\s{0,3}#{1,6}(?:\s+|$)(.*?)\s*$")
 SETEXT_RE = re.compile(r"^\s{0,3}(?:=+|-+)\s*$")
+BLOCKQUOTE_PREFIX_RE = re.compile(r"^ {0,3}>[ \t]?")
 URI_SCHEME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
 PLACEHOLDER_RE = re.compile(r"\{\{[^}]+\}\}|\$\{[^}]+\}|%\{[^}]+\}|\{[^}/]+\}|\*")
 REFERENCE_DEFINITION_RE = re.compile(
@@ -544,8 +545,17 @@ def github_slug(value: str) -> str:
     return "".join(characters)
 
 
+def _normalize_blockquote_prefix(line: str) -> tuple[int, str]:
+    depth = 0
+    while match := BLOCKQUOTE_PREFIX_RE.match(line):
+        depth += 1
+        line = line[match.end() :]
+    return depth, line
+
+
 def collect_anchors(markdown: str) -> set[str]:
     heading_lines = strip_fenced_code(markdown.splitlines())
+    normalized_headings = [_normalize_blockquote_prefix(line) for line in heading_lines]
     html_lines = visible_lines(markdown)
     anchors: set[str] = set()
     duplicate_counts: dict[str, int] = {}
@@ -558,15 +568,19 @@ def collect_anchors(markdown: str) -> set[str]:
         duplicate_counts[base] = count + 1
         anchors.add(base if count == 0 else f"{base}-{count}")
 
-    for index, line in enumerate(heading_lines):
+    for index, (blockquote_depth, line) in enumerate(normalized_headings):
         heading = ATX_HEADING_RE.match(line)
         if heading:
             add_heading(re.sub(r"\s+#+\s*$", "", heading.group(1)))
             continue
         if index == 0 or not SETEXT_RE.match(line):
             continue
-        previous = heading_lines[index - 1]
-        if previous.strip() and not ATX_HEADING_RE.match(previous):
+        previous_depth, previous = normalized_headings[index - 1]
+        if (
+            previous_depth == blockquote_depth
+            and previous.strip()
+            and not ATX_HEADING_RE.match(previous)
+        ):
             add_heading(previous.strip())
 
     html_visible = re.sub(r"<!--.*?-->", "", "\n".join(html_lines), flags=re.DOTALL)

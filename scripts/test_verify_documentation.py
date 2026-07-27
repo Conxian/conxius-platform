@@ -259,6 +259,46 @@ prose id="not-an-anchor"
         self.assertNotIn("not-an-anchor", anchors)
         self.assertNotIn("comment-anchor", anchors)
 
+    def test_collects_single_blockquote_atx_heading(self) -> None:
+        self.assertEqual(collect_anchors("> # Quoted ATX\n"), {"quoted-atx"})
+
+    def test_collects_single_blockquote_setext_heading(self) -> None:
+        self.assertEqual(
+            collect_anchors("> Quoted Setext\n> -------------\n"),
+            {"quoted-setext"},
+        )
+
+    def test_collects_nested_blockquote_atx_and_setext_headings(self) -> None:
+        markdown = "> > ## Nested ATX\n\n>   > Nested Setext\n>   > =============\n"
+
+        self.assertEqual(collect_anchors(markdown), {"nested-atx", "nested-setext"})
+
+    def test_sequences_duplicate_headings_across_quoted_and_unquoted_forms(
+        self,
+    ) -> None:
+        markdown = "# Repeat\n> # Repeat\n> > Repeat\n> > ------\n## Repeat\n"
+
+        self.assertEqual(
+            collect_anchors(markdown),
+            {"repeat", "repeat-1", "repeat-2", "repeat-3"},
+        )
+
+    def test_ignores_quoted_fences_lazy_continuations_and_non_heading_prose(
+        self,
+    ) -> None:
+        markdown = """> ```markdown
+> # Fenced ATX
+> Fenced Setext
+> -------------
+> ```
+> Lazy paragraph
+----------------
+>     # Code continuation
+> ordinary prose
+"""
+
+        self.assertEqual(collect_anchors(markdown), set())
+
     def test_parses_encoded_destination_and_rejects_malformed_percent(self) -> None:
         destination, error = parse_local_destination("Guide%20One.md#caf%C3%A9")
         self.assertIsNone(error)
@@ -603,6 +643,45 @@ class DocumentationValidationTests(unittest.TestCase):
             )
 
             self.assertEqual(validate(root), [])
+
+    def test_validates_blockquoted_heading_links_and_reports_missing_fragment(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self._write_required_entries(root)
+            (root / "docs" / "target.md").write_text(
+                "> # Quoted ATX\n"
+                "> Quoted Setext\n"
+                "> -------------\n"
+                "> > ## Nested ATX\n"
+                "> > Nested Setext\n"
+                "> > =============\n"
+                "# Repeat\n"
+                "> # Repeat\n"
+                "> > Repeat\n"
+                "> > ------\n",
+                encoding="utf-8",
+            )
+            (root / "README.md").write_text(
+                "[quoted ATX](docs/target.md#quoted-atx)\n"
+                "[quoted Setext](docs/target.md#quoted-setext)\n"
+                "[nested ATX](docs/target.md#nested-atx)\n"
+                "[nested Setext](docs/target.md#nested-setext)\n"
+                "[repeat](docs/target.md#repeat)\n"
+                "[quoted repeat](docs/target.md#repeat-1)\n"
+                "[nested repeat](docs/target.md#repeat-2)\n"
+                "[missing](docs/target.md#quoted-missing)\n",
+                encoding="utf-8",
+            )
+
+            diagnostics = validate(root)
+
+            self.assertEqual(len(diagnostics), 1)
+            self.assertEqual(diagnostics[0].line, 8)
+            self.assertIn(
+                "missing local fragment #quoted-missing", diagnostics[0].message
+            )
 
     def test_validates_query_before_fragment_and_literal_query_in_html_id(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:

@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
-
 EXCLUDED_DIRECTORY_NAMES = {
     ".git",
     ".next",
@@ -74,9 +73,7 @@ REQUIRED_ENTRY_PATHS = {
     ),
 }
 
-REFERENCE_DEFINITION_RE = re.compile(
-    r"^\s{0,3}\[[^\]]+\]:\s*(?:<([^>]+)>|(\S+))"
-)
+REFERENCE_DEFINITION_RE = re.compile(r"^\s{0,3}\[[^\]]+\]:\s*(?:<([^>]+)>|(\S+))")
 INLINE_LINK_START_RE = re.compile(r"!?\[[^\]\n]*\]\(")
 FENCE_RE = re.compile(r"^\s{0,3}(`{3,}|~{3,})")
 PLACEHOLDER_RE = re.compile(
@@ -122,12 +119,89 @@ def is_excluded_source(path: Path, root: Path) -> bool:
     return is_historical(path, root)
 
 
-def active_markdown_files(root: Path) -> list[Path]:
-    return sorted(
-        path
-        for path in root.rglob("*.md")
-        if path.is_file() and not is_excluded_source(path, root)
-    )
+def _resolve_existing(path: Path) -> Path | None:
+    try:
+        return path.resolve(strict=True)
+    except (OSError, RuntimeError):
+        return None
+
+
+def _is_within(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+    except ValueError:
+        return False
+    return True
+
+
+def active_markdown_files(root: Path) -> tuple[list[Path], list[Diagnostic]]:
+    sources: list[Path] = []
+    diagnostics: list[Diagnostic] = []
+
+    for path in root.rglob("*.md"):
+        if is_excluded_source(path, root):
+            continue
+
+        if path.is_symlink():
+            resolved = _resolve_existing(path)
+            if resolved is None:
+                diagnostics.append(
+                    Diagnostic(
+                        path, 1, "active documentation symlink cannot be resolved"
+                    )
+                )
+                continue
+            if not _is_within(resolved, root):
+                diagnostics.append(
+                    Diagnostic(
+                        path, 1, "active documentation symlink escapes repository"
+                    )
+                )
+                continue
+            if is_historical(resolved, root):
+                diagnostics.append(
+                    Diagnostic(
+                        path,
+                        1,
+                        "active documentation symlink resolves to historical content",
+                    )
+                )
+                continue
+            if is_excluded_source(resolved, root):
+                diagnostics.append(
+                    Diagnostic(
+                        path,
+                        1,
+                        "active documentation symlink resolves to excluded content",
+                    )
+                )
+                continue
+            if not resolved.is_file():
+                diagnostics.append(
+                    Diagnostic(
+                        path,
+                        1,
+                        "active documentation symlink does not resolve to a file",
+                    )
+                )
+                continue
+        else:
+            try:
+                if not path.is_file():
+                    continue
+            except OSError:
+                diagnostics.append(
+                    Diagnostic(
+                        path,
+                        1,
+                        "active documentation source cannot be inspected",
+                    )
+                )
+                continue
+
+        sources.append(path)
+
+    return sorted(sources), diagnostics
 
 
 def strip_fenced_code(lines: list[str]) -> list[str]:
@@ -245,25 +319,79 @@ def validate(root: Path) -> list[Diagnostic]:
     for source_label, paths in REQUIRED_ENTRY_PATHS.items():
         for relative_path in paths:
             candidate = root / relative_path
-            if not candidate.exists():
+            resolved = _resolve_existing(candidate)
+            if resolved is None:
+                if candidate.is_symlink():
+                    message = (
+                        f"invalid {source_label} entry point {relative_path}: "
+                        "symlink cannot be resolved"
+                    )
+                else:
+                    diagnostics.append(
+                        Diagnostic(
+                            root / "AGENTS.md",
+                            1,
+                            f"missing {source_label} entry point: {relative_path}",
+                        )
+                    )
+                    continue
+            elif not _is_within(resolved, root):
+                message = (
+                    f"invalid {source_label} entry point {relative_path}: "
+                    "symlink escapes repository"
+                )
+            elif is_historical(resolved, root):
+                message = (
+                    f"invalid {source_label} entry point {relative_path}: "
+                    "symlink resolves to historical content"
+                )
+            elif resolved != candidate:
+                message = (
+                    f"invalid {source_label} entry point {relative_path}: "
+                    "required entries must be regular files, not symlinks"
+                )
+            elif not resolved.is_file():
+                message = (
+                    f"invalid {source_label} entry point {relative_path}: "
+                    "required entry is not a regular file"
+                )
+            else:
+                continue
+
+            diagnostics.append(Diagnostic(root / "AGENTS.md", 1, message))
+
+    sources, source_diagnostics = active_markdown_files(root)
+    diagnostics.extend(source_diagnostics)
+    for source in sources:
+        try:
+            source_text = source.read_text(encoding="utf-8")
+        except (OSError, UnicodeError):
+            diagnostics.append(
+                Diagnostic(source, 1, "active documentation source cannot be read")
+            )
+            continue
+
+        for link in extract_links(source_text):
+            try:
+                target = resolve_local_target(source, link.target, root)
+            except (OSError, RuntimeError):
                 diagnostics.append(
                     Diagnostic(
-                        root / "AGENTS.md",
-                        1,
-                        f"missing {source_label} entry point: {relative_path}",
+                        source,
+                        link.line,
+                        f"local link target cannot be resolved: {link.target}",
                     )
                 )
-
-    for source in active_markdown_files(root):
-        for link in extract_links(source.read_text(encoding="utf-8")):
-            target = resolve_local_target(source, link.target, root)
+                continue
             if target is None:
                 continue
-            try:
-                target.relative_to(root)
-            except ValueError:
+            if not _is_within(target, root):
                 diagnostics.append(
-                    Diagnostic(source, link.line, f"local link escapes repository: {link.target}")
+                    Diagnostic(
+                        source,
+                        link.line,
+                        f"local link escapes repository: {link.target}",
+                    )
                 )
                 continue
             if is_historical(target, root) and not is_allowed_historical_link(
@@ -278,10 +406,14 @@ def validate(root: Path) -> list[Diagnostic]:
                 )
             elif not target.exists():
                 diagnostics.append(
-                    Diagnostic(source, link.line, f"missing local link target: {link.target}")
+                    Diagnostic(
+                        source, link.line, f"missing local link target: {link.target}"
+                    )
                 )
 
-    return sorted(diagnostics, key=lambda item: (str(item.path), item.line, item.message))
+    return sorted(
+        diagnostics, key=lambda item: (str(item.path), item.line, item.message)
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -301,7 +433,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"documentation validation failed with {len(diagnostics)} error(s)")
         return 1
 
-    print(f"documentation validation passed ({len(active_markdown_files(args.root.resolve()))} active Markdown files)")
+    sources, _ = active_markdown_files(args.root.resolve())
+    print(f"documentation validation passed ({len(sources)} active Markdown files)")
     return 0
 
 

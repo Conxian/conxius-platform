@@ -15,7 +15,7 @@
     "prepublishOnly": "node -e \"console.error('pnpm publish is disabled for now in this repository; use Git tags and GitHub Releases.'); process.exit(1)\""
   },
   "dependencies": {
-    "imapflow": "^1.4.8",
+    "imapflow": "^1.6.1",
     "jose": "^6.2.4",
     "mailparser": "^3.9.14",
     "next": "16.2.12",

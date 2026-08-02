@@ -1,4 +1,4 @@
-# Conxian Labs: Agent Instructions (v2.0 - OpenSpec Aligned)
+# Conxian Labs: Agent Instructions (v2.1 — Session 47, Aug 2026)
 
 Welcome, Agent. You are tasked with maintaining and extending the Conxian platform.
 
@@ -24,6 +24,32 @@ Welcome, Agent. You are tasked with maintaining and extending the Conxian platfo
 
 ## Documentation
 Refer to `docs/architecture/ALIGNMENT.md` for strategy and `docs/architecture/SYNERGY.md` for inter-repo workflows.
+
+### CI/CD & Monorepo Context (Session 47 — Aug 2026)
+
+- **pnpm next.js**: Version pin requires `pnpm.overrides.next` in root `package.json`.
+  Without it, `pnpm install` selects an incompatible version from the lockfile.
+- **Branch**: `fix/ci-cd-fixes` — track CI fixes here. Do NOT create PRs; push directly.
+- **CircleCI**: `.circleci/config.yml` is hello-world boilerplate. Heavy compute
+  (Clarity chain-check, Rust cargo test) targeted for migration from GitHub Actions.
+- **Verification Scripts**: All reside in `scripts/`. Key gates:
+  - `verify_submodule_integrity.py` — ensures gitlinks match `.gitmodules`
+  - `verify_bos_production_boundary.py` — no `.stub.json` files in platform repo
+  - `verify_lifecycle_control_gates.py` — 12-gate BOS compliance
+  - `verify_org_security.py` — repo security posture
+  - `verify_multidimensional_alignment.py` — alignment across repos
+- **Submodule Integrity**: When run from a monorepo parent (conxian-business),
+  submodule integrity checks see all 12 submodules' gitlinks. The script is
+  designed for in-repo CI runs only.
+
+### SDK Wire Architecture
+
+The monorepo's SDK layer feeds upward:
+```
+conxius-enclave-sdk ──→ lib-conxian-core ──→ conxian-nexus ──→ conxian-gateway
+                   └──→ conxius-wallet (feature-gated)
+```
+The `conxius-platform` CI scripts validate all 8 repos against canonical paths.
 
 ### Information Hierarchy
 All documentation in this repository follows a four-tier hierarchy defined in [`docs/INFORMATION_HIERARCHY.md`](./docs/INFORMATION_HIERARCHY.md). When reading or writing documentation:

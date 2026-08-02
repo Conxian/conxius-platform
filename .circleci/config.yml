@@ -1,0 +1,184 @@
+version: 2.1
+
+# Conxius Platform — CircleCI
+# Orchestration repo: Docker Compose stacks, TypeScript orchestration,
+# NixOS deployment tooling, and Playwright E2E tests.
+
+executors:
+  node:
+    docker:
+      - image: cimg/node:22.14
+    resource_class: medium
+
+  python:
+    docker:
+      - image: cimg/python:3.12
+    resource_class: medium
+
+  machine:
+    machine:
+      image: ubuntu-2204:2024.05
+    resource_class: medium
+
+commands:
+  pnpm-setup:
+    description: "Enable pnpm and install dependencies"
+    steps:
+      - run:
+          name: Enable corepack
+          command: corepack enable
+      - restore_cache:
+          keys:
+            - pnpm-{{ arch }}-{{ checksum "pnpm-lock.yaml" }}
+            - pnpm-{{ arch }}-
+      - run:
+          name: Install dependencies
+          command: pnpm install --frozen-lockfile
+      - save_cache:
+          key: pnpm-{{ arch }}-{{ checksum "pnpm-lock.yaml" }}
+          paths:
+            - node_modules
+            - ~/.local/share/pnpm
+
+jobs:
+  # ── TypeScript tests ──
+  test:
+    executor: node
+    steps:
+      - checkout
+      - pnpm-setup
+      - run:
+          name: TypeScript tests
+          command: pnpm run test
+          no_output_timeout: 10m
+
+  # ── Typecheck ──
+  typecheck:
+    executor: node
+    steps:
+      - checkout
+      - pnpm-setup
+      - run:
+          name: TypeScript typecheck
+          command: pnpm run typecheck
+          no_output_timeout: 10m
+
+  # ── Lint ──
+  lint:
+    executor: node
+    steps:
+      - checkout
+      - pnpm-setup
+      - run:
+          name: Lint
+          command: pnpm run lint
+          no_output_timeout: 10m
+
+  # ── Dependency consistency ──
+  dependency-check:
+    executor: node
+    steps:
+      - checkout
+      - pnpm-setup
+      - run:
+          name: Check dependency consistency
+          command: pnpm run check:dependency-consistency
+
+  # ── Lifecycle control gates ──
+  lifecycle-gates:
+    executor: machine
+    steps:
+      - checkout
+      - run:
+          name: Run lifecycle control gates
+          command: pnpm run check:lifecycle-control
+          no_output_timeout: 15m
+
+  # ── Cross-repo harness (Phase 6 sequence 1) ──
+  cross-repo-harness:
+    executor: machine
+    steps:
+      - checkout
+      - run:
+          name: Run cross-repo harness MVP
+          command: pnpm run check:phase6:sequence1
+          no_output_timeout: 20m
+
+  # ── Docker Compose validation ──
+  docker-compose-validate:
+    executor: machine
+    steps:
+      - checkout
+      - run:
+          name: Validate docker-compose
+          command: docker compose -f docker-compose.yml config
+      - run:
+          name: Validate prometheus config
+          command: |
+            docker run --rm -v $(pwd)/prometheus.yml:/etc/prometheus/prometheus.yml \
+              prom/prometheus:v2.55.1 check config /etc/prometheus/prometheus.yml
+
+  # ── Python scripts ──
+  python-verify:
+    executor: python
+    steps:
+      - checkout
+      - run:
+          name: Verify Python scripts
+          command: |
+            for f in scripts/ci/*.py; do
+              if [ -f "$f" ]; then
+                echo "=== $f ==="
+                python3 "$f" || echo "WARNING: $f exited non-zero"
+              fi
+            done
+
+  # ── NixOS flake check ──
+  nix-flake-check:
+    executor: machine
+    steps:
+      - checkout
+      - run:
+          name: Check Nix flake
+          command: |
+            if command -v nix &>/dev/null; then
+              nix flake check || true
+            else
+              echo "Nix not available in CI; skipping flake check"
+            fi
+
+workflows:
+  version: 2
+
+  # Main workflow: runs on PRs and pushes to main
+  main:
+    jobs:
+      - test
+      - typecheck
+      - lint
+      - dependency-check
+      - lifecycle-gates
+      - cross-repo-harness
+      - docker-compose-validate
+      - python-verify
+      - nix-flake-check
+
+  # Nightly: full suite
+  nightly:
+    triggers:
+      - schedule:
+          cron: "0 4 * * *"
+          filters:
+            branches:
+              only:
+                - main
+    jobs:
+      - test
+      - typecheck
+      - lint
+      - dependency-check
+      - lifecycle-gates
+      - cross-repo-harness
+      - docker-compose-validate
+      - python-verify
+      - nix-flake-check

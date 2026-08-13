@@ -25,7 +25,7 @@ Evidence is append-only or immutable after publication. Start with the evidence 
 
 ## Historical
 
-Historical content is excluded from active reading chains and from ordinary missing-link remediation. The read-only roots are `docs/archived-reports/`, `docs/archived-tasks/`, `docs/archived-scripts/`, and `openspec/changes/archive/`. Do not use those materials as current authority.
+Historical content is excluded from active reading chains and from ordinary missing-link remediation. The read-only roots are `docs/archived-reports/`, `docs/archived-tasks/`, `docs/archived-scripts/`, `docs/archive/`, and `openspec/changes/archive/`. Do not use those materials as current authority.
 
 ## Contributor entry points
 

@@ -45,6 +45,7 @@ Historical context preserves institutional memory without competing with live go
 - [`docs/archived-reports/`](./docs/archived-reports/) — superseded alignment reports, phase reviews, scorecards
 - [`docs/archived-tasks/`](./docs/archived-tasks/) — completed enhancement plans and task summaries
 - [`docs/archived-scripts/`](./docs/archived-scripts/) — superseded maintenance scripts
+- [`docs/archive/`](./docs/archive/) — archived agent instructions and session logs
 - [`openspec/changes/archive/`](./openspec/changes/archive/) — archived OpenSpec proposals
 
 Historical documents are **strictly read-only**. They must never be cited as authority for current decisions, must never appear in active reading chains, and must not be updated in place. If a historical document contains information that needs revision, create a new document in the appropriate active lane and archive the old one per the [Information Hierarchy](./docs/INFORMATION_HIERARCHY.md) archival process.

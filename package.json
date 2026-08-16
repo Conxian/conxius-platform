@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "lint": "pnpm -r --if-present run lint",
-    "test": "pnpm run test:agent-discovery && pnpm run test:agent-coordination && pnpm run test:protocol-revenue-observation && pnpm -r --if-present run test",
+    "test": "if command -v pytest >/dev/null 2>&1; then pnpm run test:python; fi && pnpm run test:agent-discovery && pnpm run test:agent-coordination && pnpm run test:protocol-revenue-observation && pnpm -r --if-present run test",
+    "test:python": "PYTHONPATH=src pytest",
     "build": "pnpm -r --if-present run build",
     "typecheck": "pnpm run typecheck:agent-discovery && pnpm run typecheck:agent-coordination && pnpm run typecheck:protocol-revenue-observation && pnpm -r --if-present run typecheck",
     "agent-discovery": "tsx scripts/agent-discovery.ts",

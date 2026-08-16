@@ -10,3 +10,12 @@ playwright-report/
 .DS_Store
 *.log
 *.tmp
+.venv/
+venv/
+env/
+.coverage
+htmlcov/
+*.cover
+.pytest_cache/
+.cache/
+.vite/

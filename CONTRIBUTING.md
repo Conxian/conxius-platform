@@ -28,10 +28,12 @@ Prerequisites:
 
 - Node.js `>=20.19.0`
 - `pnpm` (via Corepack)
+- Python `>=3.11` (for platform adapters and audit tooling)
 
 ```bash
 corepack enable
 pnpm install
+pip install -r requirements-dev.txt
 make init
 ```
 
@@ -55,7 +57,9 @@ Run the checks relevant to your changes before opening a PR:
 pnpm lint
 pnpm typecheck
 pnpm test
-python3 -m unittest scripts/test_verify_documentation.py
+pnpm run test:python
+python3 scripts/maintenance/system_audit.py
+python3 scripts/maintenance/hardened_audit.py
 python3 scripts/verify_documentation.py
 ```
 

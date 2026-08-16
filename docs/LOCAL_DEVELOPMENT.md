@@ -16,12 +16,14 @@ or evidence of production readiness.
 
 - Node.js `>=20.19.0`
 - Corepack with pnpm `9.15.5`
+- Python `>=3.11` (for platform adapters and audit scripts)
 - Docker with Compose v2 for the integration harness
 - OpenSSL for local secret generation
 
 ```bash
 corepack enable
 pnpm install --frozen-lockfile
+pip install -r requirements-dev.txt
 make init
 ```
 
@@ -42,10 +44,12 @@ Useful repository commands include:
 pnpm lint
 pnpm typecheck
 pnpm test
+pnpm run test:python
 pnpm run check:dependency-consistency
 pnpm --filter admin-dashboard run typecheck
 pnpm --filter admin-dashboard run test:phase7
-python3 -m unittest scripts/test_verify_documentation.py
+python3 scripts/maintenance/system_audit.py
+python3 scripts/maintenance/hardened_audit.py
 python3 scripts/verify_documentation.py
 ```
 

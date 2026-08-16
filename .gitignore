@@ -7,6 +7,16 @@ dist/
 build/
 *.egg
 
+# Python Virtual Environments & Test Coverage
+.venv/
+venv/
+env/
+.coverage
+htmlcov/
+*.cover
+.cache/
+.vite/
+
 # Conxian Platform Hardening
 .env*
 node_modules/

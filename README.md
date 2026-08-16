@@ -127,6 +127,7 @@ prints fallback messages. See [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md).
 - [REVIEWS.md](REVIEWS.md)
 - [RELEASE_POLICY.md](RELEASE_POLICY.md)
 - [CODEOWNERS](CODEOWNERS)
+- [Pull Request Template](.github/PULL_REQUEST_TEMPLATE.md)
 
 ## Contact
 

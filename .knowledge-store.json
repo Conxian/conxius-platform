@@ -1,0 +1,128 @@
+{
+  "entries": {
+    "metric-internal-mt0fe1jj-9fnhub": {
+      "id": "metric-internal-mt0fe1jj-9fnhub",
+      "category": "metric",
+      "source": "internal",
+      "data": {
+        "totalFiles": 625,
+        "tsFiles": 175,
+        "testFiles": 38,
+        "apiRoutes": 38,
+        "pages": 15,
+        "workflows": 19,
+        "avgFileSize": 6746.2928,
+        "largestFiles": [
+          {
+            "path": "docs/archive/AGENTS_archive_session_58.md",
+            "sizeKB": 173
+          },
+          {
+            "path": "scripts/agent-coordination.ts",
+            "sizeKB": 169
+          },
+          {
+            "path": "docs/images/verification_overview.png",
+            "sizeKB": 143
+          },
+          {
+            "path": "pnpm-lock.yaml",
+            "sizeKB": 114
+          },
+          {
+            "path": "services/admin-dashboard/src/lib/support/m2mKeyStore.ts",
+            "sizeKB": 62
+          }
+        ],
+        "avgFileSizeKB": 7
+      },
+      "confidence": 0.98,
+      "lastUpdated": "2026-08-19T18:29:07.279Z",
+      "tags": [
+        "codebase",
+        "metrics",
+        "structure"
+      ],
+      "evidence": [
+        "625 total files",
+        "175 TypeScript files",
+        "19 CI workflows"
+      ]
+    },
+    "gap-internal-mt0fe1jj-yaftgx": {
+      "id": "gap-internal-mt0fe1jj-yaftgx",
+      "category": "gap",
+      "source": "synthesis",
+      "data": {
+        "type": "test-coverage",
+        "coverage": 0.21714285714285714,
+        "threshold": 0.5,
+        "deficit": 0.28285714285714286,
+        "recommendation": "Increase test coverage to >50%"
+      },
+      "confidence": 0.95,
+      "lastUpdated": "2026-08-19T18:29:07.280Z",
+      "tags": [
+        "testing",
+        "coverage",
+        "gap"
+      ],
+      "evidence": [
+        "38 tests for 175 TypeScript files",
+        "Coverage: 21.7%"
+      ]
+    },
+    "pattern-internal-mt0fe1jj-phedld": {
+      "id": "pattern-internal-mt0fe1jj-phedld",
+      "category": "pattern",
+      "source": "internal",
+      "data": {
+        "type": "api-auth",
+        "apiRoutes": 38,
+        "pattern": "validateAdminAuth",
+        "convention": "All API routes protected with validateAdminAuth()"
+      },
+      "confidence": 0.9,
+      "lastUpdated": "2026-08-19T18:29:07.280Z",
+      "tags": [
+        "api",
+        "auth",
+        "pattern",
+        "convention"
+      ],
+      "evidence": [
+        "38 API routes with consistent auth pattern"
+      ]
+    },
+    "pattern-internal-mt0fe1jk-unsgrj": {
+      "id": "pattern-internal-mt0fe1jk-unsgrj",
+      "category": "pattern",
+      "source": "internal",
+      "data": {
+        "type": "ci-workflows",
+        "count": 19,
+        "maturity": "high",
+        "description": "Extensive CI/CD pipeline with multiple specialized workflows"
+      },
+      "confidence": 0.85,
+      "lastUpdated": "2026-08-19T18:29:07.280Z",
+      "tags": [
+        "ci",
+        "workflows",
+        "pattern",
+        "maturity"
+      ],
+      "evidence": [
+        "19 workflow files detected"
+      ]
+    }
+  },
+  "relationships": {
+    "metric-internal-mt0fe1jj-9fnhub": [],
+    "gap-internal-mt0fe1jj-yaftgx": [],
+    "pattern-internal-mt0fe1jj-phedld": [],
+    "pattern-internal-mt0fe1jk-unsgrj": []
+  },
+  "version": 5,
+  "lastSync": "2026-08-19T18:29:07.280Z"
+}

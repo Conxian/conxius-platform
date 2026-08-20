@@ -1,0 +1,63 @@
+[
+  {
+    "section": "Key Gaps Still Open",
+    "current": "Add entry if new critical gap found",
+    "proposed": "- **test-coverage**: Increase test coverage to >50%",
+    "evidence": [
+      "38 tests for 175 TypeScript files",
+      "Coverage: 21.7%"
+    ],
+    "confidence": 0.95,
+    "priority": "medium"
+  },
+  {
+    "section": "Complete API Surface",
+    "current": "(38 admin routes + 2 public frames)",
+    "proposed": "(~38 admin routes + 2 public frames)",
+    "evidence": [
+      "Auto-detected: 38 API routes"
+    ],
+    "confidence": 0.98,
+    "priority": "low"
+  },
+  {
+    "section": "CI Workflows",
+    "current": "17 custom",
+    "proposed": "~19 custom",
+    "evidence": [
+      "Auto-detected: 19 workflow files"
+    ],
+    "confidence": 0.98,
+    "priority": "low"
+  },
+  {
+    "section": "Test Coverage",
+    "current": "20 test files",
+    "proposed": "~38 test files",
+    "evidence": [
+      "Auto-detected: 38 test files, 175 TS files"
+    ],
+    "confidence": 0.98,
+    "priority": "low"
+  },
+  {
+    "section": "Reusable Patterns",
+    "current": "Add pattern if new significant pattern detected",
+    "proposed": "api-auth: All API routes protected with validateAdminAuth()",
+    "evidence": [
+      "38 API routes with consistent auth pattern"
+    ],
+    "confidence": 0.9,
+    "priority": "low"
+  },
+  {
+    "section": "Reusable Patterns",
+    "current": "Add pattern if new significant pattern detected",
+    "proposed": "ci-workflows: Extensive CI/CD pipeline with multiple specialized workflows",
+    "evidence": [
+      "19 workflow files detected"
+    ],
+    "confidence": 0.85,
+    "priority": "low"
+  }
+]

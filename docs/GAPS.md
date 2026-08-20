@@ -105,6 +105,14 @@ repository; it does not implement a proof backend.
 | **G-57** | Cross-repository revenue model drift | [Founder-rights observation report](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#contradictions-and-safe-interpretation) | 🟡 **Active gap**. Protocol, Gateway, core, and platform models require owner-level reconciliation; this platform change selects no rate. |
 | **G-58** | Deployment evidence and live-interface verification | [Founder-rights observation report](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#verified-evidence-matrix) | 🟡 **Stage gate implemented**. No broadcast, confirmation, or live-interface deployment is asserted by this repository. |
 | **G-59** | Gateway/Nexus read-only observation integration | [Founder-rights observation report](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#phase-plan) | ⚪ **Not implemented**. Requires a separate OpenSpec adapter using canonical protocol evidence. |
+| **G-60** | Automated Knowledge Base Self-Evolution Pipeline | [SELF_EVOLVING_KB.md](./SELF_EVOLVING_KB.md) | 🏗️ **Active Implementation**. KB pattern scanner, store & test suite in . |
+| **G-61** | OpenSpec Strict Schema Validation Guardrails | [SELF_EVOLVING_KB.md](./SELF_EVOLVING_KB.md#openspec-validation) | 🟢 **Implemented**. Strict OpenSpec v1.6.0 schema validation harness. |
+| **G-62** | FROST Threshold DKG Session State Hardening | [FULL_STACK_BITCOIN_RESEARCH.md#34](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#34) | 🟢 **Unit Verified**. Round-2 commitment signing & threshold bounds in . |
+| **G-63** | BitVM Fail-Closed Replay & Tombstone Verification | [FULL_STACK_BITCOIN_RESEARCH.md#21](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#21) | 🛡️ **Fail-Closed Boundary**. Bounded retention, FIFO replay protection, and tombstones in . |
+| **G-60** | Automated Knowledge Base Self-Evolution Pipeline | [SELF_EVOLVING_KB.md](./SELF_EVOLVING_KB.md) | 🏗️ **Active Implementation**.  pattern scanner, knowledge store & test suite. |
+| **G-61** | OpenSpec Strict Schema Validation Guardrails | [SELF_EVOLVING_KB.md](./SELF_EVOLVING_KB.md#openspec-validation) | 🟢 **Implemented**. Strict OpenSpec v1.6.0 schema validation harness. |
+| **G-62** | FROST Threshold DKG Session State Hardening | [FULL_STACK_BITCOIN_RESEARCH.md#34](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#34) | 🟢 **Unit Verified**. Round-2 commitment signing & threshold bounds in . |
+| **G-63** | BitVM Fail-Closed Replay & Tombstone Verification | [FULL_STACK_BITCOIN_RESEARCH.md#21](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#21) | 🛡️ **Fail-Closed Boundary**. Bounded retention, FIFO replay protection, and tombstones in . |
 
 ---
 *Updated by Charlie (issue #1187 remediation) - 2026-07-22*
@@ -136,3 +144,7 @@ repository; it does not implement a proof backend.
   confirmation, and live-interface evidence. No deployment fact is asserted.
 - **G-59**: ⚪ **Not implemented**. A Gateway/Nexus read-only adapter requires a
   separate change and canonical protocol evidence.
+- **G-60 (KB Self-Evolution Automation)**: 🏗️ **Active Implementation**. Pattern scanner, knowledge store, update generator, and test suite in .
+- **G-61 (OpenSpec Validation)**: 🟢 **Implemented**. Validation guardrails for OpenSpec change proposals.
+- **G-62 (FROST Session Hardening)**: 🟢 **Unit Verified**. DKG round-2 commitments and threshold signature verification in .
+- **G-63 (BitVM Tombstone Verification)**: 🛡️ **Fail-closed boundary**. Replay protection, hard retention caps, and tombstones in  and .

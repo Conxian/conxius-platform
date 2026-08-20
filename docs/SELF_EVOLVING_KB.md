@@ -464,3 +464,17 @@ To enable self-evolution:
 ---
 
 © 2026 Conxian Labs. Code is Law.
+
+
+## OpenSpec Validation
+
+Change proposals located in `openspec/changes/` are governed by OpenSpec v1.6.0. Validation can be executed locally via:
+```bash
+pnpm dlx @fission-ai/openspec@1.6.0 validate <change-name> --type change --strict --no-interactive --json
+```
+
+### Automated KB Test Suite
+The self-evolving knowledge base is backed by a native test runner test suite located at `scripts/kb/kb-self-evolution.test.ts`. The suite verifies:
+- `KnowledgeStore` CRUD operations, graph relationships, filtering, and export/import functionality.
+- `detect-patterns.ts` repository file scanning, TypeScript pattern classification, and gap generation.
+- `generate-updates.ts` report synthesis, priority categorization, and markdown preview generation.

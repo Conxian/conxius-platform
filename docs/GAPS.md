@@ -109,10 +109,6 @@ repository; it does not implement a proof backend.
 | **G-61** | OpenSpec Strict Schema Validation Guardrails | [SELF_EVOLVING_KB.md](./SELF_EVOLVING_KB.md#openspec-validation) | 🟢 **Implemented**. Strict OpenSpec v1.6.0 schema validation harness. |
 | **G-62** | FROST Threshold DKG Session State Hardening | [FULL_STACK_BITCOIN_RESEARCH.md#34](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#34) | 🟢 **Unit Verified**. Round-2 commitment signing & threshold bounds in . |
 | **G-63** | BitVM Fail-Closed Replay & Tombstone Verification | [FULL_STACK_BITCOIN_RESEARCH.md#21](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#21) | 🛡️ **Fail-Closed Boundary**. Bounded retention, FIFO replay protection, and tombstones in . |
-| **G-60** | Automated Knowledge Base Self-Evolution Pipeline | [SELF_EVOLVING_KB.md](./SELF_EVOLVING_KB.md) | 🏗️ **Active Implementation**.  pattern scanner, knowledge store & test suite. |
-| **G-61** | OpenSpec Strict Schema Validation Guardrails | [SELF_EVOLVING_KB.md](./SELF_EVOLVING_KB.md#openspec-validation) | 🟢 **Implemented**. Strict OpenSpec v1.6.0 schema validation harness. |
-| **G-62** | FROST Threshold DKG Session State Hardening | [FULL_STACK_BITCOIN_RESEARCH.md#34](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#34) | 🟢 **Unit Verified**. Round-2 commitment signing & threshold bounds in . |
-| **G-63** | BitVM Fail-Closed Replay & Tombstone Verification | [FULL_STACK_BITCOIN_RESEARCH.md#21](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#21) | 🛡️ **Fail-Closed Boundary**. Bounded retention, FIFO replay protection, and tombstones in . |
 
 ---
 *Updated by Charlie (issue #1187 remediation) - 2026-07-22*

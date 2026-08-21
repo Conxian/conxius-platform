@@ -32,7 +32,7 @@ The Conxius Platform must NOT own:
 All PRs targeting `main`, `develop`, `dev`, and `release/*` must pass:
 - ✅ Lint validation (`pnpm lint`)
 - ✅ Typecheck validation (`pnpm typecheck`)
-- ✅ Unit tests (`pnpm test`)
+- ✅ Unit tests (`pnpm test` using `.mts` Vitest configs for native ESM loader compliance)
 - ✅ Secret scanning (gitleaks)
 - ✅ Dependency review
 - ✅ Hygiene audit

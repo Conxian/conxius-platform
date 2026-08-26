@@ -247,6 +247,28 @@
 - External repository owners must independently evidence runtime capabilities and replacement contracts.
 - Remote repository changes and branch-policy verification remain owner/environment dependent.
 
+### 2026-08-26 — Platform Economy Rework and Wallet Decoupling
+**What was done**:
+- Removed wallet/M2M registry dependency from the active platform catalog.
+- Added `PLATFORM_ECONOMY_POLICY_2026.md` defining default-free, non-custodial platform economics.
+- Added `verify_platform_economy.py` and `check:platform-economy` for fail-closed runtime scanning.
+- Added an OpenSpec proposal for wallet decoupling and economic neutrality.
+
+**Gaps**:
+- Existing governance and historical adapters still require owner-led migration; they are not silently promoted into platform economics.
+- Production signature verification, durable replay storage, and provider capability evidence remain external prerequisites.
+
+### 2026-08-26 — Organization Service Capability Review
+**What was done**:
+- Classified repositories as core SDK, security SDK, wallet, provider, observation, product, client, governance, neutral platform, protocol, or archived surfaces.
+- Added the organization service/capability evidence matrix.
+- Confirmed wallet resources are preserved behind an optional SDK boundary.
+- Confirmed market economics remain product-owned and Gateway/Nexus remain delegated providers.
+
+**Gaps**:
+- External CI, branch protection, Docker/runtime, deployment, rollback, and production evidence require owner-provided verification.
+- Legacy platform runtime governance/economic surfaces remain migration-scoped and are not promoted as universal capabilities.
+
 ## Repository Knowledge Graph (Current)
 
 

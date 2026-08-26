@@ -236,6 +236,17 @@
 - A production adapter still requires an approved signature-verification implementation and durable replay store.
 - External Gateway/Nexus providers must publish capability and finality fixtures before universal claims can be made.
 
+### 2026-08-26 — Authority Alignment Across Platform and Business
+**What was done**:
+- Established `conxian-business` as portfolio governance authority for doctrine, OpenSpec, approvals, evidence standards, and repository role policy.
+- Explicitly delegated runtime ownership to independently evidenced implementation repositories.
+- Aligned platform and business boundaries: no custody, treasury, pricing, yield, trading, or protocol execution in governance/platform layers.
+- Relabeled runtime maturity as evidence-scoped and retired Orbit/protocol/product surfaces as active platform dependencies.
+
+**Gaps**:
+- External repository owners must independently evidence runtime capabilities and replacement contracts.
+- Remote repository changes and branch-policy verification remain owner/environment dependent.
+
 ## Repository Knowledge Graph (Current)
 
 

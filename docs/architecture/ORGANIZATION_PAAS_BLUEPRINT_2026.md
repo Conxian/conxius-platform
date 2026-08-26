@@ -12,13 +12,13 @@ The machine-readable local catalog is [`platform/services.catalog.json`](../../p
 | Repository | PaaS relationship | Owns | Must not own |
 |---|---|---|---|
 | `conxius-platform` | Control plane | Manifests, promotion gates, cross-repo verification, telemetry ingestion, operator workflows | Protocol logic, custody, signing, direct cloud mutation |
-| `conxian-business` | Strategy and BOS authority | Mandates, legal/regulatory policy, hiring, private operating records | Runtime deployment implementation |
+| `conxian-business` | Portfolio governance authority | Doctrine, OpenSpec, approvals, evidence standards, repository role policy | Runtime execution, custody, treasury, pricing, yield, trading, protocol economics |
 | `conxian-gateway` | Data plane/access layer | APIs, routing, integrations, identity resolution | Organization-wide policy authority |
 | `conxian-nexus` | Proof/state layer | State records, synchronization, Merkle/checkpoint evidence | Gateway routing or product UX |
 | `lib-conxian-core` | Shared primitive layer | Protocol models, cryptography, portable/Wasm primitives | Hardware-specific attestation |
 | `conxius-enclave-sdk` | Security boundary | Hardware-backed signing and attestation adapters | Business policy or deployment orchestration |
-| `conxius-orbit` | Deployment execution surface | Chain-aware execution, diagnostics, verification results | Platform governance or signing-key custody |
-| `Conxian` | Protocol surface | Clarity contracts and protocol behavior | Infrastructure orchestration |
+| External deployment providers | Optional execution surface | Provider-specific deployment and verification, only under an explicit contract | Platform governance or signing-key custody |
+| External protocol clients | External protocol surface | Client-owned protocol behavior and economics | Universal platform orchestration authority |
 | `conxius-wallet` | Execution client | Identity, private keys, transaction construction, user policy | Server-side custody or platform keys |
 | `conxian_ui` / `conxian-labs-site` | Experience surfaces | User/operator presentation and public communication | Source-of-truth deployment state |
 | `conxian_market` | Product/market experience | Catalog and market-facing presentation | Settlement custody or protocol authority |

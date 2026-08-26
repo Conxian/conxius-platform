@@ -11,7 +11,7 @@
       "runtime": "nextjs",
       "entrypoint": "dev",
       "contracts": ["http-health", "admin-api-auth", "prometheus-metrics"],
-      "dependencies": ["gateway", "m2m-service-key-registry"],
+      "dependencies": ["gateway"],
       "deployment": "docker-compose/admin-dashboard",
       "removalCriteria": "Replacement dashboard deployed and all routes migrated"
     },
@@ -40,5 +40,6 @@
       "removalCriteria": "Agent integration retired and consuming deployments removed"
     }
   ],
-  "externalRepositories": []
+  "externalRepositories": [],
+  "excludedCapabilities": ["wallet", "custody", "signing", "treasury", "yield", "pricing", "trading", "protocol-economics"]
 }

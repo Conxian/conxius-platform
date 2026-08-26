@@ -247,6 +247,17 @@
 - External repository owners must independently evidence runtime capabilities and replacement contracts.
 - Remote repository changes and branch-policy verification remain owner/environment dependent.
 
+### 2026-08-26 — Platform Economy Rework and Wallet Decoupling
+**What was done**:
+- Removed wallet/M2M registry dependency from the active platform catalog.
+- Added `PLATFORM_ECONOMY_POLICY_2026.md` defining default-free, non-custodial platform economics.
+- Added `verify_platform_economy.py` and `check:platform-economy` for fail-closed runtime scanning.
+- Added an OpenSpec proposal for wallet decoupling and economic neutrality.
+
+**Gaps**:
+- Existing governance and historical adapters still require owner-led migration; they are not silently promoted into platform economics.
+- Production signature verification, durable replay storage, and provider capability evidence remain external prerequisites.
+
 ## Repository Knowledge Graph (Current)
 
 

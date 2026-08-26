@@ -20,6 +20,10 @@ The neutral M2M intent schema is `platform/neutral-m2m-intent.schema.json`. Inte
 6. Economic terms are inputs owned by the requesting client or protocol, not platform defaults.
 7. Signing remains user/provider controlled; the platform never receives private keys or takes custody.
 
+## Economy policy
+
+The detailed default-free economic boundary is defined by `PLATFORM_ECONOMY_POLICY_2026.md`. The platform must not infer or own protocol fees, spreads, yield, treasury, pricing, trading, custody, or wallet signing.
+
 ## Explicit non-goals
 
 No market fees, yield splits, treasury routing, swaps, lending, borrowing, proprietary solver, DAO policy, or protocol-specific deployment defaults belong in this platform.

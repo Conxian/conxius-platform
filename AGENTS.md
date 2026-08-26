@@ -172,6 +172,28 @@
 - Organization-wide verification requires an authenticated GitHub CLI or owner-provided evidence.
 - Docker/live service checks and external repository changes require separate environments and owner coordination.
 
+### 2026-08-26 — Page and Organization Surface Audit
+**Trigger**: User requested an audit of all pages against the conversation and all organization repositories.
+
+**What was done**:
+- Audited all 15 dashboard page routes in the local preview; every route returned HTTP 200.
+- Browser-verified overview, unavailable metrics, settings, launch, and shared navigation surfaces.
+- Added `docs/audits/2026-08-26-page-and-organization-surface-audit.md` and linked it from `docs/README.md`.
+
+**Key discoveries**:
+- The dashboard is fail-closed for unavailable live metrics and contributor profile data, but the error states need more actionable operator context.
+- Shared navigation is crowded and not responsive at the audited desktop width; settings lacks visible save-state/confirmation evidence.
+- Several page heading trees and active-navigation semantics need an accessibility pass.
+- Organization-wide GitHub controls and runtime evidence remain externally constrained.
+
+**Files touched**: `docs/audits/2026-08-26-page-and-organization-surface-audit.md`, `docs/README.md`, `AGENTS.md`
+
+**Gaps identified**:
+- Responsive shared layout and design-token cleanup.
+- Settings interaction status and high-privilege workflow review.
+- Actionable live-source error metadata without exposing secrets.
+- Full keyboard, focus, heading, and active-navigation verification.
+
 ## Repository Knowledge Graph (Current)
 
 

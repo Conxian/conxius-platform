@@ -9,6 +9,7 @@ This index routes readers through the four-tier model defined by the [Informatio
 - [Strategic Alignment](./architecture/ALIGNMENT.md) — ecosystem positioning
 - [Repository Taxonomy](./REPOSITORY_TAXONOMY.md) — repository inventory and boundaries
 - [Organization PaaS Blueprint](./architecture/ORGANIZATION_PAAS_BLUEPRINT_2026.md) — control-plane role, contracts, and delivery roadmap
+- [Upgrade Alignment Contract](./architecture/UPGRADE_ALIGNMENT_CONTRACT_2026.md) — versioning, capabilities, evidence, and neutral M2M boundaries
 - [Organization Lifecycle Audit](./audits/2026-08-26-organization-lifecycle-audit.md) — repository/service inventory and removal criteria
 - [Cross-Repository Platform Readiness Audit](./audits/2026-08-26-platform-readiness-audit.md) — organization inventory, verified controls, and owner-coordinated gaps
 - [Page and Organization Surface Audit](./audits/2026-08-26-page-and-organization-surface-audit.md) — all dashboard routes, shared UX, and cross-repository evidence

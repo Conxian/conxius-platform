@@ -217,6 +217,25 @@
 - Remote repository deletion/archive decisions and GitHub policy changes require owner permissions.
 - Replacement coverage for Orbit deployment/verification must be evidenced before the historical reference can be removed entirely.
 
+### 2026-08-26 — Upgrade-Aligned Neutral M2M Contract
+**Trigger**: User approved all recommendations from the market M2M review.
+
+**What was done**:
+- Added `platform/neutral-m2m-intent.schema.json` with domain/network binding, positive amounts, nonce, expiry, idempotency, route constraints, and optional signatures.
+- Added `docs/architecture/UPGRADE_ALIGNMENT_CONTRACT_2026.md` defining versioned capability manifests, evidence/finality semantics, upgrade gates, provider plurality, and economic neutrality.
+- Added schema validation tests and wired `test:neutral-m2m-intent` into package scripts.
+- Marked the historical gap-to-research mappings as non-authoritative and unavailable unless independently evidenced.
+
+**Key discoveries**:
+- The market M2M router is not production authorization: it lacks cryptographic identity, replay protection, expiry, idempotency, asset/network binding, and provider evidence.
+- Market economics and protocol defaults must remain client-owned and outside the universal platform.
+
+**Files touched**: `platform/neutral-m2m-intent.schema.json`, `docs/architecture/UPGRADE_ALIGNMENT_CONTRACT_2026.md`, `scripts/validate_neutral_m2m_intent.test.ts`, `package.json`, `docs/GAPS.md`, `AGENTS.md`
+
+**Gaps identified**:
+- A production adapter still requires an approved signature-verification implementation and durable replay store.
+- External Gateway/Nexus providers must publish capability and finality fixtures before universal claims can be made.
+
 ## Repository Knowledge Graph (Current)
 
 

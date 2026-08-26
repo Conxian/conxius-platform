@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://platform.example.invalid/schemas/neutral-m2m-intent-v1.json",
+  "title": "Neutral M2M Intent",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "intentId", "domain", "sourceAgent", "destinationAgent", "asset", "network", "amount", "nonce", "expiresAt", "idempotencyKey", "routeConstraints"],
+  "properties": {
+    "schemaVersion": { "const": "m2m-intent/v1" },
+    "intentId": { "type": "string", "minLength": 16, "maxLength": 128, "pattern": "^[A-Za-z0-9._:-]+$" },
+    "domain": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "sourceAgent": { "$ref": "#/$defs/agent" },
+    "destinationAgent": { "$ref": "#/$defs/agent" },
+    "asset": { "type": "object", "additionalProperties": false, "required": ["namespace", "symbol"], "properties": { "namespace": { "type": "string", "minLength": 1, "maxLength": 128 }, "symbol": { "type": "string", "minLength": 1, "maxLength": 128 }, "contract": { "type": "string", "maxLength": 256 } } },
+    "network": { "type": "object", "additionalProperties": false, "required": ["family", "networkId"], "properties": { "family": { "type": "string", "minLength": 1, "maxLength": 64 }, "networkId": { "type": "string", "minLength": 1, "maxLength": 128 } } },
+    "amount": { "type": "string", "pattern": "^[1-9][0-9]*$" },
+    "nonce": { "type": "string", "pattern": "^[1-9][0-9]*$" },
+    "expiresAt": { "type": "string", "format": "date-time" },
+    "idempotencyKey": { "type": "string", "minLength": 16, "maxLength": 256 },
+    "routeConstraints": { "type": "object", "additionalProperties": false, "required": ["allowedProviders", "maxAttempts"], "properties": { "allowedProviders": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }, "maxAttempts": { "type": "integer", "minimum": 1, "maximum": 5 }, "requireFinalityEvidence": { "type": "boolean" } } },
+    "signature": { "type": "object", "additionalProperties": false, "required": ["algorithm", "keyId", "value"], "properties": { "algorithm": { "type": "string", "minLength": 1 }, "keyId": { "type": "string", "minLength": 1 }, "value": { "type": "string", "minLength": 1 } } }
+  },
+  "$defs": { "agent": { "type": "object", "additionalProperties": false, "required": ["id", "keyId"], "properties": { "id": { "type": "string", "minLength": 1, "maxLength": 256 }, "keyId": { "type": "string", "minLength": 1, "maxLength": 256 } } } }
+}

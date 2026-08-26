@@ -64,7 +64,10 @@ repository; it does not implement a proof backend.
 ---
 *Maintained by Jules (Sovereign Engineering Agent)*
 
-## 4. Gap-to-Research Mapping (Phase 7 Alignment)
+## 4. Gap-to-Research Mapping (Historical, non-authoritative)
+
+The mappings below are retained for provenance only. They do not imply that protocol-specific implementations, DeFi capabilities, custody, pricing, treasury, yield, or execution are platform capabilities. Current platform authority is the provider-neutral upgrade contract in `docs/architecture/UPGRADE_ALIGNMENT_CONTRACT_2026.md`; unsupported items must remain `unavailable` until independently evidenced.
+
 
 | Gap ID | Description | Research Reference | Implementation Path |
 | :--- | :--- | :--- | :--- |

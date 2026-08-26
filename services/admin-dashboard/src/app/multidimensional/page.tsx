@@ -1,8 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import SovereignFinancialOffice from '../pulse-bos-stub';
-import Fdc3Console from './Fdc3Console';
 
 export default function MultidimensionalDashboard() {
   const [data, setData] = useState<Record<string, any> | null>(null);
@@ -13,10 +11,16 @@ export default function MultidimensionalDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/multidimensional/metrics");
-      if (!res.ok) throw new Error(`Failed to fetch metrics: ${res.status}`);
+      const res = await fetch("/api/multidimensional/metrics", { cache: "no-store" });
+      if (!res.ok) {
+        throw new Error(
+          res.status === 503
+            ? "Metrics are temporarily unavailable. Please try again."
+            : `Failed to fetch metrics: ${res.status}`,
+        );
+      }
       const d = await res.json();
-      setData(d);
+      setData(d?.data ?? d);
     } catch (err: unknown) {
       console.error(err);
       setError(err instanceof Error ? err.message : String(err));
@@ -29,7 +33,18 @@ export default function MultidimensionalDashboard() {
     fetchData();
   }, []);
 
-  if (loading && !data) return <div style={{ padding: '2rem', color: '#2E403B', textAlign: 'center' }}>Loading Multidimensional Pulse...</div>;
+  if (loading && !data) return <div style={{ padding: '2rem', color: '#2E403B', textAlign: 'center' }}>Loading live platform metrics...</div>;
+  if (error && !data) {
+    return (
+      <div style={{ padding: '2rem', maxWidth: '900px', margin: '0 auto', color: '#991b1b' }}>
+        <h1 style={{ color: '#0f172a' }}>Live platform metrics unavailable</h1>
+        <p>{error}</p>
+        <button onClick={fetchData} disabled={loading} style={{ marginTop: '1rem', padding: '0.6rem 1.2rem', backgroundColor: '#2E403B', color: 'white', border: 'none', borderRadius: '6px' }}>
+          {loading ? "Refreshing..." : "Retry live source"}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto', fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
@@ -142,11 +157,6 @@ export default function MultidimensionalDashboard() {
           </div>
         </section>
 
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '4rem' }}>
-        <Fdc3Console />
-        <SovereignFinancialOffice />
       </div>
 
       <footer style={{ marginTop: '4rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.875rem' }}>

@@ -17,14 +17,21 @@ export async function GET(req: Request): Promise<Response> {
 }
 
 async function renderMetrics(): Promise<Response> {
+  try {
+    const payload = await sidlMetricsSnapshot();
 
-  const payload = await sidlMetricsSnapshot();
-
-  return new Response(payload, {
-    status: 200,
-    headers: {
-      "Content-Type": sidlMetricsContentType(),
-      "Cache-Control": "no-store",
-    },
-  });
+    return new Response(payload, {
+      status: 200,
+      headers: {
+        "Content-Type": sidlMetricsContentType(),
+        "Cache-Control": "no-store",
+      },
+    });
+  } catch (error) {
+    console.error("[metrics] failed to render snapshot", error);
+    return Response.json(
+      { error: "Metrics are temporarily unavailable" },
+      { status: 503 },
+    );
+  }
 }

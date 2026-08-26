@@ -49,6 +49,9 @@ jobs:
       - name: Validate dependency consistency
         run: pnpm run check:dependency-consistency
 
+      - name: Validate service catalog lifecycle
+        run: pnpm run check:service-catalog
+
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 

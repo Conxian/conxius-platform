@@ -40,6 +40,14 @@
       "removalCriteria": "Agent integration retired and consuming deployments removed"
     }
   ],
-  "externalRepositories": [],
+  "externalRepositories": [
+    {
+      "repository": "Conxian/conxius-wallet",
+      "role": "external-wallet-sdk-provider",
+      "contract": "platform/wallet-capability-sdk.contract.json",
+      "state": "unavailable-until-provider-contract-verified",
+      "preserveResources": true
+    }
+  ],
   "excludedCapabilities": ["wallet", "custody", "signing", "treasury", "yield", "pricing", "trading", "protocol-economics"]
 }

@@ -18,6 +18,10 @@ A separately approved infrastructure or service fee may be configured only as an
 
 A missing fee configuration means no fee, not a fallback rate.
 
+## Wallet SDK boundary
+
+The platform may integrate `conxius-wallet` only through the versioned external SDK contract at `platform/wallet-capability-sdk.contract.json`. Wallet resources, provider adapters, and in-flight intents are preserved; this boundary is non-destructive. Signing, custody, balances, and transaction construction remain wallet-owned and unavailable to the platform until provider evidence is verified.
+
 ## Prohibited platform economics
 The platform must not own or imply:
 

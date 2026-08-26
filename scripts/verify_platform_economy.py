@@ -7,6 +7,10 @@ ROOT = Path(__file__).resolve().parents[1]
 # This guard protects the universal platform contract surface. Legacy product,
 # governance, and adapter implementations are tracked separately for migration.
 SCAN_ROOTS = (ROOT / "platform",)
+REQUIRED_WALLET_CONTRACT_KEYS = {
+    "schemaVersion", "ownerRepository", "consumer", "boundary", "platformMay",
+    "platformMustNot", "requiredEvidence", "resourcePolicy", "availability",
+}
 FORBIDDEN = (
     "CONXIAN_PRIVATE_KEY", "NOSTR_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY",
     "private_key", "treasury", "yield_split", "liquidity_desk", "liquidity-desk",
@@ -15,6 +19,7 @@ FORBIDDEN = (
 ALLOWLIST = {
     ROOT / "platform" / "neutral-m2m-intent.schema.json",
     ROOT / "platform" / "services.catalog.json",
+    ROOT / "platform" / "wallet-capability-sdk.contract.json",
 }
 IGNORED_DIRS = {"__tests__", "tests", "docs", "openspec", ".next", "node_modules"}
 LEGACY_SURFACES = {
@@ -27,6 +32,18 @@ LEGACY_SURFACES = {
 }
 
 violations = []
+wallet_contract = ROOT / "platform" / "wallet-capability-sdk.contract.json"
+if not wallet_contract.exists():
+    violations.append("platform/wallet-capability-sdk.contract.json: missing")
+else:
+    import json
+    document = json.loads(wallet_contract.read_text())
+    missing = REQUIRED_WALLET_CONTRACT_KEYS - document.keys()
+    if missing:
+        violations.append(f"platform/wallet-capability-sdk.contract.json: missing keys {sorted(missing)}")
+    if document.get("boundary") != "sdk-only" or document.get("resourcePolicy", {}).get("destructiveMigration") is not False:
+        violations.append("platform/wallet-capability-sdk.contract.json: wallet boundary must remain SDK-only and non-destructive")
+
 for base in SCAN_ROOTS:
     if not base.exists():
         continue

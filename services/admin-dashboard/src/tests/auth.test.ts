@@ -46,7 +46,7 @@ describe('Admin API Auth (CON-353)', () => {
         method: 'POST',
         body: JSON.stringify({ secrets: {} }),
       });
-      const response = await postSecrets(req);
+      const response = await postSecrets();
       expect(response.status).toBe(410);
       expect(await response.json()).toMatchObject({ success: false });
     });

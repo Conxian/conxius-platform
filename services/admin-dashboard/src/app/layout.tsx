@@ -21,7 +21,7 @@ const navigation = [
   ["Pulse", "/multidimensional"],
 
   ["Support", "/support"],
-  ["Settings", "/settings"],
+  ["Status", "/status"],
 ] as const;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

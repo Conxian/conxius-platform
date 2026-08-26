@@ -1,80 +1,64 @@
-"use client";
+import { getConnectionEvidence, type ConnectionState } from "../../lib/connection-evidence";
 
-import React from "react";
-
-type ConnectionStatus = "configured" | "missing" | "unverified";
-
-type Connection = {
-  name: string;
-  owner: string;
-  source: string;
-  status: ConnectionStatus;
-  detail: string;
+const stateLabels: Record<ConnectionState, string> = {
+  configured: "Configured",
+  "not-configured": "Not configured",
+  "external-evidence": "External evidence",
 };
 
-const connections: Connection[] = [
-  { name: "Admin dashboard", owner: "conxius-platform", source: "Vercel environment", status: "configured", detail: "ADMIN_DASHBOARD_API_KEY" },
-  { name: "Neon Postgres", owner: "Platform data services", source: "Neon integration", status: "configured", detail: "DATABASE_URL / NEON_DATABASE_URL" },
-  { name: "Supabase", owner: "Owned source repository", source: "Supabase integration", status: "configured", detail: "SUPABASE_URL and publishable credentials" },
-  { name: "Upstash", owner: "Ephemeral infrastructure", source: "Upstash integration", status: "configured", detail: "REST endpoint and runtime token" },
-  { name: "Gateway", owner: "Gateway repository", source: "Vercel environment", status: "unverified", detail: "GATEWAY_URL is configured; authenticated contract check required" },
-  { name: "Nexus", owner: "Nexus repository", source: "Vercel environment", status: "unverified", detail: "NEXUS_ADMIN_API_TOKEN is configured; endpoint evidence required" },
-  { name: "External protocol services", owner: "Owning repositories", source: "Service-specific configuration", status: "unverified", detail: "Oracle, Stacks, Tableland, and Kwil require owner evidence" },
-];
-
-function StatusBadge({ status }: { status: ConnectionStatus }) {
-  return <span className={`status-badge status-${status}`}>{status}</span>;
+function StateBadge({ state }: { state: ConnectionState }) {
+  return <span className={`status-badge status-${state}`}>{stateLabels[state]}</span>;
 }
 
-export default function SettingsPage() {
+export default function ConxianStatusPage() {
+  const connections = getConnectionEvidence();
+  const configured = connections.filter((connection) => connection.state === "configured").length;
+  const unresolved = connections.length - configured;
+
   return (
-    <main className="settings-page">
+    <main className="settings-page status-page">
       <header className="settings-header">
-        <p className="eyebrow">Platform configuration</p>
-        <h1>Settings</h1>
-        <p className="settings-intro">Configuration is managed by the owning Vercel project, integration, or repository. This page is intentionally read-only.</p>
+        <p className="eyebrow">ConxianStatus · public operational view</p>
+        <h1>Service status</h1>
+        <p className="settings-intro">A transparent view of Conxian Labs services and dependencies. Configuration alone never counts as healthy; each service needs current authenticated evidence.</p>
       </header>
 
-      <section className="settings-notice" aria-labelledby="settings-notice-title">
-        <h2 id="settings-notice-title">Secrets are not entered here</h2>
-        <p>Do not paste tokens, passwords, private keys, service-account JSON, or mailbox credentials into the dashboard. Use the project environment and connection controls so secrets remain scoped, auditable, and available to deployed runtimes.</p>
+      <section className="status-hero" aria-labelledby="status-summary-title">
+        <div>
+          <p className="eyebrow">Current posture</p>
+          <h2 id="status-summary-title">Operational surfaces are evidence-scoped</h2>
+          <p>No active incident is declared from this static inventory. Provider-specific health remains unverified where the owning service has not supplied a live contract response.</p>
+        </div>
+        <div className="status-summary" aria-label="Status summary">
+          <div><strong>{configured}</strong><span>configured</span></div>
+          <div><strong>{unresolved}</strong><span>needs evidence</span></div>
+        </div>
       </section>
 
-      <section className="settings-panel" aria-labelledby="connection-inventory-title">
+      <section className="settings-panel" aria-labelledby="dependency-title">
         <div className="settings-panel-heading">
-          <div>
-            <p className="eyebrow">Source of truth</p>
-            <h2 id="connection-inventory-title">Connection inventory</h2>
-          </div>
-          <span className="inventory-count">{connections.length} surfaces</span>
+          <div><p className="eyebrow">Dependency register</p><h2 id="dependency-title">Service connections</h2></div>
+          <span className="inventory-count">Checked at build time</span>
         </div>
         <div className="connection-list">
           {connections.map((connection) => (
             <article className="connection-row" key={connection.name}>
-              <div>
-                <h3>{connection.name}</h3>
-                <p>{connection.detail}</p>
-              </div>
-              <div className="connection-meta">
-                <span>{connection.owner}</span>
-                <span>{connection.source}</span>
-                <StatusBadge status={connection.status} />
-              </div>
+              <div><h3>{connection.name}</h3><p>{connection.contract}</p></div>
+              <div className="connection-meta"><span>{connection.owner}</span><StateBadge state={connection.state} /></div>
+              <p className="connection-action">{connection.nextAction}</p>
             </article>
           ))}
         </div>
       </section>
 
-      <section className="settings-panel settings-guidance" aria-labelledby="settings-guidance-title">
-        <p className="eyebrow">Operational boundary</p>
-        <h2 id="settings-guidance-title">How to change configuration</h2>
-        <ul>
-          <li>Use Vercel project environment variables for runtime configuration.</li>
-          <li>Use managed integrations for Neon, Supabase, Upstash, and other connected services.</li>
-          <li>Use the owning repository workflow for CI, publishing, wallet, and protocol credentials.</li>
-          <li>Use authenticated health and contract checks before marking a dependency healthy.</li>
-        </ul>
+      <section className="settings-panel settings-guidance" aria-labelledby="incident-title">
+        <p className="eyebrow">Incident communication</p>
+        <h2 id="incident-title">No incident declared</h2>
+        <p>For an outage or degraded dependency, record the affected service, observed timestamps, evidence URL, customer impact, owner, mitigation, and next update. Do not paste credentials or personal data into an incident record.</p>
+        <div className="status-links"><a href="/support">Open support</a><a href="/services">Review service catalog</a></div>
       </section>
     </main>
   );
 }
+
+export { ConxianStatusPage };

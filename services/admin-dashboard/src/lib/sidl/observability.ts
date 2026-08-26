@@ -98,6 +98,10 @@ function getMetricsStore(): SidlMetricsStore {
 
   if (existing && typeof existing === "object") {
     const store = existing as Partial<SidlMetricsStore>;
+    store.sidlRequestsTotal ??= new Map<string, CounterSeries>();
+    store.sidlRequestDurationSeconds ??= new Map<string, HistogramSeries>();
+    store.sidlFailuresTotal ??= new Map<string, CounterSeries>();
+    store.sidlCheckoutPaymentHeaderTotal ??= new Map<string, CounterSeries>();
     store.m2mServiceKeyExpiryTimestampSeconds ??= new Map<string, GaugeSeries>();
     store.m2mServiceKeyRotationTotal ??= new Map<string, CounterSeries>();
     store.m2mServiceKeyRollbackTotal ??= new Map<string, CounterSeries>();

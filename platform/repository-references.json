@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0",
+  "policy": {
+    "active": "May be used by deployable code, active manifests, or current release gates.",
+    "historical": "May remain in audits, archived changes, and migration records.",
+    "replacement-required": "Capability is recognized but cannot use an archived implementation.",
+    "invalid": "Target must be removed or corrected."
+  },
+  "repositories": {
+    "Conxian/conxius-orbit": {
+      "state": "archived",
+      "referenceClass": "historical",
+      "activeDependency": false,
+      "replacement": "platform-owned deployment and verification contract plus current execution surface"
+    }
+  }
+}

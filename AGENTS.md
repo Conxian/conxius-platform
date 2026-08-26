@@ -17,7 +17,7 @@
 - **Rust (Gateway)**: Use Actix-web for the API and `tokio` for background orchestration. Maintain modular module boundaries (Mesh, Nexus, Compliance).
 - **TypeScript (UI)**: Use the consolidated `coreApi.ts` for all Gateway interactions. Ensure strict type safety and no `any` types.
 - **Clarity (Contracts)**: Prioritize mathematical certainty and sBTC integration.
-- **Orbit CLI (Python canonical, Node wrapper)**: The canonical CLI surface is Python (`conxius_orbit_cli.py`). The Node.js binary (`conxius-orbit`) is a wrapper that delegates core operations (deploy, monitor, verify, dashboard, diagnose, detect) to Python. Automation and CI paths should target the Node binary entry point as the stable user-facing contract.
+- **Deployment and verification**: Orbit is archived compatibility material and is not an active platform dependency. Current deployment and verification must use versioned platform contracts and an explicitly owned execution surface; until replacement evidence exists, report the capability as unavailable rather than delegating implicitly.
 - **Rust toolchain**: 1.97.1 minimum.
 
 ## Session Log
@@ -194,6 +194,29 @@
 - Actionable live-source error metadata without exposing secrets.
 - Full keyboard, focus, heading, and active-navigation verification.
 
+### 2026-08-26 — Orbit Retirement and Gateway Decentralization Review
+**Trigger**: User approved removal review for Orbit and expansion of Gateway decentralization.
+
+**What was done**:
+- Added OpenSpec proposal `openspec/changes/2026-08-26-orbit-retirement/proposal.md`.
+- Marked archived Orbit as historical/non-active in the service catalog and added `platform/repository-references.json`.
+- Added `check:repository-references` to reject archived repositories as active service owners/dependencies.
+- Added `docs/architecture/GATEWAY_DECENTRALIZATION_CONTRACT_2026.md` covering provider plurality, evidence-based routing, bounded coordination, fail-closed behavior, and no custody.
+- Added `docs/audits/2026-08-26-orbit-and-gateway-migration-review.md` with current-code findings and migration advice.
+- Updated current agent guidance and knowledge graph to stop treating Orbit as active.
+
+**Key discoveries**:
+- Orbit should not be deleted or blanket-purged from historical evidence; it is archived compatibility material.
+- Gateway has the strongest current replacement surface, but must remain a decentralized routing/data plane rather than a single authority.
+- Valid `Conxian/...` links need classification, not blanket removal.
+
+**Files touched**: `openspec/changes/2026-08-26-orbit-retirement/proposal.md`, `platform/services.catalog.json`, `platform/repository-references.json`, `scripts/verify_repository_references.py`, `package.json`, `docs/architecture/GATEWAY_DECENTRALIZATION_CONTRACT_2026.md`, `docs/audits/2026-08-26-orbit-and-gateway-migration-review.md`, `docs/README.md`, `AGENTS.md`
+
+**Gaps identified**:
+- Gateway owners still need to publish provider capability and verification fixtures.
+- Remote repository deletion/archive decisions and GitHub policy changes require owner permissions.
+- Replacement coverage for Orbit deployment/verification must be evidenced before the historical reference can be removed entirely.
+
 ## Repository Knowledge Graph (Current)
 
 
@@ -203,7 +226,7 @@
 | `lib-conxian-core` | `../lib-conxian-core` | Shared protocol primitives (v0.3.2) |
 | `conxian-gateway` | `../conxian-gateway` | Runtime orchestration + middleware (v0.1.5) |
 | `conxian-nexus` | `../conxian-nexus` | Glass Node proof layer (v0.4.22) |
-| `conxius-orbit` | `../conxius-orbit` | Deployment CLI + Clarinet AST management |
+| `conxius-orbit` | archived compatibility reference | Historical deployment CLI; not an active platform dependency |
 | `conxius-wallet` | `../conxius-wallet` | Wallet application |
 | `conxian_market` | `../conxian-market` | Market documentation |
 

@@ -47,7 +47,7 @@
     {"repository": "Conxian/conxian-nexus", "role": "proof-and-evidence", "state": "active"},
     {"repository": "Conxian/conxius-enclave-sdk", "role": "security-and-signing", "state": "active"},
     {"repository": "Conxian/conxius-wallet", "role": "wallet-experience", "state": "active"},
-    {"repository": "Conxian/conxius-orbit", "role": "deployment-cli", "state": "archived"},
+    {"repository": "Conxian/conxius-orbit", "role": "historical-compatibility-reference", "state": "archived", "activeDependency": false},
     {"repository": "Conxian/conxian_market", "role": "protocol-documentation", "state": "active"},
     {"repository": "Conxian/conxian_ui", "role": "product-experience", "state": "active"}
   ]

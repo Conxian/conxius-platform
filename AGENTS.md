@@ -258,6 +258,17 @@
 - Existing governance and historical adapters still require owner-led migration; they are not silently promoted into platform economics.
 - Production signature verification, durable replay storage, and provider capability evidence remain external prerequisites.
 
+### 2026-08-26 — Organization Service Capability Review
+**What was done**:
+- Classified repositories as core SDK, security SDK, wallet, provider, observation, product, client, governance, neutral platform, protocol, or archived surfaces.
+- Added the organization service/capability evidence matrix.
+- Confirmed wallet resources are preserved behind an optional SDK boundary.
+- Confirmed market economics remain product-owned and Gateway/Nexus remain delegated providers.
+
+**Gaps**:
+- External CI, branch protection, Docker/runtime, deployment, rollback, and production evidence require owner-provided verification.
+- Legacy platform runtime governance/economic surfaces remain migration-scoped and are not promoted as universal capabilities.
+
 ## Repository Knowledge Graph (Current)
 
 

@@ -151,6 +151,27 @@
 **Gotchas**:
 - The repository's canonical dependency script is `check:dependency-consistency`; the compatibility alias now points to it.
 
+### 2026-08-26 — Platform Gap Remediation
+**Trigger**: User approved investigation and remediation of all gaps found in the conversation and readiness audit.
+
+**What was done**:
+- Added OpenSpec proposal `openspec/changes/2026-08-26-platform-gap-remediation/proposal.md`.
+- Added `scripts/verify_org_readiness.py` and package commands for repeatable cross-repository evidence collection.
+- Added readiness tests and fail-closed handling when GitHub authentication is unavailable.
+- Corrected CI documentation so local workflow files are not presented as proof of remote branch protection.
+- Documented database URL precedence and component-variable fallback in the connection audit.
+- Updated the active gap register and platform audit with current evidence interpretation.
+
+**Key discoveries**:
+- Local platform checks pass; the GitHub CLI in the execution shell was not authenticated, so organization readiness collection correctly failed closed.
+- Remote branch protection, deployment health, Docker runtime, cross-repository manifests, and external ownership decisions remain outside this repository's mutation boundary.
+
+**Files touched**: `openspec/changes/2026-08-26-platform-gap-remediation/proposal.md`, `scripts/verify_org_readiness.py`, `scripts/verify_org_readiness.test.ts`, `package.json`, `docs/GAPS.md`, `docs/CI_CD_BASELINE_GAP_ANALYSIS.md`, `docs/audits/2026-08-26-connection-audit.md`, `docs/audits/2026-08-26-platform-readiness-audit.md`, `AGENTS.md`
+
+**Gaps identified**:
+- Organization-wide verification requires an authenticated GitHub CLI or owner-provided evidence.
+- Docker/live service checks and external repository changes require separate environments and owner coordination.
+
 ## Repository Knowledge Graph (Current)
 
 

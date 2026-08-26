@@ -2,7 +2,12 @@
 
 **Status:** Active operational gap register; scores and labels are not production-readiness evidence.
 
-**Last reviewed:** 2026-07-27
+**Last reviewed:** 2026-08-26
+
+**Platform gap remediation status:** Local platform gaps are tracked by the
+[platform gap remediation OpenSpec](../openspec/changes/2026-08-26-platform-gap-remediation/proposal.md).
+Organization-wide controls, external deployments, and cross-repository contracts
+remain owner-coordinated until independently evidenced.
 
 **Authority:** [`INFORMATION_HIERARCHY.md`](./INFORMATION_HIERARCHY.md) and the
 canonical sources linked from each entry. Current documentation-alignment

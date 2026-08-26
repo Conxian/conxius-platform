@@ -8,6 +8,7 @@ Repository code, knowledge-base and governance documents, OpenSpec artifacts, Co
 | Severity | Area | Finding | Status |
 |---|---|---|---|
 | P1 | Live integrations | Gateway, Oracle, Stacks, Tableland, and Kwil endpoint variables are not present in the runtime environment inventory used by the audit shell. | Blocked by configuration/credential availability |
+| P2 | Database tooling | A database URL is available through the project environment inventory; tooling should prefer `DATABASE_URL`/provider URLs and fall back to `PGHOST`, `PGPORT`, `PGUSER`, `PGDATABASE`, and `PGSSLMODE` without logging secrets. | Configuration contract documented |
 | P1 | Compose | `gateway` and `conxian-ui` use nginx placeholders while exposing non-nginx ports; their probes target nginx port 80 and are intentionally placeholder-only. | Documented existing boundary; Docker validation unavailable |
 | P1 | Live integrations | Supabase base URL responded at the network layer; root path returned HTTP 404, which is expected for a project API root and is not an auth/schema probe. | Reachable; deeper MCP schema validation pending |
 | P1 | Live integrations | Upstash REST endpoint returned HTTP 401 without an authenticated request. | Reachable; credential-safe probe confirms auth is required |

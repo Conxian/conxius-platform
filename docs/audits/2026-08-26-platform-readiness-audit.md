@@ -25,6 +25,8 @@ Read-only inspection covered every Conxian organization repository visible to th
 
 ## Verified platform controls
 
+The repeatable `pnpm run check:org-readiness` collector requires an authenticated `gh` session. If GitHub credentials are unavailable, it fails closed with an actionable error rather than producing incomplete organization evidence.
+
 - Repository discovery protocol passed and attested the four required context files.
 - Service catalog validation passed: 3 local services and 9 external repositories.
 - Security/system audit passed: no tracked environment files, private keys, generated artifacts, or obvious hardcoded secrets.

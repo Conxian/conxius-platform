@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "1.0",
+  "canonicalHost": "www.conxian-labs.com",
+  "redirectHost": "conxian-labs.com",
+  "platformRepository": "Conxian/conxius-platform",
+  "surfaces": [
+    {
+      "host": "www.conxian-labs.com",
+      "pathPrefix": "/",
+      "serviceId": "admin-dashboard",
+      "repository": "Conxian/conxius-platform",
+      "deployment": "Vercel project prj_rr37DgbJsfl1Hfoh2MUhOx6pUVHf",
+      "auth": "admin-api-auth for protected data routes",
+      "healthEvidence": "/api/health must return 200; provider data remains evidence-scoped",
+      "owner": "Conxian platform operations"
+    }
+  ],
+  "externalSurfaces": [
+    { "serviceId": "gateway", "owner": "Gateway repository owner", "status": "external dependency" },
+    { "serviceId": "nexus", "owner": "Nexus repository owner", "status": "external dependency" },
+    { "serviceId": "protocol-and-wallet", "owner": "Protocol or wallet repository owners", "status": "not platform-owned; no custody or signing" },
+    { "serviceId": "elizaos-plugin-conxian", "owner": "Conxian/conxius-platform", "status": "external-agent-runtime" }
+  ],
+  "excludedFromPlatformClaims": ["wallet", "custody", "signing", "treasury", "yield", "pricing", "trading", "protocol-economics"]
+}

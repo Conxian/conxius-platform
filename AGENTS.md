@@ -17,7 +17,7 @@
 - **Rust (Gateway)**: Use Actix-web for the API and `tokio` for background orchestration. Maintain modular module boundaries (Mesh, Nexus, Compliance).
 - **TypeScript (UI)**: Use the consolidated `coreApi.ts` for all Gateway interactions. Ensure strict type safety and no `any` types.
 - **Clarity (Contracts)**: Prioritize mathematical certainty and sBTC integration.
-- **Orbit CLI (Python canonical, Node wrapper)**: The canonical CLI surface is Python (`conxius_orbit_cli.py`). The Node.js binary (`conxius-orbit`) is a wrapper that delegates core operations (deploy, monitor, verify, dashboard, diagnose, detect) to Python. Automation and CI paths should target the Node binary entry point as the stable user-facing contract.
+- **Deployment and verification**: Orbit is archived compatibility material and is not an active platform dependency. Current deployment and verification must use versioned platform contracts and an explicitly owned execution surface; until replacement evidence exists, report the capability as unavailable rather than delegating implicitly.
 - **Rust toolchain**: 1.97.1 minimum.
 
 ## Session Log
@@ -109,6 +109,25 @@
 - Organization-wide live adapters require each source repository's supported read contract and credentials.
 - GitHub Projects access and Docker/Compose runtime verification remain environment-dependent.
 
+### 2026-08-26 — Cross-Repository Platform Readiness Audit
+**Trigger**: User approved inspection of all organization repositories and platform setup.
+
+**What was done**:
+- Inspected all 14 visible Conxian organization repositories, including archived `conxius-orbit` and organization metadata repositories.
+- Verified repository-local discovery, service catalog, security, dependency consistency, and full test gates.
+- Added `docs/audits/2026-08-26-platform-readiness-audit.md` with repository matrix, evidence, boundaries, and owner-coordinated actions.
+- Linked the audit from `docs/README.md` without modifying remote repositories or GitHub settings.
+
+**Key discoveries**:
+- Platform-local controls pass; organization-wide readiness cannot be claimed without owner evidence from external repositories.
+- No inspected `main` branch returned available branch-protection data through the read-only token.
+- Archived Orbit remains a compatibility dependency pending an explicit replacement decision.
+
+**Files touched**: `docs/audits/2026-08-26-platform-readiness-audit.md`, `docs/README.md`, `AGENTS.md`
+
+**Gaps identified**:
+- Organization rulesets/branch protection, cross-repository manifests, reusable workflow adoption, live deployment evidence, Docker runtime evidence, and GitHub Projects access require external coordination.
+
 ### 2026-08-26 — Full Connection Audit Follow-up
 **Trigger**: User-approved audit of databases, app integrations, knowledge bases, agents, and docs.
 
@@ -132,6 +151,102 @@
 **Gotchas**:
 - The repository's canonical dependency script is `check:dependency-consistency`; the compatibility alias now points to it.
 
+### 2026-08-26 — Platform Gap Remediation
+**Trigger**: User approved investigation and remediation of all gaps found in the conversation and readiness audit.
+
+**What was done**:
+- Added OpenSpec proposal `openspec/changes/2026-08-26-platform-gap-remediation/proposal.md`.
+- Added `scripts/verify_org_readiness.py` and package commands for repeatable cross-repository evidence collection.
+- Added readiness tests and fail-closed handling when GitHub authentication is unavailable.
+- Corrected CI documentation so local workflow files are not presented as proof of remote branch protection.
+- Documented database URL precedence and component-variable fallback in the connection audit.
+- Updated the active gap register and platform audit with current evidence interpretation.
+
+**Key discoveries**:
+- Local platform checks pass; the GitHub CLI in the execution shell was not authenticated, so organization readiness collection correctly failed closed.
+- Remote branch protection, deployment health, Docker runtime, cross-repository manifests, and external ownership decisions remain outside this repository's mutation boundary.
+
+**Files touched**: `openspec/changes/2026-08-26-platform-gap-remediation/proposal.md`, `scripts/verify_org_readiness.py`, `scripts/verify_org_readiness.test.ts`, `package.json`, `docs/GAPS.md`, `docs/CI_CD_BASELINE_GAP_ANALYSIS.md`, `docs/audits/2026-08-26-connection-audit.md`, `docs/audits/2026-08-26-platform-readiness-audit.md`, `AGENTS.md`
+
+**Gaps identified**:
+- Organization-wide verification requires an authenticated GitHub CLI or owner-provided evidence.
+- Docker/live service checks and external repository changes require separate environments and owner coordination.
+
+### 2026-08-26 — Page and Organization Surface Audit
+**Trigger**: User requested an audit of all pages against the conversation and all organization repositories.
+
+**What was done**:
+- Audited all 15 dashboard page routes in the local preview; every route returned HTTP 200.
+- Browser-verified overview, unavailable metrics, settings, launch, and shared navigation surfaces.
+- Added `docs/audits/2026-08-26-page-and-organization-surface-audit.md` and linked it from `docs/README.md`.
+
+**Key discoveries**:
+- The dashboard is fail-closed for unavailable live metrics and contributor profile data, but the error states need more actionable operator context.
+- Shared navigation is crowded and not responsive at the audited desktop width; settings lacks visible save-state/confirmation evidence.
+- Several page heading trees and active-navigation semantics need an accessibility pass.
+- Organization-wide GitHub controls and runtime evidence remain externally constrained.
+
+**Files touched**: `docs/audits/2026-08-26-page-and-organization-surface-audit.md`, `docs/README.md`, `AGENTS.md`
+
+**Gaps identified**:
+- Responsive shared layout and design-token cleanup.
+- Settings interaction status and high-privilege workflow review.
+- Actionable live-source error metadata without exposing secrets.
+- Full keyboard, focus, heading, and active-navigation verification.
+
+### 2026-08-26 — Orbit Retirement and Gateway Decentralization Review
+**Trigger**: User approved removal review for Orbit and expansion of Gateway decentralization.
+
+**What was done**:
+- Added OpenSpec proposal `openspec/changes/2026-08-26-orbit-retirement/proposal.md`.
+- Marked archived Orbit as historical/non-active in the service catalog and added `platform/repository-references.json`.
+- Added `check:repository-references` to reject archived repositories as active service owners/dependencies.
+- Added `docs/architecture/GATEWAY_DECENTRALIZATION_CONTRACT_2026.md` covering provider plurality, evidence-based routing, bounded coordination, fail-closed behavior, and no custody.
+- Added `docs/audits/2026-08-26-orbit-and-gateway-migration-review.md` with current-code findings and migration advice.
+- Updated current agent guidance and knowledge graph to stop treating Orbit as active.
+
+**Key discoveries**:
+- Orbit should not be deleted or blanket-purged from historical evidence; it is archived compatibility material.
+- Gateway has the strongest current replacement surface, but must remain a decentralized routing/data plane rather than a single authority.
+- Valid `Conxian/...` links need classification, not blanket removal.
+
+**Files touched**: `openspec/changes/2026-08-26-orbit-retirement/proposal.md`, `platform/services.catalog.json`, `platform/repository-references.json`, `scripts/verify_repository_references.py`, `package.json`, `docs/architecture/GATEWAY_DECENTRALIZATION_CONTRACT_2026.md`, `docs/audits/2026-08-26-orbit-and-gateway-migration-review.md`, `docs/README.md`, `AGENTS.md`
+
+**Gaps identified**:
+- Gateway owners still need to publish provider capability and verification fixtures.
+- Remote repository deletion/archive decisions and GitHub policy changes require owner permissions.
+- Replacement coverage for Orbit deployment/verification must be evidenced before the historical reference can be removed entirely.
+
+### 2026-08-26 — Upgrade-Aligned Neutral M2M Contract
+**Trigger**: User approved all recommendations from the market M2M review.
+
+**What was done**:
+- Added `platform/neutral-m2m-intent.schema.json` with domain/network binding, positive amounts, nonce, expiry, idempotency, route constraints, and optional signatures.
+- Added `docs/architecture/UPGRADE_ALIGNMENT_CONTRACT_2026.md` defining versioned capability manifests, evidence/finality semantics, upgrade gates, provider plurality, and economic neutrality.
+- Added schema validation tests and wired `test:neutral-m2m-intent` into package scripts.
+- Marked the historical gap-to-research mappings as non-authoritative and unavailable unless independently evidenced.
+
+**Key discoveries**:
+- The market M2M router is not production authorization: it lacks cryptographic identity, replay protection, expiry, idempotency, asset/network binding, and provider evidence.
+- Market economics and protocol defaults must remain client-owned and outside the universal platform.
+
+**Files touched**: `platform/neutral-m2m-intent.schema.json`, `docs/architecture/UPGRADE_ALIGNMENT_CONTRACT_2026.md`, `scripts/validate_neutral_m2m_intent.test.ts`, `package.json`, `docs/GAPS.md`, `AGENTS.md`
+
+**Gaps identified**:
+- A production adapter still requires an approved signature-verification implementation and durable replay store.
+- External Gateway/Nexus providers must publish capability and finality fixtures before universal claims can be made.
+
+### 2026-08-26 — Authority Alignment Across Platform and Business
+**What was done**:
+- Established `conxian-business` as portfolio governance authority for doctrine, OpenSpec, approvals, evidence standards, and repository role policy.
+- Explicitly delegated runtime ownership to independently evidenced implementation repositories.
+- Aligned platform and business boundaries: no custody, treasury, pricing, yield, trading, or protocol execution in governance/platform layers.
+- Relabeled runtime maturity as evidence-scoped and retired Orbit/protocol/product surfaces as active platform dependencies.
+
+**Gaps**:
+- External repository owners must independently evidence runtime capabilities and replacement contracts.
+- Remote repository changes and branch-policy verification remain owner/environment dependent.
+
 ## Repository Knowledge Graph (Current)
 
 
@@ -141,7 +256,7 @@
 | `lib-conxian-core` | `../lib-conxian-core` | Shared protocol primitives (v0.3.2) |
 | `conxian-gateway` | `../conxian-gateway` | Runtime orchestration + middleware (v0.1.5) |
 | `conxian-nexus` | `../conxian-nexus` | Glass Node proof layer (v0.4.22) |
-| `conxius-orbit` | `../conxius-orbit` | Deployment CLI + Clarinet AST management |
+| `conxius-orbit` | archived compatibility reference | Historical deployment CLI; not an active platform dependency |
 | `conxius-wallet` | `../conxius-wallet` | Wallet application |
 | `conxian_market` | `../conxian-market` | Market documentation |
 

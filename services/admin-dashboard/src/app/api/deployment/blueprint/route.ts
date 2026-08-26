@@ -13,30 +13,11 @@ export async function GET(req: Request) {
     integrity_standard: "Nakamoto-Style",
     deployment_targets: [
       {
-        target: "GCP (Gateway)",
-        status: "Production",
-        orchestrator: "Kubernetes",
-        replicas: 3,
-        image_repo: "gcr.io/conxian-project/gateway",
-        repository: "https://github.com/Conxian/conxian-gateway"
-      },
-      {
-        target: "Render (UI)",
-        status: "Production",
-        orchestrator: "Render Native",
-        build_command: "pnpm install && pnpm build",
-        start_command: "pnpm start -- -p $PORT --hostname 0.0.0.0",
-        repository: "https://github.com/Conxian/conxian_ui",
-        remediation_ref: "CON-739"
-      },
-      {
-        target: "Render (Labs Site)",
-        status: "Production",
-        orchestrator: "Static",
-        build_command: "npm install && npm run build",
-        publish_path: "dist",
-        repository: "https://github.com/Conxian/conxian-labs-site",
-        remediation_ref: "CON-739"
+        target: "configured-runtime-provider",
+        status: "Unavailable",
+        reason: "No provider-neutral deployment execution contract is configured",
+        orchestrator: "unavailable",
+        repository: null
       }
     ],
     governance: {

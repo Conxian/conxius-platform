@@ -2,7 +2,12 @@
 
 **Status:** Active operational gap register; scores and labels are not production-readiness evidence.
 
-**Last reviewed:** 2026-07-27
+**Last reviewed:** 2026-08-26
+
+**Platform gap remediation status:** Local platform gaps are tracked by the
+[platform gap remediation OpenSpec](../openspec/changes/2026-08-26-platform-gap-remediation/proposal.md).
+Organization-wide controls, external deployments, and cross-repository contracts
+remain owner-coordinated until independently evidenced.
 
 **Authority:** [`INFORMATION_HIERARCHY.md`](./INFORMATION_HIERARCHY.md) and the
 canonical sources linked from each entry. Current documentation-alignment
@@ -59,7 +64,10 @@ repository; it does not implement a proof backend.
 ---
 *Maintained by Jules (Sovereign Engineering Agent)*
 
-## 4. Gap-to-Research Mapping (Phase 7 Alignment)
+## 4. Gap-to-Research Mapping (Historical, non-authoritative)
+
+The mappings below are retained for provenance only. They do not imply that protocol-specific implementations, DeFi capabilities, custody, pricing, treasury, yield, or execution are platform capabilities. Current platform authority is the provider-neutral upgrade contract in `docs/architecture/UPGRADE_ALIGNMENT_CONTRACT_2026.md`; unsupported items must remain `unavailable` until independently evidenced.
+
 
 | Gap ID | Description | Research Reference | Implementation Path |
 | :--- | :--- | :--- | :--- |

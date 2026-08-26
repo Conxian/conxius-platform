@@ -40,15 +40,5 @@
       "removalCriteria": "Agent integration retired and consuming deployments removed"
     }
   ],
-  "externalRepositories": [
-    {"repository": "Conxian/conxian-business", "role": "strategy-and-bos", "state": "active"},
-    {"repository": "Conxian/conxian-gateway", "role": "runtime-data-plane", "state": "active"},
-    {"repository": "Conxian/lib-conxian-core", "role": "shared-contracts", "state": "active"},
-    {"repository": "Conxian/conxian-nexus", "role": "proof-and-evidence", "state": "active"},
-    {"repository": "Conxian/conxius-enclave-sdk", "role": "security-and-signing", "state": "active"},
-    {"repository": "Conxian/conxius-wallet", "role": "wallet-experience", "state": "active"},
-    {"repository": "Conxian/conxius-orbit", "role": "deployment-cli", "state": "archived"},
-    {"repository": "Conxian/conxian_market", "role": "protocol-documentation", "state": "active"},
-    {"repository": "Conxian/conxian_ui", "role": "product-experience", "state": "active"}
-  ]
+  "externalRepositories": []
 }

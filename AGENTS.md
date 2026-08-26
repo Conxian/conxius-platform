@@ -269,6 +269,17 @@
 - External CI, branch protection, Docker/runtime, deployment, rollback, and production evidence require owner-provided verification.
 - Legacy platform runtime governance/economic surfaces remain migration-scoped and are not promoted as universal capabilities.
 
+### 2026-08-26 — Organization and Connected Surface Alignment
+**What was done**:
+- Audited all 15 visible Conxian organization repositories and read-only GitHub governance evidence.
+- Corrected the service catalog's invalid schema reference and repository namespace drift.
+- Added explicit organization repository roles and archived-state metadata to `platform/services.catalog.json`.
+- Added the connected-surface alignment audit and OpenSpec proposal.
+
+**Gaps**:
+- Public repository `main` branches currently report no branch protection through the available read-only evidence; organization owners must activate rulesets.
+- Deployment, Docker, provider contracts, database schemas/RLS, and live Gateway evidence remain external prerequisites.
+
 ## Repository Knowledge Graph (Current)
 
 

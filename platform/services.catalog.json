@@ -41,6 +41,23 @@
       "removalCriteria": "Agent integration retired and consuming deployments removed"
     }
   ],
+  "organizationRepositories": [
+    {"repository": "Conxian/conxius-platform", "role": "platform-spine", "state": "active"},
+    {"repository": "Conxian/conxian-gateway", "role": "gateway-execution", "state": "active"},
+    {"repository": "Conxian/conxian-nexus", "role": "observation-and-proof", "state": "active"},
+    {"repository": "Conxian/lib-conxian-core", "role": "core-library-authority", "state": "active"},
+    {"repository": "Conxian/conxius-wallet", "role": "wallet-provider", "state": "active"},
+    {"repository": "Conxian/conxius-enclave-sdk", "role": "enclave-sdk", "state": "active"},
+    {"repository": "Conxian/conxian-business", "role": "business-and-protocol-coordination", "state": "active"},
+    {"repository": "Conxian/Conxian", "role": "organization-and-research", "state": "active"},
+    {"repository": "Conxian/conxian_market", "role": "market-surface", "state": "active"},
+    {"repository": "Conxian/conxian_ui", "role": "shared-ui-surface", "state": "active"},
+    {"repository": "Conxian/conxian-labs-site", "role": "public-site", "state": "active"},
+    {"repository": "Conxian/conxian.github.io", "role": "public-docs-site", "state": "active"},
+    {"repository": "Conxian/.github", "role": "organization-governance", "state": "active"},
+    {"repository": "Conxian/.github-private", "role": "private-organization-governance", "state": "active"},
+    {"repository": "Conxian/conxius-orbit", "role": "archived-compatibility-reference", "state": "archived"}
+  ],
   "externalRepositories": [
     {
       "repository": "Conxian/conxius-wallet",

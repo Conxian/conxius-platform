@@ -5,7 +5,6 @@
   "private": true,
   "description": "Admin Pulse (BOS) components for Conxian ecosystem",
   "scripts": {
-    "lint": "echo 'No linting configured for this package yet.'",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

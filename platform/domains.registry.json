@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "1.0",
+  "canonicalDomain": "conxian-labs.com",
+  "canonicalWebHost": "www.conxian-labs.com",
+  "secondaryDomain": "conxian.io",
+  "domainPolicy": {
+    "conxian-labs.com": "redirect-to-www",
+    "conxian.io": "redirect-or-secondary-brand",
+    "conxia-labs.com": "retire-after-redirect-and-traffic-verification"
+  },
+  "services": [
+    {"id":"public-site","repository":"Conxian/conxian-labs-site","hostname":"www.conxian-labs.com","route":"/","state":"planned","healthPath":"/"},
+    {"id":"control-plane","repository":"Conxian/conxius-platform","hostname":"app.conxian-labs.com","route":"/","state":"planned","healthPath":"/api/health"},
+    {"id":"public-api","repository":"Conxian/conxian-gateway","hostname":"api.conxian-labs.com","route":"/","state":"planned","healthPath":"/health"},
+    {"id":"gateway","repository":"Conxian/conxian-gateway","hostname":"gateway.conxian-labs.com","route":"/","state":"planned","healthPath":"/health"},
+    {"id":"nexus","repository":"Conxian/conxian-nexus","hostname":"nexus.conxian-labs.com","route":"/","state":"planned","healthPath":"/health"},
+    {"id":"market","repository":"Conxian/conxian_market","hostname":"market.conxian-labs.com","route":"/","state":"planned","healthPath":"/health"},
+    {"id":"sdk","repository":"Conxian/conxius-enclave-sdk","hostname":"sdk.conxian-labs.com","route":"/","state":"planned","healthPath":"/"},
+    {"id":"docs","repository":"Conxian/conxian_market","hostname":"docs.conxian-labs.com","route":"/","state":"planned","healthPath":"/"},
+    {"id":"status","repository":"Conxian/deployment-monitoring","hostname":"status.conxian-labs.com","route":"/","state":"planned","healthPath":"/api/health"}
+  ],
+  "repositories": [
+    {"repository":"Conxian/conxian-gateway","role":"runtime-data-plane","canonicalHostnames":["api.conxian-labs.com","gateway.conxian-labs.com"]},
+    {"repository":"Conxian/conxius-enclave-sdk","role":"security-and-signing","canonicalHostnames":["sdk.conxian-labs.com"]},
+    {"repository":"Conxian/lib-conxian-core","role":"shared-contracts","canonicalHostnames":[]},
+    {"repository":"Conxian/conxian_market","role":"market-and-documentation","canonicalHostnames":["market.conxian-labs.com","docs.conxian-labs.com"]},
+    {"repository":"Conxian/conxian-nexus","role":"proof-and-evidence","canonicalHostnames":["nexus.conxian-labs.com"]},
+    {"repository":"Conxian/conxius-platform","role":"neutral-paas-control-plane","canonicalHostnames":["app.conxian-labs.com"]}
+  ]
+}

@@ -7,6 +7,8 @@ The target operating model is **declarative and Git/CI/GitOps-first**. A portal 
 
 The machine-readable local catalog is [`platform/services.catalog.json`](../../platform/services.catalog.json) and is enforced by `pnpm run check:service-catalog`.
 
+Runtime API configuration and readiness are centralized in `services/admin-dashboard/src/lib/support/upstreams.ts`; operators use [`/api/readiness`](../runbooks/PLATFORM_API_SETUP_RUNBOOK_2026.md) to verify live upstreams without exposing secrets.
+
 ## Repository capability map
 
 | Repository | PaaS relationship | Owns | Must not own |

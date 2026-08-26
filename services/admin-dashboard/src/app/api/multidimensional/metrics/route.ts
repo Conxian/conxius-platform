@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getGatewayAuthHeaders } from "@/lib/sidl/gateway";
+import { redactUpstreamError, timeoutSignal, upstreamUrl } from "@/lib/support/upstreams";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +10,7 @@ function gatewayBaseUrl(): string | null {
 }
 
 export async function GET() {
-  const baseUrl = gatewayBaseUrl();
+  const baseUrl = upstreamUrl("gateway") ?? gatewayBaseUrl();
   const observedAt = new Date().toISOString();
 
   if (!baseUrl) {
@@ -24,6 +25,7 @@ export async function GET() {
     const response = await fetch(`${baseUrl}/api/v1/metrics`, {
       cache: "no-store",
       headers: { ...headers, Accept: "application/json" },
+      signal: timeoutSignal(),
     });
 
     if (!response.ok) {
@@ -37,7 +39,7 @@ export async function GET() {
     return NextResponse.json({ status: "live", source: "gateway", observedAt, data: payload }, { headers: { "Cache-Control": "no-store" } });
   } catch (error: unknown) {
     return NextResponse.json(
-      { status: "unavailable", source: "gateway", observedAt, reason: error instanceof Error ? error.message : "Gateway request failed" },
+      { status: "unavailable", source: "gateway", observedAt, reason: redactUpstreamError(error) },
       { status: 503 },
     );
   }

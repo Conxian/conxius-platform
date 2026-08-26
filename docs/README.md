@@ -20,6 +20,7 @@ This index routes readers through the four-tier model defined by the [Informatio
 - [Scoring Matrix](./SCORING_MATRIX.md) — prioritization gate
 - [Deployment Promotion Model](./DEPLOYMENT_PROMOTION_MODEL.md) — release promotion controls
 - [Runbooks](./runbooks/) — current operator procedures and checklists
+- [Platform API Setup](./runbooks/PLATFORM_API_SETUP_RUNBOOK_2026.md) — live upstream configuration and readiness verification
 - [Active OpenSpec Changes](../openspec/changes/) — change-specific execution artifacts
 
 ## Evidence

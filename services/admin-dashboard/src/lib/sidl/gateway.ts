@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createHash } from "node:crypto";
+import { timeoutSignal } from "../support/upstreams";
 import type { Scope } from "../support/m2m";
 import { getM2MAuthenticator, M2MConfig } from "../support/m2m";
 import type { YieldSnapshot } from "./types";
@@ -126,6 +127,7 @@ async function fetchGateway<T>(path: string): Promise<T | null> {
         ...headers,
         Accept: "application/json",
       },
+      signal: timeoutSignal(),
     });
     if (!response.ok) return null;
     return (await response.json()) as T;
@@ -151,6 +153,7 @@ export async function getSbtcYieldSnapshot(): Promise<YieldSnapshot> {
         ...headers,
         Accept: "application/json",
       },
+      signal: timeoutSignal(),
     });
     if (!response.ok) return { token: "sBTC", apy: null, updatedAtIso };
 

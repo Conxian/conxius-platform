@@ -1,4 +1,3 @@
-import { validateAdminAuth } from "@/lib/support/auth";
 import { NextResponse } from "next/server";
 import { type ContributionData, getContributorLevel } from "@/lib/launch";
 import type { PointsData, ReputationData, StakingData, StewardDashboard } from "@/lib/steward/types";
@@ -64,9 +63,7 @@ function buildContributionData(): ContributionData {
   };
 }
 
-export async function GET(req: Request) {
-  const authError = await validateAdminAuth(req);
-  if (authError) return authError;
+export async function GET() {
   const dashboard: StewardDashboard = {
     points: buildPointsData(),
     reputation: buildReputationData(),

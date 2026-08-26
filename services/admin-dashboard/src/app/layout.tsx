@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import React from "react";
+import { RealityStatus } from "../components/reality-status";
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
@@ -48,7 +49,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </nav>
           </div>
         </header>
-        <main className="site-main">{children}</main>
+        <main className="site-main">
+          <RealityStatus />
+          {children}
+        </main>
         <footer className="site-footer">
           <span>CONXIAN LABS</span>
           <span>Evidence-scoped operations · 2026</span>

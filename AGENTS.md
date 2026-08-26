@@ -45,9 +45,34 @@
 - External Gateway/UI images and protocol services are outside this repository boundary.
 
 **Gotchas**:
-- The root `lint` command skips packages without configured lint scripts rather than reporting a successful placeholder lint.
+- Docker/Compose runtime verification requires a Docker-enabled runner.
+- External Gateway/UI images and protocol services are outside this repository boundary.
+
+### 2026-08-26 — Full Connection Audit Follow-up
+**Trigger**: User-approved audit of databases, app integrations, knowledge bases, agents, and docs.
+
+**What was done**:
+- Re-ran repository discovery, governance checks, hardened security audit, dependency consistency, and test suite.
+- Probed configured Supabase and Upstash endpoints without exposing credentials or response bodies.
+- Added a compatibility alias for `check:dependencies` and recorded sanitized findings in `docs/audits/2026-08-26-connection-audit.md`.
+
+**Key discoveries**:
+- Supabase is network-reachable; its API root returns expected HTTP 404.
+- Upstash is network-reachable and correctly requires authentication with HTTP 401 for an unauthenticated probe.
+- Gateway, Oracle, Stacks, Tableland, and Kwil live probes are blocked by missing endpoint configuration in the shell environment.
+- Docker is unavailable, so Compose startup and container health remain deferred.
+
+**Files touched**: `package.json`, `docs/audits/2026-08-26-connection-audit.md`, `AGENTS.md`
+
+**Gaps identified**:
+- Live schema/permission checks and migrations require MCP access and explicit per-target migration records.
+- Compose verification requires a Docker-enabled runner.
+
+**Gotchas**:
+- The repository's canonical dependency script is `check:dependency-consistency`; the compatibility alias now points to it.
 
 ## Repository Knowledge Graph (Current)
+
 
 | Crate | Path | Role |
 |-------|------|------|

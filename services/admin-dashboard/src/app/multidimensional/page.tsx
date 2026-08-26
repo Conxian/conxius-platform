@@ -13,8 +13,14 @@ export default function MultidimensionalDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/multidimensional/metrics");
-      if (!res.ok) throw new Error(`Failed to fetch metrics: ${res.status}`);
+      const res = await fetch("/api/multidimensional/metrics", { cache: "no-store" });
+      if (!res.ok) {
+        throw new Error(
+          res.status === 503
+            ? "Metrics are temporarily unavailable. Please try again."
+            : `Failed to fetch metrics: ${res.status}`,
+        );
+      }
       const d = await res.json();
       setData(d);
     } catch (err: unknown) {

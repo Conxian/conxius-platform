@@ -21,6 +21,7 @@
     "check:lifecycle-control": "bash scripts/ci/run-lifecycle-control-gates.sh",
     "check:service-catalog": "python3 scripts/verify_service_catalog.py",
     "check:domain-registry": "python3 scripts/verify_domain_registry.py",
+    "check:integrations": "python3 scripts/verify_integrations_registry.py",
     "check:phase6:sequence1": "bash scripts/ci/run-cross-repo-harness-mvp.sh",
     "prepublishOnly": "node -e \"console.error('pnpm publish is disabled for now in this repository; use Git tags and GitHub Releases.'); process.exit(1)\"",
     "kb:ingest": "tsx scripts/kb/ingest-github.ts",

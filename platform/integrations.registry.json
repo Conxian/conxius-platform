@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "2026-08-26",
+  "purpose": "Authoritative cross-session integration contract for conxius-platform",
+  "integrations": [
+    {
+      "id": "neon",
+      "provider": "Neon",
+      "role": "primary relational application database and Better Auth backing store",
+      "canonicalEnv": "NEON_DATABASE_URL",
+      "aliases": ["DATABASE_URL", "POSTGRES_URL", "NEON_POSTGRES_URL"],
+      "secretEnvs": ["NEON_DATABASE_URL", "NEON_PGPASSWORD", "POSTGRES_PASSWORD"],
+      "owner": "platform-data",
+      "production": true,
+      "fallback": "none",
+      "migrationPolicy": "explicit migration artifact and owner approval required"
+    },
+    {
+      "id": "supabase",
+      "provider": "Supabase",
+      "role": "explicitly assigned auth, data, storage, or realtime workloads with RLS",
+      "canonicalEnv": "NEXT_PUBLIC_SUPABASE_URL",
+      "aliases": ["SUPABASE_URL"],
+      "secretEnvs": ["SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_SECRET_KEY", "SUPABASE_JWT_SECRET"],
+      "owner": "platform-data",
+      "production": true,
+      "fallback": "none",
+      "migrationPolicy": "schema MCP and RLS verification required before changes"
+    },
+    {
+      "id": "upstash-redis",
+      "provider": "Upstash for Redis",
+      "role": "ephemeral cache, rate limiting, queues, or sessions only",
+      "canonicalEnv": "UPSTASH_KV_KV_REST_API_URL",
+      "aliases": ["UPSTASH_KV_KV_URL", "UPSTASH_KV_REDIS_URL", "REDIS_URL"],
+      "secretEnvs": ["UPSTASH_KV_KV_REST_API_TOKEN", "UPSTASH_KV_KV_REST_API_READ_ONLY_TOKEN"],
+      "owner": "platform-runtime",
+      "production": true,
+      "fallback": "unknown/unavailable",
+      "migrationPolicy": "never use as primary business database"
+    },
+    {
+      "id": "aurora-postgresql",
+      "provider": "Amazon Aurora PostgreSQL",
+      "role": "AWS-owned relational workload only when explicitly assigned",
+      "canonicalEnv": "AWS_APG_PGHOST",
+      "aliases": ["AWS_APG_AWS_RESOURCE_ARN", "AWS_APG_PGDATABASE"],
+      "secretEnvs": ["AWS_APG_PGUSER", "AWS_APG_AWS_ROLE_ARN"],
+      "owner": "platform-infrastructure",
+      "production": true,
+      "fallback": "none",
+      "migrationPolicy": "AWS integration and owner approval required"
+    },
+    {
+      "id": "gateway",
+      "provider": "Conxian Gateway",
+      "role": "server-only live API and telemetry upstream",
+      "canonicalEnv": "GATEWAY_URL",
+      "aliases": ["CORE_API_URL", "NEXT_PUBLIC_CORE_API_URL"],
+      "secretEnvs": ["GATEWAY_ADMIN_API_KEY", "SERVICE_KEY_GATEWAY"],
+      "owner": "gateway-owner",
+      "production": true,
+      "fallback": "unknown/unavailable",
+      "migrationPolicy": "typed contract and timeout required"
+    }
+  ],
+  "continuityRules": [
+    "Re-check connected integrations before every integration-dependent change.",
+    "Never commit, print, or expose secret values; only report configured/missing status.",
+    "Do not infer schema or perform migrations when schema access is unavailable.",
+    "Every user-data query must be scoped to the authenticated user where applicable.",
+    "Production UI must show live provenance or unavailable state, never fabricated fallback data."
+  ]
+}

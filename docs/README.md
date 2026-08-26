@@ -21,6 +21,7 @@ This index routes readers through the four-tier model defined by the [Informatio
 - [Deployment Promotion Model](./DEPLOYMENT_PROMOTION_MODEL.md) — release promotion controls
 - [Runbooks](./runbooks/) — current operator procedures and checklists
 - [Platform API Setup](./runbooks/PLATFORM_API_SETUP_RUNBOOK_2026.md) — live upstream configuration and readiness verification
+- [Integration Continuity](./runbooks/INTEGRATION_CONTINUITY_RUNBOOK_2026.md) — canonical provider matrix and cross-session setup
 - [Conxian Domain Migration](./runbooks/CONXIAN_DOMAIN_MIGRATION_2026.md) — approved hostnames, staging, cutover, and retirement procedure
 - [Domain Repository Checklist](./runbooks/CONXIAN_DOMAIN_REPOSITORY_CHECKLIST_2026.md) — coordinated issue and PR acceptance criteria
 - [Active OpenSpec Changes](../openspec/changes/) — change-specific execution artifacts

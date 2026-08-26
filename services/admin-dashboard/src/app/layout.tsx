@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import React from "react";
 import { RealityStatus } from "../components/reality-status";
+import { ServiceFabric } from "../components/service-fabric";
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
@@ -14,7 +15,9 @@ export const metadata: Metadata = {
 
 const navigation = [
   ["Overview", "/"],
+  ["Services", "/services"],
   ["Pulse", "/multidimensional"],
+
   ["Launch", "/launch"],
   ["Steward", "/steward"],
   ["Claims", "/claims"],

@@ -10,6 +10,7 @@ This index routes readers through the four-tier model defined by the [Informatio
 - [Repository Taxonomy](./REPOSITORY_TAXONOMY.md) — repository inventory and boundaries
 - [Organization PaaS Blueprint](./architecture/ORGANIZATION_PAAS_BLUEPRINT_2026.md) — control-plane role, contracts, and delivery roadmap
 - [Organization Lifecycle Audit](./audits/2026-08-26-organization-lifecycle-audit.md) — repository/service inventory and removal criteria
+- [Live Data and Retirement Register](./audits/2026-08-26-live-data-retirement-register.md) — synthetic-data remediation and non-destructive retirement actions
 - [Governance](../GOVERNANCE.md) — decision rights and governance lanes
 - [Whitepaper](./WHITEPAPER.md) — project thesis and vision
 

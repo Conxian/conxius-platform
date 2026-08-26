@@ -89,6 +89,26 @@
 - Cross-repository manifest/verification fixtures and compatibility matrices remain to be coordinated with owning repositories.
 - Docker/Compose runtime validation requires a Docker-enabled runner.
 
+### 2026-08-26 — Live Data and Retirement Remediation
+**Trigger**: User approved removal of synthetic production surfaces and alignment to a neutral PaaS control plane.
+
+**What was done**:
+- Added OpenSpec proposal `openspec/changes/2026-08-26-live-data-remediation/proposal.md`.
+- Replaced hardcoded multidimensional metrics with a no-store Gateway `/api/v1/metrics` adapter.
+- Added explicit live/unavailable source and observation metadata.
+- Removed the rendered usage simulator, FDC3 panel, and BOS stub from the multidimensional dashboard.
+- Added `docs/audits/2026-08-26-live-data-retirement-register.md` with non-destructive organization retirement actions.
+
+**Key discoveries**:
+- The configured Gateway endpoint is not available to the local dashboard runtime, so the metrics route correctly returns HTTP 503 rather than fabricated values.
+- Test-only mocks remain in tests; remaining production simulation/deprecation markers require separate owner-approved migrations.
+- External repository deletion/archive was not performed; retirement actions are documented for owner coordination.
+
+**Gaps identified**:
+- Gateway `/api/v1/metrics` contract must be confirmed by the Gateway owner.
+- Organization-wide live adapters require each source repository's supported read contract and credentials.
+- GitHub Projects access and Docker/Compose runtime verification remain environment-dependent.
+
 ### 2026-08-26 — Full Connection Audit Follow-up
 **Trigger**: User-approved audit of databases, app integrations, knowledge bases, agents, and docs.
 

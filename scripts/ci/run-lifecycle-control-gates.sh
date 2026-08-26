@@ -43,6 +43,7 @@ run_check() {
   fi
 }
 
+run_check "verify_service_catalog" python3 scripts/verify_service_catalog.py
 run_check "verify_lifecycle_control_gates" python3 scripts/verify_lifecycle_control_gates.py
 run_check "verify_bos_production_boundary" python3 scripts/verify_bos_production_boundary.py
 run_check "verify_submodule_integrity" python3 scripts/verify_submodule_integrity.py

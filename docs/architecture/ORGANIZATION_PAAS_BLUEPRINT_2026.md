@@ -5,6 +5,8 @@
 
 The target operating model is **declarative and Git/CI/GitOps-first**. A portal may generate or review a manifest, but deployment execution belongs to the deployment lane and infrastructure reconciler, not to browser code. This aligns with the industry pattern of a service catalog/portal, Git-based desired state, a reconciler, and observable verification evidence.
 
+The machine-readable local catalog is [`platform/services.catalog.json`](../../platform/services.catalog.json) and is enforced by `pnpm run check:service-catalog`.
+
 ## Repository capability map
 
 | Repository | PaaS relationship | Owns | Must not own |

@@ -71,6 +71,24 @@
 **Gotchas**:
 - Backstage, Argo CD, and Crossplane are reference patterns, not immediate authorities; contract and evidence foundations come first.
 
+### 2026-08-26 — Organization Lifecycle Audit
+**Trigger**: User approved a full organization repository, service, issue, PR, and project alignment review.
+
+**What was done**:
+- Added machine-readable local service catalog `platform/services.catalog.json`.
+- Added `scripts/verify_service_catalog.py` and wired it into the lifecycle gate and reusable CI workflow.
+- Added `docs/audits/2026-08-26-organization-lifecycle-audit.md` and linked it from `docs/README.md`.
+
+**Key discoveries**:
+- Local services are `admin-dashboard` (active), `admin-pulse-bos` (source-consumed), and `elizaos-plugin-conxian` (active).
+- `conxius-orbit` is archived upstream and must be treated as a compatibility dependency until ownership confirms replacement.
+- No local service is safe to delete yet under the required evidence policy; low activity alone is insufficient.
+- GitHub Projects could not be enumerated with the current token because `projectsV2` access is unavailable.
+
+**Gaps identified**:
+- Cross-repository manifest/verification fixtures and compatibility matrices remain to be coordinated with owning repositories.
+- Docker/Compose runtime validation requires a Docker-enabled runner.
+
 ### 2026-08-26 — Full Connection Audit Follow-up
 **Trigger**: User-approved audit of databases, app integrations, knowledge bases, agents, and docs.
 

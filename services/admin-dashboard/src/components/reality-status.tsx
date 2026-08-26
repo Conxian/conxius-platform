@@ -5,10 +5,10 @@ export function RealityStatus() {
     <aside className="reality-status" aria-label="Platform reality status">
       <div className="reality-status__signal" aria-hidden="true" />
       <div className="reality-status__copy">
-        <strong>Evidence-scoped control plane</strong>
+        <strong>Evidence-scoped Conxian Platform</strong>
         <span>Live sources are shown only when configured and verified. Unavailable providers are never simulated.</span>
       </div>
-      <Link href="/settings" className="reality-status__link">Review sources</Link>
+      <Link href="/status" className="reality-status__link">Review platform status</Link>
     </aside>
   );
 }

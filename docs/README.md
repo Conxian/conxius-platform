@@ -8,7 +8,7 @@ This index routes readers through the four-tier model defined by the [Informatio
 - [System Architecture](./architecture/SOVEREIGN_REPR_2026.md) — current architecture baseline
 - [Strategic Alignment](./architecture/ALIGNMENT.md) — ecosystem positioning
 - [Repository Taxonomy](./REPOSITORY_TAXONOMY.md) — repository inventory and boundaries
-- [Organization PaaS Blueprint](./architecture/ORGANIZATION_PAAS_BLUEPRINT_2026.md) — control-plane role, contracts, and delivery roadmap
+- [Organization PaaS Blueprint](./architecture/ORGANIZATION_PAAS_BLUEPRINT_2026.md) — platform role, contracts, and delivery roadmap
 - [Upgrade Alignment Contract](./architecture/UPGRADE_ALIGNMENT_CONTRACT_2026.md) — versioning, capabilities, evidence, and neutral M2M boundaries
 - [Platform Economy Policy](./architecture/PLATFORM_ECONOMY_POLICY_2026.md) — non-custodial, economically neutral platform rules
 - [Organization Service Capability Review](./audits/2026-08-26-organization-service-capability-review.md) — repository roles, capability ownership, and evidence requirements
@@ -18,6 +18,7 @@ This index routes readers through the four-tier model defined by the [Informatio
 - [Page and Organization Surface Audit](./audits/2026-08-26-page-and-organization-surface-audit.md) — all dashboard routes, shared UX, and cross-repository evidence
 - [Orbit and Gateway Migration Review](./audits/2026-08-26-orbit-and-gateway-migration-review.md) — archived dependency retirement and decentralized Gateway replacement
 - [Live Data and Retirement Register](./audits/2026-08-26-live-data-retirement-register.md) — synthetic-data remediation and non-destructive retirement actions
+- [Organization and Connected Surface Alignment](./audits/2026-08-26-organization-connected-surface-alignment.md) — organization inventory, canonical configuration, and connected-surface evidence
 - [Governance](../GOVERNANCE.md) — decision rights and governance lanes
 - [Whitepaper](./WHITEPAPER.md) — project thesis and vision
 

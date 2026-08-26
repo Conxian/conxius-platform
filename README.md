@@ -1,10 +1,10 @@
 # Conxius Platform
 
-The `conxius-platform` repository contains development and control-plane scaffolding for composing parts of the Conxian stack locally and in managed environments.
+The `conxius-platform` repository contains platform composition and lifecycle scaffolding for composing parts of the Conxian stack locally and in managed environments.
 
 ## Status
 
-**Active development.** This is a platform control-plane repository and should be read primarily as contributor and operator infrastructure rather than as an end-user product surface.
+**Active development.** This is a Conxian Platform repository and should be read primarily as contributor and operator infrastructure rather than as an end-user product surface.
 
 This repository uses formal versioned releases tracked in `CHANGELOG.md` and published via GitHub Releases.
 
@@ -27,7 +27,7 @@ See [SESSION.md](SESSION.md) for the session standard — the enforcement baseli
 Use this repository if you need:
 
 - local or managed environment scaffolding
-- control-plane and orchestration assets
+- platform orchestration and lifecycle assets
 - CI and release automation references
 - developer tooling that spans multiple Conxian repositories
 
@@ -39,7 +39,7 @@ GitHub Actions workflows in [`.github/workflows`](./.github/workflows) are the s
 
 ## Scope
 
-`conxius-platform` is a platform control-plane repository. Keep root-level content focused on:
+`conxius-platform` is a Conxian Platform repository. Keep root-level content focused on:
 
 - environment and runtime orchestration
 - CI and release automation
@@ -96,7 +96,7 @@ make start
 make bench
 ```
 
-This starts the local Compose control-plane/integration harness, not a full
+This starts the local Compose platform/integration harness, not a full
 protocol or production stack. The direct Admin Dashboard defaults to
 `http://localhost:3001`; the Compose dashboard is `http://localhost:3002`,
 while Compose Grafana uses `http://localhost:3001`. See

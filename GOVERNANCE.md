@@ -84,13 +84,13 @@ Historical documents are **strictly read-only**. They must never be cited as aut
 
 ## Repository boundary
 
-`conxius-platform` is the declarative control plane repository for the Conxian ecosystem. It owns the orchestration and operator surfaces, while core protocol logic remains in its respective source repositories. See [`docs/PRODUCTION_BOUNDARY.md`](./docs/PRODUCTION_BOUNDARY.md).
+`conxius-platform` is the declarative Conxian Platform repository for the Conxian ecosystem. It owns the orchestration and operator surfaces, while core protocol logic remains in its respective source repositories. See [`docs/PRODUCTION_BOUNDARY.md`](./docs/PRODUCTION_BOUNDARY.md).
 
 ## Cross-repository control alignment (ITIL V5 Root-to-Leaf)
 
 - Chain-specific deployment/operator repositories (including Conxius Orbit in `Conxian/conxius-orbit`) must align to the parent lifecycle and root-to-leaf control model (ITIL V5) defined by this repository.
 - This alignment is an operational policy baseline only; it does not transfer code-review/merge authority across repositories.
-- Operator setup and deployment-policy changes in those repositories must reference a parent control-plane issue/spec and use parent-approved runbook evidence.
+- Operator setup and deployment-policy changes in those repositories must reference a parent platform issue/spec and use parent-approved runbook evidence.
 - Trust assumption: operator surfaces are treated as untrusted by default and must never require protocol-signing key custody.
 - Scope boundary: deployment/operator repositories must not expand into broad protocol ownership; protocol-state/business-logic changes remain in their owning repositories.
 

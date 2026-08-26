@@ -62,6 +62,14 @@ const connections = [
     nextAction: "Select one authoritative SQL store and document failover ownership.",
   },
   {
+    name: "ERP attestation / Nostr",
+    owner: "Platform evidence adapters",
+    contract: "Attestation trust and relay observation",
+    environment: ["ERP_ATTESTATION_TRUSTED_KEYS_JSON", "NOSTR_RELAYS"],
+    boundary: "Evidence and relay observation only; no custody or protocol authority.",
+    nextAction: "Verify trust material and relay response freshness.",
+  },
+  {
     name: "Stacks / Oracle / Tableland / Kwil",
     owner: "External protocol providers",
     contract: "Protocol and data-plane adapters",

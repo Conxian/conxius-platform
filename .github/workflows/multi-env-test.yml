@@ -4,7 +4,7 @@ permissions:
   contents: read
 
 # Multi-environment deployment testing per Issue #968
-# Demonstrates control-plane deployment orchestration capabilities
+# Demonstrates Conxian Platform deployment orchestration capabilities
 # See: .github/CONXIUS_CICD_BASELINE.md
 
 on:

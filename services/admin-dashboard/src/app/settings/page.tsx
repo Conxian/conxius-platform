@@ -1,155 +1,23 @@
-"use client";
-import React, { useState } from "react";
+import { getConnectionEvidence } from "../../lib/connection-evidence";
+import { getLiveProviderStatus, type LiveState } from "../../lib/live-provider-status";
 
-function SecretInput({
-  label,
-  name,
-  value,
-  onChange,
-}: {
-  label: string;
-  name: string;
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-}) {
+const labels: Record<LiveState, string> = { reachable: "Reachable", degraded: "Degraded", unavailable: "Unavailable", "not-configured": "Not configured" };
+
+export const dynamic = "force-dynamic";
+
+export default async function ConxianStatusPage() {
+  const [evidence, live] = await Promise.all([Promise.resolve(getConnectionEvidence()), getLiveProviderStatus()]);
+  const liveByName = new Map(live.map((item) => [item.name, item]));
+  const reachable = live.filter((item) => item.state === "reachable").length;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-      <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#444' }}>{label}</label>
-      <input 
-        type="password"
-        name={name}
-        value={value}
-        onChange={onChange}
-        style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
-        autoComplete="off"
-      />
-    </div>
+    <main className="settings-page status-page">
+      <header className="settings-header"><p className="eyebrow">ConxianStatus · live operational view</p><h1>Platform status</h1><p className="settings-intro">Bounded connectivity evidence for platform services and external providers. Configuration alone never counts as healthy.</p></header>
+      <section className="status-hero" aria-labelledby="status-summary-title"><div><p className="eyebrow">Current posture</p><h2 id="status-summary-title">Live evidence, safely reported</h2><p>Each configured endpoint is checked with a five-second timeout. Credentials and response bodies are never exposed.</p><div className="status-links"><a href="/connections">Connection contracts</a><a href="/operations">Operations</a><a href="/api/status">Machine-readable status</a></div></div><div className="status-summary" aria-label="Status summary"><div><strong>{reachable}</strong><span>reachable</span></div><div><strong>{live.length - reachable}</strong><span>needs attention</span></div></div></section>
+      <section className="settings-panel" aria-labelledby="dependency-title"><div className="settings-panel-heading"><div><p className="eyebrow">Dependency register</p><h2 id="dependency-title">Service connections</h2></div><span className="inventory-count">Checked live at request time</span></div><div className="connection-list">{evidence.map((connection) => { const current = liveByName.get(connection.name); const state = current?.state ?? "not-configured"; return <article className="connection-row" key={connection.name}><div><h3>{connection.name}</h3><p>{connection.contract}</p><p>{current?.detail ?? connection.nextAction}</p></div><div className="connection-meta"><span>{current?.latencyMs == null ? "—" : `${current.latencyMs} ms`}</span><span className={`status-badge status-${state}`}>{labels[state]}</span></div></article>; })}</div></section>
+      <section className="settings-panel settings-guidance" aria-labelledby="boundary-title"><p className="eyebrow">Platform boundary</p><h2 id="boundary-title">What this page can prove</h2><p>The platform can report whether a declared endpoint responded within a bounded window. Provider execution, protocol authority, custody, wallet operations, and business data remain owned by their respective services.</p><div className="status-links"><a href="/support">Open support</a><a href="/services">Review service catalog</a></div></section>
+    </main>
   );
 }
 
-export default function SettingsPage() {
-  const [secrets, setSecrets] = useState({
-    ADMIN_PAT_TOKEN: "",
-    ADMIN_PNPM_TOKEN: "",
-    ADMIN_PYPI_API_TOKEN: "",
-    ADMIN_GCP_SA_KEY_JSON: "",
-    ADMIN_CHANGELLY_API_ID: "",
-    ADMIN_CHANGELLY_API_SEC: "",
-    SUPPORT_IMAP_PWD: "",
-    SUPPORT_SMTP_PWD: "",
-    SUPPORT_LINEAR_TOKEN: ""
-  });
-  const [adminApiKey, setAdminApiKey] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setSecrets({ ...secrets, [e.target.name]: e.target.value });
-  };
-
-  const handleSave = async () => {
-    if (!adminApiKey) {
-      alert("Please provide the Admin Dashboard API Key.");
-      return;
-    }
-
-    setLoading(true);
-    setMessage(null);
-    try {
-      const res = await fetch("/api/secrets", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Admin-API-Key": adminApiKey
-        },
-        body: JSON.stringify({ secrets })
-      });
-      if (res.ok) {
-        setMessage({ text: "Settings saved successfully", type: 'success' });
-        setTimeout(() => setMessage(null), 5000);
-      } else {
-        const err = await res.json();
-        setMessage({ text: `Failed to save settings: ${err.error}`, type: 'error' });
-      }
-    } catch (err: unknown) {
-      console.error(err);
-      setMessage({ text: `Error: ${err instanceof Error ? err.message : String(err)}`, type: 'error' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-      <h2 style={{ color: '#2E403B', marginBottom: '1.5rem' }}>Platform Admin Settings</h2>
-      <div style={{ backgroundColor: "#fef2f2", border: "1px solid #fee2e2", padding: "1rem", borderRadius: "8px", marginBottom: "2rem", color: "#b91c1c", fontSize: "0.9rem" }}>
-        <p style={{ margin: 0, fontWeight: "bold" }}>HIGH PRIVILEGE AREA</p>
-        <p style={{ margin: "0.25rem 0 0 0" }}>Managing these secrets affects automated deployments, support intake, and exchange integrations. Ensure you are authorized to make these changes.</p>
-      </div>
-      
-      <section style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', marginBottom: '2rem' }}>
-        <h3 style={{ marginTop: 0, color: '#D4A017', fontSize: '1.2rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem' }}>Authentication</h3>
-        <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1.5rem' }}>Provide the management API key to authorize changes.</p>
-        <div style={{ marginBottom: '1.5rem' }}>
-          <SecretInput
-            label="Admin Dashboard API Key"
-            name="adminApiKey"
-            value={adminApiKey}
-            onChange={(e) => setAdminApiKey(e.target.value)}
-          />
-        </div>
-
-        <h3 style={{ marginTop: '2rem', color: '#D4A017', fontSize: '1.2rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem' }}>Institutional Secrets</h3>
-        <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1.5rem' }}>These secrets are required for automated deployments (pnpm, PyPI, GCP) and exchange integrations.</p>
-        
-        <div style={{ display: 'grid', gap: '1rem' }}>
-          <SecretInput label="GitHub PAT Token" name="ADMIN_PAT_TOKEN" value={secrets.ADMIN_PAT_TOKEN} onChange={handleChange} />
-          <SecretInput label="pnpm Registry Token" name="ADMIN_PNPM_TOKEN" value={secrets.ADMIN_PNPM_TOKEN} onChange={handleChange} />
-          <SecretInput label="PyPI API Token" name="ADMIN_PYPI_API_TOKEN" value={secrets.ADMIN_PYPI_API_TOKEN} onChange={handleChange} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-            <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#444' }}>GCP Service Account Key (JSON)</label>
-            <textarea 
-              name="ADMIN_GCP_SA_KEY_JSON" 
-              value={secrets.ADMIN_GCP_SA_KEY_JSON} 
-              onChange={handleChange}
-              rows={4}
-              style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', fontFamily: 'monospace', fontSize: '0.8rem' }}
-              placeholder='{ "type": "service_account", "project_id": "..." }'
-            />
-          </div>
-          <SecretInput label="Changelly API Key" name="ADMIN_CHANGELLY_API_ID" value={secrets.ADMIN_CHANGELLY_API_ID} onChange={handleChange} />
-          <SecretInput label="Changelly API Secret" name="ADMIN_CHANGELLY_API_SEC" value={secrets.ADMIN_CHANGELLY_API_SEC} onChange={handleChange} />
-        </div>
-
-        <h3 style={{ marginTop: '2rem', color: '#D4A017', fontSize: '1.2rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem' }}>Support & Intake</h3>
-        <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1.5rem' }}>Configuration for the automated support mailbox and Linear integration.</p>
-
-        <div style={{ display: 'grid', gap: '1rem' }}>
-          <SecretInput label="Support IMAP Password" name="SUPPORT_IMAP_PWD" value={secrets.SUPPORT_IMAP_PWD} onChange={handleChange} />
-          <SecretInput label="Support SMTP Password" name="SUPPORT_SMTP_PWD" value={secrets.SUPPORT_SMTP_PWD} onChange={handleChange} />
-          <SecretInput label="Support Linear API Key" name="SUPPORT_LINEAR_TOKEN" value={secrets.SUPPORT_LINEAR_TOKEN} onChange={handleChange} />
-        </div>
-      </section>
-
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', alignItems: 'center' }}>
-        {message && <span style={{ color: message.type === 'success' ? '#2E403B' : '#b91c1c', fontWeight: 'bold' }}>{message.text}</span>}
-        <button 
-          onClick={handleSave}
-          disabled={loading}
-          style={{
-            padding: '0.8rem 2rem',
-            backgroundColor: loading ? '#ccc' : '#2E403B',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            fontWeight: 'bold',
-            cursor: loading ? 'default' : 'pointer',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-          }}
-        >
-          {loading ? "Saving..." : "Save Configuration"}
-        </button>
-      </div>
-    </div>
-  );
-}
+export { ConxianStatusPage };

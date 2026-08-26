@@ -20,6 +20,33 @@
 - **Orbit CLI (Python canonical, Node wrapper)**: The canonical CLI surface is Python (`conxius_orbit_cli.py`). The Node.js binary (`conxius-orbit`) is a wrapper that delegates core operations (deploy, monitor, verify, dashboard, diagnose, detect) to Python. Automation and CI paths should target the Node binary entry point as the stable user-facing contract.
 - **Rust toolchain**: 1.97.1 minimum.
 
+## Session Log
+
+### 2026-08-26 — Repository and Service Readiness Audit
+**Trigger**: User requested a full repository, services, workflow, and functionality review with remediation.
+
+**What was done**:
+- Audited repository discovery, open issues/PRs, service manifests, service entrypoints, workflows, Compose configuration, and gap markers.
+- Added OpenSpec proposal `openspec/changes/2026-08-26-service-readiness-audit/proposal.md`.
+- Corrected default nginx placeholder health probes and removed a false no-op lint success script.
+- Declared the Next.js dashboard package as ESM to remove its module-mode build warning.
+- Verified frozen install, dependency consistency, tests, typechecks, and builds.
+
+**Key discoveries**:
+- Three executable workspace services/packages are present: admin-dashboard, admin-pulse-bos, and elizaos-plugin-conxian.
+- Docker is unavailable in the sandbox, so Compose startup could not be executed locally.
+- Gateway and UI Compose images are intentionally external dependency slots; defaults remain nginx placeholders.
+- The admin-dashboard build still reports a non-fatal NFT tracing warning caused by required filesystem-backed M2M registry logic.
+
+**Files touched**: `docker-compose.yml`, `services/admin-dashboard/package.json`, `services/admin-pulse-bos/package.json`, `openspec/changes/2026-08-26-service-readiness-audit/proposal.md`, `AGENTS.md`
+
+**Gaps identified**:
+- Docker/Compose runtime verification requires a Docker-enabled runner.
+- External Gateway/UI images and protocol services are outside this repository boundary.
+
+**Gotchas**:
+- The root `lint` command skips packages without configured lint scripts rather than reporting a successful placeholder lint.
+
 ## Repository Knowledge Graph (Current)
 
 | Crate | Path | Role |

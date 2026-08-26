@@ -12,6 +12,7 @@ This index routes readers through the four-tier model defined by the [Informatio
 - [Upgrade Alignment Contract](./architecture/UPGRADE_ALIGNMENT_CONTRACT_2026.md) — versioning, capabilities, evidence, and neutral M2M boundaries
 - [Platform Economy Policy](./architecture/PLATFORM_ECONOMY_POLICY_2026.md) — non-custodial, economically neutral platform rules
 - [Organization Service Capability Review](./audits/2026-08-26-organization-service-capability-review.md) — repository roles, capability ownership, and evidence requirements
+- [End-to-End ITIL 4 Connection Review](./audits/2026-08-26-end-to-end-itil-connection-review.md) — service configuration, connection chains, and operating practices
 - [Organization Lifecycle Audit](./audits/2026-08-26-organization-lifecycle-audit.md) — repository/service inventory and removal criteria
 - [Cross-Repository Platform Readiness Audit](./audits/2026-08-26-platform-readiness-audit.md) — organization inventory, verified controls, and owner-coordinated gaps
 - [Page and Organization Surface Audit](./audits/2026-08-26-page-and-organization-surface-audit.md) — all dashboard routes, shared UX, and cross-repository evidence

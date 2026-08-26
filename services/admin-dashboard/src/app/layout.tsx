@@ -16,17 +16,10 @@ export const metadata: Metadata = {
 const navigation = [
   ["Overview", "/"],
   ["Services", "/services"],
+  ["Connections", "/connections"],
+  ["Operations", "/operations"],
   ["Pulse", "/multidimensional"],
 
-  ["Launch", "/launch"],
-  ["Steward", "/steward"],
-  ["Claims", "/claims"],
-  ["Funded roles", "/funded-roles"],
-  ["Proposals", "/proposal-templates"],
-  ["Rewards", "/rewards"],
-  ["Operators", "/operators"],
-  ["Frontends", "/frontends"],
-  ["Tiers", "/tiers"],
   ["Support", "/support"],
   ["Settings", "/settings"],
 ] as const;

@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { validateAdminAuth } from "@/lib/support/auth";
 import {
   type ContributorProfile,
   type MintedTokenEntry,
@@ -64,9 +63,6 @@ function buildEmptyContributorProfile(address: string): ContributorProfile {
 }
 
 export async function GET(request: Request) {
-  const authError = await validateAdminAuth(request);
-  if (authError) return authError;
-
   const { searchParams } = new URL(request.url);
   const address = searchParams.get("address");
 

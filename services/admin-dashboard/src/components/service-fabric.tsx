@@ -9,7 +9,7 @@ type Service = {
 };
 
 const services: Service[] = [
-  { name: "conxius-platform", role: "Neutral control plane", owner: "Conxian/conxius-platform", state: "Active", boundary: "Orchestration, lifecycle, evidence" },
+  { name: "conxius-platform", role: "Platform composition and lifecycle", owner: "Conxian/conxius-platform", state: "Active", boundary: "Orchestration, lifecycle, evidence" },
   { name: "admin-dashboard", role: "Operator interface", owner: "conxius-platform", state: "Active", boundary: "Read-only operational visibility" },
   { name: "admin-pulse-bos", role: "Pulse component source", owner: "conxius-platform", state: "Active", boundary: "Typed UI components" },
   { name: "elizaos-plugin-conxian", role: "Agent adapter", owner: "conxius-platform", state: "Active", boundary: "Gateway-authenticated actions" },
@@ -31,7 +31,7 @@ export function ServiceFabric() {
       <div className="section-heading">
         <p className="eyebrow">Organization service map</p>
         <h2 id="service-fabric-title">Every capability has an owner</h2>
-        <p>All repositories remain preserved. This control plane reports boundaries and evidence; it does not claim ownership of external execution.</p>
+        <p>All repositories remain preserved. The platform reports boundaries and evidence; it does not claim ownership of external execution.</p>
       </div>
       <div className="service-fabric__grid">
         {services.map((service) => (
@@ -46,7 +46,7 @@ export function ServiceFabric() {
           </article>
         ))}
       </div>
-      <Link className="reality-status__link" href="/settings">Review configured sources and evidence</Link>
+      <Link className="reality-status__link" href="/status">Review platform status and evidence</Link>
     </section>
   );
 }

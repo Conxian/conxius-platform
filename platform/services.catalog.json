@@ -1,7 +1,8 @@
 {
   "schemaVersion": "1.0",
   "platformRepository": "Conxian/conxius-platform",
-  "purpose": "Organization PaaS control-plane service catalog",
+  "manifest": "platform/platform.manifest.json",
+  "purpose": "Conxian Platform service catalog for composition, lifecycle, evidence, and operator delivery",
   "services": [
     {
       "id": "admin-dashboard",

@@ -1,0 +1,16 @@
+{
+  "$schema": "./platform.manifest.schema.json",
+  "schemaVersion": "1.0",
+  "platform": "conxian",
+  "repository": "Conxian/conxius-platform",
+  "purpose": "Declarative composition, lifecycle, deployment intent, verification, telemetry, and operator experience for the Conxian ecosystem.",
+  "bitcoinNative": true,
+  "ownership": {
+    "owned": ["orchestration", "service-catalog", "lifecycle", "deployment-intent", "verification", "telemetry", "operator-experience"],
+    "external": ["gateway", "nexus", "protocol", "wallet", "custody", "signing", "business-authority"]
+  },
+  "lifecycle": ["design", "validate", "promote", "deploy", "verify", "observe", "retire"],
+  "evidencePolicy": "fail-closed",
+  "catalog": "platform/services.catalog.json",
+  "statusSurface": "https://conxian-labs.com/status"
+}

@@ -9,7 +9,7 @@ const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
-  title: "Conxian Admin | Operations Control Plane",
+  title: "Conxian Platform | Operations",
   description: "Evidence-scoped telemetry and lifecycle operations for the Conxian platform.",
 };
 
@@ -34,7 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <span className="brand-mark" aria-hidden="true">CX</span>
               <span>
                 <strong>CONXIAN</strong>
-                <small>ADMIN CONTROL PLANE</small>
+                <small>CONXIAN PLATFORM</small>
               </span>
             </a>
             <span className="environment-badge">TELEMETRY</span>

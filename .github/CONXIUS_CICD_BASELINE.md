@@ -1,6 +1,6 @@
 # Conxius Platform CI/CD Baseline (Issue #968)
 
-This document defines the control-plane, deployment orchestration, and GitOps ownership boundaries for the Conxius Platform repository, establishing org-wide CI/CD standards.
+This document defines the platform, deployment orchestration, and GitOps ownership boundaries for the Conxius Platform repository, establishing org-wide CI/CD standards.
 
 ## 1. Core Principles
 
@@ -19,7 +19,7 @@ The Conxius Platform repository owns:
 - Operator/admin services that ship from this repo (e.g., `services/admin-dashboard`)
 - Secrets provisioning and operator tooling
 - Orchestration wiring (submodule pins, `docker-compose.yml`, CI workflows)
-- Deployment orchestration for control-plane services
+- Deployment orchestration for platform services
 
 The Conxius Platform must NOT own:
 - Core Nexus/Gateway production logic (belongs in their respective repositories)
@@ -193,14 +193,14 @@ Repositories inheriting from this baseline must:
 2. Near-term: Enhanced environment protection + approval gates
 3. Target: GitOps-based declarative infrastructure
 
-### 7.3 Deployment Promotion and Control-Plane Boundary
-The `conxius-platform` repository serves as the control plane for deployment promotion across Conxian repositories. See [`docs/DEPLOYMENT_PROMOTION_MODEL.md`](../docs/DEPLOYMENT_PROMOTION_MODEL.md) for:
+### 7.3 Deployment Promotion and Platform Boundary
+The `conxius-platform` repository serves as the platform spine for deployment promotion across Conxian repositories. See [`docs/DEPLOYMENT_PROMOTION_MODEL.md`](../docs/DEPLOYMENT_PROMOTION_MODEL.md) for:
 - The three-tier boundary between repo CI, release orchestration, and deployment promotion
 - Environment promotion ladder and gating rules
 - Cross-repo coordination patterns
 - Where GitOps manifests live and how they are promoted
 
-Application repositories must not self-deploy to production directly from CI. Production changes must route through the control plane's promotion model.
+Application repositories must not self-deploy to production directly from CI. Production changes must route through the platform's promotion model.
 
 ### 7.4 Shared Deployment Schemas
 Cross-repo deployment artifacts use standardized schemas defined in [`schemas/`](../schemas/):

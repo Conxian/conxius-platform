@@ -41,23 +41,14 @@ describe('Admin API Auth (CON-353)', () => {
   });
 
   describe('Secrets API', () => {
-    it('should return 401 if X-Admin-API-Key header is missing', async () => {
+    it('should reject the deprecated local secret writer', async () => {
       const req = new Request('http://localhost/api/secrets', {
         method: 'POST',
         body: JSON.stringify({ secrets: {} }),
       });
       const response = await postSecrets(req);
-      expect(response.status).toBe(401);
-    });
-
-    it('should return 401 if X-Admin-API-Key header is incorrect', async () => {
-      const req = new Request('http://localhost/api/secrets', {
-        method: 'POST',
-        headers: { 'X-Admin-API-Key': 'wrong-key' },
-        body: JSON.stringify({ secrets: {} }),
-      });
-      const response = await postSecrets(req);
-      expect(response.status).toBe(401);
+      expect(response.status).toBe(410);
+      expect(await response.json()).toMatchObject({ success: false });
     });
   });
 

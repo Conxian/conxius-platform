@@ -1,155 +1,80 @@
 "use client";
-import React, { useState } from "react";
 
-function SecretInput({
-  label,
-  name,
-  value,
-  onChange,
-}: {
-  label: string;
+import React from "react";
+
+type ConnectionStatus = "configured" | "missing" | "unverified";
+
+type Connection = {
   name: string;
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-}) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-      <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#444' }}>{label}</label>
-      <input 
-        type="password"
-        name={name}
-        value={value}
-        onChange={onChange}
-        style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
-        autoComplete="off"
-      />
-    </div>
-  );
+  owner: string;
+  source: string;
+  status: ConnectionStatus;
+  detail: string;
+};
+
+const connections: Connection[] = [
+  { name: "Admin dashboard", owner: "conxius-platform", source: "Vercel environment", status: "configured", detail: "ADMIN_DASHBOARD_API_KEY" },
+  { name: "Neon Postgres", owner: "Platform data services", source: "Neon integration", status: "configured", detail: "DATABASE_URL / NEON_DATABASE_URL" },
+  { name: "Supabase", owner: "Owned source repository", source: "Supabase integration", status: "configured", detail: "SUPABASE_URL and publishable credentials" },
+  { name: "Upstash", owner: "Ephemeral infrastructure", source: "Upstash integration", status: "configured", detail: "REST endpoint and runtime token" },
+  { name: "Gateway", owner: "Gateway repository", source: "Vercel environment", status: "unverified", detail: "GATEWAY_URL is configured; authenticated contract check required" },
+  { name: "Nexus", owner: "Nexus repository", source: "Vercel environment", status: "unverified", detail: "NEXUS_ADMIN_API_TOKEN is configured; endpoint evidence required" },
+  { name: "External protocol services", owner: "Owning repositories", source: "Service-specific configuration", status: "unverified", detail: "Oracle, Stacks, Tableland, and Kwil require owner evidence" },
+];
+
+function StatusBadge({ status }: { status: ConnectionStatus }) {
+  return <span className={`status-badge status-${status}`}>{status}</span>;
 }
 
 export default function SettingsPage() {
-  const [secrets, setSecrets] = useState({
-    ADMIN_PAT_TOKEN: "",
-    ADMIN_PNPM_TOKEN: "",
-    ADMIN_PYPI_API_TOKEN: "",
-    ADMIN_GCP_SA_KEY_JSON: "",
-    ADMIN_CHANGELLY_API_ID: "",
-    ADMIN_CHANGELLY_API_SEC: "",
-    SUPPORT_IMAP_PWD: "",
-    SUPPORT_SMTP_PWD: "",
-    SUPPORT_LINEAR_TOKEN: ""
-  });
-  const [adminApiKey, setAdminApiKey] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setSecrets({ ...secrets, [e.target.name]: e.target.value });
-  };
-
-  const handleSave = async () => {
-    if (!adminApiKey) {
-      alert("Please provide the Admin Dashboard API Key.");
-      return;
-    }
-
-    setLoading(true);
-    setMessage(null);
-    try {
-      const res = await fetch("/api/secrets", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Admin-API-Key": adminApiKey
-        },
-        body: JSON.stringify({ secrets })
-      });
-      if (res.ok) {
-        setMessage({ text: "Settings saved successfully", type: 'success' });
-        setTimeout(() => setMessage(null), 5000);
-      } else {
-        const err = await res.json();
-        setMessage({ text: `Failed to save settings: ${err.error}`, type: 'error' });
-      }
-    } catch (err: unknown) {
-      console.error(err);
-      setMessage({ text: `Error: ${err instanceof Error ? err.message : String(err)}`, type: 'error' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-      <h2 style={{ color: '#2E403B', marginBottom: '1.5rem' }}>Platform Admin Settings</h2>
-      <div style={{ backgroundColor: "#fef2f2", border: "1px solid #fee2e2", padding: "1rem", borderRadius: "8px", marginBottom: "2rem", color: "#b91c1c", fontSize: "0.9rem" }}>
-        <p style={{ margin: 0, fontWeight: "bold" }}>HIGH PRIVILEGE AREA</p>
-        <p style={{ margin: "0.25rem 0 0 0" }}>Managing these secrets affects automated deployments, support intake, and exchange integrations. Ensure you are authorized to make these changes.</p>
-      </div>
-      
-      <section style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', marginBottom: '2rem' }}>
-        <h3 style={{ marginTop: 0, color: '#D4A017', fontSize: '1.2rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem' }}>Authentication</h3>
-        <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1.5rem' }}>Provide the management API key to authorize changes.</p>
-        <div style={{ marginBottom: '1.5rem' }}>
-          <SecretInput
-            label="Admin Dashboard API Key"
-            name="adminApiKey"
-            value={adminApiKey}
-            onChange={(e) => setAdminApiKey(e.target.value)}
-          />
-        </div>
+    <main className="settings-page">
+      <header className="settings-header">
+        <p className="eyebrow">Platform configuration</p>
+        <h1>Settings</h1>
+        <p className="settings-intro">Configuration is managed by the owning Vercel project, integration, or repository. This page is intentionally read-only.</p>
+      </header>
 
-        <h3 style={{ marginTop: '2rem', color: '#D4A017', fontSize: '1.2rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem' }}>Institutional Secrets</h3>
-        <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1.5rem' }}>These secrets are required for automated deployments (pnpm, PyPI, GCP) and exchange integrations.</p>
-        
-        <div style={{ display: 'grid', gap: '1rem' }}>
-          <SecretInput label="GitHub PAT Token" name="ADMIN_PAT_TOKEN" value={secrets.ADMIN_PAT_TOKEN} onChange={handleChange} />
-          <SecretInput label="pnpm Registry Token" name="ADMIN_PNPM_TOKEN" value={secrets.ADMIN_PNPM_TOKEN} onChange={handleChange} />
-          <SecretInput label="PyPI API Token" name="ADMIN_PYPI_API_TOKEN" value={secrets.ADMIN_PYPI_API_TOKEN} onChange={handleChange} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-            <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#444' }}>GCP Service Account Key (JSON)</label>
-            <textarea 
-              name="ADMIN_GCP_SA_KEY_JSON" 
-              value={secrets.ADMIN_GCP_SA_KEY_JSON} 
-              onChange={handleChange}
-              rows={4}
-              style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', fontFamily: 'monospace', fontSize: '0.8rem' }}
-              placeholder='{ "type": "service_account", "project_id": "..." }'
-            />
+      <section className="settings-notice" aria-labelledby="settings-notice-title">
+        <h2 id="settings-notice-title">Secrets are not entered here</h2>
+        <p>Do not paste tokens, passwords, private keys, service-account JSON, or mailbox credentials into the dashboard. Use the project environment and connection controls so secrets remain scoped, auditable, and available to deployed runtimes.</p>
+      </section>
+
+      <section className="settings-panel" aria-labelledby="connection-inventory-title">
+        <div className="settings-panel-heading">
+          <div>
+            <p className="eyebrow">Source of truth</p>
+            <h2 id="connection-inventory-title">Connection inventory</h2>
           </div>
-          <SecretInput label="Changelly API Key" name="ADMIN_CHANGELLY_API_ID" value={secrets.ADMIN_CHANGELLY_API_ID} onChange={handleChange} />
-          <SecretInput label="Changelly API Secret" name="ADMIN_CHANGELLY_API_SEC" value={secrets.ADMIN_CHANGELLY_API_SEC} onChange={handleChange} />
+          <span className="inventory-count">{connections.length} surfaces</span>
         </div>
-
-        <h3 style={{ marginTop: '2rem', color: '#D4A017', fontSize: '1.2rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem' }}>Support & Intake</h3>
-        <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1.5rem' }}>Configuration for the automated support mailbox and Linear integration.</p>
-
-        <div style={{ display: 'grid', gap: '1rem' }}>
-          <SecretInput label="Support IMAP Password" name="SUPPORT_IMAP_PWD" value={secrets.SUPPORT_IMAP_PWD} onChange={handleChange} />
-          <SecretInput label="Support SMTP Password" name="SUPPORT_SMTP_PWD" value={secrets.SUPPORT_SMTP_PWD} onChange={handleChange} />
-          <SecretInput label="Support Linear API Key" name="SUPPORT_LINEAR_TOKEN" value={secrets.SUPPORT_LINEAR_TOKEN} onChange={handleChange} />
+        <div className="connection-list">
+          {connections.map((connection) => (
+            <article className="connection-row" key={connection.name}>
+              <div>
+                <h3>{connection.name}</h3>
+                <p>{connection.detail}</p>
+              </div>
+              <div className="connection-meta">
+                <span>{connection.owner}</span>
+                <span>{connection.source}</span>
+                <StatusBadge status={connection.status} />
+              </div>
+            </article>
+          ))}
         </div>
       </section>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', alignItems: 'center' }}>
-        {message && <span style={{ color: message.type === 'success' ? '#2E403B' : '#b91c1c', fontWeight: 'bold' }}>{message.text}</span>}
-        <button 
-          onClick={handleSave}
-          disabled={loading}
-          style={{
-            padding: '0.8rem 2rem',
-            backgroundColor: loading ? '#ccc' : '#2E403B',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            fontWeight: 'bold',
-            cursor: loading ? 'default' : 'pointer',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-          }}
-        >
-          {loading ? "Saving..." : "Save Configuration"}
-        </button>
-      </div>
-    </div>
+      <section className="settings-panel settings-guidance" aria-labelledby="settings-guidance-title">
+        <p className="eyebrow">Operational boundary</p>
+        <h2 id="settings-guidance-title">How to change configuration</h2>
+        <ul>
+          <li>Use Vercel project environment variables for runtime configuration.</li>
+          <li>Use managed integrations for Neon, Supabase, Upstash, and other connected services.</li>
+          <li>Use the owning repository workflow for CI, publishing, wallet, and protocol credentials.</li>
+          <li>Use authenticated health and contract checks before marking a dependency healthy.</li>
+        </ul>
+      </section>
+    </main>
   );
 }

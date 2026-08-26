@@ -41,8 +41,8 @@ def main() -> int:
         path = ROOT / service["path"]
         if not path.is_dir():
             fail(f"{service_id} path does not exist: {service['path']}")
-        if not service["ownerRepository"].startswith("Conxian/"):
-            fail(f"{service_id} has invalid owner repository")
+        if "/" not in service["ownerRepository"].strip():
+            fail(f"{service_id} has invalid owner repository identifier")
         if not service["contracts"]:
             fail(f"{service_id} must declare at least one contract")
         if not service["removalCriteria"].strip():

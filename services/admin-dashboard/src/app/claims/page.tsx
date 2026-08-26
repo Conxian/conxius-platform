@@ -119,7 +119,7 @@ export default function ClaimsPage() {
         artifactRef: {
           system: artifactSystem,
           id: artifactId,
-          url: artifactUrl || `https://github.com/Conxian/Conxian/issues/${artifactId}`,
+          url: artifactUrl || undefined,
         },
         category,
         impactMultiplierBps: impactMultiplier,
@@ -127,7 +127,7 @@ export default function ClaimsPage() {
         evidence: [
           {
             type: evidenceType,
-            uri: evidenceUri || `https://github.com/Conxian/Conxian/pull/${artifactId}`,
+            uri: evidenceUri || undefined,
             capturedAt: new Date().toISOString(),
           },
         ],

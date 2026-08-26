@@ -98,8 +98,10 @@ jobs:
           echo "✅ Admin Dashboard Dockerfile valid"
       - name: Validate Deployment Blueprint
         run: |
-          grep -q "pnpm start -- -p \$PORT --hostname 0.0.0.0" services/admin-dashboard/src/app/api/deployment/blueprint/route.ts
-          echo "✅ Blueprint remediations verified"
+          grep -q 'target: "configured-runtime-provider"' services/admin-dashboard/src/app/api/deployment/blueprint/route.ts
+          grep -q 'status: "Unavailable"' services/admin-dashboard/src/app/api/deployment/blueprint/route.ts
+          grep -q 'No provider-neutral deployment execution contract is configured' services/admin-dashboard/src/app/api/deployment/blueprint/route.ts
+          echo "✅ Provider-neutral blueprint verified"
 
   test-summary:
     name: Test Summary

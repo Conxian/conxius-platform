@@ -109,6 +109,25 @@
 - Organization-wide live adapters require each source repository's supported read contract and credentials.
 - GitHub Projects access and Docker/Compose runtime verification remain environment-dependent.
 
+### 2026-08-26 — Cross-Repository Platform Readiness Audit
+**Trigger**: User approved inspection of all organization repositories and platform setup.
+
+**What was done**:
+- Inspected all 14 visible Conxian organization repositories, including archived `conxius-orbit` and organization metadata repositories.
+- Verified repository-local discovery, service catalog, security, dependency consistency, and full test gates.
+- Added `docs/audits/2026-08-26-platform-readiness-audit.md` with repository matrix, evidence, boundaries, and owner-coordinated actions.
+- Linked the audit from `docs/README.md` without modifying remote repositories or GitHub settings.
+
+**Key discoveries**:
+- Platform-local controls pass; organization-wide readiness cannot be claimed without owner evidence from external repositories.
+- No inspected `main` branch returned available branch-protection data through the read-only token.
+- Archived Orbit remains a compatibility dependency pending an explicit replacement decision.
+
+**Files touched**: `docs/audits/2026-08-26-platform-readiness-audit.md`, `docs/README.md`, `AGENTS.md`
+
+**Gaps identified**:
+- Organization rulesets/branch protection, cross-repository manifests, reusable workflow adoption, live deployment evidence, Docker runtime evidence, and GitHub Projects access require external coordination.
+
 ### 2026-08-26 — Full Connection Audit Follow-up
 **Trigger**: User-approved audit of databases, app integrations, knowledge bases, agents, and docs.
 

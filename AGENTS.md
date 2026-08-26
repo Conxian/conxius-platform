@@ -48,6 +48,29 @@
 - Docker/Compose runtime verification requires a Docker-enabled runner.
 - External Gateway/UI images and protocol services are outside this repository boundary.
 
+### 2026-08-26 — Organization PaaS Alignment
+**Trigger**: User approved alignment of the organization repositories around a platform-as-a-service outcome.
+
+**What was done**:
+- Added OpenSpec proposal `openspec/changes/2026-08-26-organization-paas-alignment/proposal.md`.
+- Added `docs/architecture/ORGANIZATION_PAAS_BLUEPRINT_2026.md` defining repository roles, contract spine, golden path, and phased delivery.
+- Linked the blueprint from `docs/README.md`.
+
+**Key discoveries**:
+- `conxius-platform` already owns deployment orchestration, lifecycle gates, verification, and telemetry by the boundary contract.
+- The organization has distinct strategy, data-plane, proof, protocol, security, deployment, product, and experience repositories; the PaaS must coordinate them without absorbing their authorities.
+- Git/CI/GitOps-first desired state is safer than direct portal-to-cloud mutation.
+
+**Files touched**: `openspec/changes/2026-08-26-organization-paas-alignment/proposal.md`, `docs/architecture/ORGANIZATION_PAAS_BLUEPRINT_2026.md`, `docs/README.md`, `AGENTS.md`
+
+**Gaps identified**:
+- Manifest and verification contracts need broader machine-readable fixtures and cross-repository compatibility checks.
+- Cross-repository workflow reuse and service catalog ingestion require coordinated external-repository PRs.
+- Docker/runtime and live external-service validation remain environment-dependent.
+
+**Gotchas**:
+- Backstage, Argo CD, and Crossplane are reference patterns, not immediate authorities; contract and evidence foundations come first.
+
 ### 2026-08-26 — Full Connection Audit Follow-up
 **Trigger**: User-approved audit of databases, app integrations, knowledge bases, agents, and docs.
 

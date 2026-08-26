@@ -8,6 +8,7 @@ This index routes readers through the four-tier model defined by the [Informatio
 - [System Architecture](./architecture/SOVEREIGN_REPR_2026.md) — current architecture baseline
 - [Strategic Alignment](./architecture/ALIGNMENT.md) — ecosystem positioning
 - [Repository Taxonomy](./REPOSITORY_TAXONOMY.md) — repository inventory and boundaries
+- [Organization PaaS Blueprint](./architecture/ORGANIZATION_PAAS_BLUEPRINT_2026.md) — control-plane role, contracts, and delivery roadmap
 - [Governance](../GOVERNANCE.md) — decision rights and governance lanes
 - [Whitepaper](./WHITEPAPER.md) — project thesis and vision
 

@@ -1,4 +1,5 @@
 import os
+import json
 import re
 import subprocess
 import sys
@@ -70,6 +71,15 @@ def check_secrets():
 
 def check_render_configs():
     print("\n--- Render Deployment Configuration Check ---")
+    pkg_path = "services/admin-dashboard/package.json"
+    if os.path.exists(pkg_path):
+        with open(pkg_path, "r", encoding="utf-8") as f:
+            pkg_data = json.load(f)
+            start_script = pkg_data.get("scripts", {}).get("start", "")
+            if "-H" in start_script or "0.0.0.0" in start_script:
+                print("PASSED: 'admin-dashboard' start script explicitly binds to 0.0.0.0 host.")
+            else:
+                print("WARNING: 'admin-dashboard' start script missing explicit 0.0.0.0 host binding.")
     print("REMARK: Ensure Render services use correct PORT binding and production build commands.")
     print("REMARK: 'conxian-ui' should bind to 0.0.0.0 and use the PORT env var.")
 

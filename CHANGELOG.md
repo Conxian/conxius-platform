@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Org-Wide Functionality Map & Audit Report**: Published `docs/architecture/ORG_WIDE_FUNCTIONALITY_MAP_AND_AUDIT.md` covering all 6 Neon cloud database projects (`corelibs`, `Software dev kit`, `Business Operating System`, `market`, `Gateway`, `Conxian Nexus`), Render web hosting services, monorepo service taxonomy, 39+ BFF API routes, and Phase 7 strategic anchor status.
+- **Render & Container Host Binding Alignment**: Configured `services/admin-dashboard/package.json` start script with explicit `-H ${HOSTNAME:-0.0.0.0} -p ${PORT:-3001}` host binding and updated `scripts/maintenance/hardened_audit.py` to audit start script compliance.
+- **Knowledge Base Self-Evolution Ingestion**: Processed KB pattern detection (`kb:patterns`) and update generation (`kb:update`) syncing knowledge store entries in `.kb-updates.json`.
+
 - **M2M Service-Key Rotation Operations**: Added persistent dashboard-owned
   service-key rotation/rollback deployment wiring, fail-closed Prometheus
   scrape authentication, bounded rotation and registry alerts, and operator

@@ -17,7 +17,9 @@ FORBIDDEN = (
     "protocol_fee", "founder_vesting", "custody", "sign_transaction",
 )
 ALLOWLIST = {
+    ROOT / "platform" / "domain-service-map.json",
     ROOT / "platform" / "neutral-m2m-intent.schema.json",
+    ROOT / "platform" / "platform.manifest.json",
     ROOT / "platform" / "services.catalog.json",
     ROOT / "platform" / "wallet-capability-sdk.contract.json",
 }

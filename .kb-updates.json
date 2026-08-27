@@ -22,6 +22,17 @@
     "priority": "medium"
   },
   {
+    "section": "Key Gaps Still Open",
+    "current": "Add entry if new critical gap found",
+    "proposed": "- **test-coverage**: Increase test coverage to >50%",
+    "evidence": [
+      "40 tests for 180 TypeScript files",
+      "Coverage: 22.2%"
+    ],
+    "confidence": 0.95,
+    "priority": "medium"
+  },
+  {
     "section": "Complete API Surface",
     "current": "(39 admin routes + 2 public frames)",
     "proposed": "(~39 admin routes + 2 public frames)",
@@ -49,6 +60,26 @@
       "Auto-detected: 40 test files, 180 TS files"
     ],
     "confidence": 0.98,
+    "priority": "low"
+  },
+  {
+    "section": "Reusable Patterns",
+    "current": "Add pattern if new significant pattern detected",
+    "proposed": "api-auth: All API routes protected with validateAdminAuth()",
+    "evidence": [
+      "39 API routes with consistent auth pattern"
+    ],
+    "confidence": 0.9,
+    "priority": "low"
+  },
+  {
+    "section": "Reusable Patterns",
+    "current": "Add pattern if new significant pattern detected",
+    "proposed": "ci-workflows: Extensive CI/CD pipeline with multiple specialized workflows",
+    "evidence": [
+      "19 workflow files detected"
+    ],
+    "confidence": 0.85,
     "priority": "low"
   },
   {

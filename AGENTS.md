@@ -288,7 +288,7 @@
 | `conxius-enclave-sdk` | `../conxius-enclave-sdk` | Production Vault SDK (v2.0.16) — hardware signing, attestation |
 | `lib-conxian-core` | `../lib-conxian-core` | Shared protocol primitives (v0.3.2) |
 | `conxian-gateway` | `../conxian-gateway` | Runtime orchestration + middleware (v0.1.5) |
-| `conxian-nexus` | `../conxian-nexus` | Glass Node proof layer (v0.4.22) |
+| `conxian-nexus` | `../conxian-nexus` | Glass Node proof layer (v0.4.23) |
 | `conxius-orbit` | archived compatibility reference | Historical deployment CLI; not an active platform dependency |
 | `conxius-wallet` | `../conxius-wallet` | Wallet application |
 | `conxian_market` | `../conxian-market` | Market documentation |

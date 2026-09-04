@@ -108,7 +108,7 @@ The mappings below are retained for provenance only. They do not imply that prot
 | **G-52** | BRC-20 / Runes Integration | [FULL_STACK_BITCOIN_RESEARCH.md#52](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#52) | `conxian-nexus/adapters` |
 | **G-53** | Lightning Async Payments | [FULL_STACK_BITCOIN_RESEARCH.md#53](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#53) | `lib-conxian-core/lightning` |
 | **G-54** | OP_VAULT (BIP-345) | [FULL_STACK_BITCOIN_RESEARCH.md#54](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#54) | `lib-conxian-core/covenants` |
-| **G-55** | Enterprise ERP Simulation & Programmable Mock Engines | [ENTERPRISE_ERP_SIMULATION_RESEARCH.md](./architecture/ENTERPRISE_ERP_SIMULATION_RESEARCH.md) | 🏗️ **Active Scaffolding**. CON-1320 initialized. |
+| **G-55** | Enterprise ERP Simulation & Programmable Mock Engines | [ENTERPRISE_ERP_SIMULATION_RESEARCH.md](./architecture/ENTERPRISE_ERP_SIMULATION_RESEARCH.md) | 🟢 **Active Scaffolding & Unit Verified**. CON-1320 implemented in `lib/sidl/erp.ts` and verified by `erpSimulation.test.ts`. |
 | **G-56** | Founder-rights decision and evidence boundary | [Founder-rights observation report](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md) | 🟡 **Observation contract implemented**. Protocol ratification and beneficiary decision remain unresolved. |
 | **G-57** | Cross-repository revenue model drift | [Founder-rights observation report](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#contradictions-and-safe-interpretation) | 🟡 **Active gap**. Protocol, Gateway, core, and platform models require owner-level reconciliation; this platform change selects no rate. |
 | **G-58** | Deployment evidence and live-interface verification | [Founder-rights observation report](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#verified-evidence-matrix) | 🟡 **Stage gate implemented**. No broadcast, confirmation, or live-interface deployment is asserted by this repository. |
@@ -122,7 +122,7 @@ The mappings below are retained for provenance only. They do not imply that prot
 *Updated by Charlie (issue #1187 remediation) - 2026-07-22*
 
 ## 5. Implementation Status (June 2026 Update)
-- **G-55 (Enterprise ERP Simulation)**: 🏗️ **Active Scaffolding**. Initialized via CON-1320.
+- **G-55 (Enterprise ERP Simulation)**: 🟢 **Active Scaffolding & Unit Verified**. Expanded with double-entry ledger validation and mock engine health checks via CON-1320.
 - **G-44 (BitVMX)**: 🏗️ **Active Scaffolding**. Initialized via CON-1311.
 - **G-02 (FDC3 Native Resolver)**: 🟢 **Implemented**.
 - **G-03 (Usage Validation)**: 🟢 **Implemented**.

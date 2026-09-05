@@ -50,6 +50,7 @@ This matrix scores the identified gaps based on Strategic Alignment, Implementat
 | **G-53** | **Lightning Async Payments** | 8 | 7 | 9 | **24** | [Async Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#53) |
 | **G-54** | **OP_VAULT (BIP-345)** | 9 | 8 | 6 | **23** | [Vault Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#54) |
 | **G-55** | **Enterprise ERP Simulation** | 9 | 7 | 8 | **24** | [Enterprise ERP Simulation](./architecture/ENTERPRISE_ERP_SIMULATION_RESEARCH.md) |
+| **G-64** | **BitVMX Fail-Closed Execution Engine** | 10 | 8 | 7 | **25** | [BitVMX Research](./architecture/BITVMX_RESEARCH.md) |
 | **G-56** | **Founder-rights observation/evidence boundary** | 10 | 4 | 10 | **24** | [Founder-rights observation](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md) |
 | **G-57** | **Cross-repository revenue model drift** | 10 | 6 | 9 | **25** | [Contradictions and ownership](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#contradictions-and-safe-interpretation) |
 | **G-58** | **Deployment evidence/live-interface verification** | 10 | 5 | 9 | **24** | [Evidence matrix](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#verified-evidence-matrix) |

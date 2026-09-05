@@ -139,6 +139,8 @@ export type ErpSimulationState = {
   erpnextUrl: string;
   latencyMs: number;
   faultInjectionActive: boolean;
+  mockEngineStatus?: "healthy" | "degraded" | "offline";
+  balancedLedger?: boolean;
   x402Mandates: {
     mandateId: string;
     invoiceRef: string;

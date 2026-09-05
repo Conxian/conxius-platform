@@ -6,7 +6,7 @@
  * accumulated knowledge entries.
  */
 
-import { knowledgeStore, KnowledgeEntry, KnowledgeStore } from './knowledge-store';
+import { knowledgeStore } from './knowledge-store';
 
 export interface KBUpdate {
   section: string;
@@ -151,7 +151,7 @@ function generateInsightUpdates(): KBUpdate[] {
 }
 
 function generateAllUpdates(): KBUpdate[] {
-  return [
+  const all = [
     ...generateMetricUpdates(),
     ...generateGapUpdates(),
     ...generatePatternUpdates(),
@@ -160,6 +160,19 @@ function generateAllUpdates(): KBUpdate[] {
     const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
     return priorityOrder[a.priority] - priorityOrder[b.priority];
   });
+
+  const seen = new Set<string>();
+  const deduplicated: KBUpdate[] = [];
+
+  for (const update of all) {
+    const key = `${update.section}::${update.proposed}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      deduplicated.push(update);
+    }
+  }
+
+  return deduplicated;
 }
 
 function formatUpdatePR(): string {

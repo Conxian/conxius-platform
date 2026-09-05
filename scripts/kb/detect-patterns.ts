@@ -6,8 +6,8 @@
  * trends, conventions, and anomalies.
  */
 
-import { knowledgeStore, KnowledgeEntry, KnowledgeStore } from './knowledge-store';
-import { readdirSync, statSync, readFileSync } from 'fs';
+import { knowledgeStore, KnowledgeEntry } from './knowledge-store';
+import { readdirSync, statSync } from 'fs';
 import { join } from 'path';
 
 interface CodeMetrics {
@@ -85,7 +85,7 @@ function detectCoveragePattern(testFiles: number, tsFiles: number): KnowledgeEnt
   
   if (coverage < 0.5) {
     return {
-      id: KnowledgeStore.generateId('gap', 'internal'),
+      id: 'gap-synthesis-test-coverage',
       category: 'gap',
       source: 'synthesis',
       data: {
@@ -106,12 +106,11 @@ function detectCoveragePattern(testFiles: number, tsFiles: number): KnowledgeEnt
 }
 
 function detectAPIConvention(apiRoutes: number): KnowledgeEntry | null {
-  // Check for validateAdminAuth pattern
   const hasAuthPattern = true; // Assume pattern is present based on codebase
   
   if (apiRoutes > 0 && hasAuthPattern) {
     return {
-      id: KnowledgeStore.generateId('pattern', 'internal'),
+      id: 'pattern-internal-api-auth',
       category: 'pattern',
       source: 'internal',
       data: {
@@ -133,7 +132,7 @@ function detectAPIConvention(apiRoutes: number): KnowledgeEntry | null {
 function detectWorkflowPattern(workflows: number): KnowledgeEntry | null {
   if (workflows >= 15) {
     return {
-      id: KnowledgeStore.generateId('pattern', 'internal'),
+      id: 'pattern-internal-ci-workflows',
       category: 'pattern',
       source: 'internal',
       data: {
@@ -164,9 +163,9 @@ async function detectPatterns(): Promise<void> {
   console.log(`   - ${metrics.pages} pages`);
   console.log(`   - ${metrics.workflows} workflows`);
   
-  // Add metrics entry
+  // Add metrics entry with deterministic ID
   const metricsEntry: KnowledgeEntry = {
-    id: KnowledgeStore.generateId('metric', 'internal'),
+    id: 'metric-internal-codebase-metrics',
     category: 'metric',
     source: 'internal',
     data: {

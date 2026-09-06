@@ -30,6 +30,7 @@ We will acknowledge receipt and coordinate remediation privately.
 ## Security expectations
 
 - do not commit secrets, credentials, or production-sensitive configuration
-- **Defense in Depth**: We maintain multi-layered `.gitignore` rules at both root and service levels to prevent accidental exposure of sensitive files (e.g., `.env`, `.DS_Store`).
+- **Defense in Depth**: We maintain multi-layered `.gitignore` rules at both root and service levels to prevent accidental exposure of sensitive files (e.g., `.env`, `.DS_Store`, `.m2m/`, `.secrets/`, `service-key-registry.json*`).
+- **M2M Key Store & Artifact Boundary**: Machine-to-machine key registries and transaction/secret stores (`.m2m/`, `.secrets/`, `service-key-registry.json*`) must never be committed to Git and are enforced recursively across root and service-level `.gitignore` rules and automated audit checks (`system_audit.py`).
 - **Environment Hygiene**: Prefer templates and examples (e.g., `.env.example`, `.env.admin.example`) for local environment setup.
 - rotate any exposed credentials immediately

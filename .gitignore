@@ -30,11 +30,8 @@ playwright-report/
 *.tsbuildinfo
 .action-version-cache.json
 
-# Local M2M service-key registry and transaction artifacts
-/.m2m/
-/service-key-registry.json
-/service-key-registry.json.candidate
-/service-key-registry.json.journal
-/service-key-registry.json.marker
-/service-key-registry.json.lock
-/.secrets/prometheus-scrape.password
+# Local M2M service-key registry, secrets, and transaction artifacts
+.m2m/
+.secrets/
+service-key-registry.json
+service-key-registry.json.*

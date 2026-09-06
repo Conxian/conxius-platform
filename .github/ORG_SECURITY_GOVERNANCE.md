@@ -78,6 +78,7 @@ All public repositories **must** have push protection enabled:
 - **Block commits with secrets**: Commits containing detected secrets are blocked at push time
 - **Remediation required**: Blocked pushes require secret removal or explicit bypass by security team
 - **Audit trail**: All bypass events are logged and reviewed quarterly
+- **Sensitive File & Key Registry Boundaries**: Standardized recursive exclusion rules (`.env*`, `.m2m/`, `.secrets/`, `service-key-registry.json*`) are enforced across root and service-level `.gitignore` configurations and validated by `scripts/maintenance/system_audit.py`.
 
 ### 2.2 Secret Scanning Configuration
 

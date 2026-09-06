@@ -18,3 +18,9 @@ htmlcov/
 .pytest_cache/
 .cache/
 .vite/
+
+# Local M2M service-key registry and secrets
+.m2m/
+.secrets/
+service-key-registry.json
+service-key-registry.json.*

@@ -92,6 +92,14 @@ def audit_security():
     else:
         print("PASSED: No private keys tracked.")
 
+    cmd = r"git ls-files | grep -E '(^|/)service-key-registry\.json.*$|(^|/)\.m2m/|(^|/)\.secrets/'"
+    out, err, code = run_cmd(cmd)
+    if out:
+        print(f"CRITICAL: Found tracked M2M service-key registry or secrets directory:\n{out}")
+        all_passed = False
+    else:
+        print("PASSED: No M2M service-key registries or secret directories tracked.")
+
     # 2. Check for tracked generated artifacts
     print("Checking for tracked generated artifacts...")
     artifacts = [

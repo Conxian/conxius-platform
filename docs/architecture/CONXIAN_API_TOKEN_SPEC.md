@@ -105,3 +105,20 @@ Requires `write:admin` (or `read:admin`). Immediately revokes the designated tok
 1. **Auto-Environment Detection**: Client SDKs (such as `elizaos-plugin-conxian`) automatically inspect the token prefix (`cx_live_` vs `cx_test_`) to select the appropriate base URL (`https://api.conxian-labs.com` vs `https://testnet.api.conxian-labs.com`).
 2. **Secret Scanner Immunity**: Distinct prefixes (`cx_live_` and `cx_test_`) allow automated CI workflows (e.g. Gitleaks, GitHub Secret Scanning) to flag accidental commits of production tokens before PR merge.
 3. **Zero-Downtime Key Rotation**: Developers can issue a secondary token, update their application configurations, and revoke the legacy token without service disruption.
+
+---
+
+## 8. Config Management Workflows & Zero-Downtime Key Rotation
+
+### 1. Zero-Downtime Token Rotation Contract
+The platform supports active key rotation via `PUT /api/v1/m2m/tokens`:
+- Clients invoke rotation specifying `{ "id": "<token_id>", "action": "rotate", "gracePeriodSeconds": 300 }`.
+- The store creates a replacement token while extending the expiration of the legacy token by `gracePeriodSeconds`.
+- During the grace window, both tokens pass timing-safe authentication, enabling seamless service updates without downtime.
+
+### 2. IP/CIDR & Rate Limit Safeguards
+- Tokens can define optional `ipAllowlist` arrays and `rateLimitPerMin` thresholds.
+- The `verifyToken` method checks client IP match before granting access.
+
+### 3. Declarative Config Map Export
+- Endpoint `GET /api/v1/m2m/tokens?export=true` provides a canonical export format (`v0.2.5`) of active token metadata for integration with external gateway configurations and deployment pipelines.

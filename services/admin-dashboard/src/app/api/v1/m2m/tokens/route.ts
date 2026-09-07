@@ -9,7 +9,15 @@ export async function GET(request: Request): Promise<NextResponse> {
   if (authError) return authError;
 
   try {
+    const { searchParams } = new URL(request.url);
+    const exportConfig = searchParams.get("export") === "true";
     const store = getApiTokenStore();
+
+    if (exportConfig) {
+      const configMap = store.exportTokenConfigMap();
+      return NextResponse.json(configMap);
+    }
+
     const metadataList = store.listMetadata();
     return NextResponse.json({ tokens: metadataList, count: metadataList.length });
   } catch (error) {
@@ -28,6 +36,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     const environment: ApiTokenEnvironment = body.environment === "test" ? "test" : "live";
     const scopes: Scope[] = Array.isArray(body.scopes) ? body.scopes : ["read:admin"];
     const ttlSeconds = typeof body.ttlSeconds === "number" ? body.ttlSeconds : undefined;
+    const ipAllowlist = Array.isArray(body.ipAllowlist) ? body.ipAllowlist : undefined;
+    const rateLimitPerMin = typeof body.rateLimitPerMin === "number" ? body.rateLimitPerMin : undefined;
 
     if (!label || typeof label !== "string" || label.trim().length === 0) {
       return NextResponse.json({ error: "Validation Error", details: "label is required" }, { status: 400 });
@@ -40,6 +50,8 @@ export async function POST(request: Request): Promise<NextResponse> {
       environment,
       scopes,
       ttlSeconds,
+      ipAllowlist,
+      rateLimitPerMin,
     });
 
     return NextResponse.json(
@@ -50,6 +62,37 @@ export async function POST(request: Request): Promise<NextResponse> {
       },
       { status: 201 }
     );
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: "Internal Server Error", details: msg }, { status: 500 });
+  }
+}
+
+export async function PUT(request: Request): Promise<NextResponse> {
+  const authError = await validateAdminAuth(request);
+  if (authError) return authError;
+
+  try {
+    const body = await request.json().catch(() => ({}));
+    const { id, action, label, scopes, ipAllowlist, rateLimitPerMin, gracePeriodSeconds, ttlSeconds } = body;
+
+    if (!id || typeof id !== "string") {
+      return NextResponse.json({ error: "Validation Error", details: "id is required" }, { status: 400 });
+    }
+
+    const store = getApiTokenStore();
+
+    if (action === "rotate") {
+      const rotated = store.rotateToken(id, { gracePeriodSeconds, ttlSeconds });
+      return NextResponse.json({
+        message: "Token rotated successfully. Previous token remains valid for grace period.",
+        newToken: rotated.rawToken,
+        metadata: rotated.metadata,
+      });
+    }
+
+    const updated = store.updateToken(id, { label, scopes, ipAllowlist, rateLimitPerMin });
+    return NextResponse.json({ message: "Token metadata updated successfully", metadata: updated });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ error: "Internal Server Error", details: msg }, { status: 500 });

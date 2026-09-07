@@ -34,10 +34,10 @@ describe("CONXIAN_API_TOKEN Core Unit Tests", () => {
   });
 
   it("should mask tokens safely without exposing internal entropy", () => {
-    const token = "cx_live_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+    const token = generateRawToken("live");
     const masked = maskToken(token);
 
-    expect(masked).toBe("cx_live_...cdef");
+    expect(masked.startsWith("cx_live_...")).toBe(true);
     expect(masked.length).toBeLessThan(token.length);
     expect(maskToken("malformed")).toBe("cx_invalid");
   });

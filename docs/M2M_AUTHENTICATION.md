@@ -31,15 +31,15 @@ Authentication precedence is strictly enforced:
 
 For complete details, see the [CONXIAN_API_TOKEN Architecture Specification](./architecture/CONXIAN_API_TOKEN_SPEC.md).
 
-### Usage Example
+### Usage Example (Placeholder Token)
 
 ```bash
-# Production token request
-curl -H "Authorization: Bearer cx_live_a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e" \
+# Production token request (Simulated/Mock Data placeholder)
+curl -H "Authorization: Bearer cx_live_<YOUR_API_TOKEN_ENTROPY>" \
   https://api.conxian-labs.com/api/v1/settlement-engine
 
 # Or via explicit header
-curl -H "X-Conxian-Api-Token: cx_live_a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e" \
+curl -H "X-Conxian-Api-Token: cx_live_<YOUR_API_TOKEN_ENTROPY>" \
   https://api.conxian-labs.com/api/v1/settlement-engine
 ```
 

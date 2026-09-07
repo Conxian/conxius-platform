@@ -1,6 +1,6 @@
 # CONXIAN_API_TOKEN Specification & Org-Wide API Management Strategy
 
-**Document Status**: Draft / Strategic Standard
+**Document Status**: Strategic Standard
 **Target Version**: v0.2.5+
 **Owner**: Conxian Engineering & Security Architecture
 **Last Updated**: 2026-09-07
@@ -31,9 +31,9 @@ cx_<environment>_<entropy>
    - `cx_test_`: Sandbox / Testnet / Devnet operations. Restricts state changes to simulated or devnet environments.
 3. **High-Entropy Secret Payload**: 32 hex-encoded random bytes (64 hex characters) generated via cryptographically secure pseudo-random number generators (`crypto.randomBytes(32)` or `crypto.getRandomValues()`).
 
-### Example Tokens
-- **Production Token**: `cx_live_a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e`
-- **Testnet/Sandbox Token**: `cx_test_9f8e7d6c5b4a39281706f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a0`
+### Example Token Placeholders (Simulated Data)
+- **Production Token Placeholder**: `cx_live_<64_hex_entropy_bytes>`
+- **Testnet Token Placeholder**: `cx_test_<64_hex_entropy_bytes>`
 
 ---
 
@@ -45,7 +45,7 @@ To prevent credential leakage in the event of database or telemetry compromise, 
 1. **One-Time Display**: The raw, unhashed token is returned **exactly once** to the client upon creation.
 2. **SHA-256 Hash Digest**: Persistence stores the hex-encoded SHA-256 digest of the token:
    $$\text{stored\_hash} = \text{SHA-256}(\text{raw\_token})$$
-3. **Masked Display Metadata**: Persistence stores a masked representation for dashboard display and auditing (e.g. `cx_live_a1b2...4d5e`).
+3. **Masked Display Metadata**: Persistence stores a masked representation for dashboard display and auditing (e.g. `cx_live_...4d5e`).
 4. **Timing-Safe Verification**: All token verification routines utilize constant-time comparison functions (`crypto.timingSafeEqual`) to prevent timing side-channel attacks.
 
 ---
@@ -54,8 +54,8 @@ To prevent credential leakage in the event of database or telemetry compromise, 
 
 Services accepting `CONXIAN_API_TOKEN` evaluate incoming request headers according to the following strict precedence order:
 
-1. **Primary Bearer Authorization**: `Authorization: Bearer cx_live_...` or `Authorization: Bearer cx_test_...`
-2. **Explicit Token Header**: `X-Conxian-Api-Token: cx_live_...`
+1. **Primary Bearer Authorization**: `Authorization: Bearer cx_live_<token>` or `Authorization: Bearer cx_test_<token>`
+2. **Explicit Token Header**: `X-Conxian-Api-Token: cx_live_<token>`
 3. **Legacy Headers**:
    - `X-Admin-API-Key` (Legacy environment variable `ADMIN_DASHBOARD_API_KEY`)
    - `X-Service-Key` (Legacy registry `X-Service-Key: <serviceId>:<secret>`)

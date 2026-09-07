@@ -1,0 +1,7 @@
+# GitGuardian secret scanning configuration
+version: 2
+secret:
+  ignored_paths:
+    - docs/architecture/CONXIAN_API_TOKEN_SPEC.md
+    - docs/M2M_AUTHENTICATION.md
+    - services/admin-dashboard/src/tests/apiTokens.test.ts

@@ -48,12 +48,14 @@ run_check "verify_lifecycle_control_gates" python3 scripts/verify_lifecycle_cont
 run_check "verify_bos_production_boundary" python3 scripts/verify_bos_production_boundary.py
 run_check "verify_submodule_integrity" python3 scripts/verify_submodule_integrity.py
 run_check "verify_contamination_guard" python3 scripts/verify_contamination_guard.py
+run_check "verify_tracked_artifacts" python3 scripts/verify_tracked_artifacts.py
+run_check "verify_release_hygiene" python3 scripts/verify_release_hygiene.py
 
 if (( failures > 0 )); then
   echo >> "${SUMMARY_FILE}"
   echo "**Result:** FAIL (${failures} check(s))" >> "${SUMMARY_FILE}"
   cat "${SUMMARY_FILE}"
-  exit 1
+  return 1 2>/dev/null || builtin exit 1
 fi
 
 echo >> "${SUMMARY_FILE}"

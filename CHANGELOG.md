@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **BitVM3 & Nova Recursive Proof Research (G-55)**: Documented recursive rollup aggregation and SNARK proof folding mechanics in `FULL_STACK_BITCOIN_RESEARCH.md` and `BITVMX_RESEARCH.md`.
+- **Technical Debt Burn-Down (D-04)**: Completed logging migration in `services/admin-dashboard/src/lib/support/imap-worker.ts` and updated `DEBT_INVENTORY.md`.
 - **Org-Wide Functionality Map & Audit Report**: Published `docs/architecture/ORG_WIDE_FUNCTIONALITY_MAP_AND_AUDIT.md` covering all 6 Neon cloud database projects (`corelibs`, `Software dev kit`, `Business Operating System`, `market`, `Gateway`, `Conxian Nexus`), Render web hosting services, monorepo service taxonomy, 39+ BFF API routes, and Phase 7 strategic anchor status.
 - **Render & Container Host Binding Alignment**: Configured `services/admin-dashboard/package.json` start script with explicit `-H ${HOSTNAME:-0.0.0.0} -p ${PORT:-3001}` host binding and updated `scripts/maintenance/hardened_audit.py` to audit start script compliance.
 - **Knowledge Base Self-Evolution Ingestion**: Processed KB pattern detection (`kb:patterns`) and update generation (`kb:update`) syncing knowledge store entries in `.kb-updates.json`.

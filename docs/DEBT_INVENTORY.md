@@ -28,7 +28,7 @@ Last updated: 2026-07-22.
 
 | ID | Item | Risk Class | Status |
 |----|------|-----------|--------|
-| D-04 | 15+ `console.log`/`console.error` in library code | Dev-Efficiency | 🏗️ Created `lib/support/logger.ts`. Migrated citrea, ark, bitvm, bitvm3, bitvmx, event-bus. Remaining: bip322, solver, imap-worker, observability |
+| D-04 | 15+ `console.log`/`console.error` in library code | Dev-Efficiency | ✅ Fixed — migrated bip322, solver, imap-worker, and lib support modules to `createLogger` |
 | D-05 | `console.error` scattered across 15+ page files | Dev-Efficiency | ⬜ Page-level `console.error` in catch blocks is acceptable (client-side debugging). Defer migration. |
 
 ### Determinism (Correctness → Fixed this session)

@@ -153,3 +153,5 @@ The mappings below are retained for provenance only. They do not imply that prot
 - **G-62 (FROST Session Hardening)**: 🟢 **Unit Verified**. DKG round-2 commitments and threshold signature verification in .
 - **G-63 (BitVM Tombstone Verification)**: 🛡️ **Fail-closed boundary**. Replay protection, hard retention caps, and tombstones in  and .
 - **G-64 (BitVMX Fail-Closed Execution & Bounded State Machine)**: 🛡️ **Fail-closed boundary & Unit Verified**. Strict program/input validation, state transition invariants, bounded challenge depth, memory limits, and tombstoning in .
+
+- **G-65 (Conxian Unified API Token Management & Developer Self-Service)**: 🟢 **Implemented & Unit Verified**. Prefixed token generator (`cx_live_` / `cx_test_`), SHA-256 hashed storage, scope delegation, and management API endpoints in `services/admin-dashboard`.

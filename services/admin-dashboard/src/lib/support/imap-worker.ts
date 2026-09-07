@@ -1,3 +1,5 @@
+import { createLogger } from "./logger";
+const logger = createLogger("IMAPWorker");
 import { generateTicketToken } from "./idgen";
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
@@ -76,7 +78,7 @@ export class ImapWorker {
         };
 
         const sanitizedSubjectForLog = this.scrubContent(email.subject);
-        console.log(`[IMAP] Processing email from ${email.from.split('@')[1] || 'unknown'}: ${sanitizedSubjectForLog}`);
+        logger.info(`[IMAP] Processing email from ${email.from.split('@')[1] || 'unknown'}: ${sanitizedSubjectForLog}`);
 
         const result = await this.processEmail(email);
 
@@ -104,24 +106,24 @@ export class ImapWorker {
     const isSuppressed = this.isMissingSourceSuppressed(uid);
 
     if (!isSuppressed) {
-      console.warn(`[IMAP] Missing source for message ${uid}; retrying fetchOne()`);
+      logger.warn(`[IMAP] Missing source for message ${uid}; retrying fetchOne()`);
       try {
         const refetched = await this.client.fetchOne(uid, { source: true }, { uid: true });
         if (refetched !== false && refetched.source) {
           return refetched.source;
         }
       } catch (e) {
-        console.warn(`[IMAP] Failed to refetch message ${uid} source`, e);
+        logger.warn(`[IMAP] Failed to refetch message ${uid} source`, e);
       }
     }
 
     if (!isSuppressed) {
-      console.error(`[IMAP] Skipping message ${uid}: missing source after retry`);
+      logger.error(`[IMAP] Skipping message ${uid}: missing source after retry`);
 
       try {
         await this.client.messageFlagsAdd({ uid }, ['\\Flagged']);
       } catch (e) {
-        console.warn(`[IMAP] Failed to flag message ${uid} after missing source`, e);
+        logger.warn(`[IMAP] Failed to flag message ${uid} after missing source`, e);
       }
     }
 
@@ -131,7 +133,7 @@ export class ImapWorker {
     } catch (e) {
       this.suppressMissingSource(uid);
       if (!isSuppressed) {
-        console.warn(`[IMAP] Failed to mark message ${uid} as seen after missing source; suppressing logs/refetch`, e);
+        logger.warn(`[IMAP] Failed to mark message ${uid} as seen after missing source; suppressing logs/refetch`, e);
       }
     }
 
@@ -218,7 +220,7 @@ export class ImapWorker {
           this.labelCache.set(label.name, label.id);
         }
       } catch (e) {
-        console.warn('[Linear] Could not fetch labels, proceeding with empty labels');
+        logger.warn('[Linear] Could not fetch labels, proceeding with empty labels');
       }
     }
 
@@ -287,10 +289,10 @@ ${sanitizedBody}
       };
 
       const data = await this.linearFetch(query, variables);
-      console.log(`[Linear] Created issue ${data.issueCreate.issue.identifier} for ${token}`);
+      logger.info(`[Linear] Created issue ${data.issueCreate.issue.identifier} for ${token}`);
       return { success: true, token };
     } catch (error) {
-      console.error(`[Linear] Failed to create issue for ${token}:`, error);
+      logger.error(`[Linear] Failed to create issue for ${token}:`, error);
       return { success: false, token: '' };
     }
   }
@@ -318,9 +320,9 @@ The Conxian Labs Team
 
     try {
       await this.transporter.sendMail(mailOptions);
-      console.log(`[SMTP] Sent auto-ack to ${email.from} for ${token}`);
+      logger.info(`[SMTP] Sent auto-ack to ${email.from} for ${token}`);
     } catch (error) {
-      console.error(`[SMTP] Failed to send auto-ack for ${token}:`, error);
+      logger.error(`[SMTP] Failed to send auto-ack for ${token}:`, error);
     }
   }
 }

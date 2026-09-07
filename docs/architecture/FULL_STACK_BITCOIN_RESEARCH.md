@@ -430,3 +430,9 @@ Research into secondary settlement layers to ensure multidimensional redundancy.
 - **Concept**: A specialized covenant opcode designed for creating secure, multi-stage Bitcoin vaults with recovery paths and spend delays.
 - **Strategic Value**: Providing institutional-grade security for Conxian liquidity pools and treasury management without the complexity of general-purpose covenants.
 - **Research**: Monitoring the consensus progress and prototyping vault logic in the USI simulation environment.
+
+<a id="55"></a>
+## 55. Recursive Rollup Aggregation & SNARK Folding (BitVM3 & Nova)
+- **Concept**: Combining Nova/Sangria SNARK folding schemes with BitVM3 adaptive execution to achieve recursive proof aggregation for Bitcoin L2 rollups.
+- **Strategic Impact**: Scales transaction throughput exponentially by compressing $N$ execution steps into a single $O(1)$ verification proof, reducing on-chain dispute footprint on Bitcoin L1.
+- **Implementation Status**: Scaffolding active in `services/admin-dashboard/src/lib/support/bitvm3.ts` and `bitvmx.ts`.

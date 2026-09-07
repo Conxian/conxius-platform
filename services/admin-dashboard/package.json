@@ -16,6 +16,7 @@
     "prepublishOnly": "node -e \"console.error('pnpm publish is disabled for now in this repository; use Git tags and GitHub Releases.'); process.exit(1)\""
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "imapflow": "^1.6.5",
     "jose": "^6.2.7",
     "mailparser": "^3.9.14",

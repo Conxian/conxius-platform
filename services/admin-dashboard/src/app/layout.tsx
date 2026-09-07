@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import React from "react";
+import { Analytics } from "@vercel/analytics/next";
 import { RealityStatus } from "../components/reality-status";
 import { ServiceFabric } from "../components/service-fabric";
 import "./globals.css";
@@ -53,6 +54,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <span>CONXIAN LABS</span>
           <span>Evidence-scoped operations · 2026</span>
         </footer>
+        <Analytics />
       </body>
     </html>
   );

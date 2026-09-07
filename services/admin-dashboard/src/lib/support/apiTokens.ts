@@ -19,6 +19,12 @@ export interface ApiTokenMetadata {
   lastUsedAtIso?: string;
   revoked: boolean;
   revokedAtIso?: string;
+  ipAllowlist?: string[];
+  rateLimitPerMin?: number;
+  rotationHistory?: {
+    previousTokenId?: string;
+    rotatedAtIso: string;
+  };
 }
 
 export interface IssuedApiToken {
@@ -37,6 +43,20 @@ export interface IssueTokenOptions {
   environment?: ApiTokenEnvironment;
   scopes: readonly Scope[];
   ttlSeconds?: number;
+  ipAllowlist?: string[];
+  rateLimitPerMin?: number;
+}
+
+export interface UpdateTokenOptions {
+  label?: string;
+  scopes?: readonly Scope[];
+  ipAllowlist?: string[];
+  rateLimitPerMin?: number;
+}
+
+export interface RotateTokenOptions {
+  ttlSeconds?: number;
+  gracePeriodSeconds?: number;
 }
 
 export interface TokenVerificationResult {
@@ -126,6 +146,8 @@ export class ApiTokenStore {
       createdAtIso: nowIso,
       expiresAtIso,
       revoked: false,
+      ipAllowlist: Array.isArray(options.ipAllowlist) ? [...options.ipAllowlist] : undefined,
+      rateLimitPerMin: typeof options.rateLimitPerMin === "number" ? Math.max(1, options.rateLimitPerMin) : undefined,
     };
 
     const record: ApiTokenRecord = { hash, metadata };
@@ -137,7 +159,76 @@ export class ApiTokenStore {
     return { rawToken, metadata };
   }
 
-  public verifyToken(rawToken: string, requiredScope?: Scope): TokenVerificationResult {
+  public updateToken(id: string, updates: UpdateTokenOptions): ApiTokenMetadata {
+    const hash = this.tokensById.get(id);
+    if (!hash) throw new Error("Token ID not found");
+
+    const record = this.tokensByHash.get(hash);
+    if (!record || record.metadata.revoked) throw new Error("Token not found or revoked");
+
+    const { metadata } = record;
+
+    if (updates.label && updates.label.trim().length > 0) {
+      metadata.label = updates.label.trim();
+    }
+
+    if (updates.scopes) {
+      metadata.scopes = Array.from(
+        new Set(updates.scopes.filter((s) => (SERVICE_PERMISSIONS["admin-dashboard"] as readonly string[]).includes(s)))
+      );
+    }
+
+    if (updates.ipAllowlist !== undefined) {
+      metadata.ipAllowlist = Array.isArray(updates.ipAllowlist) ? [...updates.ipAllowlist] : undefined;
+    }
+
+    if (updates.rateLimitPerMin !== undefined) {
+      metadata.rateLimitPerMin = typeof updates.rateLimitPerMin === "number" ? Math.max(1, updates.rateLimitPerMin) : undefined;
+    }
+
+    logger.info("Updated CONXIAN_API_TOKEN metadata", { id, label: metadata.label });
+    return { ...metadata, scopes: [...metadata.scopes] };
+  }
+
+  public rotateToken(id: string, options?: RotateTokenOptions): IssuedApiToken {
+    const hash = this.tokensById.get(id);
+    if (!hash) throw new Error("Token ID not found");
+
+    const record = this.tokensByHash.get(hash);
+    if (!record || record.metadata.revoked) throw new Error("Token not found or revoked");
+
+    const oldMetadata = record.metadata;
+    const gracePeriodSeconds = options?.gracePeriodSeconds ?? 300; // 5 minute default overlap grace period
+
+    // Set old token expiration to now + gracePeriodSeconds
+    oldMetadata.expiresAtIso = new Date(Date.now() + gracePeriodSeconds * 1000).toISOString();
+
+    // Issue new replacement token retaining label, owner, env, scopes, allowlist, rate limits
+    const newToken = this.issueToken({
+      label: `${oldMetadata.label} (Rotated)`,
+      ownerId: oldMetadata.ownerId,
+      environment: oldMetadata.environment,
+      scopes: oldMetadata.scopes,
+      ttlSeconds: options?.ttlSeconds,
+      ipAllowlist: oldMetadata.ipAllowlist,
+      rateLimitPerMin: oldMetadata.rateLimitPerMin,
+    });
+
+    newToken.metadata.rotationHistory = {
+      previousTokenId: oldMetadata.id,
+      rotatedAtIso: new Date().toISOString(),
+    };
+
+    logger.info("Rotated CONXIAN_API_TOKEN", {
+      oldTokenId: id,
+      newTokenId: newToken.metadata.id,
+      gracePeriodSeconds,
+    });
+
+    return newToken;
+  }
+
+  public verifyToken(rawToken: string, requiredScope?: Scope, clientIp?: string): TokenVerificationResult {
     if (!isValidTokenFormat(rawToken)) {
       return { valid: false, error: "Invalid token format" };
     }
@@ -174,6 +265,12 @@ export class ApiTokenStore {
       return { valid: false, error: `Missing required scope: ${requiredScope}` };
     }
 
+    if (clientIp && metadata.ipAllowlist && metadata.ipAllowlist.length > 0) {
+      if (!metadata.ipAllowlist.includes(clientIp)) {
+        return { valid: false, error: `Client IP ${clientIp} not in token allowlist` };
+      }
+    }
+
     // Touch lastUsedAtIso timestamp
     metadata.lastUsedAtIso = new Date().toISOString();
 
@@ -202,6 +299,27 @@ export class ApiTokenStore {
       }
     }
     return results.sort((a, b) => new Date(b.createdAtIso).getTime() - new Date(a.createdAtIso).getTime());
+  }
+
+  public exportTokenConfigMap(ownerId?: string): Record<string, unknown> {
+    const activeTokens = this.listMetadata(ownerId).filter((t) => !t.revoked);
+    return {
+      version: "v0.2.5",
+      exportedAtIso: new Date().toISOString(),
+      ownerId: ownerId ?? "all",
+      tokenCount: activeTokens.length,
+      tokens: activeTokens.map((t) => ({
+        id: t.id,
+        label: t.label,
+        environment: t.environment,
+        maskedToken: t.maskedToken,
+        scopes: t.scopes,
+        rateLimitPerMin: t.rateLimitPerMin ?? null,
+        ipAllowlist: t.ipAllowlist ?? [],
+        createdAtIso: t.createdAtIso,
+        expiresAtIso: t.expiresAtIso ?? null,
+      })),
+    };
   }
 }
 

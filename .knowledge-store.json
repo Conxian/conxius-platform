@@ -585,13 +585,13 @@
       "category": "metric",
       "source": "internal",
       "data": {
-        "totalFiles": 685,
-        "tsFiles": 182,
-        "testFiles": 41,
-        "apiRoutes": 39,
+        "totalFiles": 688,
+        "tsFiles": 185,
+        "testFiles": 42,
+        "apiRoutes": 40,
         "pages": 19,
         "workflows": 19,
-        "avgFileSize": 6386.886131386861,
+        "avgFileSize": 6379.672965116279,
         "largestFiles": [
           {
             "path": "docs/archive/AGENTS_archive_session_58.md",
@@ -617,15 +617,15 @@
         "avgFileSizeKB": 6
       },
       "confidence": 0.98,
-      "lastUpdated": "2026-09-07T08:39:39.422Z",
+      "lastUpdated": "2026-09-07T11:03:57.329Z",
       "tags": [
         "codebase",
         "metrics",
         "structure"
       ],
       "evidence": [
-        "685 total files",
-        "182 TypeScript files",
+        "688 total files",
+        "185 TypeScript files",
         "19 CI workflows"
       ]
     },
@@ -635,21 +635,21 @@
       "source": "synthesis",
       "data": {
         "type": "test-coverage",
-        "coverage": 0.22527472527472528,
+        "coverage": 0.22702702702702704,
         "threshold": 0.5,
-        "deficit": 0.27472527472527475,
+        "deficit": 0.27297297297297296,
         "recommendation": "Increase test coverage to >50%"
       },
       "confidence": 0.95,
-      "lastUpdated": "2026-09-07T08:39:39.423Z",
+      "lastUpdated": "2026-09-07T11:03:57.330Z",
       "tags": [
         "testing",
         "coverage",
         "gap"
       ],
       "evidence": [
-        "41 tests for 182 TypeScript files",
-        "Coverage: 22.5%"
+        "42 tests for 185 TypeScript files",
+        "Coverage: 22.7%"
       ]
     },
     "pattern-internal-api-auth": {
@@ -658,12 +658,12 @@
       "source": "internal",
       "data": {
         "type": "api-auth",
-        "apiRoutes": 39,
+        "apiRoutes": 40,
         "pattern": "validateAdminAuth",
         "convention": "All API routes protected with validateAdminAuth()"
       },
       "confidence": 0.9,
-      "lastUpdated": "2026-09-07T08:39:39.423Z",
+      "lastUpdated": "2026-09-07T11:03:57.330Z",
       "tags": [
         "api",
         "auth",
@@ -671,7 +671,7 @@
         "convention"
       ],
       "evidence": [
-        "39 API routes with consistent auth pattern"
+        "40 API routes with consistent auth pattern"
       ]
     },
     "pattern-internal-ci-workflows": {
@@ -685,7 +685,7 @@
         "description": "Extensive CI/CD pipeline with multiple specialized workflows"
       },
       "confidence": 0.85,
-      "lastUpdated": "2026-09-07T08:39:39.424Z",
+      "lastUpdated": "2026-09-07T11:03:57.331Z",
       "tags": [
         "ci",
         "workflows",
@@ -723,6 +723,6 @@
     "pattern-internal-api-auth": [],
     "pattern-internal-ci-workflows": []
   },
-  "version": 45,
-  "lastSync": "2026-09-07T08:39:39.424Z"
+  "version": 49,
+  "lastSync": "2026-09-07T11:03:57.331Z"
 }

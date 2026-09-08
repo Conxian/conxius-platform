@@ -33,9 +33,9 @@
   {
     "section": "Test Coverage",
     "current": "20 test files",
-    "proposed": "~42 test files",
+    "proposed": "~43 test files",
     "evidence": [
-      "Auto-detected: 42 test files, 185 TS files"
+      "Auto-detected: 43 test files, 187 TS files"
     ],
     "confidence": 0.98,
     "priority": "low"

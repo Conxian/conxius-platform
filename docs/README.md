@@ -10,6 +10,7 @@ This index routes readers through the four-tier model defined by the [Informatio
 - [Repository Taxonomy](./REPOSITORY_TAXONOMY.md) — repository inventory and boundaries
 - [Organization PaaS Blueprint](./architecture/ORGANIZATION_PAAS_BLUEPRINT_2026.md) — platform role, contracts, and delivery roadmap
 - [Upgrade Alignment Contract](./architecture/UPGRADE_ALIGNMENT_CONTRACT_2026.md) — versioning, capabilities, evidence, and neutral M2M boundaries
+- [Client Onboarding & Unified Installer Spec](./architecture/CLIENT_ONBOARDING_AND_UNIFIED_INSTALLER_SPEC_2026.md) — client purchase, installation journey, inputs, and inter-service connectivity harness
 - [Platform Economy Policy](./architecture/PLATFORM_ECONOMY_POLICY_2026.md) — non-custodial, economically neutral platform rules
 - [Organization Service Capability Review](./audits/2026-08-26-organization-service-capability-review.md) — repository roles, capability ownership, and evidence requirements
 - [End-to-End ITIL 4 Connection Review](./audits/2026-08-26-end-to-end-itil-connection-review.md) — service configuration, connection chains, and operating practices

@@ -280,6 +280,24 @@
 - Public repository `main` branches currently report no branch protection through the available read-only evidence; organization owners must activate rulesets.
 - Deployment, Docker, provider contracts, database schemas/RLS, and live Gateway evidence remain external prerequisites.
 
+### 2026-09-08 — Client Onboarding, System Installation & Unified Installer Specification (G-66 & G-67)
+**Trigger**: User requested comprehensive review of system install, setup, management process, client purchasing model, inter-service connectivity, and unified installer architecture.
+
+**What was done**:
+- Performed full repository code pull and Knowledge Base pattern scanning (`scripts/kb/detect-patterns.ts`, `scripts/kb/generate-updates.ts`).
+- Added OpenSpec proposal and strictly validated spec delta (`openspec/changes/2026-09-08-client-onboarding-and-unified-installer-spec/`).
+- Added comprehensive system architecture blueprint `docs/architecture/CLIENT_ONBOARDING_AND_UNIFIED_INSTALLER_SPEC_2026.md` detailing client purchases, first-time installation steps, required inputs (Postgres/Neon DB URIs, RPC URLs, KMS keys, M2M API keys), deployment targets (NixOS, Docker Compose, Helm), and inter-service connectivity topologies.
+- Registered G-66 (Unified Client System Installer & Provisioning Engine) and G-67 (End-to-End Inter-Service Connectivity Verification Harness) in `docs/GAPS.md` and linked in `docs/README.md`.
+- Implemented `services/admin-dashboard/src/lib/support/installer.ts` supporting declarative client config validation, deployment manifest generation, M2M token binding, and an end-to-end 6-point pre-flight connectivity diagnostic harness.
+- Added comprehensive unit tests in `services/admin-dashboard/src/tests/installer.test.ts` (all 265 Vitest tests passing).
+- Verified all documentation links (`verify_documentation.py`), service catalog (`verify_service_catalog.py`), repository references (`verify_repository_references.py`), platform economy policy (`verify_platform_economy.py`), and system security/hygiene audits (`system_audit.py`, `hardened_audit.py`).
+
+**Key discoveries**:
+- Legacy `conxius-orbit` CLI delegation is deprecated and replaced by unified `@conxian/cli` installer tooling.
+- Pre-flight diagnostic harness validates 6 asset links (Database, Gateway API, Nexus Glass Node, Bitcoin L1 RPC, Stacks L2 RPC, M2M Token) before system boot to enforce fail-closed runtime safety.
+
+**Files touched**: `docs/architecture/CLIENT_ONBOARDING_AND_UNIFIED_INSTALLER_SPEC_2026.md`, `openspec/changes/2026-09-08-client-onboarding-and-unified-installer-spec/proposal.md`, `openspec/changes/2026-09-08-client-onboarding-and-unified-installer-spec/specs/client-onboarding-and-unified-installer/spec.md`, `services/admin-dashboard/src/lib/support/installer.ts`, `services/admin-dashboard/src/tests/installer.test.ts`, `docs/GAPS.md`, `docs/README.md`, `.kb-updates.json`, `.knowledge-store.json`, `AGENTS.md`
+
 ## Repository Knowledge Graph (Current)
 
 

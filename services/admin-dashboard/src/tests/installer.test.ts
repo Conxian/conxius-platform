@@ -9,14 +9,14 @@ import {
 describe('Client System Installer & Diagnostics Engine (G-66 & G-67)', () => {
   const validConfig: InstallerConfig = {
     environment: 'production',
-    coreDbUri: 'postgresql://neondb_owner:npg_secret123@ep-sparkling-sunset-69236559.us-east-2.aws.neon.tech/neondb?sslmode=require',
+    coreDbUri: 'postgresql://db_user:db_password@postgres.client.internal:5432/neondb?sslmode=require',
     bitcoinRpcUrl: 'https://btc-node.client.internal:8332',
     stacksRpcUrl: 'https://stacks-node.client.internal:20443',
     kwilDbUrl: 'https://kwil-node.client.internal:8080',
-    m2mToken: 'cx_live_a1b2c3d4e5f607891011121314151617',
-    gatewayAdminKey: 'admin_key_high_entropy_1234567890',
-    gatewayJwtSecret: 'jwt_secret_high_entropy_minimum_32_chars_long_12345',
-    enclaveKmsKeyArn: 'arn:aws:kms:us-east-2:123456789012:key/abc-123',
+    m2mToken: 'cx_live_00000000000000000000000000000000',
+    gatewayAdminKey: 'admin_key_placeholder_for_tests',
+    gatewayJwtSecret: 'jwt_secret_placeholder_for_tests_32_chars',
+    enclaveKmsKeyArn: 'arn:aws:kms:us-east-2:000000000000:key/00000000-0000-0000-0000-000000000000',
     target: 'nixos',
   };
 

@@ -12,10 +12,10 @@
   },
   {
     "section": "Complete API Surface",
-    "current": "(39 admin routes + 2 public frames)",
-    "proposed": "(~39 admin routes + 2 public frames)",
+    "current": "(40 admin routes + 2 public frames)",
+    "proposed": "(~40 admin routes + 2 public frames)",
     "evidence": [
-      "Auto-detected: 39 API routes"
+      "Auto-detected: 40 API routes"
     ],
     "confidence": 0.98,
     "priority": "low"
@@ -33,9 +33,9 @@
   {
     "section": "Test Coverage",
     "current": "20 test files",
-    "proposed": "~41 test files",
+    "proposed": "~42 test files",
     "evidence": [
-      "Auto-detected: 41 test files, 182 TS files"
+      "Auto-detected: 42 test files, 185 TS files"
     ],
     "confidence": 0.98,
     "priority": "low"

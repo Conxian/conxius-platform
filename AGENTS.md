@@ -18,7 +18,7 @@
 - **TypeScript (UI)**: Use the consolidated `coreApi.ts` for all Gateway interactions. Ensure strict type safety and no `any` types.
 - **Clarity (Contracts)**: Prioritize mathematical certainty and sBTC integration.
 - **Deployment and verification**: Orbit is archived compatibility material and is not an active platform dependency. Current deployment and verification must use versioned platform contracts and an explicitly owned execution surface; until replacement evidence exists, report the capability as unavailable rather than delegating implicitly.
-- **Rust toolchain**: 1.97.1 minimum.
+- **Rust toolchain**: 1.98.1 minimum.
 
 ## Session Log
 

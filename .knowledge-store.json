@@ -585,13 +585,13 @@
       "category": "metric",
       "source": "internal",
       "data": {
-        "totalFiles": 690,
-        "tsFiles": 185,
-        "testFiles": 42,
+        "totalFiles": 697,
+        "tsFiles": 187,
+        "testFiles": 43,
         "apiRoutes": 40,
         "pages": 19,
         "workflows": 19,
-        "avgFileSize": 6366.594202898551,
+        "avgFileSize": 6350.863701578192,
         "largestFiles": [
           {
             "path": "docs/archive/AGENTS_archive_session_58.md",
@@ -607,7 +607,7 @@
           },
           {
             "path": "pnpm-lock.yaml",
-            "sizeKB": 115
+            "sizeKB": 113
           },
           {
             "path": "services/admin-dashboard/src/lib/support/m2mKeyStore.ts",
@@ -617,15 +617,15 @@
         "avgFileSizeKB": 6
       },
       "confidence": 0.98,
-      "lastUpdated": "2026-09-08T10:58:11.568Z",
+      "lastUpdated": "2026-09-08T14:12:12.532Z",
       "tags": [
         "codebase",
         "metrics",
         "structure"
       ],
       "evidence": [
-        "690 total files",
-        "185 TypeScript files",
+        "697 total files",
+        "187 TypeScript files",
         "19 CI workflows"
       ]
     },
@@ -635,21 +635,21 @@
       "source": "synthesis",
       "data": {
         "type": "test-coverage",
-        "coverage": 0.22702702702702704,
+        "coverage": 0.22994652406417113,
         "threshold": 0.5,
-        "deficit": 0.27297297297297296,
+        "deficit": 0.27005347593582885,
         "recommendation": "Increase test coverage to >50%"
       },
       "confidence": 0.95,
-      "lastUpdated": "2026-09-08T10:58:11.570Z",
+      "lastUpdated": "2026-09-08T14:12:12.533Z",
       "tags": [
         "testing",
         "coverage",
         "gap"
       ],
       "evidence": [
-        "42 tests for 185 TypeScript files",
-        "Coverage: 22.7%"
+        "43 tests for 187 TypeScript files",
+        "Coverage: 23.0%"
       ]
     },
     "pattern-internal-api-auth": {
@@ -663,7 +663,7 @@
         "convention": "All API routes protected with validateAdminAuth()"
       },
       "confidence": 0.9,
-      "lastUpdated": "2026-09-08T10:58:11.570Z",
+      "lastUpdated": "2026-09-08T14:12:12.533Z",
       "tags": [
         "api",
         "auth",
@@ -685,7 +685,7 @@
         "description": "Extensive CI/CD pipeline with multiple specialized workflows"
       },
       "confidence": 0.85,
-      "lastUpdated": "2026-09-08T10:58:11.571Z",
+      "lastUpdated": "2026-09-08T14:12:12.534Z",
       "tags": [
         "ci",
         "workflows",
@@ -723,6 +723,6 @@
     "pattern-internal-api-auth": [],
     "pattern-internal-ci-workflows": []
   },
-  "version": 53,
-  "lastSync": "2026-09-08T10:58:11.571Z"
+  "version": 57,
+  "lastSync": "2026-09-08T14:12:12.534Z"
 }

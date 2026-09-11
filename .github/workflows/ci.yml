@@ -5,18 +5,8 @@ name: CI Baseline
 
 on:
   pull_request:
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - 'CODEOWNERS'
-      - 'LICENSE'
     branches: [ main, develop, dev, 'release/**' ]
   push:
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - 'CODEOWNERS'
-      - 'LICENSE'
     branches: [ main, develop, dev, 'release/**' ]
 
 permissions:

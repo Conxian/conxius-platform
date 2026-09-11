@@ -587,3 +587,48 @@ test('rejects malformed evidence URLs instead of treating them as durable eviden
   (first as Record<string, unknown>).url = 'not-an-absolute-url';
   expectCode(snapshot, 'INVALID_CONTRACT');
 });
+
+const ISSUE_1168_FIXTURE_NOW = '2026-09-11T12:30:00.000Z';
+const ISSUE_1168_FIXTURE_PATH = resolve(
+  process.cwd(),
+  'fixtures/protocol-revenue/issue-1168-proposed-builder-carve.observation.json',
+);
+
+function loadIssue1168ProposalFixture(): Record<string, unknown> {
+  return JSON.parse(readFileSync(ISSUE_1168_FIXTURE_PATH, 'utf8')) as Record<string, unknown>;
+}
+
+test('accepts the checked-in #1168 proposal fixture without enabling payout', () => {
+  const fixture = loadIssue1168ProposalFixture();
+  const schema = JSON.parse(readFileSync(resolve(process.cwd(), 'schemas/protocol-revenue-observation.schema.json'), 'utf8')) as Record<string, unknown>;
+  const ajv = new Ajv2020({ allErrors: true, strict: true });
+  addFormats(ajv);
+  const validate = ajv.compile(schema);
+  assert.equal(validate(fixture), true, JSON.stringify(validate.errors));
+
+  const validated = validateProtocolRevenueObservation(fixture, { now: ISSUE_1168_FIXTURE_NOW });
+  assert.equal(validated.policy_authority.kind, 'proposal');
+  assert.equal(validated.policy_authority.approval_status, 'unratified');
+  assert.equal(validated.compensation.builder.status, 'proposed');
+  assert.equal(validated.compensation.founder.status, 'none-observed');
+  assert.deepEqual(
+    validated.compensation.builder.schedule.entries.map((entry) => entry.rate_bps),
+    [250, 150, 100, 75],
+  );
+  assert.equal(validated.payout.payout_enabled, false);
+  assert.equal(validated.custody_claim, false);
+  assert.equal(validated.deployment.stage, 'source-only');
+});
+
+test('rejects promoting the #1168 proposal fixture to active payout without ratification', () => {
+  const activeAttempt = loadIssue1168ProposalFixture();
+  const authority = recordAt(activeAttempt, ['policy_authority']);
+  authority.kind = 'proposal';
+  authority.approval_status = 'unratified';
+  recordAt(activeAttempt, ['compensation', 'builder']).status = 'active';
+  expectCode(activeAttempt, 'INVALID_COMPENSATION', ISSUE_1168_FIXTURE_NOW);
+
+  const payoutAttempt = loadIssue1168ProposalFixture();
+  recordAt(payoutAttempt, ['payout']).payout_enabled = true;
+  expectCode(payoutAttempt, 'PAYOUT_NOT_ELIGIBLE', ISSUE_1168_FIXTURE_NOW);
+});

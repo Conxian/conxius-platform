@@ -109,10 +109,10 @@ The mappings below are retained for provenance only. They do not imply that prot
 | **G-53** | Lightning Async Payments | [FULL_STACK_BITCOIN_RESEARCH.md#53](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#53) | `lib-conxian-core/lightning` |
 | **G-54** | OP_VAULT (BIP-345) | [FULL_STACK_BITCOIN_RESEARCH.md#54](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#54) | `lib-conxian-core/covenants` |
 | **G-55** | Enterprise ERP Simulation & Programmable Mock Engines | [ENTERPRISE_ERP_SIMULATION_RESEARCH.md](./architecture/ENTERPRISE_ERP_SIMULATION_RESEARCH.md) | 🟢 **Active Scaffolding & Unit Verified**. CON-1320 implemented in `lib/sidl/erp.ts` and verified by `erpSimulation.test.ts`. |
-| **G-56** | Founder-rights decision and evidence boundary | [Founder-rights observation report](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md) | 🟡 **Observation contract implemented**. Protocol ratification and beneficiary decision remain unresolved. |
-| **G-57** | Cross-repository revenue model drift | [Founder-rights observation report](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#contradictions-and-safe-interpretation) | 🟡 **Active gap**. Protocol, Gateway, core, and platform models require owner-level reconciliation; this platform change selects no rate. |
-| **G-58** | Deployment evidence and live-interface verification | [Founder-rights observation report](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#verified-evidence-matrix) | 🟡 **Stage gate implemented**. No broadcast, confirmation, or live-interface deployment is asserted by this repository. |
-| **G-59** | Gateway/Nexus read-only observation integration | [Founder-rights observation report](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#phase-plan) | ⚪ **Not implemented**. Requires a separate OpenSpec adapter using canonical protocol evidence. |
+| **G-56** | Founder-rights decision and evidence boundary | [Research closure handoff](./architecture/proposals/FOUNDER_RIGHTS_RESEARCH_CLOSURE_2026-09-11.md) | 🟢 **Platform research complete**. Observation contract + proposal fixture shipped; protocol ratification and beneficiary decision remain unresolved. |
+| **G-57** | Cross-repository revenue model drift | [Competing models](./architecture/proposals/FOUNDER_RIGHTS_RESEARCH_CLOSURE_2026-09-11.md#competing-models-do-not-collapse) | 🟡 **Active gap**. Protocol, Gateway, core, platform, #1168, and #488 models require owner-level reconciliation; this platform change selects no rate. |
+| **G-58** | Deployment evidence and live-interface verification | [Decision checklist](./architecture/proposals/FOUNDER_RIGHTS_RESEARCH_CLOSURE_2026-09-11.md#decision-checklist-owner-gated) | 🟡 **Stage gate implemented**. No broadcast, confirmation, or live-interface deployment is asserted by this repository. |
+| **G-59** | Gateway/Nexus read-only observation integration | [Decision checklist item 7](./architecture/proposals/FOUNDER_RIGHTS_RESEARCH_CLOSURE_2026-09-11.md#decision-checklist-owner-gated) | ⚪ **Not implemented**. Requires a separate OpenSpec adapter using canonical protocol evidence. |
 | **G-60** | Automated Knowledge Base Self-Evolution Pipeline | [SELF_EVOLVING_KB.md](./SELF_EVOLVING_KB.md) | 🏗️ **Active Implementation**. KB pattern scanner, store & test suite in . |
 | **G-61** | OpenSpec Strict Schema Validation Guardrails | [SELF_EVOLVING_KB.md](./SELF_EVOLVING_KB.md#openspec-validation) | 🟢 **Implemented**. Strict OpenSpec v1.6.0 schema validation harness. |
 | **G-62** | FROST Threshold DKG Session State Hardening | [FULL_STACK_BITCOIN_RESEARCH.md#34](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#34) | 🟢 **Unit Verified**. Round-2 commitment signing & threshold bounds in . |
@@ -143,11 +143,13 @@ The mappings below are retained for provenance only. They do not imply that prot
 
 ## 6. Phase 4 Observation Contract Update (2026-07-22)
 
-- **G-56**: 🟢 **Observation contract implemented** in the Phase 4 candidate
-  for #1168. The validator prevents source/proposal evidence from becoming
-  active founder rights or payout authority; protocol governance remains open.
-- **G-57**: 🟡 **Active unresolved drift** across protocol, Gateway, core, and
-  platform economic descriptions. No fee or allocation was selected here.
+- **G-56**: 🟢 **Platform research complete** for #1168. Observation contract,
+  proposal fixture, and decision handoff are in-repo; protocol governance must
+  still ratify or reject any economic schedule before payout can be observed as
+  enabled.
+- **G-57**: 🟡 **Active unresolved drift** across protocol, Gateway, core,
+  platform, #1168, and #488 economic descriptions. No fee or allocation was
+  selected here.
 - **G-58**: 🟢 **Fail-closed evidence gate implemented** for staged deployment,
   confirmation, and live-interface evidence. No deployment fact is asserted.
 - **G-59**: ⚪ **Not implemented**. A Gateway/Nexus read-only adapter requires a
@@ -161,3 +163,13 @@ The mappings below are retained for provenance only. They do not imply that prot
 - **G-65 (Conxian Unified API Token Management & Developer Self-Service)**: 🟢 **Implemented & Unit Verified**. Prefixed token generator (`cx_live_` / `cx_test_`), SHA-256 hashed storage, scope delegation, and management API endpoints in `services/admin-dashboard`.
 - **G-66 (Unified Client System Installer & Provisioning Engine)**: 🟢 **Implemented & Unit Verified**. Declarative client setup engine, environment validator, and license/M2M token binder in `services/admin-dashboard/src/lib/support/installer.ts`.
 - **G-67 (End-to-End Inter-Service Connectivity Verification Harness)**: 🟢 **Implemented & Unit Verified**. Pre-flight connectivity diagnostic harness across Gateway, Nexus, Neon/Postgres DBs, and RPC nodes in `services/admin-dashboard/src/lib/support/installer.ts`.
+
+## 7. Research Closure Update (2026-09-11)
+
+- Issue #1168 platform lane is closed as research-complete / decision-pending.
+- Proposal fixture:
+  `fixtures/protocol-revenue/issue-1168-proposed-builder-carve.observation.json`.
+- Handoff:
+  `docs/architecture/proposals/FOUNDER_RIGHTS_RESEARCH_CLOSURE_2026-09-11.md`.
+- Remaining economic activation work belongs to `Conxian/Conxian` and legal
+  owners; the platform must not add custody or a competing fee ledger.

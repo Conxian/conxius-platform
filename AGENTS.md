@@ -298,6 +298,25 @@
 
 **Files touched**: `docs/architecture/CLIENT_ONBOARDING_AND_UNIFIED_INSTALLER_SPEC_2026.md`, `openspec/changes/2026-09-08-client-onboarding-and-unified-installer-spec/proposal.md`, `openspec/changes/2026-09-08-client-onboarding-and-unified-installer-spec/specs/client-onboarding-and-unified-installer/spec.md`, `services/admin-dashboard/src/lib/support/installer.ts`, `services/admin-dashboard/src/tests/installer.test.ts`, `docs/GAPS.md`, `docs/README.md`, `.kb-updates.json`, `.knowledge-store.json`, `AGENTS.md`
 
+### 2026-09-11 — Founder-Rights Research Closure (#1168)
+**Trigger**: [Conxian/conxius-platform#1168](https://github.com/Conxian/conxius-platform/issues/1168) research/decision handoff after merged observation contract PR #1197.
+
+**What was done**:
+- Added OpenSpec change `openspec/changes/2026-09-11-founder-rights-research-closure/`.
+- Added research-closure / decision-handoff document with refreshed protocol evidence pins and owner checklist.
+- Added checked-in proposal observation fixture for the 250→150→100→75 bps builder carve.
+- Extended protocol-revenue observation tests for proposal acceptance and fail-closed payout rejection.
+- Updated G-56/G-57 status and documentation index links.
+
+**Key discoveries**:
+- Platform research for #1168 is complete; remaining checkboxes are protocol/legal decisions.
+- Protocol `main` still shows competing source schedules (100 bps automation vs 200/150/100 collector) and unresolved #488 proposal drift.
+- Correct sustainability math for `$84k/year` at 1% fee × 2.5% builder share requires `$336M` gross volume, not `$3.4M`.
+
+**Files touched**: `openspec/changes/2026-09-11-founder-rights-research-closure/`, `docs/architecture/proposals/FOUNDER_RIGHTS_RESEARCH_CLOSURE_2026-09-11.md`, `fixtures/protocol-revenue/issue-1168-proposed-builder-carve.observation.json`, `scripts/protocol-revenue-observation.test.ts`, `docs/GAPS.md`, `docs/README.md`, `docs/SCORING_MATRIX.md`, `AGENTS.md`
+
+**Gaps identified**: Protocol ratification, burn-height schedule, beneficiary/multi-sig disclosure, live-interface evidence, and G-59 Gateway adapter remain external.
+
 ## Repository Knowledge Graph (Current)
 
 

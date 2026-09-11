@@ -83,9 +83,16 @@ approval. This platform work implements the observation schema, pure
 fail-closed validator, tests, and evidence report; it does not select a fee,
 allocation, beneficiary, custody model, payout route, or deployment state.
 
-- **G-56** is implemented as the observation boundary; ratification remains a
-  protocol governance question.
+- **G-56** is implemented as the observation boundary and 2026-09-11 research
+  closure; ratification remains a protocol governance question.
 - **G-57** and **G-58** remain active cross-repository ownership and deployment
   evidence gaps.
 - **G-59** remains a future read-only Gateway/Nexus integration, requiring a
   separate OpenSpec change.
+
+### Research Closure Update (2026-09-11)
+
+Platform research for #1168 is complete. The checked-in proposal fixture and
+decision handoff record the 250→150→100→75 bps builder carve as unratified
+proposal evidence only. See
+[FOUNDER_RIGHTS_RESEARCH_CLOSURE_2026-09-11.md](./architecture/proposals/FOUNDER_RIGHTS_RESEARCH_CLOSURE_2026-09-11.md).

@@ -1,0 +1,250 @@
+{
+  "schema": "conxian.protocol-revenue-observation.v1",
+  "version": "1.0.0",
+  "observation_id": "observation-proposal-1168-2026-09-11",
+  "observation": {
+    "observed_at": "2026-09-11T12:00:00.000Z",
+    "expires_at": "2026-09-11T13:00:00.000Z",
+    "evidence_ids": ["ev-source-fee", "ev-source-treasury", "ev-proposal-1168", "ev-anchor"]
+  },
+  "policy_authority": {
+    "kind": "proposal",
+    "approval_status": "unratified",
+    "owner_scope": "protocol",
+    "provenance_id": "prov-proposal-1168",
+    "approval_evidence_ids": []
+  },
+  "provenance": [
+    {
+      "provenance_id": "prov-source-fee",
+      "repository": "Conxian/Conxian",
+      "ref": "refs/heads/main",
+      "commit_sha": "ff9746065e9b849a243207c4e6e73774b430d572",
+      "artifact_path": "contracts/treasury/revenue-automation.clar",
+      "role": "protocol-source",
+      "evidence_ids": ["ev-source-fee"]
+    },
+    {
+      "provenance_id": "prov-source-treasury",
+      "repository": "Conxian/Conxian",
+      "ref": "refs/heads/main",
+      "commit_sha": "ff9746065e9b849a243207c4e6e73774b430d572",
+      "artifact_path": "contracts/treasury/cxd-treasury.clar",
+      "role": "protocol-source",
+      "evidence_ids": ["ev-source-treasury"]
+    },
+    {
+      "provenance_id": "prov-source-collector",
+      "repository": "Conxian/Conxian",
+      "ref": "refs/heads/main",
+      "commit_sha": "ff9746065e9b849a243207c4e6e73774b430d572",
+      "artifact_path": "contracts/treasury/protocol-fee-collector.clar",
+      "role": "protocol-source",
+      "evidence_ids": ["ev-source-fee"]
+    },
+    {
+      "provenance_id": "prov-proposal-1168",
+      "repository": "Conxian/conxius-platform",
+      "ref": "refs/heads/main",
+      "commit_sha": "3c700afbd1eeaf5d26d16569a8a8bdbf218503ad",
+      "artifact_path": "docs/architecture/proposals/FOUNDER_RIGHTS_RESEARCH_CLOSURE_2026-09-11.md",
+      "role": "governance-proposal",
+      "evidence_ids": ["ev-proposal-1168"]
+    }
+  ],
+  "fee_policy": {
+    "fee_base": {
+      "kind": "eligible-fee-base",
+      "unit": "asset-smallest-units",
+      "asset": { "asset_id": "stx", "decimals": 6 }
+    },
+    "denominator_bps": 10000,
+    "rates": [
+      {
+        "label": "observed-revenue-automation-baseline",
+        "rate_bps": 100,
+        "denominator_bps": 10000,
+        "effective_window": {
+          "status": "unresolved",
+          "start_burn_block_height": null,
+          "end_burn_block_height": null
+        }
+      },
+      {
+        "label": "observed-collector-launch-rate",
+        "rate_bps": 200,
+        "denominator_bps": 10000,
+        "effective_window": {
+          "status": "unresolved",
+          "start_burn_block_height": null,
+          "end_burn_block_height": null
+        }
+      },
+      {
+        "label": "observed-collector-growth-rate",
+        "rate_bps": 150,
+        "denominator_bps": 10000,
+        "effective_window": {
+          "status": "unresolved",
+          "start_burn_block_height": null,
+          "end_burn_block_height": null
+        }
+      },
+      {
+        "label": "observed-collector-mature-rate",
+        "rate_bps": 100,
+        "denominator_bps": 10000,
+        "effective_window": {
+          "status": "unresolved",
+          "start_burn_block_height": null,
+          "end_burn_block_height": null
+        }
+      }
+    ],
+    "schedule_status": "observed"
+  },
+  "compensation": {
+    "founder": {
+      "status": "none-observed",
+      "beneficiary_disclosure": {
+        "status": "not-disclosed",
+        "reference_kind": "not-applicable",
+        "reference": null
+      },
+      "schedule": { "status": "unresolved", "entries": [] },
+      "route_state": "not-configured"
+    },
+    "builder": {
+      "status": "proposed",
+      "beneficiary_disclosure": {
+        "status": "unresolved",
+        "reference_kind": "not-applicable",
+        "reference": null
+      },
+      "schedule": {
+        "status": "resolved",
+        "entries": [
+          {
+            "schedule_id": "phase-1-launch-survival",
+            "rate_bps": 250,
+            "denominator_bps": 10000,
+            "rate_basis": "protocol-fee",
+            "effective_window": {
+              "status": "unresolved",
+              "start_burn_block_height": null,
+              "end_burn_block_height": null
+            }
+          },
+          {
+            "schedule_id": "phase-2-community-transition",
+            "rate_bps": 150,
+            "denominator_bps": 10000,
+            "rate_basis": "protocol-fee",
+            "effective_window": {
+              "status": "unresolved",
+              "start_burn_block_height": null,
+              "end_burn_block_height": null
+            }
+          },
+          {
+            "schedule_id": "phase-3-maintenance",
+            "rate_bps": 100,
+            "denominator_bps": 10000,
+            "rate_basis": "protocol-fee",
+            "effective_window": {
+              "status": "unresolved",
+              "start_burn_block_height": null,
+              "end_burn_block_height": null
+            }
+          },
+          {
+            "schedule_id": "phase-3-floor",
+            "rate_bps": 75,
+            "denominator_bps": 10000,
+            "rate_basis": "protocol-fee",
+            "effective_window": {
+              "status": "unresolved",
+              "start_burn_block_height": null,
+              "end_burn_block_height": null
+            }
+          }
+        ]
+      },
+      "route_state": "declared"
+    }
+  },
+  "deployment": {
+    "stage": "source-only",
+    "environment": "mainnet",
+    "source_provenance_id": "prov-source-fee",
+    "transaction_id": null,
+    "confirmed_burn_block_height": null,
+    "evidence_ids": ["ev-source-fee"],
+    "interface_evidence_ids": []
+  },
+  "routing": {
+    "collector": {
+      "reference": ".protocol-fee-collector",
+      "owner_scope": "protocol",
+      "authorization": "declared",
+      "evidence_ids": ["ev-source-fee"]
+    },
+    "distributor": {
+      "reference": ".cxd-treasury",
+      "owner_scope": "protocol",
+      "authorization": "declared",
+      "evidence_ids": ["ev-source-treasury"]
+    },
+    "authorized_sources": [
+      {
+        "reference": ".revenue-automation",
+        "owner_scope": "protocol",
+        "authorization": "declared",
+        "evidence_ids": ["ev-source-fee"]
+      }
+    ],
+    "platform_substitution": false
+  },
+  "anchor": {
+    "bitcoin_burn_block_height": 0,
+    "observed_at": "2026-09-11T12:00:00.000Z",
+    "evidence_id": "ev-anchor"
+  },
+  "payout": {
+    "route_state": "blocked",
+    "payout_enabled": false,
+    "evidence_ids": ["ev-proposal-1168"],
+    "reason": "Issue #1168 builder carve remains an unratified proposal; no payout is authorized."
+  },
+  "custody_claim": false,
+  "evidence": [
+    {
+      "evidence_id": "ev-source-fee",
+      "kind": "source",
+      "external_id": "Conxian/Conxian@ff9746065e9b849a243207c4e6e73774b430d572:contracts/treasury/revenue-automation.clar",
+      "observed_at": "2026-09-11T12:00:00.000Z",
+      "claim": "Observed PROTOCOL_FEE_BPS u100 in revenue-automation.clar and 200/150/100 collector phase rates; no founder carve selected."
+    },
+    {
+      "evidence_id": "ev-source-treasury",
+      "kind": "source",
+      "external_id": "Conxian/Conxian@ff9746065e9b849a243207c4e6e73774b430d572:contracts/treasury/cxd-treasury.clar",
+      "observed_at": "2026-09-11T12:00:00.000Z",
+      "claim": "Observed CXIP-013-style 45/30/15/5/5 target shares; treasury source is not ratified founder entitlement."
+    },
+    {
+      "evidence_id": "ev-proposal-1168",
+      "kind": "proposal",
+      "url": "https://github.com/Conxian/conxius-platform/issues/1168",
+      "observed_at": "2026-09-11T12:00:00.000Z",
+      "claim": "Issue #1168 proposes a direct builder carve of 250→150→100→75 bps of protocol fee with unresolved burn-height boundaries."
+    },
+    {
+      "evidence_id": "ev-anchor",
+      "kind": "burn-anchor",
+      "external_id": "observation-anchor-unresolved-height",
+      "observed_at": "2026-09-11T12:00:00.000Z",
+      "claim": "Proposal observation uses an explicit unresolved burn-height placeholder; it is not live deployment evidence."
+    }
+  ]
+}

@@ -61,23 +61,6 @@ services:
       retries: 3
       start_period: 15s
 
-  # Conxian UI - Orchestrated as an external dependency in Phase 7
-  conxian-ui:
-    image: ${UI_IMAGE:-nginx:1.27-alpine}
-    restart: unless-stopped
-    ports:
-      - "${UI_PORT:-3000}:3000"
-    environment:
-      - NEXT_PUBLIC_CORE_API_URL=${NEXT_PUBLIC_CORE_API_URL}
-    networks:
-      - conxian-network
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:80"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-
   bisq-node:
     profiles:
       - bisq

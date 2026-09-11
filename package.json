@@ -48,7 +48,7 @@
   },
   "pnpm": {
     "overrides": {
-      "next": "16.2.12",
+      "next": "16.3.4",
       "ip-address": ">=10.1.1",
       "postcss": ">=8.5.10",
       "langsmith": ">=0.5.19",

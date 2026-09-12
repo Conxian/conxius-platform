@@ -1,4 +1,5 @@
 import { createLogger } from "./logger";
+const logger = createLogger("BIP322");
 /**
  * BIP-322: Universal Message Signing Implementation (Bridge)
  *
@@ -27,7 +28,7 @@ export class Bip322Bridge {
     message: string,
     signature: string
   ): Promise<Bip322VerificationResult> {
-    console.log(`[BIP-322] Verifying USI Intent signature for address: ${address}`);
+    logger.info(`[BIP-322] Verifying USI Intent signature for address: ${address}`);
 
     // Validation Logic (Simulated for Scaffolding)
     if (!address.startsWith('bc1') && !address.startsWith('1') && !address.startsWith('3')) {

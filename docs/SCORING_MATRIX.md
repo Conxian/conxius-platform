@@ -54,6 +54,10 @@ This matrix scores the identified gaps based on Strategic Alignment, Implementat
 | **G-57** | **Cross-repository revenue model drift** | 10 | 6 | 9 | **25** | [Contradictions and ownership](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#contradictions-and-safe-interpretation) |
 | **G-58** | **Deployment evidence/live-interface verification** | 10 | 5 | 9 | **24** | [Evidence matrix](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#verified-evidence-matrix) |
 | **G-59** | **Gateway/Nexus observation integration** | 9 | 7 | 8 | **24** | [Phase plan](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#phase-plan) |
+| **G-64** | **BitVMX Fail-Closed Execution Engine** | 10 | 9 | 6 | **25** | [BitVMX Research](./architecture/BITVMX_RESEARCH.md) |
+| **G-65** | **Conxian Unified API Token Management** | 9 | 6 | 10 | **25** | [M2M Authentication](./M2M_AUTHENTICATION.md) |
+| **G-66** | **Unified Client System Installer** | 9 | 7 | 9 | **25** | [Sovereign Representation](./architecture/SOVEREIGN_REPR_2026.md) |
+| **G-67** | **Inter-Service Connectivity Harness** | 9 | 7 | 9 | **25** | [Sovereign Representation](./architecture/SOVEREIGN_REPR_2026.md) |
 
 ## Scoring Rubric (1-10)
 - **Strategic Alignment**: How critical is this to the "Full Bitcoin Stack" vision?

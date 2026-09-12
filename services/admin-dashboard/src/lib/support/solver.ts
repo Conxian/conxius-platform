@@ -1,4 +1,5 @@
 import { createLogger } from "./logger";
+const logger = createLogger("SolverSelectionEngine");
 /**
  * G-12: ERC-7683 Solver Selection Algorithm (CON-1307)
  *
@@ -35,7 +36,7 @@ export class SolverSelectionEngine {
    * Weights: Reputation (40%), Fee (40%), Latency (20%).
    */
   public rankSolvers(targetChain: string, amount_sats: number): Solver[] {
-    console.log(`[ERC-7683] Ranking solvers for chain: ${targetChain} and amount: ${amount_sats} sats`);
+    logger.info(`[ERC-7683] Ranking solvers for chain: ${targetChain} and amount: ${amount_sats} sats`);
 
     return this.solvers
       .filter(s => s.supportedChains.includes(targetChain))
@@ -58,7 +59,7 @@ export class SolverSelectionEngine {
     if (ranked.length === 0) return undefined;
 
     const best = ranked[0];
-    console.log(`[ERC-7683] Selected best solver: ${best.name} for intent: ${intentId}`);
+    logger.info(`[ERC-7683] Selected best solver: ${best.name} for intent: ${intentId}`);
 
     // Simulate bid generation
     return {

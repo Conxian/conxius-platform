@@ -75,7 +75,7 @@ The mappings below are retained for provenance only. They do not imply that prot
 | **G-02** | FDC3 Native Resolver | [FDC3_INTEROPERABILITY.md](./architecture/FDC3_INTEROPERABILITY.md) | 🟢 **Implemented**. Standardized mapping in `resolver.ts`. |
 | **G-03** | Usage Validation | [usage-validation-instrumentation-v1.spec.md](../openspec/specs/usage-validation-instrumentation-v1.spec.md) | 🟢 **Implemented**. Score-based triage in `usageValidation.ts`. |
 | **G-04** | Wasm Wallet-BFF | [FULL_STACK_BITCOIN_RESEARCH.md#15](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#15) | `lib-conxian-core` (Wasm) |
-| **G-05** | Silent Payments (BIP-352) | [FULL_STACK_BITCOIN_RESEARCH.md#30](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#30) | 🏗️ **Active Scaffolding**. CON-1281 implemented in enclave-sdk. |
+| **G-05** | Silent Payments (BIP-352) | [FULL_STACK_BITCOIN_RESEARCH.md#30](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#30) | 🟢 **Implemented & Unit Verified**. CON-1281 address encoding, validation, parsing, spend key tweaking, and scan key output matching in `services/admin-dashboard/src/lib/support/silentPayments.ts`. |
 | **G-06** | DLC Native Finance | [FULL_STACK_BITCOIN_RESEARCH.md#26](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#26) | `lib-conxian-core/dlc` |
 | **G-07** | Nostr Wallet Connect (NWC) | [FULL_STACK_BITCOIN_RESEARCH.md#27](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#27) | 🟢 **Implemented**. CON-1267 authorized via Admin BFF |
 | **G-08** | ZK-Rollup T1 Adapters (Citrea/Strata) | [FULL_STACK_BITCOIN_RESEARCH.md#28](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#28) | `conxian-nexus/adapters` |
@@ -138,7 +138,7 @@ The mappings below are retained for provenance only. They do not imply that prot
 - **G-20 (BitVM3)**: 🛡️ **Fail-closed boundary; same-proof FIFO replay/conflict protection, bounded terminal retention, and finite-window identity tombstones are implemented; durable Gateway/Core registry and recursive backend remain pending**.
 - **G-50 (ZKCP)**: 🛡️ **Fail-closed boundary; versioned intent binding, bounded retention/pagination, immutable proof/payment evidence, and unavailable defaults are implemented. Production key release is hard-disabled with zero adapter dispatch and no finalized/key output. Verifier/payment backends plus a future independently authenticated, server-bound Gateway/Core atomic claim-or-get coordinator and durable registry remain pending; dependency injection alone can never enable release**.
 - **G-51 (Optimized verifier)**: 🏗️ **Research only; no pairing implementation in this repository**.
-- **G-05 (Silent Payments)**: 🏗️ **Active Scaffolding**.
+- **G-05 (Silent Payments)**: 🟢 **Implemented & Unit Verified**. BIP-352 address generation, validation, parsing, spend key tweaking, and scan output matching verified by `silentPayments.test.ts`.
 - **G-44 (BitVMX Computation)**: 🏗️ **Active Scaffolding**.
 
 ## 6. Phase 4 Observation Contract Update (2026-07-22)

@@ -52,6 +52,12 @@ This matrix scores the identified gaps based on Strategic Alignment, Implementat
 | **G-55** | **Enterprise ERP Simulation** | 9 | 7 | 8 | **24** | [Enterprise ERP Simulation](./architecture/ENTERPRISE_ERP_SIMULATION_RESEARCH.md) |
 | **G-64** | **BitVMX Fail-Closed Execution Engine** | 10 | 8 | 7 | **25** | [BitVMX Research](./architecture/BITVMX_RESEARCH.md) |
 | **G-65** | **Conxian Unified API Token Management & Developer Self-Service** | 9 | 6 | 10 | **25** | [CONXIAN_API_TOKEN Spec](./architecture/CONXIAN_API_TOKEN_SPEC.md) |
+| **G-60** | **Automated Knowledge Base Self-Evolution Pipeline** | 8 | 5 | 9 | **22** | [SELF_EVOLVING_KB](./SELF_EVOLVING_KB.md) |
+| **G-61** | **OpenSpec Strict Schema Validation Guardrails** | 8 | 4 | 9 | **21** | [OpenSpec Guardrails](./SELF_EVOLVING_KB.md#openspec-validation) |
+| **G-62** | **FROST Threshold DKG Session State Hardening** | 9 | 7 | 8 | **24** | [FROST Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#34) |
+| **G-63** | **BitVM Fail-Closed Replay & Tombstone Verification** | 10 | 8 | 7 | **25** | [BitVM Floor](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#21) |
+| **G-66** | **Unified Client System Installer & Provisioning Engine** | 9 | 6 | 10 | **25** | [Client Onboarding Spec](./architecture/CLIENT_ONBOARDING_AND_UNIFIED_INSTALLER_SPEC_2026.md) |
+| **G-67** | **End-to-End Inter-Service Connectivity Verification Harness** | 9 | 6 | 10 | **25** | [Inter-Service Connectivity Spec](./architecture/CLIENT_ONBOARDING_AND_UNIFIED_INSTALLER_SPEC_2026.md) |
 | **G-56** | **Founder-rights observation/evidence boundary** | 10 | 4 | 10 | **24** | [Founder-rights observation](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md) |
 | **G-57** | **Cross-repository revenue model drift** | 10 | 6 | 9 | **25** | [Contradictions and ownership](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#contradictions-and-safe-interpretation) |
 | **G-58** | **Deployment evidence/live-interface verification** | 10 | 5 | 9 | **24** | [Evidence matrix](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#verified-evidence-matrix) |

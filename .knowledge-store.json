@@ -585,13 +585,13 @@
       "category": "metric",
       "source": "internal",
       "data": {
-        "totalFiles": 697,
-        "tsFiles": 187,
-        "testFiles": 43,
+        "totalFiles": 698,
+        "tsFiles": 189,
+        "testFiles": 44,
         "apiRoutes": 40,
         "pages": 19,
         "workflows": 19,
-        "avgFileSize": 6350.863701578192,
+        "avgFileSize": 6375.498567335244,
         "largestFiles": [
           {
             "path": "docs/archive/AGENTS_archive_session_58.md",
@@ -617,15 +617,15 @@
         "avgFileSizeKB": 6
       },
       "confidence": 0.98,
-      "lastUpdated": "2026-09-08T14:12:12.532Z",
+      "lastUpdated": "2026-09-12T13:08:45.246Z",
       "tags": [
         "codebase",
         "metrics",
         "structure"
       ],
       "evidence": [
-        "697 total files",
-        "187 TypeScript files",
+        "698 total files",
+        "189 TypeScript files",
         "19 CI workflows"
       ]
     },
@@ -635,21 +635,21 @@
       "source": "synthesis",
       "data": {
         "type": "test-coverage",
-        "coverage": 0.22994652406417113,
+        "coverage": 0.2328042328042328,
         "threshold": 0.5,
-        "deficit": 0.27005347593582885,
+        "deficit": 0.2671957671957672,
         "recommendation": "Increase test coverage to >50%"
       },
       "confidence": 0.95,
-      "lastUpdated": "2026-09-08T14:12:12.533Z",
+      "lastUpdated": "2026-09-12T13:08:45.246Z",
       "tags": [
         "testing",
         "coverage",
         "gap"
       ],
       "evidence": [
-        "43 tests for 187 TypeScript files",
-        "Coverage: 23.0%"
+        "44 tests for 189 TypeScript files",
+        "Coverage: 23.3%"
       ]
     },
     "pattern-internal-api-auth": {
@@ -663,7 +663,7 @@
         "convention": "All API routes protected with validateAdminAuth()"
       },
       "confidence": 0.9,
-      "lastUpdated": "2026-09-08T14:12:12.533Z",
+      "lastUpdated": "2026-09-12T13:08:45.247Z",
       "tags": [
         "api",
         "auth",
@@ -685,7 +685,7 @@
         "description": "Extensive CI/CD pipeline with multiple specialized workflows"
       },
       "confidence": 0.85,
-      "lastUpdated": "2026-09-08T14:12:12.534Z",
+      "lastUpdated": "2026-09-12T13:08:45.247Z",
       "tags": [
         "ci",
         "workflows",
@@ -739,6 +739,6 @@
     "pattern-internal-api-auth": [],
     "pattern-internal-ci-workflows": []
   },
-  "version": 57,
-  "lastSync": "2026-09-12T12:07:54Z"
+  "version": 65,
+  "lastSync": "2026-09-12T13:08:45.247Z"
 }

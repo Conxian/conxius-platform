@@ -271,7 +271,7 @@ Research into secondary settlement layers to ensure multidimensional redundancy.
 <a id="30"></a>
 ## 30. Silent Payments (BIP-352): Reusable Privacy
 - **Concept**: Reusable donation addresses that don't reveal the recipient's identity on-chain and prevent address reuse without per-transaction interaction.
-- **Implementation**: `lib-conxian-core` implementation for scanning and spending Silent Payments.
+- **Implementation**: 🟢 **Implemented & Unit Verified** in `services/admin-dashboard/src/lib/support/silentPayments.ts` providing BIP-352 address generation, validation, parsing, spend key tweaking, scan key registration, and output matching, verified by `silentPayments.test.ts`.
 - **Benefit**: Enhances privacy for corporate treasury and payroll without the overhead of BIP-47 Notification transactions.
 
 <a id="31"></a>

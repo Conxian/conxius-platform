@@ -20,7 +20,7 @@
     "jose": "^6.2.7",
     "mailparser": "^3.9.14",
     "next": "16.2.12",
-    "nodemailer": "^9.0.3",
+    "nodemailer": "^10.0.0",
     "nostr-tools": "^2.24.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",

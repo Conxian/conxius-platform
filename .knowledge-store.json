@@ -695,6 +695,22 @@
       "evidence": [
         "19 workflow files detected"
       ]
+    },
+    "pattern-musig2-aggregation-g10": {
+      "id": "pattern-musig2-aggregation-g10",
+      "type": "pattern",
+      "title": "MuSig2 Multi-Party Key Aggregation & Signing Engine (G-10)",
+      "description": "Implemented BIP-327 MuSig2 multi-party Taproot key aggregation, two-round nonce generation, partial signature computation, and final Schnorr signature assembly in services/admin-dashboard/src/lib/support/musig2.ts, verified by services/admin-dashboard/src/tests/musig2.test.ts.",
+      "confidenceScore": 0.95,
+      "lastUpdated": "2026-09-12T12:07:54Z",
+      "tags": [
+        "musig2",
+        "bip327",
+        "schnorr",
+        "taproot",
+        "phase7",
+        "g10"
+      ]
     }
   },
   "relationships": {
@@ -724,5 +740,5 @@
     "pattern-internal-ci-workflows": []
   },
   "version": 57,
-  "lastSync": "2026-09-08T14:12:12.534Z"
+  "lastSync": "2026-09-12T12:07:54Z"
 }

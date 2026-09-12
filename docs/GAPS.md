@@ -105,6 +105,10 @@ repository; it does not implement a proof backend.
 | **G-57** | Cross-repository revenue model drift | [Founder-rights observation report](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#contradictions-and-safe-interpretation) | 🟡 **Active gap**. Protocol, Gateway, core, and platform models require owner-level reconciliation; this platform change selects no rate. |
 | **G-58** | Deployment evidence and live-interface verification | [Founder-rights observation report](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#verified-evidence-matrix) | 🟡 **Stage gate implemented**. No broadcast, confirmation, or live-interface deployment is asserted by this repository. |
 | **G-59** | Gateway/Nexus read-only observation integration | [Founder-rights observation report](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#phase-plan) | ⚪ **Not implemented**. Requires a separate OpenSpec adapter using canonical protocol evidence. |
+| **G-64** | BitVMX Fail-Closed Execution Engine | [BITVMX_RESEARCH.md](./architecture/BITVMX_RESEARCH.md) | 🟢 **Implemented**. Fail-closed execution, state invariants, max capacity, challenge depth capping, and tombstoning in `bitvmx.ts`. |
+| **G-65** | Conxian Unified API Token Management | [M2M_AUTHENTICATION.md](./M2M_AUTHENTICATION.md) | 🟢 **Implemented**. Prefixed token generation (`cx_live_`/`cx_test_`), SHA-256 hashed storage, constant-time verification, and scope enforcement in `apiTokens.ts`. |
+| **G-66** | Unified Client System Installer & Provisioning Engine | [SOVEREIGN_REPR_2026.md](./architecture/SOVEREIGN_REPR_2026.md) | 🟢 **Implemented**. Declarative installer configuration, fail-closed environment validation, and M2M binding in `installer.ts`. |
+| **G-67** | End-to-End Inter-Service Connectivity Verification Harness | [SOVEREIGN_REPR_2026.md](./architecture/SOVEREIGN_REPR_2026.md) | 🟢 **Implemented**. Diagnostics across Gateway, Nexus, Database (Neon/Postgres), RPC nodes, and Enclave KMS in `installer.ts`. |
 
 ---
 *Updated by Charlie (issue #1187 remediation) - 2026-07-22*

@@ -100,7 +100,7 @@ def audit_security():
     else:
         print("PASSED: No M2M service-key registries or secret directories tracked.")
 
-    # 2. Check for tracked generated artifacts
+    # 2. Check for tracked generated artifacts & runtime state
     print("Checking for tracked generated artifacts...")
     artifacts = [
         "node_modules",
@@ -118,6 +118,18 @@ def audit_security():
         out, err, code = run_cmd(cmd)
         if out:
             print(f"CRITICAL: Found tracked generated artifact: {artifact}")
+            all_passed = False
+
+    state_files = [
+        ".sidl-state.json",
+        ".claims-state.json",
+        ".action-version-cache.json"
+    ]
+    for state_file in state_files:
+        cmd = f"git ls-files | grep -E '(^|/){re.escape(state_file)}$'"
+        out, err, code = run_cmd(cmd)
+        if out:
+            print(f"CRITICAL: Found tracked runtime state file: {state_file}")
             all_passed = False
 
     if all_passed:

@@ -4,7 +4,7 @@ The `conxius-platform` repository contains platform composition and lifecycle sc
 
 ## Status
 
-**Active development.** This is a Conxian Platform repository and should be read primarily as contributor and operator infrastructure rather than as an end-user product surface.
+**Active development.** This is a Conxian Platform repository and should be read primarily as contributor and operator infrastructure rather than as an end-user product surface. Synchronized platform baseline: `v0.2.5`.
 
 This repository uses formal versioned releases tracked in `CHANGELOG.md` and published via GitHub Releases.
 
@@ -37,16 +37,17 @@ For protocol logic, wallet/client behavior, or public site content, use the owni
 
 GitHub Actions workflows in [`.github/workflows`](./.github/workflows) are the sole CI source of truth for this repository. Legacy CircleCI configuration has been intentionally removed.
 
-## Scope
+## Scope & Workspace Services
 
-`conxius-platform` is a Conxian Platform repository. Keep root-level content focused on:
+`conxius-platform` is organized as a pnpm monorepo. Keep root-level content focused on environment runtime, orchestration, CI/CD pipelines, and platform architecture.
 
-- environment and runtime orchestration
-- CI and release automation
-- integration harnesses and developer tooling
-- platform architecture and repository-boundary guidance
+Internal workspace services located under `services/`:
 
-Out of scope here: portfolio strategy narratives, legal or financial operations material, and non-platform product planning. Route those to the owning repository in [Repository Taxonomy](./docs/REPOSITORY_TAXONOMY.md) or the Conxian Linear `CON` workspace.
+- [**Admin Dashboard** (`services/admin-dashboard`)](./services/admin-dashboard/README.md): Internal control plane for Gateway health, telemetry, and multidimensional pulse orchestration.
+- [**Admin Pulse BOS** (`services/admin-pulse-bos`)](./services/admin-pulse-bos/README.md): Specialized Sovereign Financial Office (SFO) command pulse components for internal dev testing.
+- [**ElizaOS Plugin** (`services/elizaos-plugin-conxian`)](./services/elizaos-plugin-conxian/README.md): AI agent integration plugin exposing Gateway and SIDL actions to ElizaOS.
+
+See [SUPPORT.md](SUPPORT.md) for support tiers and expectations for each workspace service.
 
 ## Governance relation
 
@@ -116,6 +117,7 @@ prints fallback messages. See [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md).
 - This repository follows Semantic Versioning via annotated tags (`vX.Y.Z`).
 - Changes are recorded in `CHANGELOG.md`.
 - Releases are triggered by tags and verified by the [`release.yml`](./.github/workflows/release.yml) workflow.
+- See [`RELEASE_POLICY.md`](RELEASE_POLICY.md), [`RELEASE_CONTROL.md`](RELEASE_CONTROL.md), and [`RELEASING.md`](RELEASING.md) for full release promotion and gating requirements.
 
 ## Policies
 
@@ -126,6 +128,8 @@ prints fallback messages. See [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md).
 - [SUPPORT.md](SUPPORT.md)
 - [REVIEWS.md](REVIEWS.md)
 - [RELEASE_POLICY.md](RELEASE_POLICY.md)
+- [RELEASE_CONTROL.md](RELEASE_CONTROL.md)
+- [RELEASING.md](RELEASING.md)
 - [CODEOWNERS](CODEOWNERS)
 - [Pull Request Template](.github/PULL_REQUEST_TEMPLATE.md)
 

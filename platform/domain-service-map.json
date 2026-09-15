@@ -3,6 +3,27 @@
   "canonicalHost": "www.conxian-labs.com",
   "redirectHost": "conxian-labs.com",
   "platformRepository": "Conxian/conxius-platform",
+  "domainFirewallRules": {
+    "protocolDevSurface": {
+      "domain": "conxian.org",
+      "description": "Pure technical distribution, stateless container images, SDKs, open protocol specifications. No corporate marketing.",
+      "routes": {
+        "conxian-nexus": "nexus.conxian.org",
+        "conxian-gateway": "gateway.conxian.org",
+        "conxius-enclave-sdk": "sdk.conxian.org",
+        "conxius-platform": "platform.conxian.org",
+        "conxian_market": "market.conxian.org"
+      }
+    },
+    "corporateGovernanceSurface": {
+      "domain": "conxian-labs.com",
+      "description": "B2B enterprise licensing, legal compliance, business operations, and sovereign control plane.",
+      "routes": {
+        "conxian-business": "bos.conxian-labs.com",
+        "conxian-labs-site": "www.conxian-labs.com"
+      }
+    }
+  },
   "surfaces": [
     {
       "host": "www.conxian-labs.com",
@@ -16,8 +37,10 @@
     }
   ],
   "externalSurfaces": [
-    { "serviceId": "gateway", "owner": "Gateway repository owner", "status": "external dependency" },
-    { "serviceId": "nexus", "owner": "Nexus repository owner", "status": "external dependency" },
+    { "serviceId": "gateway", "targetHost": "gateway.conxian.org", "owner": "Gateway repository owner", "status": "external dependency" },
+    { "serviceId": "nexus", "targetHost": "nexus.conxian.org", "owner": "Nexus repository owner", "status": "external dependency" },
+    { "serviceId": "enclave-sdk", "targetHost": "sdk.conxian.org", "owner": "Enclave SDK repository owner", "status": "external dependency" },
+    { "serviceId": "market", "targetHost": "market.conxian.org", "owner": "Market repository owner", "status": "external dependency" },
     { "serviceId": "protocol-and-wallet", "owner": "Protocol or wallet repository owners", "status": "not platform-owned; no custody or signing" },
     { "serviceId": "elizaos-plugin-conxian", "owner": "Conxian/conxius-platform", "status": "external-agent-runtime" }
   ],

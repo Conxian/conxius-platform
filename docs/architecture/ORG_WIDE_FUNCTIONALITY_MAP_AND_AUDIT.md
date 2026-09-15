@@ -13,6 +13,26 @@ This report delivers a full org-wide functionality mapping and audit across all 
 
 ---
 
+
+## 1.0 Legal & Architectural Firewall Domain Routing
+
+Conxian maintains a strict legal and architectural firewall between the open-source protocol distribution and the corporate entity.
+
+### Protocol & Developer Surface (conxian.org)
+*Pure technical distribution, stateless container images, SDKs, open specifications. No corporate marketing.*
+- conxian-nexus -> nexus.conxian.org
+- conxian-gateway -> gateway.conxian.org
+- conxius-enclave-sdk -> sdk.conxian.org
+- conxius-platform -> platform.conxian.org
+- conxian_market -> market.conxian.org
+
+### Corporate & Governance Surface (conxian-labs.com)
+*B2B Sales, Enterprise Licensing, Legal Compliance, Operations, and Sovereign Control Plane.*
+- conxian-business -> bos.conxian-labs.com
+- conxian-labs-site -> www.conxian-labs.com
+
+---
+
 ## 1. Cloud Infrastructure & Service Topology Map
 
 ### 1.1 Neon Cloud Database Portfolio

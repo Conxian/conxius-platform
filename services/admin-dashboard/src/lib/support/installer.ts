@@ -37,6 +37,7 @@ export interface ComponentDiagnosticStatus {
   status: 'healthy' | 'unreachable' | 'misconfigured' | 'unauthorized';
   latencyMs: number;
   details: string;
+  version?: string;
 }
 
 export interface PreFlightDiagnosticReport {
@@ -166,6 +167,7 @@ export async function runPreFlightDiagnostics(
       component: 'database',
       status: 'healthy',
       latencyMs: Date.now() - dbStart,
+      version: '0.2.5',
       details: 'PostgreSQL / Neon database connection string valid and formatted.',
     });
   } else {

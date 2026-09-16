@@ -58,6 +58,8 @@ This matrix scores the identified gaps based on Strategic Alignment, Implementat
 | **G-63** | **BitVM Fail-Closed Replay & Tombstone Verification** | 10 | 8 | 7 | **25** | [BitVM Floor](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#21) |
 | **G-66** | **Unified Client System Installer & Provisioning Engine** | 9 | 6 | 10 | **25** | [Client Onboarding Spec](./architecture/CLIENT_ONBOARDING_AND_UNIFIED_INSTALLER_SPEC_2026.md) |
 | **G-67** | **End-to-End Inter-Service Connectivity Verification Harness** | 9 | 6 | 10 | **25** | [Inter-Service Connectivity Spec](./architecture/CLIENT_ONBOARDING_AND_UNIFIED_INSTALLER_SPEC_2026.md) |
+| **G-68** | **conxian.org Sovereign Protocol Surface & Developer Hub** | 10 | 6 | 10 | **26** | [Org-Wide Functionality Map](./architecture/ORG_WIDE_FUNCTIONALITY_MAP_AND_AUDIT.md) |
+| **G-69** | **Strict Legal & Architectural Domain Firewall Routing** | 10 | 5 | 10 | **25** | [Org-Wide Functionality Map](./architecture/ORG_WIDE_FUNCTIONALITY_MAP_AND_AUDIT.md) |
 | **G-56** | **Founder-rights observation/evidence boundary** | 10 | 4 | 10 | **24** | [Founder-rights observation](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md) |
 | **G-57** | **Cross-repository revenue model drift** | 10 | 6 | 9 | **25** | [Contradictions and ownership](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#contradictions-and-safe-interpretation) |
 | **G-58** | **Deployment evidence/live-interface verification** | 10 | 5 | 9 | **24** | [Evidence matrix](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#verified-evidence-matrix) |

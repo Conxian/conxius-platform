@@ -585,13 +585,13 @@
       "category": "metric",
       "source": "internal",
       "data": {
-        "totalFiles": 698,
+        "totalFiles": 700,
         "tsFiles": 189,
         "testFiles": 44,
         "apiRoutes": 40,
         "pages": 19,
         "workflows": 19,
-        "avgFileSize": 6389.712034383954,
+        "avgFileSize": 6385.478571428572,
         "largestFiles": [
           {
             "path": "docs/archive/AGENTS_archive_session_58.md",
@@ -617,14 +617,14 @@
         "avgFileSizeKB": 6
       },
       "confidence": 0.98,
-      "lastUpdated": "2026-09-15T08:22:22.661Z",
+      "lastUpdated": "2026-09-16T15:16:50.153Z",
       "tags": [
         "codebase",
         "metrics",
         "structure"
       ],
       "evidence": [
-        "698 total files",
+        "700 total files",
         "189 TypeScript files",
         "19 CI workflows"
       ]
@@ -641,7 +641,7 @@
         "recommendation": "Increase test coverage to >50%"
       },
       "confidence": 0.95,
-      "lastUpdated": "2026-09-15T08:22:22.663Z",
+      "lastUpdated": "2026-09-16T15:16:50.154Z",
       "tags": [
         "testing",
         "coverage",
@@ -663,7 +663,7 @@
         "convention": "All API routes protected with validateAdminAuth()"
       },
       "confidence": 0.9,
-      "lastUpdated": "2026-09-15T08:22:22.663Z",
+      "lastUpdated": "2026-09-16T15:16:50.155Z",
       "tags": [
         "api",
         "auth",
@@ -685,7 +685,7 @@
         "description": "Extensive CI/CD pipeline with multiple specialized workflows"
       },
       "confidence": 0.85,
-      "lastUpdated": "2026-09-15T08:22:22.664Z",
+      "lastUpdated": "2026-09-16T15:16:50.156Z",
       "tags": [
         "ci",
         "workflows",
@@ -739,6 +739,6 @@
     "pattern-internal-api-auth": [],
     "pattern-internal-ci-workflows": []
   },
-  "version": 69,
-  "lastSync": "2026-09-15T08:22:22.664Z"
+  "version": 77,
+  "lastSync": "2026-09-16T15:16:50.156Z"
 }

@@ -1,13 +1,14 @@
 /**
- * MuSig2 (BIP-327) Unit Test Suite (Gap G-10)
+ * MuSig2 (BIP-327) Unit Test Suite (Gap G-10 & G-11)
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import { MuSig2Engine, MuSig2Participant } from '../lib/support/musig2';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { MuSig2Engine, MuSig2Participant, MAX_MUSIG2_SESSIONS, MUSIG2_SESSION_TTL_MS } from '../lib/support/musig2';
 
-describe('MuSig2 Multi-Party Aggregation & Signing Engine (G-10)', () => {
+describe('MuSig2 Multi-Party Aggregation & Signing Engine (G-10 & G-11)', () => {
   beforeEach(() => {
     MuSig2Engine.clearSessions();
+    vi.restoreAllMocks();
   });
 
   const participant1: MuSig2Participant = {
@@ -137,5 +138,35 @@ describe('MuSig2 Multi-Party Aggregation & Signing Engine (G-10)', () => {
     expect(() => {
       MuSig2Engine.submitPartialSignature(sessionId, participant1.participantId, 'invalid-sig');
     }).toThrow(/Session invalid-input-session is in state nonce_exchange, expected signing/);
+  });
+
+  it('enforces maximum session capacity limits (G-11)', () => {
+    const participants = [participant1, participant2];
+
+    for (let i = 0; i < MAX_MUSIG2_SESSIONS; i++) {
+      MuSig2Engine.createSession(`session-cap-${i}`, participants, messageHashHex);
+    }
+
+    expect(() => {
+      MuSig2Engine.createSession('session-cap-overflow', participants, messageHashHex);
+    }).toThrow(/capacity exceeded/);
+  });
+
+  it('automatically purges and rejects expired sessions (G-11)', () => {
+    const participants = [participant1, participant2];
+    const sessionId = 'expired-session-test';
+
+    const now = Date.now();
+    vi.spyOn(Date, 'now').mockReturnValue(now);
+
+    MuSig2Engine.createSession(sessionId, participants, messageHashHex);
+
+    // Fast-forward 25 hours
+    vi.spyOn(Date, 'now').mockReturnValue(now + MUSIG2_SESSION_TTL_MS + 60 * 60 * 1000);
+
+    expect(MuSig2Engine.getSession(sessionId)).toBeUndefined();
+    expect(() => {
+      MuSig2Engine.submitPublicNonce(sessionId, 'p1', '0'.repeat(128));
+    }).toThrow(/Session expired-session-test not found/);
   });
 });

@@ -85,7 +85,7 @@ The mappings below are retained for provenance only. They do not imply that prot
 | **G-12** | ERC-7683 Solver Selection | [FULL_STACK_BITCOIN_RESEARCH.md#32](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#32) | 🏗️ **Active Scaffolding**. CON-1307 initialized. |
 | **G-13** | MFE Federation | [SOVEREIGN_REPR_2026.md#3](./architecture/SOVEREIGN_REPR_2026.md#3) | Webpack Module Federation |
 | **G-14** | FROST Threshold Signatures | [FULL_STACK_BITCOIN_RESEARCH.md#34](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#34) | 🟢 **Active Scaffolding & Unit Verified**. Coordination types in `frost.ts` verified by `frost.test.ts`. Rust target: `lib-conxian-core/frost`. |
-| **G-15** | OP_CAT Recursive Covenants | [FULL_STACK_BITCOIN_RESEARCH.md#35](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#35) | `lib-conxian-core/covenants` |
+| **G-15** | OP_CAT Recursive Covenants (Active Scaffolding & Unit Verified) | [FULL_STACK_BITCOIN_RESEARCH.md#35](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#35) | 🟢 **Active Scaffolding & Unit Verified**. BIP-347 OP_CAT stack evaluation and recursive covenant state machine in `services/admin-dashboard/src/lib/support/opCat.ts`, verified by `services/admin-dashboard/src/tests/opCat.test.ts`. Rust target: `lib-conxian-core/covenants`. |
 | **G-16** | Fedimint Community Liquidity | [FULL_STACK_BITCOIN_RESEARCH.md#36](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#36) | `conxian-nexus/fedimint` |
 | **G-17** | BIP-353 DNS Payments | [FULL_STACK_BITCOIN_RESEARCH.md#32](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#32) | 🟢 **Implemented**. Foundational bridge active. |
 | **G-18** | BIP-324 Transport | [FULL_STACK_BITCOIN_RESEARCH.md#38](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#38) | `conxian-nexus/transport` |

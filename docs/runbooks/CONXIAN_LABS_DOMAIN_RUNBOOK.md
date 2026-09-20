@@ -29,3 +29,22 @@ The dashboard is a neutral control plane. Gateway, Nexus, protocol, wallet, cust
 ## Review lens
 
 Use ITIL 4 only for review evidence: incident, service request, problem, change enablement, configuration, monitoring/event, and continual-improvement observations. It is not the platform architecture.
+
+## Legal & Architectural Firewall Routing Matrix
+
+Conxian maintains a strict legal and architectural firewall separating open-source protocol distribution from corporate/B2B licensing and operations.
+
+### Protocol & Developer Surface (`conxian.org`)
+*No corporate marketing. Pure stateless container, SDK, and technical protocol distribution.*
+
+- `conxian-nexus` -> `nexus.conxian.org`
+- `conxian-gateway` -> `gateway.conxian.org`
+- `conxius-enclave-sdk` -> `sdk.conxian.org`
+- `conxius-platform` -> `platform.conxian.org`
+- `conxian_market` -> `market.conxian.org`
+
+### Corporate & Governance Surface (`conxian-labs.com`)
+*B2B Enterprise Licensing, Sales, Legal, and Sovereign Control Plane Operations.*
+
+- `conxian-business` -> `bos.conxian-labs.com`
+- `conxian-labs-site` -> `www.conxian-labs.com`

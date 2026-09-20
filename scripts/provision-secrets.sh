@@ -82,7 +82,7 @@ set_env_value() {
 is_placeholder_secret() {
   local value
   value=$(echo "$1" | tr '[:upper:]' '[:lower:]')
-  [[ "$value" == "secret" || "$value" == "password" || "$value" == "changeme" || "$value" == "admin" ]]
+  [[ -z "$value" || "$value" == "secret" || "$value" == "password" || "$value" == "changeme" || "$value" == "admin" || "$value" == "stub" || "$value" == "placeholder" || "$value" == *"your-"* || "$value" == *"change_me"* || "$value" == *"test-key"* || "$value" == *"mock-key"* || "$value" == *"api-key-here"* ]]
 }
 
 uri_has_placeholder_secret() {
@@ -184,16 +184,16 @@ echo "Step 3: Processing environment variables..."
 KEYS_TMP=$(mktemp)
 trap 'rm -f "$KEYS_TMP"' EXIT
 
-grep -v '^#' "$SCHEMA_FILE" | grep -v '^$' | cut -d'=' -f1 > "$KEYS_TMP"
+grep -v '^#' "$SCHEMA_FILE" | grep -v '^$' | cut -d'=' -f1 | sort -u > "$KEYS_TMP"
 
 while read -r key; do
   current_val=$(get_env_value "$key")
 
-  if [[ -z "$current_val" ]]; then
+  if [[ -z "$current_val" ]] || is_placeholder_secret "$current_val"; then
     case "$key" in
-      GATEWAY_JWT_SECRET|GATEWAY_ADMIN_API_KEY|POSTGRES_PASSWORD|GRAFANA_PASSWORD)
+      GATEWAY_JWT_SECRET|GATEWAY_ADMIN_API_KEY|POSTGRES_PASSWORD|GRAFANA_PASSWORD|ADMIN_DASHBOARD_API_KEY|SERVICE_KEY_*)
         VAL=$(openssl rand -hex 32)
-        echo "Provisioning $key..."
+        echo "Provisioning production-grade secret for $key..."
         set_env_value "$key" "$VAL"
         ;;
       POSTGRES_USER)
@@ -262,6 +262,29 @@ if [[ "$CORE_DB_URI_VAL" =~ ^postgres(ql)?://([^:]+):([^@]+)@ ]]; then
   fi
 else
   echo "❌ CORE_DB_URI must be a valid postgres URI (postgresql://user:password@host:port/db)."
+  exit 1
+fi
+
+# 4. Credential Validation
+echo "Step 4: Validating generated credentials..."
+
+ADMIN_DASHBOARD_API_KEY_VAL=$(get_env_value ADMIN_DASHBOARD_API_KEY)
+if [[ -z "$ADMIN_DASHBOARD_API_KEY_VAL" ]] || is_placeholder_secret "$ADMIN_DASHBOARD_API_KEY_VAL"; then
+  echo "❌ ADMIN_DASHBOARD_API_KEY is missing or contains an insecure placeholder."
+  exit 1
+fi
+
+for service_key_name in SERVICE_KEY_ADMIN_DASHBOARD SERVICE_KEY_GATEWAY SERVICE_KEY_ELIZAOS SERVICE_KEY_NEXUS SERVICE_KEY_ORBIT SERVICE_KEY_WALLET SERVICE_KEY_UI SERVICE_KEY_PULSE_BOS; do
+  s_val=$(get_env_value "$service_key_name")
+  if [[ -z "$s_val" ]] || is_placeholder_secret "$s_val"; then
+    echo "❌ $service_key_name is missing or contains an insecure placeholder."
+    exit 1
+  fi
+done
+
+SERVICE_KEY_ADMIN_DASHBOARD_VAL=$(get_env_value SERVICE_KEY_ADMIN_DASHBOARD)
+if [[ "$ADMIN_DASHBOARD_API_KEY_VAL" == "$SERVICE_KEY_ADMIN_DASHBOARD_VAL" ]]; then
+  echo "❌ SERVICE_KEY_ADMIN_DASHBOARD must remain distinct from ADMIN_DASHBOARD_API_KEY."
   exit 1
 fi
 

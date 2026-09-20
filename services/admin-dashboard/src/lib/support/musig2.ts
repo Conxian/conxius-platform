@@ -1,5 +1,5 @@
 /**
- * MuSig2 (BIP-327) Multi-Party Aggregation & Signing Engine (G-10)
+ * MuSig2 (BIP-327) Multi-Party Aggregation & Signing Engine (G-10 & G-11)
  *
  * Implementation of two-round Schnorr multi-signature aggregation and
  * nonce-based signing coordination for Taproot (P2TR) script paths in Conxian USI.
@@ -9,6 +9,7 @@
  * - Two-round nonce generation (secnonce / pubnonce) and nonces aggregation
  * - Partial signature computation and verification against aggregated key
  * - Final Schnorr signature assembly compatible with BIP-340 / Taproot
+ * - Fail-closed capacity limits (max 1,000 active sessions) and 24-hour TTL expiration
  *
  * @see BIP-327 — MuSig2 for BIP340 Schnorr Signatures
  */
@@ -16,6 +17,9 @@
 import { createLogger } from './logger';
 
 const logger = createLogger('musig2');
+
+export const MAX_MUSIG2_SESSIONS = 1000;
+export const MUSIG2_SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export type MuSig2Participant = {
   participantId: string;
@@ -30,7 +34,7 @@ export type MuSig2NoncePair = {
   secNonceHex?: string;
 };
 
-export type MuSig2SessionState = 'nonce_exchange' | 'signing' | 'completed' | 'failed';
+export type MuSig2SessionState = 'nonce_exchange' | 'signing' | 'completed' | 'failed' | 'expired';
 
 export type MuSig2SigningSession = {
   sessionId: string;
@@ -58,6 +62,28 @@ export interface KeyAggResult {
  */
 export class MuSig2Engine {
   private static sessions: Map<string, MuSig2SigningSession> = new Map();
+
+  /**
+   * Cleans up expired sessions based on TTL (24 hours)
+   */
+  public static purgeExpiredSessions(): number {
+    const now = Date.now();
+    let purgedCount = 0;
+
+    for (const [id, session] of this.sessions.entries()) {
+      const createdAtMs = new Date(session.createdAt).getTime();
+      if (now - createdAtMs > MUSIG2_SESSION_TTL_MS) {
+        this.sessions.delete(id);
+        purgedCount++;
+      }
+    }
+
+    if (purgedCount > 0) {
+      logger.info(`Purged ${purgedCount} expired MuSig2 session(s)`);
+    }
+
+    return purgedCount;
+  }
 
   /**
    * Sorts public keys lexicographically and computes MuSig2 KeyAgg
@@ -159,8 +185,18 @@ export class MuSig2Engine {
     messageHashHex: string,
     tweakHex?: string
   ): MuSig2SigningSession {
+    this.purgeExpiredSessions();
+
+    if (this.sessions.size >= MAX_MUSIG2_SESSIONS) {
+      throw new Error(`MuSig2 session capacity exceeded; max active sessions is ${MAX_MUSIG2_SESSIONS}`);
+    }
+
     if (this.sessions.has(sessionId)) {
       throw new Error(`Session ID ${sessionId} already exists`);
+    }
+
+    if (!participants || participants.length < 2) {
+      throw new Error('MuSig2 signing session requires at least 2 participants');
     }
 
     if (!messageHashHex || messageHashHex.length !== 64) {
@@ -200,7 +236,7 @@ export class MuSig2Engine {
     participantId: string,
     pubNonceHex: string
   ): MuSig2SigningSession {
-    const session = this.sessions.get(sessionId);
+    const session = this.getSessionWithExpiryCheck(sessionId);
     if (!session) {
       throw new Error(`Session ${sessionId} not found`);
     }
@@ -304,7 +340,7 @@ export class MuSig2Engine {
     participantId: string,
     partialSigHex: string
   ): MuSig2SigningSession {
-    const session = this.sessions.get(sessionId);
+    const session = this.getSessionWithExpiryCheck(sessionId);
     if (!session) {
       throw new Error(`Session ${sessionId} not found`);
     }
@@ -386,10 +422,25 @@ export class MuSig2Engine {
   }
 
   /**
-   * Fetches an existing session by ID
+   * Fetches an existing session by ID, returning undefined if expired
    */
   public static getSession(sessionId: string): MuSig2SigningSession | undefined {
-    return this.sessions.get(sessionId);
+    return this.getSessionWithExpiryCheck(sessionId);
+  }
+
+  private static getSessionWithExpiryCheck(sessionId: string): MuSig2SigningSession | undefined {
+    const session = this.sessions.get(sessionId);
+    if (!session) return undefined;
+
+    const createdAtMs = new Date(session.createdAt).getTime();
+    if (Date.now() - createdAtMs > MUSIG2_SESSION_TTL_MS) {
+      session.state = 'expired';
+      this.sessions.delete(sessionId);
+      logger.warn(`MuSig2 session ${sessionId} accessed after expiration; removed.`);
+      return undefined;
+    }
+
+    return session;
   }
 
   /**

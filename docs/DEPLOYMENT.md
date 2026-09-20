@@ -40,12 +40,12 @@ compose externally supplied images and endpoints, but it does not contain
 supported in-repo Kubernetes manifests, GKE/GCP deployment automation, an
 ArgoCD application, or a Render blueprint for those services.
 
-`make deploy` is a legacy convenience target. If the external
-`conxius-orbit` command is installed, it invokes `conxius-orbit deploy --all`.
-Otherwise it only prints fallback messages; the absent legacy GCP/Render paths
-are unsupported, and the target does not deploy Gateway to GCP or UI to Render.
-Treat deployment execution and evidence as owned by the external
-operator/repository, not guaranteed by this target.
+`make deploy` is a convenience target that executes the platform's
+deterministic local pre-flight deployment validation routine (`scripts/validate-local-deployment.sh`),
+checking environment configuration, required secrets, dependency consistency,
+and service hygiene. In alignment with the retirement of `conxius-orbit` from the active
+ecosystem, the target does not attempt unsupported legacy deployments or binary checks;
+treat orchestrated multi-service production deployment execution as owned by automated CI/CD pipelines.
 
 ## Target/proposed architecture
 

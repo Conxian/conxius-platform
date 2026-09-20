@@ -585,13 +585,13 @@
       "category": "metric",
       "source": "internal",
       "data": {
-        "totalFiles": 697,
-        "tsFiles": 187,
-        "testFiles": 43,
+        "totalFiles": 711,
+        "tsFiles": 197,
+        "testFiles": 48,
         "apiRoutes": 40,
         "pages": 19,
         "workflows": 19,
-        "avgFileSize": 6350.863701578192,
+        "avgFileSize": 6357.241912798875,
         "largestFiles": [
           {
             "path": "docs/archive/AGENTS_archive_session_58.md",
@@ -617,15 +617,15 @@
         "avgFileSizeKB": 6
       },
       "confidence": 0.98,
-      "lastUpdated": "2026-09-08T14:12:12.532Z",
+      "lastUpdated": "2026-09-19T20:27:37.039Z",
       "tags": [
         "codebase",
         "metrics",
         "structure"
       ],
       "evidence": [
-        "697 total files",
-        "187 TypeScript files",
+        "711 total files",
+        "197 TypeScript files",
         "19 CI workflows"
       ]
     },
@@ -635,21 +635,21 @@
       "source": "synthesis",
       "data": {
         "type": "test-coverage",
-        "coverage": 0.22994652406417113,
+        "coverage": 0.2436548223350254,
         "threshold": 0.5,
-        "deficit": 0.27005347593582885,
+        "deficit": 0.2563451776649746,
         "recommendation": "Increase test coverage to >50%"
       },
       "confidence": 0.95,
-      "lastUpdated": "2026-09-08T14:12:12.533Z",
+      "lastUpdated": "2026-09-19T20:27:37.039Z",
       "tags": [
         "testing",
         "coverage",
         "gap"
       ],
       "evidence": [
-        "43 tests for 187 TypeScript files",
-        "Coverage: 23.0%"
+        "48 tests for 197 TypeScript files",
+        "Coverage: 24.4%"
       ]
     },
     "pattern-internal-api-auth": {
@@ -663,7 +663,7 @@
         "convention": "All API routes protected with validateAdminAuth()"
       },
       "confidence": 0.9,
-      "lastUpdated": "2026-09-08T14:12:12.533Z",
+      "lastUpdated": "2026-09-19T20:27:37.040Z",
       "tags": [
         "api",
         "auth",
@@ -685,7 +685,7 @@
         "description": "Extensive CI/CD pipeline with multiple specialized workflows"
       },
       "confidence": 0.85,
-      "lastUpdated": "2026-09-08T14:12:12.534Z",
+      "lastUpdated": "2026-09-19T20:27:37.040Z",
       "tags": [
         "ci",
         "workflows",
@@ -694,6 +694,22 @@
       ],
       "evidence": [
         "19 workflow files detected"
+      ]
+    },
+    "pattern-musig2-aggregation-g10": {
+      "id": "pattern-musig2-aggregation-g10",
+      "type": "pattern",
+      "title": "MuSig2 Multi-Party Key Aggregation & Signing Engine (G-10)",
+      "description": "Implemented BIP-327 MuSig2 multi-party Taproot key aggregation, two-round nonce generation, partial signature computation, and final Schnorr signature assembly in services/admin-dashboard/src/lib/support/musig2.ts, verified by services/admin-dashboard/src/tests/musig2.test.ts.",
+      "confidenceScore": 0.95,
+      "lastUpdated": "2026-09-12T12:07:54Z",
+      "tags": [
+        "musig2",
+        "bip327",
+        "schnorr",
+        "taproot",
+        "phase7",
+        "g10"
       ]
     }
   },
@@ -723,6 +739,6 @@
     "pattern-internal-api-auth": [],
     "pattern-internal-ci-workflows": []
   },
-  "version": 57,
-  "lastSync": "2026-09-08T14:12:12.534Z"
+  "version": 101,
+  "lastSync": "2026-09-19T20:27:37.040Z"
 }

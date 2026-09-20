@@ -122,3 +122,19 @@ The platform supports active key rotation via `PUT /api/v1/m2m/tokens`:
 
 ### 3. Declarative Config Map Export
 - Endpoint `GET /api/v1/m2m/tokens?export=true` provides a canonical export format (`v0.2.5`) of active token metadata for integration with external gateway configurations and deployment pipelines.
+
+
+---
+
+## 9. Deterministic Network Key Derivation & HKDF / BIP-85 Hierarchy
+
+To support zero-storage master secrets and cryptographic environment separation, API credentials and service sub-keys can be deterministically derived from root master seeds or enclave secrets via HMAC-SHA256 HKDF (RFC 5869) or BIP-85 entropy derivation trees.
+
+### 1. Cryptographic Domain Separation
+Every derived key incorporates explicit environment context (`cx_live_` for mainnet/production vs `cx_test_` for sandbox/testnet/regtest). Key Derivation Functions (KDF) take context-specific info strings:
+$$\text{key}_{\text{derived}} = \text{HKDF-Expand}(\text{PRK}, \text{"conxian:api:v1:"} \parallel \text{service\_id} \parallel \text{":"} \parallel \text{environment}, 32)$$
+
+### 2. Benefits for Multi-Service Orchestration
+- **Zero-Storage Master Keys**: Services re-derive their expected M2M service keys on demand without storing plaintext keys in persistent databases.
+- **Cross-Environment Replay Prevention**: A token generated or derived for testnet (`cx_test_`) is cryptographically distinct from mainnet (`cx_live_`) and will be rejected at the gateway.
+- **Forward Secrecy**: Compromise or rotation of an individual service token does not expose master seeds or keys assigned to other services.

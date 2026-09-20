@@ -271,7 +271,7 @@ Research into secondary settlement layers to ensure multidimensional redundancy.
 <a id="30"></a>
 ## 30. Silent Payments (BIP-352): Reusable Privacy
 - **Concept**: Reusable donation addresses that don't reveal the recipient's identity on-chain and prevent address reuse without per-transaction interaction.
-- **Implementation**: `lib-conxian-core` implementation for scanning and spending Silent Payments.
+- **Implementation**: 🟢 **Implemented & Unit Verified** in `services/admin-dashboard/src/lib/support/silentPayments.ts` providing BIP-352 address generation, validation, parsing, spend key tweaking, scan key registration, and output matching, verified by `silentPayments.test.ts`.
 - **Benefit**: Enhances privacy for corporate treasury and payroll without the overhead of BIP-47 Notification transactions.
 
 <a id="31"></a>
@@ -436,3 +436,12 @@ Research into secondary settlement layers to ensure multidimensional redundancy.
 - **Concept**: Combining Nova/Sangria SNARK folding schemes with BitVM3 adaptive execution to achieve recursive proof aggregation for Bitcoin L2 rollups.
 - **Strategic Impact**: Scales transaction throughput exponentially by compressing $N$ execution steps into a single $O(1)$ verification proof, reducing on-chain dispute footprint on Bitcoin L1.
 - **Implementation Status**: Scaffolding active in `services/admin-dashboard/src/lib/support/bitvm3.ts` and `bitvmx.ts`.
+
+
+<a id="56"></a>
+## 56. Network-Derived Keys & Deterministic API Credential Hierarchy (BIP-85 / HKDF)
+- **Concept**: Deterministic generation of environment-bound, scope-restricted API and service keys using key derivation functions (HKDF RFC 5869 / HMAC-SHA256) and BIP-85 entropy derivation trees.
+- **Mechanism**:
+  - **Cryptographic Domain Separation**: Derived credentials bind explicit network environment contexts (`cx_live_` vs `cx_test_`), ensuring keys generated for testnet/regtest cannot be replayed or accepted on mainnet/production gateways.
+  - **Zero-Storage Master Secrets**: Service-specific sub-keys (`gateway`, `nexus`, `orbit`, `admin-dashboard`, `wallet`, `ui`, `pulse-bos`, `elizaos-plugin-conxian`) are derived on demand using HMAC-SHA256 HKDF info strings (e.g. `conxian:m2m:v1:<service_id>:<env>`), removing the need to persist or transmit unhashed master secrets across service boundaries.
+  - **Key Lifecycle & Rotation**: Integrates with the `CONXIAN_API_TOKEN` standard and M2M key store (`services/admin-dashboard/src/lib/support/apiTokens.ts` and `m2mKeyStore.ts`), providing constant-time verification (`crypto.timingSafeEqual`), SHA-256 hashed persistence, zero-downtime rotation with configurable overlap grace windows, and forward secrecy.

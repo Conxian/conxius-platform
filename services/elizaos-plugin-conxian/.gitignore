@@ -4,6 +4,9 @@ build/
 .env
 .env.*
 !.env.example
+.sidl-state.json
+.claims-state.json
+.action-version-cache.json
 test-results/
 playwright-report/
 .DS_Store

@@ -22,6 +22,9 @@ DISALLOWED_ARTIFACT_PATTERNS = [
     ".pytest_cache/",
     ".cache/",
     ".tsbuildinfo",
+    ".sidl-state.json",
+    ".claims-state.json",
+    ".action-version-cache.json",
 ]
 
 def git_ls_files() -> list[str]:

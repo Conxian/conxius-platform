@@ -48,5 +48,5 @@ bench:
 
 deploy:
 	@echo "Starting deployment workflow..."
-	@echo "Checking environment for Conxius Orbit..."
-	@if command -v conxius-orbit >/dev/null 2>&1; then 		conxius-orbit deploy --all; 	else 		echo "⚠️  Conxius Orbit TUI not found. Using standard GCP/Render fallback."; 		echo "Deploying Gateway to GCP..."; 		echo "Deploying UI to Render..."; 	fi
+	@echo "Executing deterministic local deployment pre-flight validation..."
+	@./scripts/validate-local-deployment.sh

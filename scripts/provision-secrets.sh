@@ -191,7 +191,7 @@ while read -r key; do
 
   if [[ -z "$current_val" ]]; then
     case "$key" in
-      GATEWAY_JWT_SECRET|GATEWAY_ADMIN_API_KEY|POSTGRES_PASSWORD|GRAFANA_PASSWORD)
+      GATEWAY_JWT_SECRET|GATEWAY_ADMIN_API_KEY|POSTGRES_PASSWORD|GRAFANA_PASSWORD|ADMIN_DASHBOARD_API_KEY|SERVICE_KEY_*)
         VAL=$(openssl rand -hex 32)
         echo "Provisioning $key..."
         set_env_value "$key" "$VAL"

@@ -72,3 +72,13 @@ curl -H "X-External-Key: your-external-key" \
 ## JWT contract
 
 JWT signing and verification are server-only. `GATEWAY_JWT_SECRET` must never be accepted from a request, browser storage, a URL, a cookie, or client-side configuration. No browser signing flow, public issuance endpoint, or long-lived refresh token exists.
+
+---
+
+## Network Derived Keys & Key Derivation Hierarchy
+
+For zero-storage master secrets and cryptographic environment isolation, M2M service keys and API credentials utilize HMAC-SHA256 HKDF (RFC 5869) or BIP-85 entropy derivation trees:
+
+1. **Domain Separation**: Derived keys embed environment context strings (`cx_live_` vs `cx_test_`), ensuring credentials derived for sandbox/testnet are cryptographically rejected on mainnet endpoints.
+2. **On-Demand Sub-Key Derivation**: Internal services (`gateway`, `nexus`, `admin-dashboard`, `wallet`, `ui`, `pulse-bos`, `elizaos-plugin-conxian`) derive service keys via HKDF info parameters (`conxian:m2m:v1:<service_id>:<env>`), eliminating static secret distribution files in production.
+3. **Forward Secrecy & Isolated Rotation**: Compromising an individual derived key does not reveal the root seed or sibling service keys.

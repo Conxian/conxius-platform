@@ -26,7 +26,7 @@ This matrix scores the identified gaps based on Strategic Alignment, Implementat
 | **G-12** | **ERC-7683 Solver Selection** | 8 | 7 | 8 | **23** | [L3 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#33) |
 | **G-13** | **Micro-Frontend Federation** | 7 | 8 | 5 | **20** | [Sovereign Redesign](./architecture/SOVEREIGN_REPR_2026.md#3) |
 | **G-14** | **FROST Threshold Signatures** | 9 | 8 | 7 | **24** | [FROST Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#34) — unit verified in `frost.test.ts` |
-| **G-15** | **OP_CAT Recursive Covenants** | 10 | 7 | 6 | **23** | [OP_CAT Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#35) |
+| **G-15** | **OP_CAT Recursive Covenants** | 10 | 7 | 6 | **23** | [OP_CAT Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#35) — active scaffolding & unit verified in `opCat.ts` and `opCat.test.ts` |
 | **G-16** | **Fedimint Community Liquidity** | 8 | 7 | 8 | **23** | [Fedimint Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#36) |
 | **G-17** | **BIP-353 DNS Payments** | 7 | 5 | 8 | **20** | [BIP-353 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#32) |
 | **G-18** | **BIP-324 Transport** | 7 | 6 | 7 | **20** | [BIP-324 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#38) |
@@ -48,7 +48,7 @@ This matrix scores the identified gaps based on Strategic Alignment, Implementat
 | **G-51** | **BitVM2 Optimized Verifier** | 9 | 8 | 7 | **24** | [Verifier Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#51) — research only; no pairing implementation here |
 | **G-52** | **BRC-20 / Runes Integration** | 7 | 6 | 9 | **22** | [Indexer Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#52) |
 | **G-53** | **Lightning Async Payments** | 8 | 7 | 9 | **24** | [Async Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#53) — HTLC hold invoices & bounded state machine in `services/admin-dashboard/src/lib/support/asyncPayments.ts` |
-| **G-54** | **OP_VAULT (BIP-345)** | 9 | 8 | 6 | **23** | [Vault Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#54) |
+| **G-54** | **OP_VAULT (BIP-345)** | 9 | 8 | 6 | **23** | [Vault Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#54) — active scaffolding & unit verified in `opVault.ts` and `opVault.test.ts` |
 | **G-55** | **Enterprise ERP Simulation** | 9 | 7 | 8 | **24** | [Enterprise ERP Simulation](./architecture/ENTERPRISE_ERP_SIMULATION_RESEARCH.md) |
 | **G-64** | **BitVMX Fail-Closed Execution Engine** | 10 | 8 | 7 | **25** | [BitVMX Research](./architecture/BITVMX_RESEARCH.md) |
 | **G-65** | **Conxian Unified API Token Management & Developer Self-Service** | 9 | 6 | 10 | **25** | [CONXIAN_API_TOKEN Spec](./architecture/CONXIAN_API_TOKEN_SPEC.md) |
@@ -60,6 +60,7 @@ This matrix scores the identified gaps based on Strategic Alignment, Implementat
 | **G-67** | **End-to-End Inter-Service Connectivity Verification Harness** | 9 | 6 | 10 | **25** | [Inter-Service Connectivity Spec](./architecture/CLIENT_ONBOARDING_AND_UNIFIED_INSTALLER_SPEC_2026.md) |
 | **G-68** | **conxian.org Sovereign Protocol Surface & Developer Hub** | 10 | 6 | 10 | **26** | [Org-Wide Functionality Map](./architecture/ORG_WIDE_FUNCTIONALITY_MAP_AND_AUDIT.md) |
 | **G-69** | **Strict Legal & Architectural Domain Firewall Routing** | 10 | 5 | 10 | **25** | [Org-Wide Functionality Map](./architecture/ORG_WIDE_FUNCTIONALITY_MAP_AND_AUDIT.md) |
+| **G-70** | **Autonomous Submodule Health & Cross-Repository Synchronization Engine** | 10 | 6 | 10 | **26** | [Repository Taxonomy](./REPOSITORY_TAXONOMY.md) |
 | **G-56** | **Founder-rights observation/evidence boundary** | 10 | 4 | 10 | **24** | [Founder-rights observation](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md) |
 | **G-57** | **Cross-repository revenue model drift** | 10 | 6 | 9 | **25** | [Contradictions and ownership](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#contradictions-and-safe-interpretation) |
 | **G-58** | **Deployment evidence/live-interface verification** | 10 | 5 | 9 | **24** | [Evidence matrix](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#verified-evidence-matrix) |

@@ -105,8 +105,9 @@ while Compose Grafana uses `http://localhost:3001`. See
 secrets or selecting external Gateway/UI images.
 
 Use templates and generated local secrets for development only. `make auth`
-does not generate `ADMIN_DASHBOARD_API_KEY` or `SERVICE_KEY_*`, and it does not
-establish production authentication. Do not commit real credentials.
+provisions local credentials (`ADMIN_DASHBOARD_API_KEY` and `SERVICE_KEY_*` values
+generated using secure 32-byte hex entropy) for development and testing, but it does
+not establish production deployment authentication or retrieve external secrets. Do not commit real credentials.
 
 `make deploy` is not a guaranteed deployment path: it delegates to an
 externally installed `conxius-orbit` binary when present and otherwise only

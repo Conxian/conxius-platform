@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "1.0",
+  "platformRepository": "Conxian/conxius-platform",
+  "manifest": "platform/platform.manifest.json",
+  "purpose": "Conxian Platform service catalog for composition, lifecycle, evidence, and operator delivery",
+  "services": [
+    {
+      "id": "admin-dashboard",
+      "path": "services/admin-dashboard",
+      "state": "active",
+      "ownerRepository": "Conxian/conxius-platform",
+      "runtime": "nextjs",
+      "entrypoint": "dev",
+      "contracts": ["http-health", "admin-api-auth", "prometheus-metrics"],
+      "dependencies": ["gateway"],
+      "deployment": "docker-compose/admin-dashboard",
+      "removalCriteria": "Replacement dashboard deployed and all routes migrated"
+    },
+    {
+      "id": "admin-pulse-bos",
+      "path": "services/admin-pulse-bos",
+      "state": "source-consumed",
+      "ownerRepository": "Conxian/conxius-platform",
+      "runtime": "react-library",
+      "entrypoint": "source-import",
+      "contracts": ["typed-react-components"],
+      "dependencies": [],
+      "deployment": "consumed-by-admin-dashboard",
+      "removalCriteria": "No imports remain and replacement components are verified"
+    },
+    {
+      "id": "elizaos-plugin-conxian",
+      "path": "services/elizaos-plugin-conxian",
+      "state": "active",
+      "ownerRepository": "Conxian/conxius-platform",
+      "runtime": "node-library",
+      "entrypoint": "dist/index.js",
+      "contracts": ["elizaos-plugin-api", "gateway-service-auth"],
+      "dependencies": ["gateway"],
+      "deployment": "external-agent-runtime",
+      "removalCriteria": "Agent integration retired and consuming deployments removed"
+    }
+  ],
+  "organizationRepositories": [
+    {"repository": "Conxian/conxius-platform", "role": "platform-spine", "state": "active"},
+    {"repository": "Conxian/conxian-gateway", "role": "gateway-execution", "state": "active"},
+    {"repository": "Conxian/conxian-nexus", "role": "observation-and-proof", "state": "active"},
+    {"repository": "Conxian/lib-conxian-core", "role": "core-library-authority", "state": "active"},
+    {"repository": "Conxian/conxius-wallet", "role": "wallet-provider", "state": "active"},
+    {"repository": "Conxian/conxius-enclave-sdk", "role": "enclave-sdk", "state": "active"},
+    {"repository": "Conxian/conxian-business", "role": "business-and-protocol-coordination", "state": "active"},
+    {"repository": "Conxian/Conxian", "role": "organization-and-research", "state": "active"},
+    {"repository": "Conxian/conxian_market", "role": "market-surface", "state": "active"},
+    {"repository": "Conxian/conxian_ui", "role": "shared-ui-surface", "state": "active"},
+    {"repository": "Conxian/conxian-labs-site", "role": "public-site", "state": "active"},
+    {"repository": "Conxian/conxian.github.io", "role": "public-docs-site", "state": "active"},
+    {"repository": "Conxian/.github", "role": "organization-governance", "state": "active"},
+    {"repository": "Conxian/.github-private", "role": "private-organization-governance", "state": "active"},
+    {"repository": "Conxian/conxius-orbit", "role": "archived-compatibility-reference", "state": "archived"}
+  ],
+  "externalRepositories": [
+    {
+      "repository": "Conxian/conxius-wallet",
+      "role": "external-wallet-sdk-provider",
+      "contract": "platform/wallet-capability-sdk.contract.json",
+      "state": "unavailable-until-provider-contract-verified",
+      "preserveResources": true
+    }
+  ],
+  "excludedCapabilities": ["wallet", "custody", "signing", "treasury", "yield", "pricing", "trading", "protocol-economics"]
+}

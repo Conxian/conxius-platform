@@ -5,11 +5,6 @@ name: Dependency Review
 
 on:
   pull_request:
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - 'CODEOWNERS'
-      - 'LICENSE'
     types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:

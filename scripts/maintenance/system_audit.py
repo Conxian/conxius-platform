@@ -1,6 +1,7 @@
 import os
 import subprocess
 import json
+import re
 import sys
 
 def run_cmd(cmd, cwd=None):
@@ -9,6 +10,65 @@ def run_cmd(cmd, cwd=None):
         return result.stdout.strip(), result.stderr.strip(), result.returncode
     except Exception as e:
         return "", str(e), 1
+
+def scan_hardcoded_secrets():
+    out_tracked, _, _ = run_cmd("git ls-files")
+    out_others, _, _ = run_cmd("git ls-files --others --exclude-standard")
+    all_files = set(out_tracked.splitlines() + out_others.splitlines())
+
+    ignored_extensions = (
+        '.md', '.example', '.schema', '.lock', '.svg', '.png', '.jpg', '.jpeg',
+        '.ico', '.woff', '.woff2', '.ttf', '.eot'
+    )
+    ignored_files = {
+        'scripts/maintenance/system_audit.py',
+        'scripts/maintenance/hardened_audit.py',
+        'pnpm-lock.yaml',
+        'Cargo.lock',
+        'docker-compose.yml',
+        'scripts/provision-secrets.sh',
+        '.github/workflows/multi-env-test.yml',
+        '.github/workflows/cross-repo-integration-mvp.yml',
+        '.github/workflows/synergy-test.yml'
+    }
+
+    scanned_files = [
+        f for f in all_files
+        if not f.endswith(ignored_extensions) and f not in ignored_files and not f.startswith('docs/')
+    ]
+
+    patterns = [
+        (r"password\s*[:=]\s*['\"][^'\"]+['\"]", "Hardcoded password assignment"),
+        (r"api_key\s*[:=]\s*['\"][^'\"]+['\"]", "Hardcoded API key assignment"),
+        (r"secret\s*[:=]\s*['\"][^'\"]+['\"]", "Hardcoded secret assignment"),
+        (r"xoxb-[0-9]{11}-[0-9]{11}-[a-zA-Z0-9]{24}", "Slack Token"),
+        (r"ghp_[a-zA-Z0-9]{36}", "GitHub Personal Access Token"),
+        (r"sk_live_[a-zA-Z0-9]{24}", "Stripe Live Secret Key")
+    ]
+
+    found = []
+    for filepath in scanned_files:
+        if not os.path.exists(filepath):
+            continue
+        try:
+            with open(filepath, 'r', encoding='utf-8', errors='ignore') as fp:
+                content = fp.read()
+                for pattern, desc in patterns:
+                    if re.search(pattern, content, re.IGNORECASE):
+                        if 'test' in filepath.lower() or 'mock' in content.lower() or 'redact' in content.lower():
+                            continue
+                        found.append((filepath, desc))
+        except Exception:
+            pass
+
+    if found:
+        print("WARNING: Potential hardcoded secrets found:")
+        for path, desc in found:
+            print(f"  - {path}: {desc}")
+        return False
+    else:
+        print("PASSED: No hardcoded secrets found in codebase.")
+        return True
 
 def audit_security():
     print("\n--- Security & Hygiene Audit ---")
@@ -32,7 +92,15 @@ def audit_security():
     else:
         print("PASSED: No private keys tracked.")
 
-    # 2. Check for tracked generated artifacts
+    cmd = r"git ls-files | grep -E '(^|/)service-key-registry\.json.*$|(^|/)\.m2m/|(^|/)\.secrets/'"
+    out, err, code = run_cmd(cmd)
+    if out:
+        print(f"CRITICAL: Found tracked M2M service-key registry or secrets directory:\n{out}")
+        all_passed = False
+    else:
+        print("PASSED: No M2M service-key registries or secret directories tracked.")
+
+    # 2. Check for tracked generated artifacts & runtime state
     print("Checking for tracked generated artifacts...")
     artifacts = [
         "node_modules",
@@ -52,18 +120,26 @@ def audit_security():
             print(f"CRITICAL: Found tracked generated artifact: {artifact}")
             all_passed = False
 
+    state_files = [
+        ".sidl-state.json",
+        ".claims-state.json",
+        ".action-version-cache.json"
+    ]
+    for state_file in state_files:
+        cmd = f"git ls-files | grep -E '(^|/){re.escape(state_file)}$'"
+        out, err, code = run_cmd(cmd)
+        if out:
+            print(f"CRITICAL: Found tracked runtime state file: {state_file}")
+            all_passed = False
+
     if all_passed:
         print("PASSED: No generated artifacts tracked.")
 
     # 3. Check for hardcoded secrets
     print("Scanning for potential hardcoded secrets...")
-    forbidden_patterns = ["password:", "api_key:", "secret:", "PRIVATE KEY"]
-    for pattern in forbidden_patterns:
-        # Exclude common false positives
-        cmd = f"grep -riq '{pattern}' . --exclude-dir={{node_modules,.git,.next,target}} --exclude={{*.md,*.schema,*.example,Cargo.lock,pnpm-lock.yaml,system_audit.py,multi-env-test.yml,docker-compose.yml}}"
-        out, err, code = run_cmd(cmd)
-        if code == 0:
-            print(f"WARNING: Potential secret pattern '{pattern}' found in the codebase. Please review manually.")
+    secrets_ok = scan_hardcoded_secrets()
+    if not secrets_ok:
+        all_passed = False
 
     return all_passed
 

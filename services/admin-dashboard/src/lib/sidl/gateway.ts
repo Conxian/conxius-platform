@@ -30,7 +30,7 @@ function isGatewayAuthConfigurationError(error: unknown): error is GatewayAuthCo
 }
 
 function gatewayBaseUrl(): string | null {
-  const raw = process.env.CORE_API_URL || process.env.NEXT_PUBLIC_CORE_API_URL;
+  const raw = process.env.GATEWAY_URL || process.env.CORE_API_URL || process.env.NEXT_PUBLIC_CORE_API_URL;
   if (!raw) return null;
   return raw.replace(/\/$/, "");
 }

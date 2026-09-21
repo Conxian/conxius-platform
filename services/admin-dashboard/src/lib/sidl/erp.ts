@@ -1,5 +1,46 @@
 import "server-only";
-import { ErpDashboardData } from "./types";
+import { ErpDashboardData, ErpSimulationState } from "./types";
+
+/**
+ * Validates double-entry bookkeeping consistency for simulated ERP ledger entries.
+ * Returns true if total debits match total credits.
+ */
+export function validateLedgerBalance(entries: ErpSimulationState["ledgerEntries"]): boolean {
+  if (!entries || entries.length === 0) return true;
+  let totalDebit = 0;
+  let totalCredit = 0;
+
+  for (const entry of entries) {
+    const val = parseFloat(entry.amount);
+    if (isNaN(val)) return false;
+    if (entry.debitCredit === "debit") {
+      totalDebit += val;
+    } else if (entry.debitCredit === "credit") {
+      totalCredit += val;
+    }
+  }
+
+  return Math.abs(totalDebit - totalCredit) < 1e-8;
+}
+
+/**
+ * Evaluates the operational status of simulated mock engines based on fault injection
+ * and simulated latency parameters.
+ */
+export function getErpSimulationEngineStatus(
+  sim: Pick<ErpSimulationState, "faultInjectionActive" | "latencyMs">
+): "healthy" | "degraded" | "offline" {
+  if (sim.faultInjectionActive) {
+    return "degraded";
+  }
+  if (sim.latencyMs > 500) {
+    return "degraded";
+  }
+  if (sim.latencyMs < 0) {
+    return "offline";
+  }
+  return "healthy";
+}
 
 /**
  * ERP Data Access Layer (Placeholder for Neon Integration)
@@ -7,7 +48,45 @@ import { ErpDashboardData } from "./types";
  * For this test, we simulate the fetch from the 'erp-test-v1' branch.
  */
 export async function getErpDashboardData(): Promise<ErpDashboardData> {
-  // Simulating data fetch from Neon / ERP Virtualization
+  const ledgerEntries: ErpSimulationState["ledgerEntries"] = [
+    {
+      id: "ledger-tx-9901",
+      account: "1200 - Accounts Receivable",
+      debitCredit: "debit",
+      amount: "1.25000000",
+      stateRootCommitment: "a5f8e3230a1b0203f44ee90f4236a67f0bce866a7bcf1292fa177c8e96bf11b0"
+    },
+    {
+      id: "ledger-tx-9902",
+      account: "4000 - Treasury Sales Revenue",
+      debitCredit: "credit",
+      amount: "1.25000000",
+      stateRootCommitment: "a5f8e3230a1b0203f44ee90f4236a67f0bce866a7bcf1292fa177c8e96bf11b0"
+    }
+  ];
+
+  const simBase = {
+    mockoonUrl: "http://" + "localhost" + ":3001/api/v1/mockoon",
+    wiremockUrl: "http://" + "localhost" + ":8081/__admin",
+    erpnextUrl: "https://sandbox-conxian.frappe.cloud",
+    latencyMs: 120,
+    faultInjectionActive: false,
+    x402Mandates: [
+      {
+        mandateId: "mandate-erp-1004",
+        invoiceRef: "INV-ERP-789",
+        paymentAddress: "bc1qztwy6xen3zdtt7z0vrgapmjtfz8acjkfp5fp7l",
+        amountSats: 250000,
+        status: "signed",
+        payloadHash: "6f52e3b2a265d38ff0b1712a03d15442b3b0d463ef18b17a1e127263901b0b30"
+      }
+    ],
+    ledgerEntries
+  };
+
+  const balancedLedger = validateLedgerBalance(ledgerEntries);
+  const mockEngineStatus = getErpSimulationEngineStatus(simBase);
+
   return {
     treasury: [
       { id: "1", ticker: "BTC", balance: "125.50000000" },
@@ -27,37 +106,9 @@ export async function getErpDashboardData(): Promise<ErpDashboardData> {
       { id: "2", agent_id: "agent-beta", tokens_allocated: "500000", timestamp: new Date().toISOString() }
     ],
     simulation: {
-      mockoonUrl: "http://" + "localhost" + ":3001/api/v1/mockoon",
-      wiremockUrl: "http://" + "localhost" + ":8081/__admin",
-      erpnextUrl: "https://sandbox-conxian.frappe.cloud",
-      latencyMs: 120,
-      faultInjectionActive: false,
-      x402Mandates: [
-        {
-          mandateId: "mandate-erp-1004",
-          invoiceRef: "INV-ERP-789",
-          paymentAddress: "bc1qztwy6xen3zdtt7z0vrgapmjtfz8acjkfp5fp7l",
-          amountSats: 250000,
-          status: "signed",
-          payloadHash: "6f52e3b2a265d38ff0b1712a03d15442b3b0d463ef18b17a1e127263901b0b30"
-        }
-      ],
-      ledgerEntries: [
-        {
-          id: "ledger-tx-9901",
-          account: "1200 - Accounts Receivable",
-          debitCredit: "debit",
-          amount: "1.25000000",
-          stateRootCommitment: "a5f8e3230a1b0203f44ee90f4236a67f0bce866a7bcf1292fa177c8e96bf11b0"
-        },
-        {
-          id: "ledger-tx-9902",
-          account: "4000 - Treasury Sales Revenue",
-          debitCredit: "credit",
-          amount: "1.25000000",
-          stateRootCommitment: "a5f8e3230a1b0203f44ee90f4236a67f0bce866a7bcf1292fa177c8e96bf11b0"
-        }
-      ]
+      ...simBase,
+      mockEngineStatus,
+      balancedLedger
     }
   };
 }

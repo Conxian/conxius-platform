@@ -1,5 +1,8 @@
 [allowlist]
 description = "Allowlisted files"
 paths = [
-    "services/admin-dashboard/.env.admin.example"
+    "services/admin-dashboard/.env.admin.example",
+    "docs/architecture/CONXIAN_API_TOKEN_SPEC.md",
+    "docs/M2M_AUTHENTICATION.md",
+    "services/admin-dashboard/src/tests/apiTokens.test.ts"
 ]

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://conxian-labs.com/schemas/platform.manifest.schema.json",
+  "title": "Conxian Platform Manifest",
+  "type": "object",
+  "required": ["schemaVersion", "platform", "repository", "purpose", "bitcoinNative", "ownership", "lifecycle", "evidencePolicy", "catalog", "statusSurface"],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "platform": { "const": "conxian" },
+    "repository": { "type": "string", "pattern": "^[^/]+/[^/]+$" },
+    "purpose": { "type": "string", "minLength": 1 },
+    "bitcoinNative": { "const": true },
+    "ownership": {
+      "type": "object",
+      "required": ["owned", "external"],
+      "properties": { "owned": { "type": "array", "items": { "type": "string" } }, "external": { "type": "array", "items": { "type": "string" } } },
+      "additionalProperties": false
+    },
+    "lifecycle": { "type": "array", "minItems": 7, "items": { "type": "string" } },
+    "evidencePolicy": { "const": "fail-closed" },
+    "catalog": { "type": "string" },
+    "statusSurface": { "type": "string", "format": "uri" }
+  },
+  "additionalProperties": false
+}

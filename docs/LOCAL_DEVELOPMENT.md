@@ -16,12 +16,14 @@ or evidence of production readiness.
 
 - Node.js `>=20.19.0`
 - Corepack with pnpm `9.15.5`
+- Python `>=3.11` (for platform adapters and audit scripts)
 - Docker with Compose v2 for the integration harness
 - OpenSSL for local secret generation
 
 ```bash
 corepack enable
 pnpm install --frozen-lockfile
+pip install -r requirements-dev.txt
 make init
 ```
 
@@ -42,10 +44,12 @@ Useful repository commands include:
 pnpm lint
 pnpm typecheck
 pnpm test
+pnpm run test:python
 pnpm run check:dependency-consistency
 pnpm --filter admin-dashboard run typecheck
 pnpm --filter admin-dashboard run test:phase7
-python3 -m unittest scripts/test_verify_documentation.py
+python3 scripts/maintenance/system_audit.py
+python3 scripts/maintenance/hardened_audit.py
 python3 scripts/verify_documentation.py
 ```
 
@@ -88,7 +92,7 @@ It:
 
 - copies `.env.schema` to `.env` only when `.env` does not exist;
 - generates absent `GATEWAY_JWT_SECRET`, `GATEWAY_ADMIN_API_KEY`,
-  `POSTGRES_PASSWORD`, and `GRAFANA_PASSWORD` values;
+  `POSTGRES_PASSWORD`, `GRAFANA_PASSWORD`, `ADMIN_DASHBOARD_API_KEY`, and mock `SERVICE_KEY_*` values using secure 32-byte hex entropy;
 - supplies supported Postgres defaults and derives `CORE_DB_URI` when absent;
 - creates or validates the configured Prometheus scrape-password file with
   restrictive permissions;
@@ -97,9 +101,9 @@ It:
 - treats GitHub CLI authentication as optional context, not as a credential
   source.
 
-It does **not** generate `ADMIN_DASHBOARD_API_KEY` or any `SERVICE_KEY_*`
-values. It also does not retrieve dashboard, third-party, wallet, protocol,
-cloud, or production credentials; distribute rotated keys to consumers;
+It generates local development credentials (`ADMIN_DASHBOARD_API_KEY` and mock
+`SERVICE_KEY_*`) safely without committing secrets. It does not retrieve
+third-party, wallet, protocol, cloud, or production credentials; distribute rotated keys to consumers;
 establish complete M2M authentication; or deploy anything. Review the resulting
 local file without printing secret values and populate remaining development
 fields through an approved secret source.

@@ -31,3 +31,15 @@ BitVMX proof execution, pairing arithmetic, or production backend selection is
 introduced by issue #1187.
 - **Strategic Anchor**: Phase 7 Sovereign Redesign.
 - **Linear Issue**: [CON-1311](https://linear.app/conxian-labs/issue/CON-1311)
+
+
+## G-64: Fail-Closed Execution & Bounded State Machine (2026-09-05)
+- **Fail-Closed Verification**: Input program hashes and execution payloads are strictly validated before state instantiation.
+- **Bounded State Retention**: Prevents memory leaks by capping maximum active intents (default: 1000) and auto-tombstoning finalized or disproved intents after a retention TTL (default: 3600s).
+- **Challenge Round Boundary**: Caps adaptive challenge rounds to 32 depth limit, automatically disproving invalid claims upon reaching maximum depth.
+- **Audit Trace**: Emits structured log events for all state transitions (`idle`, `executing`, `proving`, `challenged`, `disproved`, `finalized`, `tombstoned`).
+
+## Research Expansion: Adaptive Proofs & Recursive Verification Bounds (2026-09-07)
+- **Binary Search Convergence**: Bounded adaptive challenge protocols guarantee resolution in $\le 32$ rounds ($\log_2 N$ for $N \le 2^{32}$ micro-instructions).
+- **Fail-Closed Execution Invariant**: If a prover fails to submit valid intermediate state commitments within the round window or exceeds maximum challenge depth, the execution engine enforces fail-closed disproval and tombstones the session.
+- **Unit Verification Anchor**: Verification bounds, state machine transitions (`idle` $\rightarrow$ `executing` $\rightarrow$ `proving` $\rightarrow$ `challenged` $\rightarrow$ `disproved`/`finalized` $\rightarrow$ `tombstoned`), and memory capacity limits are strictly validated in `services/admin-dashboard/src/tests/bitvmx.test.ts`.

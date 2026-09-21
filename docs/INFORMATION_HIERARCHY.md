@@ -110,6 +110,7 @@ These documents are **read-only**. They preserve institutional memory but must n
 | :--- | :--- |
 | `docs/archived-reports/` | Superseded alignment reports, phase reviews, scorecards |
 | `docs/archived-tasks/` | Completed enhancement plans, task summaries, bounty docs |
+| `docs/archive/` | Archived agent instructions and session logs |
 | `openspec/changes/archive/` | Archived OpenSpec change proposals |
 
 **Maintenance Rules for Historical Documents:**

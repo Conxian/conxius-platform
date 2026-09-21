@@ -1,10 +1,10 @@
 # Conxius Platform
 
-The `conxius-platform` repository contains development and control-plane scaffolding for composing parts of the Conxian stack locally and in managed environments.
+The `conxius-platform` repository contains platform composition and lifecycle scaffolding for composing parts of the Conxian stack locally and in managed environments.
 
 ## Status
 
-**Active development.** This is a platform control-plane repository and should be read primarily as contributor and operator infrastructure rather than as an end-user product surface.
+**Active development.** This is a Conxian Platform repository and should be read primarily as contributor and operator infrastructure rather than as an end-user product surface. Synchronized platform baseline: `v0.2.5`.
 
 This repository uses formal versioned releases tracked in `CHANGELOG.md` and published via GitHub Releases.
 
@@ -27,7 +27,7 @@ See [SESSION.md](SESSION.md) for the session standard — the enforcement baseli
 Use this repository if you need:
 
 - local or managed environment scaffolding
-- control-plane and orchestration assets
+- platform orchestration and lifecycle assets
 - CI and release automation references
 - developer tooling that spans multiple Conxian repositories
 
@@ -37,16 +37,17 @@ For protocol logic, wallet/client behavior, or public site content, use the owni
 
 GitHub Actions workflows in [`.github/workflows`](./.github/workflows) are the sole CI source of truth for this repository. Legacy CircleCI configuration has been intentionally removed.
 
-## Scope
+## Scope & Workspace Services
 
-`conxius-platform` is a platform control-plane repository. Keep root-level content focused on:
+`conxius-platform` is organized as a pnpm monorepo. Keep root-level content focused on environment runtime, orchestration, CI/CD pipelines, and platform architecture.
 
-- environment and runtime orchestration
-- CI and release automation
-- integration harnesses and developer tooling
-- platform architecture and repository-boundary guidance
+Internal workspace services located under `services/`:
 
-Out of scope here: portfolio strategy narratives, legal or financial operations material, and non-platform product planning. Route those to the owning repository in [Repository Taxonomy](./docs/REPOSITORY_TAXONOMY.md) or the Conxian Linear `CON` workspace.
+- [**Admin Dashboard** (`services/admin-dashboard`)](./services/admin-dashboard/README.md): Internal control plane for Gateway health, telemetry, and multidimensional pulse orchestration.
+- [**Admin Pulse BOS** (`services/admin-pulse-bos`)](./services/admin-pulse-bos/README.md): Specialized Sovereign Financial Office (SFO) command pulse components for internal dev testing.
+- [**ElizaOS Plugin** (`services/elizaos-plugin-conxian`)](./services/elizaos-plugin-conxian/README.md): AI agent integration plugin exposing Gateway and SIDL actions to ElizaOS.
+
+See [SUPPORT.md](SUPPORT.md) for support tiers and expectations for each workspace service.
 
 ## Governance relation
 
@@ -96,7 +97,7 @@ make start
 make bench
 ```
 
-This starts the local Compose control-plane/integration harness, not a full
+This starts the local Compose platform/integration harness, not a full
 protocol or production stack. The direct Admin Dashboard defaults to
 `http://localhost:3001`; the Compose dashboard is `http://localhost:3002`,
 while Compose Grafana uses `http://localhost:3001`. See
@@ -104,8 +105,9 @@ while Compose Grafana uses `http://localhost:3001`. See
 secrets or selecting external Gateway/UI images.
 
 Use templates and generated local secrets for development only. `make auth`
-does not generate `ADMIN_DASHBOARD_API_KEY` or `SERVICE_KEY_*`, and it does not
-establish production authentication. Do not commit real credentials.
+provisions local credentials (`ADMIN_DASHBOARD_API_KEY` and `SERVICE_KEY_*` values
+generated using secure 32-byte hex entropy) for development and testing, but it does
+not establish production deployment authentication or retrieve external secrets. Do not commit real credentials.
 
 `make deploy` is not a guaranteed deployment path: it delegates to an
 externally installed `conxius-orbit` binary when present and otherwise only
@@ -116,6 +118,7 @@ prints fallback messages. See [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md).
 - This repository follows Semantic Versioning via annotated tags (`vX.Y.Z`).
 - Changes are recorded in `CHANGELOG.md`.
 - Releases are triggered by tags and verified by the [`release.yml`](./.github/workflows/release.yml) workflow.
+- See [`RELEASE_POLICY.md`](RELEASE_POLICY.md), [`RELEASE_CONTROL.md`](RELEASE_CONTROL.md), and [`RELEASING.md`](RELEASING.md) for full release promotion and gating requirements.
 
 ## Policies
 
@@ -126,7 +129,10 @@ prints fallback messages. See [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md).
 - [SUPPORT.md](SUPPORT.md)
 - [REVIEWS.md](REVIEWS.md)
 - [RELEASE_POLICY.md](RELEASE_POLICY.md)
+- [RELEASE_CONTROL.md](RELEASE_CONTROL.md)
+- [RELEASING.md](RELEASING.md)
 - [CODEOWNERS](CODEOWNERS)
+- [Pull Request Template](.github/PULL_REQUEST_TEMPLATE.md)
 
 ## Contact
 

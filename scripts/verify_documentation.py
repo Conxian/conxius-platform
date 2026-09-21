@@ -128,19 +128,22 @@ def is_historical(path: Path, root: Path) -> bool:
     except ValueError:
         return False
     return (
-        len(parts) >= 2 and parts[0] == "docs" and parts[1].startswith("archived-")
+        len(parts) >= 2 and parts[0] == "docs" and (parts[1].startswith("archived-") or parts[1] == "archive")
     ) or parts[: len(OPENSPEC_ARCHIVE_PREFIX)] == OPENSPEC_ARCHIVE_PREFIX
 
 
 def is_allowed_historical_link(source: Path, target: Path, root: Path) -> bool:
     source_relative = source.relative_to(root).as_posix()
+    if source_relative == "AGENTS.md":
+        target_parts = target.relative_to(root).parts
+        return len(target_parts) >= 2 and target_parts[0] == "docs" and target_parts[1] == "archive"
     if source_relative != HISTORICAL_LINK_EXCEPTION_SOURCE:
         return False
     target_parts = target.relative_to(root).parts
     return (
         len(target_parts) == 2
         and target_parts[0] == "docs"
-        and target_parts[1].startswith("archived-")
+        and (target_parts[1].startswith("archived-") or target_parts[1] == "archive")
     ) or target_parts == OPENSPEC_ARCHIVE_PREFIX
 
 

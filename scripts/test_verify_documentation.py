@@ -401,6 +401,20 @@ class DocumentationValidationTests(unittest.TestCase):
 
             self.assertEqual(validate(root), [])
 
+    def test_allows_agents_to_link_to_docs_archive_historical_root(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self._write_required_entries(root)
+            (root / "docs" / "archive").mkdir(parents=True)
+            (root / "docs" / "archive" / "AGENTS_archive.md").write_text(
+                "[ignored](missing.md)\n", encoding="utf-8"
+            )
+            (root / "AGENTS.md").write_text(
+                "[Historical agents](docs/archive/AGENTS_archive.md)\n", encoding="utf-8"
+            )
+
+            self.assertEqual(validate(root), [])
+
     def test_dynamic_archived_directory_is_historical_and_governance_may_declare_root(
         self,
     ) -> None:

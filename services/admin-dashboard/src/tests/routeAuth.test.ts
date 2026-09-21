@@ -105,9 +105,7 @@ describe("route-level M2M authorization", () => {
     const governanceToken = await issueToken(["write:governance", "m2m:internal"]);
     const treasuryToken = await issueToken(["write:treasury", "m2m:internal"]);
 
-    const secretsResponse = await postSecrets(
-      bearerRequest("POST", secretsToken, { secrets: {} }),
-    );
+    const secretsResponse = await postSecrets();
     const deploymentResponse = await getDeploymentBlueprint(bearerRequest("GET", deployToken));
     const governanceResponse = await postGovernanceVote(
       bearerRequest("POST", governanceToken, { proposalId: "route-test-proposal", fid: 42, choice: "yes" }),
@@ -116,7 +114,7 @@ describe("route-level M2M authorization", () => {
       bearerRequest("POST", treasuryToken, { action: "orchestrate" }),
     );
 
-    expect(secretsResponse.status).toBe(200);
+    expect(secretsResponse.status).toBe(410);
     expect(deploymentResponse.status).toBe(200);
     expect(governanceResponse.status).toBe(200);
     expect(treasuryResponse.status).toBe(503);
@@ -126,7 +124,7 @@ describe("route-level M2M authorization", () => {
     const readOnlyToken = await issueToken(["read:admin", "m2m:internal"]);
 
     const responses = [
-      await postSecrets(bearerRequest("POST", readOnlyToken, { secrets: {} })),
+      await postSecrets(),
       await getDeploymentBlueprint(bearerRequest("GET", readOnlyToken)),
       await postGovernanceVote(
         bearerRequest("POST", readOnlyToken, { proposalId: "route-test-proposal", fid: 42, choice: "yes" }),
@@ -134,7 +132,7 @@ describe("route-level M2M authorization", () => {
       await postSettlementEngine(bearerRequest("POST", readOnlyToken, { action: "orchestrate" })),
     ];
 
-    expect(responses.map((response) => response.status)).toEqual([403, 403, 403, 403]);
+    expect(responses.map((response) => response.status)).toEqual([410, 403, 403, 403]);
   });
 
   it("returns 401 for malformed JWT credentials at the route boundary", async () => {

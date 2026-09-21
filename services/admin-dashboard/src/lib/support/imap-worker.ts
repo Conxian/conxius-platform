@@ -1,9 +1,9 @@
 import { createLogger } from "./logger";
-const logger = createLogger("ImapWorker");
+const logger = createLogger("IMAPWorker");
 import { generateTicketToken } from "./idgen";
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
-import nodemailer from 'nodemailer';
+import nodemailer, { type Transporter } from 'nodemailer';
 
 export interface SupportEmail {
   id: string;
@@ -23,7 +23,7 @@ export class ImapWorker {
   private linearApiKey: string;
   private teamId: string;
   private labelCache: Map<string, string> = new Map();
-  private transporter: nodemailer.Transporter;
+  private transporter: Transporter;
   private suppressedMissingSourceUids: Set<number> = new Set();
 
   constructor() {
@@ -220,7 +220,7 @@ export class ImapWorker {
           this.labelCache.set(label.name, label.id);
         }
       } catch (e) {
-        console.warn('[Linear] Could not fetch labels, proceeding with empty labels');
+        logger.warn('[Linear] Could not fetch labels, proceeding with empty labels');
       }
     }
 

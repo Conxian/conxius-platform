@@ -1,4 +1,3 @@
-import { validateAdminAuth } from "@/lib/support/auth";
 import { NextResponse } from "next/server";
 import type { CommunityStats } from "@/lib/launch";
 
@@ -17,8 +16,6 @@ function buildCommunityStats(): CommunityStats {
   };
 }
 
-export async function GET(req: Request) {
-  const authError = await validateAdminAuth(req);
-  if (authError) return authError;
+export async function GET() {
   return NextResponse.json(buildCommunityStats());
 }

@@ -3,11 +3,12 @@
   "version": "0.2.5",
   "license": "MIT",
   "private": true,
+  "type": "module",
   "packageManager": "pnpm@9.15.5",
   "scripts": {
     "dev": "next dev -p ${PORT:-3001}",
     "build": "next build",
-    "start": "next start -p ${PORT:-3001}",
+    "start": "next start -H ${HOSTNAME:-0.0.0.0} -p ${PORT:-3001}",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:m2m": "vitest run src/tests/m2m.test.ts src/tests/m2mKeyRotation.test.ts",
@@ -15,23 +16,23 @@
     "prepublishOnly": "node -e \"console.error('pnpm publish is disabled for now in this repository; use Git tags and GitHub Releases.'); process.exit(1)\""
   },
   "dependencies": {
-    "imapflow": "^1.6.1",
-    "jose": "^6.2.4",
-    "mailparser": "^3.9.14",
-    "next": "16.2.12",
-    "nodemailer": "^9.0.3",
-    "nostr-tools": "^2.24.1",
-    "react": "19.2.8",
-    "react-dom": "19.2.8",
+    "imapflow": "^1.6.5",
+    "jose": "^6.2.12",
+    "mailparser": "^3.9.26",
+    "next": "16.3.5",
+    "nodemailer": "^10.0.9",
+    "nostr-tools": "^2.25.2",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
     "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@types/mailparser": "^3.4.6",
-    "@types/node": "^26.1.2",
+    "@types/node": "^26.5.1",
     "@types/nodemailer": "^8.0.1",
-    "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.2.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.10"
+    "vitest": "^5.0.0"
   }
 }

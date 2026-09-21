@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **BitVM3 & Nova Recursive Proof Research (G-55)**: Documented recursive rollup aggregation and SNARK proof folding mechanics in `FULL_STACK_BITCOIN_RESEARCH.md` and `BITVMX_RESEARCH.md`.
+- **Technical Debt Burn-Down (D-04)**: Completed logging migration in `services/admin-dashboard/src/lib/support/imap-worker.ts` and updated `DEBT_INVENTORY.md`.
+- **Org-Wide Functionality Map & Audit Report**: Published `docs/architecture/ORG_WIDE_FUNCTIONALITY_MAP_AND_AUDIT.md` covering all 6 Neon cloud database projects (`corelibs`, `Software dev kit`, `Business Operating System`, `market`, `Gateway`, `Conxian Nexus`), Render web hosting services, monorepo service taxonomy, 39+ BFF API routes, and Phase 7 strategic anchor status.
+- **Render & Container Host Binding Alignment**: Configured `services/admin-dashboard/package.json` start script with explicit `-H ${HOSTNAME:-0.0.0.0} -p ${PORT:-3001}` host binding and updated `scripts/maintenance/hardened_audit.py` to audit start script compliance.
+- **Knowledge Base Self-Evolution Ingestion**: Processed KB pattern detection (`kb:patterns`) and update generation (`kb:update`) syncing knowledge store entries in `.kb-updates.json`.
+
 - **M2M Service-Key Rotation Operations**: Added persistent dashboard-owned
   service-key rotation/rollback deployment wiring, fail-closed Prometheus
   scrape authentication, bounded rotation and registry alerts, and operator
@@ -22,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CI/CD Hardening**: Unified `test:phase7` script in admin-dashboard for targeted verification.
 
 ### Fixed
+- **Organization Readiness Verification Resilience**: Enhanced `scripts/verify_org_readiness.py` to handle environments without `gh` CLI or active GitHub authentication gracefully by outputting informational skip notices instead of process failure exceptions.
 - **CHANGELOG Hygiene**: Removed duplicate `[0.2.5]` section and merged duplicate `[Unreleased]` entries.
 - **Repository Maintenance & Hygiene**: Hardened root `.gitignore` with environment files and common build artifacts. Remediated workspace drift by removing redundant lockfiles and workspace manifests from service subdirectories. Enhanced `system_audit.py` to enforce workspace hygiene and updated service Dockerfiles to align with the single-lockfile monorepo structure.
 

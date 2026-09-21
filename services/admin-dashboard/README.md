@@ -4,11 +4,11 @@ This service is the internal backend/frontend orchestration layer for the Conxia
 
 ## Status
 
-**Active development.** Deployed to Render as an internal control-plane surface. Versioning follows the platform root `0.2.5` standard.
+**Active development.** Deployed to Render as an internal control-plane surface. Versioning follows the platform root `0.2.5` baseline.
 
 ## Positioning
 
-Institutional dashboard users and frontend engineers. Provides non-custodial administrative interfaces and orchestration logic; it does not take possession of customer funds.
+Institutional dashboard users and frontend engineers. Provides non-custodial administrative interfaces and orchestration logic; it does not take possession of customer funds or store private keys.
 
 ## Purpose
 
@@ -68,11 +68,23 @@ pnpm test
 pnpm test:phase7
 ```
 
-## ⚖️ Governance
+## Support Expectations
 
-- Follows [SECURITY.md](../../SECURITY.md) for reporting.
-- Adheres to [CONTRIBUTING.md](../../CONTRIBUTING.md) monorepo guidelines.
-- Complies with [CODEOWNERS](../../CODEOWNERS) service ownership.
+- **Classification**: Institutional Control Plane.
+- **Support Policy**: Supported for institutional operators and internal deployments. See [SUPPORT.md](../../SUPPORT.md) for SLAs, issue routing, and operator support.
+- **Security Reporting**: Report vulnerabilities to `security@conxian-labs.com` or via GitHub Private Vulnerability Reporting per [SECURITY.md](../../SECURITY.md).
+
+## Release Posture
+
+- Synchronized with the platform monorepo version standard (`0.2.5`).
+- Governed by [RELEASE_POLICY.md](../../RELEASE_POLICY.md) and [RELEASING.md](../../RELEASING.md).
+
+## ⚖️ Governance & License
+
+- **Security**: Follows [SECURITY.md](../../SECURITY.md) for vulnerability reporting.
+- **Contributions**: Adheres to [CONTRIBUTING.md](../../CONTRIBUTING.md) monorepo guidelines.
+- **Ownership**: Complies with [CODEOWNERS](../../CODEOWNERS) service ownership.
+- **License**: Released under the [MIT License](../../LICENSE).
 
 ---
 © 2026 Conxian Labs. Sovereign Autonomous Business.

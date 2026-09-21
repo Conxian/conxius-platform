@@ -10,6 +10,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { decodeProtectedHeader, jwtVerify, SignJWT, type JWTPayload } from "jose";
 import { NextResponse } from "next/server";
+import { getApiTokenStore, isValidTokenFormat } from "./apiTokens";
 import { getM2MKeyStore, parseM2MServiceKeyHeader } from "./m2mKeyStore";
 import { timingSafeStringEqual } from "./m2mKeyHttp";
 import { isRotatableServiceId, type RotatableServiceId } from "./m2mKeyTypes";
@@ -42,6 +43,9 @@ export const KNOWN_SCOPES = [
   "admin:secrets",
   "admin:deploy",
   "m2m:internal",
+  "read:telemetry",
+  "read:settlement",
+  "write:settlement",
 ] as const;
 
 export type Scope = (typeof KNOWN_SCOPES)[number];
@@ -81,6 +85,9 @@ export const SERVICE_PERMISSIONS: Readonly<Record<ServiceId, readonly Scope[]>> 
     "admin:secrets",
     "admin:deploy",
     "m2m:internal",
+    "read:telemetry",
+    "read:settlement",
+    "write:settlement",
   ],
   "pulse-bos": ["read:admin", "read:treasury", "read:metrics", "m2m:internal"],
   external: [],
@@ -481,6 +488,10 @@ export function parseBearerToken(headerValue: string | null): BearerTokenParseRe
     return { valid: false, error: INVALID_BEARER_ERROR };
   }
 
+  if (isValidTokenFormat(token)) {
+    return { valid: true, token };
+  }
+
   const segments = token.split(".");
   if (segments.length !== 3 || segments.some((segment) => !/^[A-Za-z0-9_-]+$/.test(segment))) {
     return { valid: false, error: INVALID_BEARER_ERROR };
@@ -701,12 +712,34 @@ export class M2MAuthenticator {
   }
 
   /** Authenticate with strict Bearer precedence, then legacy key precedence. */
+  validateConxianApiToken(rawToken: string): AuthResult {
+    const verification = getApiTokenStore().verifyToken(rawToken);
+    if (!verification.valid || !verification.metadata) {
+      return invalidAuth(verification.error ?? "Invalid API token");
+    }
+
+    return {
+      valid: true,
+      serviceId: verification.metadata.ownerId as any,
+      scopes: verification.metadata.scopes,
+      source: "api-key",
+    };
+  }
+
   async authenticate(request: Request): Promise<AuthResult> {
     const authorization = request.headers.get("Authorization");
     if (authorization !== null) {
       const bearer = parseBearerToken(authorization);
       if (!bearer.valid || !bearer.token) return invalidAuth();
+      if (isValidTokenFormat(bearer.token)) {
+        return this.validateConxianApiToken(bearer.token);
+      }
       return this.verifyJwt(bearer.token);
+    }
+
+    const conxianHeader = request.headers.get("X-Conxian-Api-Token");
+    if (conxianHeader) {
+      return this.validateConxianApiToken(conxianHeader);
     }
 
     const apiKeyResult = this.validateApiKey(request.headers.get("X-Admin-API-Key"));

@@ -45,6 +45,7 @@ Historical context preserves institutional memory without competing with live go
 - [`docs/archived-reports/`](./docs/archived-reports/) — superseded alignment reports, phase reviews, scorecards
 - [`docs/archived-tasks/`](./docs/archived-tasks/) — completed enhancement plans and task summaries
 - [`docs/archived-scripts/`](./docs/archived-scripts/) — superseded maintenance scripts
+- [`docs/archive/`](./docs/archive/) — archived agent instructions and session logs
 - [`openspec/changes/archive/`](./openspec/changes/archive/) — archived OpenSpec proposals
 
 Historical documents are **strictly read-only**. They must never be cited as authority for current decisions, must never appear in active reading chains, and must not be updated in place. If a historical document contains information that needs revision, create a new document in the appropriate active lane and archive the old one per the [Information Hierarchy](./docs/INFORMATION_HIERARCHY.md) archival process.
@@ -83,13 +84,13 @@ Historical documents are **strictly read-only**. They must never be cited as aut
 
 ## Repository boundary
 
-`conxius-platform` is the declarative control plane repository for the Conxian ecosystem. It owns the orchestration and operator surfaces, while core protocol logic remains in its respective source repositories. See [`docs/PRODUCTION_BOUNDARY.md`](./docs/PRODUCTION_BOUNDARY.md).
+`conxius-platform` is the declarative Conxian Platform repository for the Conxian ecosystem. It owns the orchestration and operator surfaces, while core protocol logic remains in its respective source repositories. See [`docs/PRODUCTION_BOUNDARY.md`](./docs/PRODUCTION_BOUNDARY.md).
 
 ## Cross-repository control alignment (ITIL V5 Root-to-Leaf)
 
 - Chain-specific deployment/operator repositories (including Conxius Orbit in `Conxian/conxius-orbit`) must align to the parent lifecycle and root-to-leaf control model (ITIL V5) defined by this repository.
 - This alignment is an operational policy baseline only; it does not transfer code-review/merge authority across repositories.
-- Operator setup and deployment-policy changes in those repositories must reference a parent control-plane issue/spec and use parent-approved runbook evidence.
+- Operator setup and deployment-policy changes in those repositories must reference a parent platform issue/spec and use parent-approved runbook evidence.
 - Trust assumption: operator surfaces are treated as untrusted by default and must never require protocol-signing key custody.
 - Scope boundary: deployment/operator repositories must not expand into broad protocol ownership; protocol-state/business-logic changes remain in their owning repositories.
 

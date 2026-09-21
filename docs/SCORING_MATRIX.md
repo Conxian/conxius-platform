@@ -21,12 +21,12 @@ This matrix scores the identified gaps based on Strategic Alignment, Implementat
 | **G-07** | **Nostr Wallet Connect (NWC)** | 8 | 5 | 9 | **22** | [NWC Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#27) |
 | **G-08** | **ZK-Rollup T1 Adapters** | 9 | 7 | 7 | **23** | [ZK-Rollup Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#28) |
 | **G-09** | **BIP-322 Signed Intents** | 10 | 6 | 8 | **24** | [BIP-322 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#29) |
-| **G-10** | **MuSig2 Aggregation** | 9 | 6 | 7 | **22** | [MuSig2 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#31) |
+| **G-10** | **MuSig2 Aggregation** (Active Scaffolding) | 9 | 6 | 7 | **22** | [MuSig2 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#31) |
 | **G-11** | **BitVM2 Multi-Party Aggregation** | 10 | 8 | 8 | **26** | [BitVM2 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#31) — aggregation gated behind verified backend evidence |
 | **G-12** | **ERC-7683 Solver Selection** | 8 | 7 | 8 | **23** | [L3 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#33) |
 | **G-13** | **Micro-Frontend Federation** | 7 | 8 | 5 | **20** | [Sovereign Redesign](./architecture/SOVEREIGN_REPR_2026.md#3) |
-| **G-14** | **FROST Threshold Signatures** | 9 | 8 | 7 | **24** | [FROST Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#34) |
-| **G-15** | **OP_CAT Recursive Covenants** | 10 | 7 | 6 | **23** | [OP_CAT Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#35) |
+| **G-14** | **FROST Threshold Signatures** | 9 | 8 | 7 | **24** | [FROST Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#34) — unit verified in `frost.test.ts` |
+| **G-15** | **OP_CAT Recursive Covenants** | 10 | 7 | 6 | **23** | [OP_CAT Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#35) — active scaffolding & unit verified in `opCat.ts` and `opCat.test.ts` |
 | **G-16** | **Fedimint Community Liquidity** | 8 | 7 | 8 | **23** | [Fedimint Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#36) |
 | **G-17** | **BIP-353 DNS Payments** | 7 | 5 | 8 | **20** | [BIP-353 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#32) |
 | **G-18** | **BIP-324 Transport** | 7 | 6 | 7 | **20** | [BIP-324 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#38) |
@@ -47,9 +47,20 @@ This matrix scores the identified gaps based on Strategic Alignment, Implementat
 | **G-50** | **ZK Contingent Payments** | 10 | 9 | 7 | **26** | [ZKCP Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#50) — verifier/observer backends pending; production key release is hard-disabled with no obligation execution, registry lookup, decryption-key output, or finalized success. Future coordinator requires independent authentication, server binding, Gateway/Core atomic claim-or-get, and durable registry |
 | **G-51** | **BitVM2 Optimized Verifier** | 9 | 8 | 7 | **24** | [Verifier Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#51) — research only; no pairing implementation here |
 | **G-52** | **BRC-20 / Runes Integration** | 7 | 6 | 9 | **22** | [Indexer Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#52) |
-| **G-53** | **Lightning Async Payments** | 8 | 7 | 9 | **24** | [Async Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#53) |
-| **G-54** | **OP_VAULT (BIP-345)** | 9 | 8 | 6 | **23** | [Vault Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#54) |
+| **G-53** | **Lightning Async Payments** | 8 | 7 | 9 | **24** | [Async Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#53) — HTLC hold invoices & bounded state machine in `services/admin-dashboard/src/lib/support/asyncPayments.ts` |
+| **G-54** | **OP_VAULT (BIP-345)** | 9 | 8 | 6 | **23** | [Vault Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#54) — active scaffolding & unit verified in `opVault.ts` and `opVault.test.ts` |
 | **G-55** | **Enterprise ERP Simulation** | 9 | 7 | 8 | **24** | [Enterprise ERP Simulation](./architecture/ENTERPRISE_ERP_SIMULATION_RESEARCH.md) |
+| **G-64** | **BitVMX Fail-Closed Execution Engine** | 10 | 8 | 7 | **25** | [BitVMX Research](./architecture/BITVMX_RESEARCH.md) |
+| **G-65** | **Conxian Unified API Token Management & Developer Self-Service** | 9 | 6 | 10 | **25** | [CONXIAN_API_TOKEN Spec](./architecture/CONXIAN_API_TOKEN_SPEC.md) |
+| **G-60** | **Automated Knowledge Base Self-Evolution Pipeline** | 8 | 5 | 9 | **22** | [SELF_EVOLVING_KB](./SELF_EVOLVING_KB.md) |
+| **G-61** | **OpenSpec Strict Schema Validation Guardrails** | 8 | 4 | 9 | **21** | [OpenSpec Guardrails](./SELF_EVOLVING_KB.md#openspec-validation) |
+| **G-62** | **FROST Threshold DKG Session State Hardening** | 9 | 7 | 8 | **24** | [FROST Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#34) |
+| **G-63** | **BitVM Fail-Closed Replay & Tombstone Verification** | 10 | 8 | 7 | **25** | [BitVM Floor](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#21) |
+| **G-66** | **Unified Client System Installer & Provisioning Engine** | 9 | 6 | 10 | **25** | [Client Onboarding Spec](./architecture/CLIENT_ONBOARDING_AND_UNIFIED_INSTALLER_SPEC_2026.md) |
+| **G-67** | **End-to-End Inter-Service Connectivity Verification Harness** | 9 | 6 | 10 | **25** | [Inter-Service Connectivity Spec](./architecture/CLIENT_ONBOARDING_AND_UNIFIED_INSTALLER_SPEC_2026.md) |
+| **G-68** | **conxian.org Sovereign Protocol Surface & Developer Hub** | 10 | 6 | 10 | **26** | [Org-Wide Functionality Map](./architecture/ORG_WIDE_FUNCTIONALITY_MAP_AND_AUDIT.md) |
+| **G-69** | **Strict Legal & Architectural Domain Firewall Routing** | 10 | 5 | 10 | **25** | [Org-Wide Functionality Map](./architecture/ORG_WIDE_FUNCTIONALITY_MAP_AND_AUDIT.md) |
+| **G-70** | **Autonomous Submodule Health & Cross-Repository Synchronization Engine** | 10 | 6 | 10 | **26** | [Repository Taxonomy](./REPOSITORY_TAXONOMY.md) |
 | **G-56** | **Founder-rights observation/evidence boundary** | 10 | 4 | 10 | **24** | [Founder-rights observation](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md) |
 | **G-57** | **Cross-repository revenue model drift** | 10 | 6 | 9 | **25** | [Contradictions and ownership](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#contradictions-and-safe-interpretation) |
 | **G-58** | **Deployment evidence/live-interface verification** | 10 | 5 | 9 | **24** | [Evidence matrix](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#verified-evidence-matrix) |

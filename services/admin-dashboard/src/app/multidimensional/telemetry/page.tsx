@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import UsageDashboard from "./UsageDashboard";
 
 export default function TelemetryPage() {
   const [data, setData] = useState<any>(null);
@@ -37,9 +36,9 @@ export default function TelemetryPage() {
       ) : (
         <div style={{ display: "grid", gap: "1.5rem" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
-            <MetricCard title="Last Sequence" value={data?.event_bus?.last_sequence ?? 0} />
-            <MetricCard title="Success Rate" value={`${data?.event_bus?.delivery_success_rate?.toFixed(1) ?? 100}%`} />
-            <MetricCard title="Pending" value={data?.event_bus?.pending_events ?? 0} />
+            <MetricCard title="Last Sequence" value={data?.event_bus?.last_sequence ?? "Unavailable"} />
+            <MetricCard title="Success Rate" value={typeof data?.event_bus?.delivery_success_rate === "number" ? `${data.event_bus.delivery_success_rate.toFixed(1)}%` : "Unavailable"} />
+            <MetricCard title="Pending" value={data?.event_bus?.pending_events ?? "Unavailable"} />
           </div>
 
           <div style={{ backgroundColor: "white", padding: "1.5rem", borderRadius: "8px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
@@ -68,7 +67,6 @@ export default function TelemetryPage() {
             </table>
           </div>
 
-          <UsageDashboard />
         </div>
       )}
     </div>

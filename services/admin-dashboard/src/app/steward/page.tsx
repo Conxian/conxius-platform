@@ -62,8 +62,14 @@ export default function StewardDashboardPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/v1/steward/dashboard");
-      if (!res.ok) throw new Error(`Failed to fetch steward data: ${res.status}`);
+      const res = await fetch("/api/v1/steward/dashboard", { cache: "no-store" });
+      if (!res.ok) {
+        throw new Error(
+          res.status === 503
+            ? "Steward data is temporarily unavailable. Please try again."
+            : `Failed to fetch steward data: ${res.status}`,
+        );
+      }
       const d = await res.json();
       setData(d);
     } catch (err: unknown) {

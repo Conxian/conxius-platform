@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "1.0",
+  "capability": "wallet-signing",
+  "ownerRepository": "Conxian/conxius-wallet",
+  "consumer": "conxius-platform",
+  "boundary": "sdk-only",
+  "mode": "external-provider",
+  "platformMay": [
+    "submit a canonical signed-intent request",
+    "receive opaque authorization and evidence references",
+    "observe status, expiry, and failure state"
+  ],
+  "platformMustNot": [
+    "receive or store private keys",
+    "perform signing or custody",
+    "construct protocol-specific transactions",
+    "infer approval from agent output",
+    "own wallet balances or fees"
+  ],
+  "requiredEvidence": [
+    "sdkVersion",
+    "providerIdentity",
+    "intentDigest",
+    "authorizationReference",
+    "signatureAlgorithm",
+    "expiresAt",
+    "verificationStatus"
+  ],
+  "resourcePolicy": {
+    "preserveExistingWalletResources": true,
+    "preserveProviderAdapters": true,
+    "preserveInFlightIntents": true,
+    "destructiveMigration": false
+  },
+  "availability": "unavailable-until-provider-contract-verified"
+}

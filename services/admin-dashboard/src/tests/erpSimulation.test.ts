@@ -3,7 +3,11 @@ import { vi, describe, test, expect } from "vitest";
 // Mock server-only to allow importing server component files in vitest test runner
 vi.mock("server-only", () => ({}));
 
-import { getErpDashboardData } from "../lib/sidl/erp";
+import {
+  getErpDashboardData,
+  validateLedgerBalance,
+  getErpSimulationEngineStatus
+} from "../lib/sidl/erp";
 
 describe("Enterprise ERP Simulation and Programmable Mock Engines (G-55 / CON-1320)", () => {
   test("should return comprehensive simulated ERP data including Mockoon and WireMock configurations", async () => {
@@ -28,6 +32,8 @@ describe("Enterprise ERP Simulation and Programmable Mock Engines (G-55 / CON-13
     expect(typeof sim.latencyMs).toBe("number");
     expect(sim.latencyMs).toBeGreaterThan(0);
     expect(typeof sim.faultInjectionActive).toBe("boolean");
+    expect(sim.mockEngineStatus).toBe("healthy");
+    expect(sim.balancedLedger).toBe(true);
 
     // Verify simulated x402 payment mandate
     expect(sim.x402Mandates).toBeInstanceOf(Array);
@@ -55,5 +61,26 @@ describe("Enterprise ERP Simulation and Programmable Mock Engines (G-55 / CON-13
     expect(creditEntry.debitCredit).toBe("credit");
     expect(creditEntry.account).toBe("4000 - Treasury Sales Revenue");
     expect(creditEntry.stateRootCommitment).toBe("a5f8e3230a1b0203f44ee90f4236a67f0bce866a7bcf1292fa177c8e96bf11b0");
+  });
+
+  test("should correctly validate double-entry ledger balancing", () => {
+    const balancedEntries = [
+      { id: "1", account: "Cash", debitCredit: "debit" as const, amount: "100.00", stateRootCommitment: "hash1" },
+      { id: "2", account: "Revenue", debitCredit: "credit" as const, amount: "100.00", stateRootCommitment: "hash1" }
+    ];
+    expect(validateLedgerBalance(balancedEntries)).toBe(true);
+
+    const unbalancedEntries = [
+      { id: "1", account: "Cash", debitCredit: "debit" as const, amount: "100.00", stateRootCommitment: "hash1" },
+      { id: "2", account: "Revenue", debitCredit: "credit" as const, amount: "50.00", stateRootCommitment: "hash1" }
+    ];
+    expect(validateLedgerBalance(unbalancedEntries)).toBe(false);
+  });
+
+  test("should evaluate mock engine operational status based on latency and fault injection", () => {
+    expect(getErpSimulationEngineStatus({ faultInjectionActive: false, latencyMs: 100 })).toBe("healthy");
+    expect(getErpSimulationEngineStatus({ faultInjectionActive: true, latencyMs: 100 })).toBe("degraded");
+    expect(getErpSimulationEngineStatus({ faultInjectionActive: false, latencyMs: 600 })).toBe("degraded");
+    expect(getErpSimulationEngineStatus({ faultInjectionActive: false, latencyMs: -1 })).toBe("offline");
   });
 });

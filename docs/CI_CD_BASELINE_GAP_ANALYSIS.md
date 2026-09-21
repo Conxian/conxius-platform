@@ -7,8 +7,8 @@ defined in [#1103](https://github.com/Conxian/conxius-platform/issues/1103). Las
 
 | Gate | Current State | Target | Status |
 |------|--------------|--------|--------|
-| No green build, no merge | ✅ Branch protection on `main` enforces required checks | Strict | **Met** |
-| No required checks, no merge | ✅ `hygiene.yml`, `hygiene-drift-guard.yml`, `secret-scan.yml` required on `main` | Strict | **Met** |
+| No green build, no merge | ⚠️ Required checks are defined locally; remote branch protection is not verifiable with the current read-only evidence | Strict | **Owner evidence required** |
+| No required checks, no merge | ⚠️ Workflow candidates exist locally; required-check rulesets must be verified in GitHub | Strict | **Owner evidence required** |
 | No pinned actions, no workflow acceptance | ✅ All actions pinned to major versions. CONXIUS_CICD_BASELINE.md documents pins. Drift guard validates. | Strict | **Met** |
 | No secret scan, no merge | ✅ `secret-scan.yml` (Gitleaks) required on PRs. Reusable at `reusable-secret-scan.yml` | Strict | **Met** |
 | No dependency review, no merge | ✅ `dependency-review.yml` runs `actions/dependency-review-action@v5.0.0` on all PRs. | Strict | **Met** |
@@ -53,6 +53,10 @@ builder flow.
 Rollback procedures are documented in runbooks but not automated. Low priority
 for `conxius-platform` (no direct deployment). Higher priority for
 deployment-bearing repos (conxian-gateway, conxian_ui, conxian-labs-site).
+
+## Evidence interpretation
+
+The table above describes repository-local workflow configuration, not proof that GitHub organization rulesets or branch protection are active. The read-only audit can verify workflow files and action pins; it cannot verify required-check enforcement when the branch-protection endpoint is unavailable. Until owner/admin evidence is attached, the relevant rows remain owner actions.
 
 ## Cross-Repo Status
 

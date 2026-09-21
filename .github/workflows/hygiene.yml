@@ -8,18 +8,8 @@ permissions:
 
 on:
   push:
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - 'CODEOWNERS'
-      - 'LICENSE'
     branches: [ main, develop, dev, 'release/**' ]
   pull_request:
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - 'CODEOWNERS'
-      - 'LICENSE'
     branches: [ main, develop, dev, 'release/**' ]
   workflow_dispatch:
 

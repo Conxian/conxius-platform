@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **ctUSD DLC Stablecoin Engine (G-22)**: Implemented production ctUSD DLC-backed stablecoin engine in `services/admin-dashboard/src/lib/support/ctusd.ts`, OpenSpec specification in `openspec/changes/2026-07-04-ctusd-dlc-stablecoin/specs/ctusd-dlc-stablecoin.spec.md`, BFF API route in `services/admin-dashboard/src/app/api/v1/ctusd/vaults/route.ts`, and Vitest test suite in `services/admin-dashboard/src/tests/ctusd.test.ts` covering vault lifecycle, 3-of-5 oracle threshold attestations, 150% collateral ratios, liquidations, and stability fees.
 - **Conxian GitHub Baseline Review Audit**: Completed comprehensive platform review against the Conxian GitHub review baseline covering security exposure (ZSE pass), tracked artifacts (0 tracked build outputs or secrets), ignore rules/CI hygiene, root/service governance compliance, and documentation alignment.
 - **BitVM3 & Nova Recursive Proof Research (G-55)**: Documented recursive rollup aggregation and SNARK proof folding mechanics in `FULL_STACK_BITCOIN_RESEARCH.md` and `BITVMX_RESEARCH.md`.
 - **Technical Debt Burn-Down (D-04)**: Completed logging migration in `services/admin-dashboard/src/lib/support/imap-worker.ts` and updated `DEBT_INVENTORY.md`.

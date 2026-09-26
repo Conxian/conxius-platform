@@ -61,6 +61,7 @@ This matrix scores the identified gaps based on Strategic Alignment, Implementat
 | **G-68** | **conxian.org Sovereign Protocol Surface & Developer Hub** | 10 | 6 | 10 | **26** | [Org-Wide Functionality Map](./architecture/ORG_WIDE_FUNCTIONALITY_MAP_AND_AUDIT.md) |
 | **G-69** | **Strict Legal & Architectural Domain Firewall Routing** | 10 | 5 | 10 | **25** | [Org-Wide Functionality Map](./architecture/ORG_WIDE_FUNCTIONALITY_MAP_AND_AUDIT.md) |
 | **G-70** | **Autonomous Submodule Health & Cross-Repository Synchronization Engine** | 10 | 6 | 10 | **26** | [Repository Taxonomy](./REPOSITORY_TAXONOMY.md) |
+| **G-71** | **KB & OpenSpec Alignment Sentinel** | 10 | 7 | 9 | **26** | [Self-Evolving KB](./SELF_EVOLVING_KB.md) |
 | **G-56** | **Founder-rights observation/evidence boundary** | 10 | 4 | 10 | **24** | [Founder-rights observation](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md) |
 | **G-57** | **Cross-repository revenue model drift** | 10 | 6 | 9 | **25** | [Contradictions and ownership](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#contradictions-and-safe-interpretation) |
 | **G-58** | **Deployment evidence/live-interface verification** | 10 | 5 | 9 | **24** | [Evidence matrix](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#verified-evidence-matrix) |

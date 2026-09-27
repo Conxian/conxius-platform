@@ -124,6 +124,7 @@ The mappings below are retained for provenance only. They do not imply that prot
 | **G-68** | conxian.org Sovereign Protocol Surface & Developer Hub | [ORG_WIDE_FUNCTIONALITY_MAP_AND_AUDIT.md](./architecture/ORG_WIDE_FUNCTIONALITY_MAP_AND_AUDIT.md) | 🟢 **Architectural Blueprint & Spec Verified**. Zero-JS SSG developer hub, interactive SDK docs, and status matrix for conxian.org. |
 | **G-69** | Strict Legal & Architectural Domain Firewall Routing | [ORG_WIDE_FUNCTIONALITY_MAP_AND_AUDIT.md](./architecture/ORG_WIDE_FUNCTIONALITY_MAP_AND_AUDIT.md) | 🟢 **Architectural Blueprint & CORS Matrix Verified**. Domain separation rules and Caddy/Nginx reverse proxy configs for conxian.org vs conxian-labs.com. |
 | **G-70** | Autonomous Submodule Health & Cross-Repository Synchronization Engine | [REPOSITORY_TAXONOMY.md](./REPOSITORY_TAXONOMY.md) | 🟢 **Implemented & Unit Verified**. Autonomous submodule state verification, commit drift detection, and dirty working tree diagnostic module in `services/admin-dashboard/src/lib/support/submoduleSync.ts`. |
+| **G-71** | Autonomous KB & OpenSpec Alignment Sentinel | [SELF_EVOLVING_KB.md](./SELF_EVOLVING_KB.md) | 🟢 **Implemented & Unit Verified**. Fail-closed diagnostic engine evaluating gap statuses, strategic alignment scores, OpenSpec proposal tracking, and automated report generation in `services/admin-dashboard/src/lib/support/kbSentinel.ts`. |
 
 ---
 *Updated by Charlie (issue #1187 remediation) - 2026-07-22*
@@ -167,3 +168,4 @@ The mappings below are retained for provenance only. They do not imply that prot
 - **G-68 (conxian.org Protocol Surface)**: 🟢 **Blueprint Verified**. Zero-JS Astro/Starlight / Next.js static export for `conxian.org` developer hub and subdomain routing.
 - **G-69 (Strict Domain Firewall & Routing Matrix)**: 🟢 **Blueprint Verified**. Enforced CORS, Nginx/Caddy proxy policies, and domain separation across protocol (`conxian.org`) and corporate (`conxian-labs.com`) surfaces.
 - **G-70 (Autonomous Submodule Health & Cross-Repository Synchronization Engine)**: 🟢 **Implemented & Unit Verified**. Fail-closed submodule health inspection, commit drift detection, and dirty status diagnostics in `services/admin-dashboard/src/lib/support/submoduleSync.ts`.
+- **G-71 (Autonomous KB & OpenSpec Alignment Sentinel)**: 🟢 **Implemented & Unit Verified**. Fail-closed diagnostic engine evaluating gap statuses, strategic alignment scores, OpenSpec proposal tracking, and automated report generation in `services/admin-dashboard/src/lib/support/kbSentinel.ts`.

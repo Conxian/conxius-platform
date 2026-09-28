@@ -98,3 +98,4 @@ allocation, beneficiary, custody model, payout route, or deployment state.
   evidence gaps.
 - **G-59** remains a future read-only Gateway/Nexus integration, requiring a
   separate OpenSpec change.
+| **G-71** | **Autonomous Cross-Repository Knowledge Store & OpenSpec Alignment Diagnostic Engine** | 10 | 6 | 10 | **26** | [Repository Taxonomy](./REPOSITORY_TAXONOMY.md) |

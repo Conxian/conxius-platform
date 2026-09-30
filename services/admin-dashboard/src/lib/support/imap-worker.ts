@@ -109,7 +109,9 @@ export class ImapWorker {
       logger.warn(`[IMAP] Missing source for message ${uid}; retrying fetchOne()`);
       try {
         const refetched = await this.client.fetchOne(uid, { source: true }, { uid: true });
-        if (refetched !== false && refetched.source) {
+        // imapflow 2.x: fetchOne() returns `undefined` (not just `false`)
+        // when the message cannot be retrieved; guard both falsy results.
+        if (refetched && refetched.source) {
           return refetched.source;
         }
       } catch (e) {

@@ -1,188 +1,222 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from "vitest";
 import {
-  evaluateGap,
-  calculateStrategicScore,
-  generateSentinelDiagnosticReport,
-  GapEvaluationSpec,
-} from '../lib/support/kbSentinel';
+  KBSentinelEngine,
+  GapEntry,
+  CandidateMetrics,
+  OpenSpecProposal,
+} from "../lib/support/kbSentinel";
 
-// Mock server-only module for Vitest component import compatibility if referenced
-vi.mock('server-only', () => ({}));
+describe("Autonomous Knowledge Store & OpenSpec Alignment Diagnostic Engine (G-71)", () => {
+  const sentinel = new KBSentinelEngine();
 
-describe('G-71 Autonomous Knowledge Base & OpenSpec Alignment Sentinel Engine', () => {
-  describe('calculateStrategicScore', () => {
-    it('should correctly calculate total strategic score for valid dimensions', () => {
-      const score = calculateStrategicScore(10, 7, 9);
-      expect(score).toBe(26);
+  describe("Gap Entry Validation & Input Security", () => {
+    it("should accept valid gap entries", () => {
+      const validEntry: GapEntry = {
+        gapId: "G-71",
+        title: "Autonomous Knowledge Store & OpenSpec Alignment Diagnostic Engine",
+        sourceDoc: "REPOSITORY_TAXONOMY.md",
+        status: "Implemented",
+        details: "Diagnostic engine for gap register and OpenSpec alignment.",
+        linkedOpenSpec: "2026-09-26-g71-kb-openspec-alignment-sentinel",
+      };
+
+      expect(() => sentinel.validateGapEntry(validEntry)).not.toThrow();
     });
 
-    it('should cap total score at 30', () => {
-      const score = calculateStrategicScore(10, 10, 10);
-      expect(score).toBe(30);
+    it("should fail-closed on invalid gapId formats", () => {
+      const invalidGapId: any = {
+        gapId: "INVALID-71",
+        title: "Invalid Gap",
+        sourceDoc: "DOC.md",
+        status: "Implemented",
+        details: "Invalid gap id format.",
+      };
+
+      expect(() => sentinel.validateGapEntry(invalidGapId)).toThrow(
+        "[kb-sentinel] Invalid gapId: 'INVALID-71'"
+      );
     });
 
-    it('should throw an error if any dimension is less than 1 or greater than 10', () => {
-      expect(() => calculateStrategicScore(0, 5, 5)).toThrow(/out of bounds/i);
-      expect(() => calculateStrategicScore(11, 5, 5)).toThrow(/out of bounds/i);
-      expect(() => calculateStrategicScore(5, -1, 5)).toThrow(/out of bounds/i);
+    it("should fail-closed on invalid gap status classifications", () => {
+      const invalidStatus: any = {
+        gapId: "G-99",
+        title: "Unknown Status Gap",
+        sourceDoc: "DOC.md",
+        status: "NonExistentStatus",
+        details: "Invalid status test.",
+      };
+
+      expect(() => sentinel.validateGapEntry(invalidStatus)).toThrow(
+        "[kb-sentinel] Invalid status 'NonExistentStatus'"
+      );
     });
   });
 
-  describe('evaluateGap', () => {
-    it('should evaluate a valid Gap specification accurately', () => {
-      const spec: GapEvaluationSpec = {
-        id: 'G-71',
-        title: 'Autonomous KB & OpenSpec Alignment Sentinel Engine',
-        state: 'implemented',
-        strategicAlignment: 10,
-        complexity: 7,
-        validationSignal: 9,
-        specPath: 'openspec/changes/2026-09-26-g71-kb-openspec-alignment-sentinel/specs/kb-openspec-alignment-sentinel.spec.md',
-        primaryReference: 'SELF_EVOLVING_KB.md',
+  describe("Multidimensional Candidate Scoring Strategy", () => {
+    it("should compute accurate weighted scores for valid candidate metrics", () => {
+      const metrics: CandidateMetrics = {
+        gapCoverage: 10,
+        implementationCost: 6, // Inverted to 5 (11 - 6)
+        riskScore: 2,          // Inverted to 9 (11 - 2)
+        testabilityScore: 9,
+        architectureAlignment: 10,
       };
 
-      const result = evaluateGap(spec);
-      expect(result.id).toBe('G-71');
-      expect(result.scores.totalScore).toBe(26);
-      expect(result.isFailClosed).toBe(true);
-      expect(result.specValid).toBe(true);
-      expect(result.state).toBe('implemented');
+      const result = sentinel.calculateWeightedScore("G-71", metrics);
+
+      expect(result.gapId).toBe("G-71");
+      expect(result.weightedScore).toBeGreaterThanOrEqual(3.0);
+      expect(result.isEligible).toBe(true);
     });
 
-    it('should reject invalid Gap ID format', () => {
-      const invalidSpec: GapEvaluationSpec = {
-        id: 'INVALID-ID',
-        title: 'Test Gap',
-        state: 'implemented',
-        strategicAlignment: 8,
-        complexity: 5,
-        validationSignal: 8,
+    it("should flag candidate as ineligible if weighted score is below 3.0", () => {
+      const poorMetrics: CandidateMetrics = {
+        gapCoverage: 2,
+        implementationCost: 10, // Inverted to 1
+        riskScore: 10,          // Inverted to 1
+        testabilityScore: 2,
+        architectureAlignment: 2,
       };
 
-      expect(() => evaluateGap(invalidSpec)).toThrow(/Invalid Gap ID format/i);
+      const result = sentinel.calculateWeightedScore("G-00", poorMetrics);
+
+      expect(result.weightedScore).toBeLessThan(3.0);
+      expect(result.isEligible).toBe(false);
     });
 
-    it('should reject missing title', () => {
-      const invalidSpec: GapEvaluationSpec = {
-        id: 'G-99',
-        title: '   ',
-        state: 'implemented',
-        strategicAlignment: 8,
-        complexity: 5,
-        validationSignal: 8,
+    it("should fail-closed on invalid metric values out of 1-10 range", () => {
+      const invalidMetrics: CandidateMetrics = {
+        gapCoverage: 15, // Out of range
+        implementationCost: 5,
+        riskScore: 5,
+        testabilityScore: 5,
+        architectureAlignment: 5,
       };
 
-      expect(() => evaluateGap(invalidSpec)).toThrow(/missing a title/i);
-    });
-
-    it('should reject invalid gap state', () => {
-      const invalidSpec = {
-        id: 'G-99',
-        title: 'Test Gap',
-        state: 'unknown_state' as any,
-        strategicAlignment: 8,
-        complexity: 5,
-        validationSignal: 8,
-      };
-
-      expect(() => evaluateGap(invalidSpec)).toThrow(/invalid state/i);
+      expect(() => sentinel.calculateWeightedScore("G-01", invalidMetrics)).toThrow(
+        "[kb-sentinel] Metric 'gapCoverage' for gap G-01 must be a number between 1 and 10."
+      );
     });
   });
 
-  describe('generateSentinelDiagnosticReport', () => {
-    it('should generate an OK diagnostic report when alignment >= 80%', () => {
-      const specs: GapEvaluationSpec[] = [
+  describe("Diagnostic Evaluation & OpenSpec Cross-Validation", () => {
+    it("should execute diagnostic evaluation successfully and generate report", () => {
+      const mockGaps: GapEntry[] = [
         {
-          id: 'G-65',
-          title: 'API Tokens',
-          state: 'implemented',
-          strategicAlignment: 9,
-          complexity: 6,
-          validationSignal: 10,
-          specPath: 'openspec/specs/api-tokens.md',
+          gapId: "G-65",
+          title: "API Tokens",
+          sourceDoc: "CONXIAN_API_TOKEN_SPEC.md",
+          status: "Implemented",
+          details: "Unified API Tokens",
+          linkedOpenSpec: "2026-07-22-issue-1160-m2m-jwt-auth",
         },
         {
-          id: 'G-70',
-          title: 'Submodule Sync Engine',
-          state: 'implemented',
-          strategicAlignment: 10,
-          complexity: 6,
-          validationSignal: 10,
-          specPath: 'openspec/specs/submodule-sync.md',
+          gapId: "G-70",
+          title: "Submodule Sync",
+          sourceDoc: "REPOSITORY_TAXONOMY.md",
+          status: "Implemented",
+          details: "Autonomous submodule sync",
+          linkedOpenSpec: "2026-09-08-client-onboarding-and-unified-installer-spec",
         },
         {
-          id: 'G-71',
-          title: 'KB Sentinel Engine',
-          state: 'implemented',
-          strategicAlignment: 10,
-          complexity: 7,
-          validationSignal: 9,
-          specPath: 'openspec/specs/kb-sentinel.md',
+          gapId: "G-71",
+          title: "KB Sentinel",
+          sourceDoc: "REPOSITORY_TAXONOMY.md",
+          status: "Implemented",
+          details: "KB Sentinel Diagnostic Engine",
+          linkedOpenSpec: "2026-09-26-g71-kb-openspec-alignment-sentinel",
         },
       ];
 
-      const report = generateSentinelDiagnosticReport(specs, 25, 50);
-
-      expect(report.totalGapsEvaluated).toBe(3);
-      expect(report.alignmentPercentage).toBe(100);
-      expect(report.status).toBe('OK');
-      expect(report.kbEntriesCount).toBe(25);
-      expect(report.openSpecProposalCount).toBe(50);
-    });
-
-    it('should generate a WARN status when alignment is between 50% and 79%', () => {
-      const specs: GapEvaluationSpec[] = [
+      const mockProposals: OpenSpecProposal[] = [
         {
-          id: 'G-01',
-          title: 'BitVM Floor',
-          state: 'fail_closed_boundary',
-          strategicAlignment: 10,
-          complexity: 9,
-          validationSignal: 7,
+          id: "2026-07-22-issue-1160-m2m-jwt-auth",
+          path: "openspec/changes/2026-07-22-issue-1160-m2m-jwt-auth",
+          hasDeltas: true,
         },
         {
-          id: 'G-02',
-          title: 'FDC3 Resolver',
-          state: 'unresolved_drift',
-          strategicAlignment: 9,
-          complexity: 6,
-          validationSignal: 8,
+          id: "2026-09-08-client-onboarding-and-unified-installer-spec",
+          path: "openspec/changes/2026-09-08-client-onboarding-and-unified-installer-spec",
+          hasDeltas: true,
+        },
+        {
+          id: "2026-09-26-g71-kb-openspec-alignment-sentinel",
+          path: "openspec/changes/2026-09-26-g71-kb-openspec-alignment-sentinel",
+          hasDeltas: true,
         },
       ];
 
-      const report = generateSentinelDiagnosticReport(specs);
-      expect(report.alignmentPercentage).toBe(50);
-      expect(report.status).toBe('WARN');
+      const report = sentinel.runDiagnostic(mockGaps, mockProposals);
+
+      expect(report.totalGapsCount).toBe(3);
+      expect(report.implementedCount).toBe(3);
+      expect(report.discrepancies.length).toBe(0);
+      expect(report.averageAlignmentScore).toBe(100);
+
+      const markdown = sentinel.exportReportMarkdown(report);
+      expect(markdown).toContain("# Knowledge Store & OpenSpec Alignment Diagnostic Report");
+      expect(markdown).toContain("**Total Gaps Evaluated:** 3");
     });
 
-    it('should generate a FAIL status when alignment < 50%', () => {
-      const specs: GapEvaluationSpec[] = [
+    it("should detect missing OpenSpec proposals for implemented gaps", () => {
+      const mockGaps: GapEntry[] = [
         {
-          id: 'G-01',
-          title: 'BitVM Floor',
-          state: 'unresolved_drift',
-          strategicAlignment: 10,
-          complexity: 9,
-          validationSignal: 7,
-        },
-        {
-          id: 'G-02',
-          title: 'FDC3 Resolver',
-          state: 'not_implemented',
-          strategicAlignment: 9,
-          complexity: 6,
-          validationSignal: 8,
+          gapId: "G-99",
+          title: "Unspecified Gap",
+          sourceDoc: "DOC.md",
+          status: "Implemented",
+          details: "No OpenSpec linked",
         },
       ];
 
-      const report = generateSentinelDiagnosticReport(specs);
-      expect(report.alignmentPercentage).toBe(0);
-      expect(report.status).toBe('FAIL');
+      const report = sentinel.runDiagnostic(mockGaps, []);
+
+      expect(report.discrepancies.length).toBe(1);
+      expect(report.discrepancies[0].type).toBe("missing_openspec");
+      expect(report.discrepancies[0].severity).toBe("warning");
     });
 
-    it('should throw an error if empty gap list is provided', () => {
-      expect(() => generateSentinelDiagnosticReport([])).toThrow(
-        /No gap specifications provided/i
+    it("should detect unlinked OpenSpec proposals", () => {
+      const mockGaps: GapEntry[] = [
+        {
+          gapId: "G-71",
+          title: "KB Sentinel",
+          sourceDoc: "DOC.md",
+          status: "Implemented",
+          details: "KB Sentinel",
+          linkedOpenSpec: "2026-09-26-g71-kb-openspec-alignment-sentinel",
+        },
+      ];
+
+      const mockProposals: OpenSpecProposal[] = [
+        {
+          id: "2026-09-26-g71-kb-openspec-alignment-sentinel",
+          path: "openspec/changes/2026-09-26-g71-kb-openspec-alignment-sentinel",
+          hasDeltas: true,
+        },
+        {
+          id: "2026-09-99-unlinked-proposal",
+          path: "openspec/changes/2026-09-99-unlinked-proposal",
+          hasDeltas: true,
+        },
+      ];
+
+      const report = sentinel.runDiagnostic(mockGaps, mockProposals);
+
+      expect(report.discrepancies.some((d) => d.type === "unlinked_openspec")).toBe(true);
+    });
+
+    it("should enforce capacity bounds and fail-closed", () => {
+      const oversizedGaps: GapEntry[] = Array.from({ length: 501 }, (_, i) => ({
+        gapId: `G-${i + 100}`,
+        title: `Gap ${i}`,
+        sourceDoc: "DOC.md",
+        status: "Research/Draft",
+        details: "Oversized gap array test",
+      }));
+
+      expect(() => sentinel.runDiagnostic(oversizedGaps, [])).toThrow(
+        "[kb-sentinel] Capacity limit exceeded: 501 gaps provided (max 500)."
       );
     });
   });

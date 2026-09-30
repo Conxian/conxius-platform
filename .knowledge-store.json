@@ -585,13 +585,13 @@
       "category": "metric",
       "source": "internal",
       "data": {
-        "totalFiles": 710,
+        "totalFiles": 713,
         "tsFiles": 197,
         "testFiles": 48,
         "apiRoutes": 40,
         "pages": 19,
         "workflows": 19,
-        "avgFileSize": 6375.998591549296,
+        "avgFileSize": 6355.500701262272,
         "largestFiles": [
           {
             "path": "docs/archive/AGENTS_archive_session_58.md",
@@ -607,7 +607,7 @@
           },
           {
             "path": "pnpm-lock.yaml",
-            "sizeKB": 114
+            "sizeKB": 113
           },
           {
             "path": "services/admin-dashboard/src/lib/support/m2mKeyStore.ts",
@@ -617,14 +617,14 @@
         "avgFileSizeKB": 6
       },
       "confidence": 0.98,
-      "lastUpdated": "2026-09-26T22:23:14.040Z",
+      "lastUpdated": "2026-09-26T21:19:16.261Z",
       "tags": [
         "codebase",
         "metrics",
         "structure"
       ],
       "evidence": [
-        "710 total files",
+        "713 total files",
         "197 TypeScript files",
         "19 CI workflows"
       ]
@@ -641,7 +641,7 @@
         "recommendation": "Increase test coverage to >50%"
       },
       "confidence": 0.95,
-      "lastUpdated": "2026-09-26T22:23:14.041Z",
+      "lastUpdated": "2026-09-26T21:19:16.262Z",
       "tags": [
         "testing",
         "coverage",
@@ -663,7 +663,7 @@
         "convention": "All API routes protected with validateAdminAuth()"
       },
       "confidence": 0.9,
-      "lastUpdated": "2026-09-26T22:23:14.042Z",
+      "lastUpdated": "2026-09-26T21:19:16.263Z",
       "tags": [
         "api",
         "auth",
@@ -685,7 +685,7 @@
         "description": "Extensive CI/CD pipeline with multiple specialized workflows"
       },
       "confidence": 0.85,
-      "lastUpdated": "2026-09-26T22:23:14.043Z",
+      "lastUpdated": "2026-09-26T21:19:16.263Z",
       "tags": [
         "ci",
         "workflows",
@@ -740,5 +740,5 @@
     "pattern-internal-ci-workflows": []
   },
   "version": 109,
-  "lastSync": "2026-09-26T22:23:14.043Z"
+  "lastSync": "2026-09-26T21:19:16.263Z"
 }

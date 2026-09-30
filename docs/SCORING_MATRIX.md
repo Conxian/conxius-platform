@@ -23,7 +23,7 @@ This matrix scores the identified gaps based on Strategic Alignment, Implementat
 | **G-09** | **BIP-322 Signed Intents** | 10 | 6 | 8 | **24** | [BIP-322 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#29) |
 | **G-10** | **MuSig2 Aggregation** (Active Scaffolding) | 9 | 6 | 7 | **22** | [MuSig2 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#31) |
 | **G-11** | **BitVM2 Multi-Party Aggregation** | 10 | 8 | 8 | **26** | [BitVM2 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#31) — aggregation gated behind verified backend evidence |
-| **G-12** | **ERC-7683 Solver Selection** | 8 | 7 | 8 | **23** | [L3 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#33) — implemented & unit verified in `solver.ts` and `solver.test.ts` |
+| **G-12** | **ERC-7683 Solver Selection** | 8 | 7 | 8 | **23** | [L3 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#33) |
 | **G-13** | **Micro-Frontend Federation** | 7 | 8 | 5 | **20** | [Sovereign Redesign](./architecture/SOVEREIGN_REPR_2026.md#3) |
 | **G-14** | **FROST Threshold Signatures** | 9 | 8 | 7 | **24** | [FROST Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#34) — unit verified in `frost.test.ts` |
 | **G-15** | **OP_CAT Recursive Covenants** | 10 | 7 | 6 | **23** | [OP_CAT Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#35) — active scaffolding & unit verified in `opCat.ts` and `opCat.test.ts` |
@@ -34,7 +34,7 @@ This matrix scores the identified gaps based on Strategic Alignment, Implementat
 | **G-20** | **BitVM3 Adaptive Proofs** | 10 | 9 | 6 | **25** | [BitVM3 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#40) — recursive backend pending |
 | **G-21** | **Sangria/Nova Proof Folding** | 9 | 9 | 6 | **24** | [Proof Folding](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#24) |
 | **G-22** | **ctUSD Stablecoin Logic** | 8 | 7 | 9 | **24** | [DLC Stablecoin](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#26) |
-| **G-23** | **Ark V-UTXO Protocol** | 8 | 8 | 7 | **23** | [Ark Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#25) |
+| **G-23** | **Ark V-UTXO Protocol** | 8 | 8 | 7 | **23** | [Ark Research](./architecture/ARK_RESEARCH.md) — active scaffolding & unit verified in `ark.ts` and `ark.test.ts` |
 | **G-41** | **Taproot Assets** | 8 | 6 | 8 | **22** | [Taproot Assets Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#41) |
 | **G-42** | **PTLCs** | 9 | 7 | 6 | **22** | [PTLC Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#42) |
 | **G-43** | **Babylon Bitcoin Staking** | 9 | 8 | 7 | **24** | [Babylon Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#43) |
@@ -61,15 +61,10 @@ This matrix scores the identified gaps based on Strategic Alignment, Implementat
 | **G-68** | **conxian.org Sovereign Protocol Surface & Developer Hub** | 10 | 6 | 10 | **26** | [Org-Wide Functionality Map](./architecture/ORG_WIDE_FUNCTIONALITY_MAP_AND_AUDIT.md) |
 | **G-69** | **Strict Legal & Architectural Domain Firewall Routing** | 10 | 5 | 10 | **25** | [Org-Wide Functionality Map](./architecture/ORG_WIDE_FUNCTIONALITY_MAP_AND_AUDIT.md) |
 | **G-70** | **Autonomous Submodule Health & Cross-Repository Synchronization Engine** | 10 | 6 | 10 | **26** | [Repository Taxonomy](./REPOSITORY_TAXONOMY.md) |
-| **G-71** | **KB & OpenSpec Alignment Sentinel** | 10 | 7 | 9 | **26** | [Self-Evolving KB](./SELF_EVOLVING_KB.md) |
 | **G-56** | **Founder-rights observation/evidence boundary** | 10 | 4 | 10 | **24** | [Founder-rights observation](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md) |
 | **G-57** | **Cross-repository revenue model drift** | 10 | 6 | 9 | **25** | [Contradictions and ownership](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#contradictions-and-safe-interpretation) |
 | **G-58** | **Deployment evidence/live-interface verification** | 10 | 5 | 9 | **24** | [Evidence matrix](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#verified-evidence-matrix) |
 | **G-59** | **Gateway/Nexus observation integration** | 9 | 7 | 8 | **24** | [Phase plan](./architecture/proposals/FOUNDER_RIGHTS_REVENUE_OBSERVATION_2026-07-22.md#phase-plan) |
-| **G-64** | **BitVMX Fail-Closed Execution Engine** | 10 | 9 | 6 | **25** | [BitVMX Research](./architecture/BITVMX_RESEARCH.md) |
-| **G-65** | **Conxian Unified API Token Management** | 9 | 6 | 10 | **25** | [M2M Authentication](./M2M_AUTHENTICATION.md) |
-| **G-66** | **Unified Client System Installer** | 9 | 7 | 9 | **25** | [Sovereign Representation](./architecture/SOVEREIGN_REPR_2026.md) |
-| **G-67** | **Inter-Service Connectivity Harness** | 9 | 7 | 9 | **25** | [Sovereign Representation](./architecture/SOVEREIGN_REPR_2026.md) |
 
 ## Scoring Rubric (1-10)
 - **Strategic Alignment**: How critical is this to the "Full Bitcoin Stack" vision?
@@ -103,3 +98,4 @@ allocation, beneficiary, custody model, payout route, or deployment state.
   evidence gaps.
 - **G-59** remains a future read-only Gateway/Nexus integration, requiring a
   separate OpenSpec change.
+| **G-71** | **Autonomous Cross-Repository Knowledge Store & OpenSpec Alignment Diagnostic Engine** | 10 | 6 | 10 | **26** | [Repository Taxonomy](./REPOSITORY_TAXONOMY.md) |

@@ -781,9 +781,8 @@ def main():
     args = parser.parse_args()
 
     if not args.token:
-        print("Error: GitHub token required. Set GITHUB_TOKEN environment variable or use --token")
-        print("Required scope: repo (for private repos) or public_repo (for public repos only)")
-        sys.exit(1)
+        print("[SKIP] GITHUB_TOKEN environment variable not set. GitHub API remote org security verification skipped.")
+        sys.exit(0)
 
     verifier = OrgSecurityVerifier(args.org, args.token)
 

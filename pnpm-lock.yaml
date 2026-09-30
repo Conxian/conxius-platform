@@ -953,8 +953,8 @@ packages:
   '@zone-eu/mailsplit@5.4.17':
     resolution: {integrity: sha512-LOMzdrKRVgaghLaezIPdHRhsGpfDiWNQo1RptWc84CRllI4dWLwqX/L4x1iTt1CaeyvyUfMXM/6mjIsEisT3Tg==}
 
-  '@zone-eu/mailsplit@5.4.19':
-    resolution: {integrity: sha512-nDWzw+X3tqfwd7DpDThAjg3KqtrNA6bG2gkrf6m2j1JBaGyyKAZzu1TguzB4GEco+HYpXAbXZ7kbl4Sn8H1vXw==}
+  '@zone-eu/mailsplit@5.4.17':
+    resolution: {integrity: sha512-LOMzdrKRVgaghLaezIPdHRhsGpfDiWNQo1RptWc84CRllI4dWLwqX/L4x1iTt1CaeyvyUfMXM/6mjIsEisT3Tg==}
 
   adapter-types@0.2.1:
     resolution: {integrity: sha512-IdA9om1M/GGHGB08RHd68sq+BDwgVdThA3ZoewzoGGOQjHgq1KNZNUQk7eVGqw+qtMA/ceYy9GjXLo++7IoReA==}
@@ -1211,6 +1211,10 @@ packages:
   duck@0.1.12:
     resolution: {integrity: sha512-wkctla1O6VfP89gQ+J/yDesM0S7B7XLXjKGzXxMDVFg7uEn706niAtyYovKbyq1oT9YwDcly721/iUWoc8MVRg==}
 
+  encoding-japanese@2.2.0:
+    resolution: {integrity: sha512-EuJWwlHPZ1LbADuKTClvHtwbaFn4rOD+dRAbWysqEOXRc2Uui0hJInNJrsdH0c+OhJA4nrCBdSkW4DD5YxAo6A==}
+    engines: {node: '>=8.10.0'}
+
   encoding-japanese@2.4.0:
     resolution: {integrity: sha512-PE0KjlsDy9JSsoU4C2Q8NXb1kC4c+bZRac9ZvHXUE4q1Ht63gScKMdEy9jst9+Fi3M4eDkqzkEhBZvix4blP2A==}
     engines: {node: '>=18.0.0'}
@@ -1395,9 +1399,6 @@ packages:
 
   libmime@5.4.4:
     resolution: {integrity: sha512-d3zZ2k8s6iO+8u9Vfkl6HfhD5lSVocGcmOViTz/i0CJcwhJADyubEJ/+TkBhuLDUSIBOiG+D8G5kJKwXwKbXXA==}
-
-  libmime@5.4.6:
-    resolution: {integrity: sha512-Cgx1vHd76GTwDaLNsl0K44CjNFfhkX/1bMcoruoWr8Ugcl0/zMw7x/8NpZERIOcpGyzlQo10tOEw9goGsv2Wlg==}
 
   libqp@2.1.1:
     resolution: {integrity: sha512-0Wd+GPz1O134cP62YU2GTOPNA7Qgl09XwCqM5zpBv87ERCXdfDtyKXvV7c9U22yWJh44QZqBocFnXN11K96qow==}
@@ -2677,11 +2678,11 @@ snapshots:
       libmime: 5.4.4
       libqp: 2.1.1
 
-  '@zone-eu/mailsplit@5.4.19':
+  '@zone-eu/mailsplit@5.4.17':
     dependencies:
-      libbase64: 1.3.1
-      libmime: 5.4.6
-      libqp: 2.1.2
+      libbase64: 1.3.0
+      libmime: 5.4.4
+      libqp: 2.1.1
 
   adapter-types@0.2.1: {}
 
@@ -2815,6 +2816,8 @@ snapshots:
   duck@0.1.12:
     dependencies:
       underscore: 1.13.8
+
+  encoding-japanese@2.2.0: {}
 
   encoding-japanese@2.4.0: {}
 
@@ -3032,7 +3035,7 @@ snapshots:
       libbase64: 1.3.0
       libqp: 2.1.1
 
-  libmime@5.4.6:
+  libmime@5.4.4:
     dependencies:
       encoding-japanese: 2.4.0
       iconv-lite: 0.7.3

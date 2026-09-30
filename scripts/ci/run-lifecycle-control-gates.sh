@@ -50,6 +50,10 @@ run_check "verify_submodule_integrity" python3 scripts/verify_submodule_integrit
 run_check "verify_contamination_guard" python3 scripts/verify_contamination_guard.py
 run_check "verify_tracked_artifacts" python3 scripts/verify_tracked_artifacts.py
 run_check "verify_release_hygiene" python3 scripts/verify_release_hygiene.py
+run_check "verify_knowledge_retention" python3 scripts/verify_knowledge_retention.py
+run_check "verify_compose_env_templates" python3 scripts/verify_compose_env_templates.py
+run_check "verify_submodule_secret_filenames" python3 scripts/verify_submodule_secret_filenames.py
+run_check "verify_pr_bos_classification" python3 scripts/verify_pr_bos_classification.py
 
 if (( failures > 0 )); then
   echo >> "${SUMMARY_FILE}"

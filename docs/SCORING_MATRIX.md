@@ -34,7 +34,7 @@ This matrix scores the identified gaps based on Strategic Alignment, Implementat
 | **G-20** | **BitVM3 Adaptive Proofs** | 10 | 9 | 6 | **25** | [BitVM3 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#40) — recursive backend pending |
 | **G-21** | **Sangria/Nova Proof Folding** | 9 | 9 | 6 | **24** | [Proof Folding](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#24) |
 | **G-22** | **ctUSD Stablecoin Logic** | 8 | 7 | 9 | **24** | [DLC Stablecoin](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#26) |
-| **G-23** | **Ark V-UTXO Protocol** | 8 | 8 | 7 | **23** | [Ark Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#25) |
+| **G-23** | **Ark V-UTXO Protocol** | 8 | 8 | 7 | **23** | [Ark Research](./architecture/ARK_RESEARCH.md) — active scaffolding & unit verified in `ark.ts` and `ark.test.ts` |
 | **G-41** | **Taproot Assets** | 8 | 6 | 8 | **22** | [Taproot Assets Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#41) |
 | **G-42** | **PTLCs** | 9 | 7 | 6 | **22** | [PTLC Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#42) |
 | **G-43** | **Babylon Bitcoin Staking** | 9 | 8 | 7 | **24** | [Babylon Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#43) |
@@ -98,3 +98,4 @@ allocation, beneficiary, custody model, payout route, or deployment state.
   evidence gaps.
 - **G-59** remains a future read-only Gateway/Nexus integration, requiring a
   separate OpenSpec change.
+| **G-71** | **Autonomous Cross-Repository Knowledge Store & OpenSpec Alignment Diagnostic Engine** | 10 | 6 | 10 | **26** | [Repository Taxonomy](./REPOSITORY_TAXONOMY.md) |

@@ -18,21 +18,21 @@
   "dependencies": {
     "imapflow": "^2.0.7",
     "jose": "^6.2.12",
-    "mailparser": "^3.9.28",
-    "next": "16.3.5",
-    "nodemailer": "^10.0.10",
+    "mailparser": "^3.9.31",
+    "next": "16.3.7",
+    "nodemailer": "^10.0.13",
     "nostr-tools": "^2.25.2",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "server-only": "^0.0.1"
   },
   "devDependencies": {
-    "@types/mailparser": "^3.4.6",
+    "@types/mailparser": "^3.9.0",
     "@types/node": "^26.6.3",
     "@types/nodemailer": "^8.0.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "typescript": "^6.0.3",
-    "vitest": "^5.0.1"
+    "vitest": "^5.0.2"
   }
 }

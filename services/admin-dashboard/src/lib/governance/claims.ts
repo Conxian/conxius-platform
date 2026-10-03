@@ -141,7 +141,7 @@ function withWriteLock<T>(fn: () => T): T {
 
 function resolveStatePath(): string {
   const envFile = process.env.CLAIMS_STATE_FILE?.trim();
-  return envFile ? path.resolve(envFile) : path.resolve(process.cwd(), DEFAULT_CLAIMS_STATE_FILE);
+  return envFile ? path.resolve(/*turbopackIgnore: true*/ envFile) : path.resolve(/*turbopackIgnore: true*/ process.cwd(), DEFAULT_CLAIMS_STATE_FILE);
 }
 
 export function loadClaimsState(): ClaimsState {

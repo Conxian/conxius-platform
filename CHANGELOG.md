@@ -124,8 +124,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Repository De-cluttering**: Archived over 50 legacy maintenance and reconstruction scripts to `docs/archived-scripts/`.
 - **Execution Simulation**: Pre-execution cost and policy validation for institutional settlement.
 - **Deterministic BOS Supply Chain**: Commitment window and manifest generation logic for immutable verification.
-- **Global Liquidity Mesh**: HTLC-based atomic swap orchestration across Stacks, Liquid, and Rootstock.
-- **Decentralized Risk Oracle**: Cryptographically signed Risk Proofs and assessments for all layers.
+- **Global Liquidity Mesh**: HTLC-based atomic swap orchestration across Stacks, Liquid, and Rootstock. *(Superseded — out of scope under the universal-infra position; Conxian does not build DeFi.)*
+- **Decentralized Risk Oracle**: Cryptographically signed Risk Proofs and assessments for all layers. *(Superseded — the Nexus provides a neutral FX price oracle, not risk scoring.)*
 - **Kwil Transactional State**: Migrated Nexus Glass Node state and history storage to Kwil.
 - **Sovereign AI Allocation**: Real-time compute weighting and risk-optimized asset management.
 - **Hardware Security**: Integrated HSM FIPS 140-2 Level 3 status tracking.

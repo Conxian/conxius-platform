@@ -342,7 +342,7 @@ function parseFrontendEntry(id: string, raw: unknown): FrontendEntry | null {
 
 function resolveStatePath(): string {
   const configured = process.env[STATE_FILE_ENV]?.trim();
-  return configured ? path.resolve(configured) : path.resolve(process.cwd(), DEFAULT_STATE_FILE);
+  return configured ? path.resolve(/*turbopackIgnore: true*/ configured) : path.resolve(/*turbopackIgnore: true*/ process.cwd(), DEFAULT_STATE_FILE);
 }
 
 export function getSidlStateFilePath(): string {

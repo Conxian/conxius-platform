@@ -16,6 +16,7 @@
     "prepublishOnly": "node -e \"console.error('pnpm publish is disabled for now in this repository; use Git tags and GitHub Releases.'); process.exit(1)\""
   },
   "dependencies": {
+    "@conxian/market-sdk": "^0.2.4",
     "imapflow": "^2.0.7",
     "jose": "^6.2.12",
     "mailparser": "^3.9.28",

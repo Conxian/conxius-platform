@@ -37,6 +37,9 @@ importers:
 
   services/admin-dashboard:
     dependencies:
+      '@conxian/market-sdk':
+        specifier: ^0.2.4
+        version: 0.2.4
       imapflow:
         specifier: ^2.0.7
         version: 2.1.2
@@ -208,6 +211,10 @@ packages:
   '@bramus/specificity@2.4.2':
     resolution: {integrity: sha512-ctxtJ/eA+t+6q2++vj5j7FYX3nRu311q1wfYH3xjlLOsczhlhxAg2FWNUXhpGvAw3BWo1xBcvOV6/YLc2r5FJw==}
     hasBin: true
+
+  '@conxian/market-sdk@0.2.4':
+    resolution: {integrity: sha512-zBJhG0jJfBbLR3MyRGtqLoDKqTYNSvZzgGEhhYWLibe3sX30aOUW8phsMZaeG9Wu7OoQhAib4+9DhDhj5N2KWQ==}
+    engines: {node: '>=20'}
 
   '@csstools/color-helpers@6.1.2':
     resolution: {integrity: sha512-grhRy3OKmniaAEKXMjua5z/EODX0MSqBGjunw8+j/3HQjOnahs2AGhvEOIYVUWcU6ScApbhLhVrQTX8XqrMrow==}
@@ -2032,6 +2039,9 @@ packages:
     engines: {node: '>= 14.6'}
     hasBin: true
 
+  zod@3.25.76:
+    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+
   zod@4.6.5:
     resolution: {integrity: sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==}
 
@@ -2109,6 +2119,10 @@ snapshots:
   '@bramus/specificity@2.4.2':
     dependencies:
       css-tree: 3.2.1
+
+  '@conxian/market-sdk@0.2.4':
+    dependencies:
+      zod: 3.25.76
 
   '@csstools/color-helpers@6.1.2': {}
 
@@ -3608,5 +3622,7 @@ snapshots:
   xmlchars@2.2.0: {}
 
   yaml@2.9.0: {}
+
+  zod@3.25.76: {}
 
   zod@4.6.5: {}

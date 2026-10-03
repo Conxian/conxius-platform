@@ -43,6 +43,9 @@ const ENV_KEYS = [
   "M2M_JWT_TTL_SECONDS",
   "M2M_JWT_CLOCK_SKEW_SECONDS",
   "M2M_GATEWAY_AUTH_MODE",
+  "GATEWAY_URL",
+  "CORE_API_URL",
+  "NEXT_PUBLIC_CORE_API_URL",
 ] as const;
 
 const originalEnvironment = new Map<string, string | undefined>(ENV_KEYS.map((key) => [key, process.env[key]]));
@@ -111,7 +114,16 @@ describe("route-level M2M authorization", () => {
       bearerRequest("POST", governanceToken, { proposalId: "route-test-proposal", fid: 42, choice: "yes" }),
     );
     const treasuryResponse = await postSettlementEngine(
-      bearerRequest("POST", treasuryToken, { action: "orchestrate" }),
+      bearerRequest("POST", treasuryToken, {
+        action: "orchestrate",
+        request: {
+          id: "route-test-settlement",
+          amountSat: "1000",
+          rail: "SBTC",
+          tier: "EXPEDIENT",
+          builderId: "route-builder",
+        },
+      }),
     );
 
     expect(secretsResponse.status).toBe(410);

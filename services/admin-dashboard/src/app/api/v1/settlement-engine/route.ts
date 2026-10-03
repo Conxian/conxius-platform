@@ -13,6 +13,11 @@ import {
   normalizeBoundaryError,
   VERIFIER_RESOURCE_LIMITS,
 } from "@/lib/support/verifier-contract";
+import {
+  orchestrateSettlement,
+  serializeSettlementResult,
+  validateSettlementRequest,
+} from "@/lib/support/settlement";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -167,9 +172,16 @@ export async function POST(req: Request) {
 
   try {
     if (action === "orchestrate") {
-      return failureResponse(
-        "unsupported_backend",
-        "Settlement orchestration is unavailable until Gateway/Core backends are injected",
+      const validation = validateSettlementRequest(payload.request);
+      if (!validation.ok) return failureResponse(validation.failure_code, validation.error);
+
+      const outcome = await orchestrateSettlement(validation.request);
+      if (!outcome.ok) return failureResponse(outcome.failure_code, outcome.error);
+
+      return responseFor(
+        serializeSettlementResult(outcome.result),
+        outcome.result.success,
+        outcome.result.success ? undefined : "payment_not_observed",
       );
     }
 

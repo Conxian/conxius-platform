@@ -1,8 +1,6 @@
 # Conxian: The Bitcoin Sovereign Finance Layer
 **Whitepaper v1.2.0 (2026 Revision - Phase 5 Alignment)**
 
-> **⚠️ Superseded — vision summary only.** The authoritative, code-verified technical whitepaper now lives in [`conxian-business/docs/TECHNICAL_WHITEPAPER.md`](https://github.com/Conxian/conxian-business/blob/dev/docs/TECHNICAL_WHITEPAPER.md). This document is retained for historical and vision context and should not be treated as the current technical statement.
-
 > **Scope note:** This whitepaper is a strategic baseline document. For current implementation status and active transition tracking, use [README.md](../README.md), [GAPS.md](./GAPS.md), and [Sovereign Computing Redesign (2026)](./architecture/SOVEREIGN_REPR_2026.md).
 
 ## Abstract

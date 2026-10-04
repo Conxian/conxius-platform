@@ -5,6 +5,9 @@ __pycache__/
 .pytest_cache/
 dist/
 build/
+out/
+coverage/
+.turbo/
 *.egg
 
 # Python Virtual Environments & Test Coverage
@@ -25,6 +28,7 @@ test-results/
 playwright-report/
 .DS_Store
 *.log
+*.tmp
 .sidl-state.json
 .claims-state.json
 *.tsbuildinfo

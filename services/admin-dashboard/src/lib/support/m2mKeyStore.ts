@@ -680,7 +680,7 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
       `m2m-${process.pid}`,
       "service-key-registry.json",
     );
-    this.registryPath = path.resolve(configuredPath || developmentDefault);
+    this.registryPath = path.resolve(/*turbopackIgnore: true*/ configuredPath || developmentDefault);
     this.directoryPath = path.dirname(this.registryPath);
     this.lockPath = `${this.registryPath}.lock`;
     this.markerPath = `${this.registryPath}.marker`;
@@ -1834,9 +1834,10 @@ const storeInstances = new Map<string, M2MKeyStoreBackend>();
 
 function configuredRegistryPath(environment: NodeJS.ProcessEnv = process.env): string {
   const configured = environment.M2M_SERVICE_KEY_REGISTRY_PATH;
-  if (configured) return path.resolve(configured);
+  if (configured) return path.resolve(/*turbopackIgnore: true*/ configured);
 
   return path.resolve(
+    /*turbopackIgnore: true*/
     path.join(
       os.tmpdir(),
       "conxius-platform",

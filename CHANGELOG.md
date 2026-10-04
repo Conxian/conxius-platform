@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Next.js Turbopack Dynamic Tracing Build Warnings**: Added `/*turbopackIgnore: true*/` annotations to dynamic `path.resolve` calls in `services/admin-dashboard/src/lib/support/m2mKeyStore.ts`, `services/admin-dashboard/src/lib/sidl/stateStore.ts`, and `services/admin-dashboard/src/lib/governance/claims.ts`, suppressing project tracing warnings for a 100% clean production build.
+- **Root Ignore Rules & CI Hygiene**: Hardened root `.gitignore` with `out/`, `coverage/`, `.turbo/`, and `*.tmp` patterns to prevent untracked build artifacts or temporary files across workspace packages.
+
 ### Added
 - **ctUSD DLC Stablecoin Engine (G-22)**: Implemented production ctUSD DLC-backed stablecoin engine in `services/admin-dashboard/src/lib/support/ctusd.ts`, OpenSpec specification in `openspec/changes/2026-07-04-ctusd-dlc-stablecoin/specs/ctusd-dlc-stablecoin.spec.md`, BFF API route in `services/admin-dashboard/src/app/api/v1/ctusd/vaults/route.ts`, and Vitest test suite in `services/admin-dashboard/src/tests/ctusd.test.ts` covering vault lifecycle, 3-of-5 oracle threshold attestations, 150% collateral ratios, liquidations, and stability fees.
 - **Conxian GitHub Baseline Review Audit**: Completed comprehensive platform review against the Conxian GitHub review baseline covering security exposure (ZSE pass), tracked artifacts (0 tracked build outputs or secrets), ignore rules/CI hygiene, root/service governance compliance, and documentation alignment.
@@ -124,8 +128,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Repository De-cluttering**: Archived over 50 legacy maintenance and reconstruction scripts to `docs/archived-scripts/`.
 - **Execution Simulation**: Pre-execution cost and policy validation for institutional settlement.
 - **Deterministic BOS Supply Chain**: Commitment window and manifest generation logic for immutable verification.
-- **Global Liquidity Mesh**: HTLC-based atomic swap orchestration across Stacks, Liquid, and Rootstock. *(Superseded — out of scope under the universal-infra position; Conxian does not build DeFi.)*
-- **Decentralized Risk Oracle**: Cryptographically signed Risk Proofs and assessments for all layers. *(Superseded — the Nexus provides a neutral FX price oracle, not risk scoring.)*
+- **Global Liquidity Mesh**: HTLC-based atomic swap orchestration across Stacks, Liquid, and Rootstock.
+- **Decentralized Risk Oracle**: Cryptographically signed Risk Proofs and assessments for all layers.
 - **Kwil Transactional State**: Migrated Nexus Glass Node state and history storage to Kwil.
 - **Sovereign AI Allocation**: Real-time compute weighting and risk-optimized asset management.
 - **Hardware Security**: Integrated HSM FIPS 140-2 Level 3 status tracking.

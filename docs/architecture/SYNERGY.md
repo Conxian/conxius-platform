@@ -6,8 +6,8 @@ This document details the interconnected workflows and synergy between the vario
 
 ## 1. The Core Loop (Phase 5 baseline; referenced during Phase 7 transition)
 The primary flow of state and authority follows this hierarchy:
-1.  **Conxian (Contracts)**: Defines on-chain state; now anchored to Nakamoto/sBTC logic.
-2.  **Conxian Gateway (Middleware)**: The **Unified Orchestrator**. Implements the Global Liquidity Mesh, Risk Oracle, and Nexus state synchronization.
+1.  **Conxian (no own contracts)**: Universal, protocol-agnostic infra; connects to Bitcoin/Stacks/sBTC without owning contracts.
+2.  **Conxian Gateway (Middleware)**: The **Unified Orchestrator**. Provides cross-chain state proofs, the FX price oracle, and Nexus state synchronization.
 3.  **Conxian UI / Wallet (Clients)**: Standardized interfaces consuming Gateway APIs for real-time mesh telemetry and compliance.
 
 ## 2. Technical Synergies
@@ -16,9 +16,10 @@ The primary flow of state and authority follows this hierarchy:
 - **State Proofs**: The Gateway exposes Nexus-derived Merkle proofs (\`/api/v1/nexus/state\`) to verify off-chain transactions against Stacks L1.
 - **ZK-Verification**: Direct integration with bellman-based ZKP verification for privacy-preserving compliance.
 
-### Global Liquidity Mesh
-- **Atomic Mobility**: Seamlessly moving BTC value between Stacks, Liquid, and Rootstock via HTLCs managed by the Gateway's MeshModule.
-- **Mesh Telemetry**: Live swap tracking available via the Gateway (\`/api/v1/mesh/swaps\`) and visualized in the UI.
+### Cross-Chain Mobility (out of scope as a Conxian-built feature)
+> **Retired / out of scope (2026-10-03).** The "Global Liquidity Mesh" (Conxian-built HTLC atomic-swap orchestration) is DeFi built by *others* — Conxian provides the neutral rail, not the DeFi.
+- **Atomic Mobility**: Achieved by routing through third-party, non-custodial swap services (e.g. Boltz), not a Conxian-owned mesh.
+- **Telemetry**: Swap status, where available, is surfaced via the Gateway; no Conxian mesh endpoint is claimed.
 
 ### Enclave Security
 - **Intent Signing**: Conxius Wallet signs intents in a mobile secure enclave; Gateway verifies these signatures before dispatching to the Mesh or Contracts.

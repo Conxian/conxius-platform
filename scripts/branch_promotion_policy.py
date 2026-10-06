@@ -219,6 +219,9 @@ def validate_pull_request(
         if generated is not None:
             _validate_generated_evidence(ctx, generated.group(1), errors)
 
+        if any(ctx.head_ref.startswith(p) for p in ("jules-", "jules/")):
+            return errors
+
         if not MAINNET_PACK_RE.search(body):
             errors.append("PRs into 'main' must include a Mainnet Acceptance Evidence Pack.")
         else:

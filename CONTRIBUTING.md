@@ -37,7 +37,7 @@ pip install -r requirements-dev.txt
 make init
 ```
 
-Use development credentials only. Never commit real secrets. Follow strict environment hygiene: do not commit `.env` files, `.DS_Store`, or generated artifacts. Use provided templates like `.env.example` or service-specific templates (e.g., `services/admin-dashboard/.env.admin.example`) for local configuration.
+Use development credentials only. Never commit real secrets, private keys (`*.key`, `*.pem`, `*.p12`, `*.pfx`, `*.keystore`), or certificates (`*.crt`, `*.cer`). Follow strict environment hygiene: do not commit `.env` or `.env*.local` files, `.DS_Store`, or generated test/build artifacts (`test-results/`, `playwright-report/`, `blob-report/`). Use provided templates like `.env.example`, `.env.schema`, or service-specific templates (e.g., `services/admin-dashboard/.env.admin.example`) for local configuration.
 
 Follow [`docs/LOCAL_DEVELOPMENT.md`](./docs/LOCAL_DEVELOPMENT.md) for the
 direct-versus-Compose ports, placeholder/stub boundaries, documentation
@@ -69,7 +69,8 @@ selection is `pnpm --filter admin-dashboard run test:phase7`.
 
 ## Security and policy
 
-- Follow `SECURITY.md` for vulnerability reporting.
-- Keep environment templates in `.env.example` and schema files; do not commit secrets.
-- **Environment Isolation**: Service-specific secrets (e.g., for the Admin Dashboard) must be kept in their respective service directories using the `.env.admin` pattern, which is globally ignored.
+- Follow `SECURITY.md` for vulnerability reporting and credential exposure boundaries.
+- Keep environment templates in `.env.example`, `.env.schema`, and `.env.production.schema`; do not commit secrets.
+- **Environment Isolation**: Service-specific secrets (e.g., for the Admin Dashboard) must be kept in their respective service directories using the `.env.admin` or `.env.admin.local` pattern, which is globally ignored.
+- **Key & Artifact Containment**: Ensure all private keys, certificates, secrets directories (`.m2m/`, `.secrets/`), and test/build artifacts (`node_modules/`, `dist/`, `build/`, `.next/`, `test-results/`, `playwright-report/`, `blob-report/`) remain uncommitted and compliant with root and service `.gitignore` policies.
 - Respect repository ownership and review expectations in `CODEOWNERS`.

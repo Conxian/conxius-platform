@@ -1,14 +1,37 @@
+# Conxian ElizaOS Plugin
 node_modules/
 dist/
 build/
+
+# Environment Files & Local Configuration
 .env
 .env.*
+.env*.local
+.env.admin
+.env.admin.local
+.env.backup
+.env.tmp
 !.env.example
+!.env*.example
+!.env.schema
+!.env*.schema
+
+# Private Keys, Certificates, and Credentials
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.crt
+*.cer
+
+# Runtime, Test, and Build Artifacts
 .sidl-state.json
 .claims-state.json
 .action-version-cache.json
 test-results/
 playwright-report/
+blob-report/
 .DS_Store
 *.log
 *.tmp

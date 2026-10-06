@@ -20,12 +20,34 @@ htmlcov/
 .cache/
 .vite/
 
-# Conxian Platform Hardening
-.env*
+# Conxian Platform Hardening - Environment Files
+.env
+.env.*
+.env*.local
+.env.admin
+.env.admin.local
+.env.backup
+.env.tmp
+!.env.example
+!.env*.example
+!.env.schema
+!.env*.schema
+
+# Conxian Platform Hardening - Private Keys, Certificates, and Credentials
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.crt
+*.cer
+
+# Conxian Platform Hardening - Build, Test & Runtime Artifacts
 node_modules/
 .next/
 test-results/
 playwright-report/
+blob-report/
 .DS_Store
 *.log
 *.tmp

@@ -55,7 +55,7 @@ export async function POST(
   }
 
   try {
-    const result = getM2MKeyStore().rollback({
+    const result = await getM2MKeyStore().rollback({
       serviceId,
       expectedGeneration: body.expectedGeneration,
       targetGeneration: body.targetGeneration,

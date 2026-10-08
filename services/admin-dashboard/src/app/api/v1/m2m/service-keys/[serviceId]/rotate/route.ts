@@ -73,7 +73,7 @@ export async function POST(
   }
 
   try {
-    const result = getM2MKeyStore().rotate({
+    const result = await getM2MKeyStore().rotate({
       serviceId,
       expectedGeneration: body.expectedGeneration,
       gracePeriodSeconds: body.gracePeriodSeconds,

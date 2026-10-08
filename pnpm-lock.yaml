@@ -40,6 +40,9 @@ importers:
       '@conxian/market-sdk':
         specifier: ^0.2.4
         version: 0.2.4
+      '@neondatabase/serverless':
+        specifier: ^1.2.0
+        version: 1.2.0
       imapflow:
         specifier: ^2.0.7
         version: 2.1.2
@@ -125,7 +128,7 @@ importers:
     dependencies:
       '@elizaos/core':
         specifier: 2.0.0-beta.1
-        version: 2.0.0-beta.1(@napi-rs/canvas@0.1.100)(@opentelemetry/api@1.9.1)
+        version: 2.0.0-beta.1(@napi-rs/canvas@0.1.100)(@neondatabase/serverless@1.2.0)(@opentelemetry/api@1.9.1)
       zod:
         specifier: ^4.6.5
         version: 4.6.5
@@ -652,6 +655,10 @@ packages:
   '@napi-rs/canvas@0.1.100':
     resolution: {integrity: sha512-xglYA6q3XO5P3BNJYxVZ1IV7DLVjp1Py6nwag88YntrS+3vKHyYcMqXVS4ZztJmwz2uGvz1FWhI/4LgbR5uQDA==}
     engines: {node: '>= 10'}
+
+  '@neondatabase/serverless@1.2.0':
+    resolution: {integrity: sha512-tnaqgixUengZQNd9ZrS3ytQfamJzLKY8QxgqWQTNHHtB+KrFQWk77JTbbpg4RD+J3qE4eO2lVytvGDX5Kj6FdQ==}
+    engines: {node: '>=19.0.0'}
 
   '@next/env@16.3.5':
     resolution: {integrity: sha512-NWEXVDMqoEo0ktmU6u0sE2Vg0LOcsD7NnOTJNo3/fEaTfsg+F1bMIxuDmQbda4e3yTIQwVdUREF2yIuMOusKtg==}
@@ -2161,7 +2168,7 @@ snapshots:
 
   '@csstools/css-tokenizer@4.0.2': {}
 
-  '@elizaos/core@2.0.0-beta.1(@napi-rs/canvas@0.1.100)(@opentelemetry/api@1.9.1)':
+  '@elizaos/core@2.0.0-beta.1(@napi-rs/canvas@0.1.100)(@neondatabase/serverless@1.2.0)(@opentelemetry/api@1.9.1)':
     dependencies:
       '@ai-sdk/anthropic': 3.0.94(zod@4.6.5)
       '@ai-sdk/gateway': 3.0.144(zod@4.6.5)
@@ -2180,7 +2187,7 @@ snapshots:
       coding-agent-adapters: 0.16.3
       dedent: 1.7.2
       dotenv: 17.4.2
-      drizzle-orm: 0.45.2(@opentelemetry/api@1.9.1)
+      drizzle-orm: 0.45.2(@neondatabase/serverless@1.2.0)(@opentelemetry/api@1.9.1)
       eventsource-parser: 3.1.0
       fast-redact: 3.5.0
       file-type: 22.0.1
@@ -2488,6 +2495,8 @@ snapshots:
       '@napi-rs/canvas-win32-arm64-msvc': 0.1.100
       '@napi-rs/canvas-win32-x64-msvc': 0.1.100
     optional: true
+
+  '@neondatabase/serverless@1.2.0': {}
 
   '@next/env@16.3.5': {}
 
@@ -2835,8 +2844,9 @@ snapshots:
 
   dotenv@17.4.2: {}
 
-  drizzle-orm@0.45.2(@opentelemetry/api@1.9.1):
+  drizzle-orm@0.45.2(@neondatabase/serverless@1.2.0)(@opentelemetry/api@1.9.1):
     optionalDependencies:
+      '@neondatabase/serverless': 1.2.0
       '@opentelemetry/api': 1.9.1
 
   duck@0.1.12:

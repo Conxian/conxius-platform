@@ -177,6 +177,7 @@ export interface M2MStoreContext {
 
 export interface M2MKeyStoreOptions {
   registryPath?: string;
+  databaseUrl?: string;
   environment?: NodeJS.ProcessEnv;
   now?: () => Date;
   lockWaitMs?: number;

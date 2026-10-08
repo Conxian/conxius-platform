@@ -8,6 +8,8 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
+import { Pool, type PoolClient } from "@neondatabase/serverless";
+
 import {
   recordM2MExpiryThresholdCrossed,
   recordM2MRegistryState,
@@ -76,11 +78,11 @@ export interface M2MRollbackInput {
 }
 
 export interface M2MKeyStoreBackend {
-  validateServiceSecret(serviceId: RotatableServiceId, secret: string): M2MServiceValidationResult;
-  listMetadata(requestId?: string): M2MRegistryMetadataResponse;
-  readiness(): M2MRegistryReadiness;
-  rotate(input: M2MRotateInput): M2MRotationResult;
-  rollback(input: M2MRollbackInput): M2MRollbackResult;
+  validateServiceSecret(serviceId: RotatableServiceId, secret: string): Promise<M2MServiceValidationResult>;
+  listMetadata(requestId?: string): Promise<M2MRegistryMetadataResponse>;
+  readiness(): Promise<M2MRegistryReadiness>;
+  rotate(input: M2MRotateInput): Promise<M2MRotationResult>;
+  rollback(input: M2MRollbackInput): Promise<M2MRollbackResult>;
 }
 
 interface ArtifactCleanup {
@@ -693,7 +695,7 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
     return this.registryPath;
   }
 
-  readiness(): M2MRegistryReadiness {
+  async readiness(): Promise<M2MRegistryReadiness> {
     if (this.recoveryRequired) {
       recordM2MRegistryUnavailable();
       return { status: "unavailable", state: "recovery-latched" };
@@ -781,10 +783,10 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
     }
   }
 
-  validateServiceSecret(
+  async validateServiceSecret(
     serviceId: RotatableServiceId,
     secret: string,
-  ): M2MServiceValidationResult {
+  ): Promise<M2MServiceValidationResult> {
     let document: M2MRegistryDocument;
     try {
       document = this.ensureReady();
@@ -831,7 +833,7 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
     return { valid: false, serviceId };
   }
 
-  listMetadata(requestId = newSystemRequestId()): M2MRegistryMetadataResponse {
+  async listMetadata(requestId = newSystemRequestId()): Promise<M2MRegistryMetadataResponse> {
     try {
       const document = this.loadReadyDocument();
       const evaluated = this.persistExpiryThresholds(document, requestId);
@@ -848,7 +850,7 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
     }
   }
 
-  rotate(input: M2MRotateInput): M2MRotationResult {
+  async rotate(input: M2MRotateInput): Promise<M2MRotationResult> {
     try {
       return this.rotateInternal(input);
     } catch (error) {
@@ -964,7 +966,7 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
     });
   }
 
-  rollback(input: M2MRollbackInput): M2MRollbackResult {
+  async rollback(input: M2MRollbackInput): Promise<M2MRollbackResult> {
     try {
       return this.rollbackInternal(input);
     } catch (error) {
@@ -1830,6 +1832,625 @@ export class FileM2MKeyStore implements M2MKeyStoreBackend {
   }
 }
 
+const NEON_M2M_REGISTRY_TABLE = "service_key_registry";
+const NEON_M2M_REGISTRY_ROW_ID = "default";
+
+interface NeonExpiryThresholdCandidate {
+  markerKey: string;
+  serviceId: RotatableServiceId;
+  generation: number;
+  keyRole: "active" | "previous";
+  deadline: string;
+  threshold: "30d" | "7d" | "24h" | "1h" | "expired";
+}
+
+export class NeonM2MKeyStore implements M2MKeyStoreBackend {
+  private readonly environment: NodeJS.ProcessEnv;
+  private readonly pool: Pool;
+  private readonly now: () => Date;
+
+  constructor(options: M2MKeyStoreOptions = {}) {
+    this.environment = options.environment ?? process.env;
+    const connectionString =
+      options.databaseUrl ??
+      this.environment.NEON_DATABASE_URL ??
+      this.environment.DATABASE_URL;
+    if (!connectionString) {
+      throw new M2MKeyStoreError(
+        "m2m_registry_unavailable",
+        "Neon M2M registry connection string is not configured",
+      );
+    }
+    this.pool = new Pool({ connectionString });
+    this.now = options.now ?? (() => new Date());
+  }
+
+  private newCommitId(): string {
+    return `commit_${randomUUID()}`;
+  }
+
+  private newKeyId(): string {
+    return `key_${randomUUID()}`;
+  }
+
+  private async readDocument(): Promise<M2MRegistryDocument | null> {
+    const { rows } = await this.pool.query(
+      `SELECT document FROM ${NEON_M2M_REGISTRY_TABLE} WHERE id = $1`,
+      [NEON_M2M_REGISTRY_ROW_ID],
+    );
+    const row = rows[0] as { document: M2MRegistryDocument } | undefined;
+    return row ? row.document : null;
+  }
+
+  private async loadDocumentForMutationUnderLock(
+    client: PoolClient,
+  ): Promise<M2MRegistryDocument> {
+    const { rows } = await client.query(
+      `SELECT document FROM ${NEON_M2M_REGISTRY_TABLE} WHERE id = $1 FOR UPDATE`,
+      [NEON_M2M_REGISTRY_ROW_ID],
+    );
+    const row = rows[0] as { document: M2MRegistryDocument } | undefined;
+    if (!row) {
+      throw new M2MKeyStoreError("m2m_registry_unavailable", "M2M registry is unavailable");
+    }
+    return row.document;
+  }
+
+  private async commitDocumentUnderLock(
+    client: PoolClient,
+    previous: M2MRegistryDocument | null,
+    next: M2MRegistryDocument,
+    failureStage: M2MRegistryFailureStage = "mutation",
+  ): Promise<void> {
+    if (
+      (previous === null && next.revision !== 1) ||
+      (previous !== null && next.revision !== previous.revision + 1)
+    ) {
+      recordM2MRegistryWriteFailure(failureStage, "invariant");
+      throw new M2MKeyStoreError("m2m_registry_unavailable", "M2M registry revision invariant failed");
+    }
+    await client.query(
+      `UPDATE ${NEON_M2M_REGISTRY_TABLE} SET document = $1, updated_at = now() WHERE id = $2`,
+      [next, NEON_M2M_REGISTRY_ROW_ID],
+    );
+  }
+
+  private async withRowLock<T>(operation: (client: PoolClient) => Promise<T>): Promise<T> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+      const result = await operation(client);
+      await client.query("COMMIT");
+      return result;
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  private buildInitialDocument(): M2MRegistryDocument {
+    const createdAt = isoNow(this.now);
+    const commitId = this.newCommitId();
+    const requestId = newSystemRequestId();
+    const services: Partial<Record<RotatableServiceId, M2MServiceRecord>> = {};
+    const auditEvents: M2MAuditEvent[] = [];
+
+    for (const serviceId of ROTATABLE_SERVICE_IDS) {
+      const environmentName = SERVICE_KEY_ENV_VARS[serviceId];
+      const secret = this.environment[environmentName];
+      if (secret === undefined || secret === "") continue;
+
+      services[serviceId] = {
+        generation: 1,
+        active: {
+          keyId: this.newKeyId(),
+          hash: hashSecret(secret).formatted,
+          createdAt,
+          expiresAt: null,
+        },
+        previous: null,
+        source: "bootstrap",
+        updatedAt: createdAt,
+      };
+      auditEvents.push({
+        eventId: `event_${randomUUID()}`,
+        eventType: "SERVICE_KEY_BOOTSTRAPPED",
+        commitId,
+        serviceId,
+        generation: 1,
+        previousGeneration: null,
+        registryRevision: 1,
+        actor: "system",
+        requestId,
+        occurredAt: createdAt,
+      });
+    }
+
+    if (auditEvents.length === 0) {
+      auditEvents.push({
+        eventId: `event_${randomUUID()}`,
+        eventType: "SERVICE_KEY_BOOTSTRAPPED",
+        commitId,
+        serviceId: null,
+        generation: null,
+        previousGeneration: null,
+        registryRevision: 1,
+        actor: "system",
+        requestId,
+        occurredAt: createdAt,
+      });
+    }
+
+    return {
+      schemaVersion: M2M_REGISTRY_SCHEMA_VERSION,
+      revision: 1,
+      lastCommitId: commitId,
+      services,
+      notificationState: {},
+      auditEvents,
+    };
+  }
+
+  private async bootstrap(): Promise<M2MRegistryDocument> {
+    const initial = this.buildInitialDocument();
+    const { rows } = await this.pool.query(
+      `INSERT INTO ${NEON_M2M_REGISTRY_TABLE} (id, document) VALUES ($1, $2)
+       ON CONFLICT (id) DO NOTHING RETURNING document`,
+      [NEON_M2M_REGISTRY_ROW_ID, initial],
+    );
+    if (rows.length > 0) return initial;
+    return (await this.readDocument()) ?? initial;
+  }
+
+  private async ensureReady(): Promise<M2MRegistryDocument> {
+    const existing = await this.readDocument();
+    if (existing) return existing;
+    return this.bootstrap();
+  }
+
+  private async loadReadyDocument(): Promise<M2MRegistryDocument> {
+    try {
+      const document = await this.ensureReady();
+      recordM2MRegistryState(document.revision, metricServicesForDocument(document));
+      return document;
+    } catch (error) {
+      recordM2MRegistryUnavailable();
+      throw error;
+    }
+  }
+
+  async readiness(): Promise<M2MRegistryReadiness> {
+    try {
+      const document = await this.ensureReady();
+      recordM2MRegistryState(document.revision, metricServicesForDocument(document));
+      return {
+        status: "healthy",
+        state: Object.keys(document.services).length === 0 ? "valid-empty" : "ready",
+      };
+    } catch {
+      recordM2MRegistryUnavailable();
+      return { status: "unavailable", state: "unavailable" };
+    }
+  }
+
+  async validateServiceSecret(
+    serviceId: RotatableServiceId,
+    secret: string,
+  ): Promise<M2MServiceValidationResult> {
+    let document: M2MRegistryDocument;
+    try {
+      document = await this.ensureReady();
+    } catch (error) {
+      recordM2MRegistryUnavailable();
+      recordM2MValidationOutcome(serviceId, "unavailable");
+      throw error;
+    }
+    recordM2MRegistryState(document.revision, metricServicesForDocument(document));
+    const service = document.services[serviceId];
+    const presentedDigest = hashSecret(secret).digest;
+
+    if (!service) {
+      recordM2MValidationOutcome(serviceId, "invalid");
+      return { valid: false, serviceId };
+    }
+
+    const activeMatch = timingSafeDigestEqual(presentedDigest, digestFromStoredHash(service.active.hash));
+    const previousMatch = service.previous
+      ? timingSafeDigestEqual(presentedDigest, digestFromStoredHash(service.previous.hash))
+      : false;
+    const currentTime = this.now();
+    const activeAccepted = activeMatch &&
+      (service.active.expiresAt === null || isBeforeNow(service.active.expiresAt, currentTime));
+    const previousAccepted = previousMatch &&
+      isBeforeNow(service.previous?.graceUntil ?? new Date(0).toISOString(), currentTime) &&
+      (service.previous?.expiresAt === null ||
+        service.previous?.expiresAt === undefined ||
+        isBeforeNow(service.previous.expiresAt, currentTime));
+
+    if (activeAccepted) {
+      recordM2MValidationOutcome(serviceId, "success");
+      return { valid: true, serviceId, generation: service.generation };
+    }
+    if (previousAccepted && service.previous) {
+      recordM2MValidationOutcome(serviceId, "success");
+      return { valid: true, serviceId, generation: service.previous.generation };
+    }
+
+    recordM2MValidationOutcome(
+      serviceId,
+      activeMatch || previousMatch ? "expired" : "invalid",
+    );
+    return { valid: false, serviceId };
+  }
+
+  async listMetadata(requestId = newSystemRequestId()): Promise<M2MRegistryMetadataResponse> {
+    try {
+      const document = await this.loadReadyDocument();
+      const evaluated = await this.persistExpiryThresholds(document, requestId);
+      recordM2MRegistryState(evaluated.revision, metricServicesForDocument(evaluated));
+      const currentTime = this.now();
+      const services = ROTATABLE_SERVICE_IDS
+        .filter((serviceId) => evaluated.services[serviceId])
+        .map((serviceId) => this.toServiceMetadata(serviceId, evaluated.services[serviceId]!, currentTime));
+
+      return { revision: evaluated.revision, services };
+    } catch (error) {
+      recordM2MRegistryUnavailable();
+      throw error;
+    }
+  }
+
+  async rotate(input: M2MRotateInput): Promise<M2MRotationResult> {
+    try {
+      return await this.rotateInternal(input);
+    } catch (error) {
+      if (error instanceof M2MKeyStoreError && error.code === "m2m_registry_unavailable") {
+        recordM2MRegistryUnavailable();
+      }
+      if (isRotatableServiceId(input.serviceId)) {
+        recordM2MRotationOutcome(input.serviceId, mutationOutcomeForError(error));
+      }
+      throw error;
+    }
+  }
+
+  private async rotateInternal(input: M2MRotateInput): Promise<M2MRotationResult> {
+    if (!isRotatableServiceId(input.serviceId)) {
+      throw new M2MKeyStoreError("service_not_found", "Service key service not found");
+    }
+    validateGeneration(input.expectedGeneration);
+    const gracePeriodSeconds = validateGracePeriod(input.gracePeriodSeconds);
+    const ready = await this.ensureReady();
+    recordM2MRegistryState(ready.revision, metricServicesForDocument(ready));
+
+    return this.withRowLock(async (client) => {
+      const current = await this.loadDocumentForMutationUnderLock(client);
+      const service = current.services[input.serviceId];
+      if (!service) {
+        throw new M2MKeyStoreError("service_not_found", "Service key service not found");
+      }
+
+      if (service.generation !== input.expectedGeneration) {
+        throw new M2MKeyStoreError(
+          "generation_conflict",
+          "Service key generation precondition failed",
+          { conflict: buildConflictMetadata(input.serviceId, input.expectedGeneration, current.revision, service) },
+        );
+      }
+
+      const rotatedAt = isoNow(this.now);
+      const rotatedAtDate = new Date(rotatedAt);
+      const expiresAt = parseFutureExpiry(input.expiresAt, rotatedAtDate);
+      const generatedSecret = randomBytes(32).toString("base64url");
+      if (Buffer.from(generatedSecret, "base64url").length !== 32) {
+        throw new M2MKeyStoreError("m2m_registry_unavailable", "M2M secret generation failed");
+      }
+      const generatedHash = hashSecret(generatedSecret).formatted;
+      const previousGraceCandidate = new Date(
+        rotatedAtDate.getTime() + gracePeriodSeconds * 1000,
+      ).toISOString();
+      const previousGraceUntil = service.active.expiresAt &&
+        new Date(service.active.expiresAt).getTime() < new Date(previousGraceCandidate).getTime()
+        ? service.active.expiresAt
+        : previousGraceCandidate;
+      const nextGeneration = service.generation + 1;
+      const nextRevision = current.revision + 1;
+      const nextCommitId = this.newCommitId();
+      const nextService: M2MServiceRecord = {
+        generation: nextGeneration,
+        active: {
+          keyId: this.newKeyId(),
+          hash: generatedHash,
+          createdAt: rotatedAt,
+          expiresAt,
+        },
+        previous: {
+          generation: service.generation,
+          keyId: service.active.keyId,
+          hash: service.active.hash,
+          createdAt: service.active.createdAt,
+          expiresAt: service.active.expiresAt,
+          graceUntil: previousGraceUntil,
+        },
+        source: "registry",
+        updatedAt: rotatedAt,
+      };
+      const auditEvent: M2MAuditEvent = {
+        eventId: `event_${randomUUID()}`,
+        eventType: "SERVICE_KEY_ROTATED",
+        commitId: nextCommitId,
+        serviceId: input.serviceId,
+        generation: nextGeneration,
+        previousGeneration: service.generation,
+        registryRevision: nextRevision,
+        actor: input.context.actor ?? "admin-api-key",
+        requestId: input.context.requestId,
+        occurredAt: rotatedAt,
+        graceUntil: previousGraceUntil,
+        expiresAt,
+      };
+      const nextDocument: M2MRegistryDocument = {
+        ...cloneDocument(current),
+        revision: nextRevision,
+        lastCommitId: nextCommitId,
+        services: {
+          ...current.services,
+          [input.serviceId]: nextService,
+        },
+        auditEvents: [...current.auditEvents, auditEvent],
+      };
+
+      await this.commitDocumentUnderLock(client, current, nextDocument);
+      recordM2MRegistryState(nextRevision, metricServicesForDocument(nextDocument));
+      recordM2MRotationOutcome(input.serviceId, "success");
+
+      return {
+        serviceId: input.serviceId,
+        generation: nextGeneration,
+        secret: generatedSecret,
+        rotatedAt,
+        previousGraceUntil,
+        expiresAt,
+        revision: nextRevision,
+      };
+    });
+  }
+
+  async rollback(input: M2MRollbackInput): Promise<M2MRollbackResult> {
+    try {
+      return await this.rollbackInternal(input);
+    } catch (error) {
+      if (error instanceof M2MKeyStoreError && error.code === "m2m_registry_unavailable") {
+        recordM2MRegistryUnavailable();
+      }
+      if (isRotatableServiceId(input.serviceId)) {
+        recordM2MRollbackOutcome(input.serviceId, mutationOutcomeForError(error));
+      }
+      throw error;
+    }
+  }
+
+  private async rollbackInternal(input: M2MRollbackInput): Promise<M2MRollbackResult> {
+    if (!isRotatableServiceId(input.serviceId)) {
+      throw new M2MKeyStoreError("service_not_found", "Service key service not found");
+    }
+    validateGeneration(input.expectedGeneration);
+    validateGeneration(input.targetGeneration);
+    const reason = sanitizeRollbackReason(input.reason);
+    const ready = await this.ensureReady();
+    recordM2MRegistryState(ready.revision, metricServicesForDocument(ready));
+
+    return this.withRowLock(async (client) => {
+      const current = await this.loadDocumentForMutationUnderLock(client);
+      const service = current.services[input.serviceId];
+      if (!service) {
+        throw new M2MKeyStoreError("service_not_found", "Service key service not found");
+      }
+
+      if (service.generation !== input.expectedGeneration) {
+        throw new M2MKeyStoreError(
+          "generation_conflict",
+          "Service key generation precondition failed",
+          { conflict: buildConflictMetadata(input.serviceId, input.expectedGeneration, current.revision, service) },
+        );
+      }
+
+      const previous = service.previous;
+      if (!previous || previous.generation !== input.targetGeneration) {
+        throw new M2MKeyStoreError("rollback_target_conflict", "Rollback target is not the current previous generation");
+      }
+
+      const rolledBackAt = isoNow(this.now);
+      const effectiveUntil = effectivePreviousDeadline(previous);
+      if (!isBeforeNow(effectiveUntil, new Date(rolledBackAt))) {
+        throw new M2MKeyStoreError("rollback_window_expired", "Rollback window has expired");
+      }
+
+      const nextGeneration = service.generation + 1;
+      const nextRevision = current.revision + 1;
+      const nextCommitId = this.newCommitId();
+      const nextService: M2MServiceRecord = {
+        generation: nextGeneration,
+        active: {
+          keyId: this.newKeyId(),
+          hash: previous.hash,
+          createdAt: rolledBackAt,
+          expiresAt: effectiveUntil,
+        },
+        previous: null,
+        source: "rollback",
+        updatedAt: rolledBackAt,
+        rollbackOfGeneration: service.generation,
+        rollbackTargetGeneration: previous.generation,
+      };
+      const auditEvent: M2MAuditEvent = {
+        eventId: `event_${randomUUID()}`,
+        eventType: "SERVICE_KEY_ROLLED_BACK",
+        commitId: nextCommitId,
+        serviceId: input.serviceId,
+        generation: nextGeneration,
+        previousGeneration: service.generation,
+        registryRevision: nextRevision,
+        actor: input.context.actor ?? "admin-api-key",
+        requestId: input.context.requestId,
+        occurredAt: rolledBackAt,
+        expiresAt: effectiveUntil,
+        effectiveUntil,
+        rollbackOfGeneration: service.generation,
+        rollbackTargetGeneration: previous.generation,
+        reason,
+      };
+      const nextDocument: M2MRegistryDocument = {
+        ...cloneDocument(current),
+        revision: nextRevision,
+        lastCommitId: nextCommitId,
+        services: {
+          ...current.services,
+          [input.serviceId]: nextService,
+        },
+        auditEvents: [...current.auditEvents, auditEvent],
+      };
+
+      await this.commitDocumentUnderLock(client, current, nextDocument);
+      recordM2MRegistryState(nextRevision, metricServicesForDocument(nextDocument));
+      recordM2MRollbackOutcome(input.serviceId, "success");
+
+      return {
+        serviceId: input.serviceId,
+        generation: nextGeneration,
+        revision: nextRevision,
+        source: "rollback",
+        rollbackOfGeneration: service.generation,
+        rollbackTargetGeneration: previous.generation,
+        activeExpiresAt: effectiveUntil,
+        rolledBackAt,
+      };
+    });
+  }
+
+  private async persistExpiryThresholds(
+    document: M2MRegistryDocument,
+    requestId: string,
+  ): Promise<M2MRegistryDocument> {
+    const candidates = this.findExpiryThresholds(document, this.now());
+    if (candidates.length === 0) return document;
+
+    return this.withRowLock(async (client) => {
+      const current = await this.loadDocumentForMutationUnderLock(client);
+      const currentCandidates = this.findExpiryThresholds(current, this.now()).filter(
+        (candidate) => !current.notificationState[candidate.markerKey],
+      );
+      if (currentCandidates.length === 0) return current;
+
+      const crossedAt = isoNow(this.now);
+      const nextRevision = current.revision + 1;
+      const nextCommitId = this.newCommitId();
+      const nextDocument = cloneDocument(current);
+      nextDocument.revision = nextRevision;
+      nextDocument.lastCommitId = nextCommitId;
+
+      for (const candidate of currentCandidates) {
+        nextDocument.notificationState[candidate.markerKey] = { crossedAt };
+        nextDocument.auditEvents.push({
+          eventId: `event_${randomUUID()}`,
+          eventType: "SERVICE_KEY_EXPIRY_THRESHOLD_CROSSED",
+          commitId: nextCommitId,
+          serviceId: candidate.serviceId,
+          generation: candidate.generation,
+          previousGeneration: candidate.keyRole === "previous" ? candidate.generation : null,
+          registryRevision: nextRevision,
+          actor: "system",
+          requestId,
+          occurredAt: crossedAt,
+          effectiveUntil: candidate.deadline,
+          keyRole: candidate.keyRole,
+          threshold: candidate.threshold,
+        });
+      }
+
+      await this.commitDocumentUnderLock(client, current, nextDocument, "threshold");
+      recordM2MRegistryState(nextRevision, metricServicesForDocument(nextDocument));
+      for (const candidate of currentCandidates) {
+        recordM2MExpiryThresholdCrossed(
+          candidate.serviceId,
+          candidate.keyRole,
+          candidate.threshold,
+        );
+      }
+      return nextDocument;
+    });
+  }
+
+  private findExpiryThresholds(
+    document: M2MRegistryDocument,
+    now: Date,
+  ): NeonExpiryThresholdCandidate[] {
+    const candidates: NeonExpiryThresholdCandidate[] = [];
+
+    for (const serviceId of ROTATABLE_SERVICE_IDS) {
+      const service = document.services[serviceId];
+      if (!service) continue;
+
+      const deadlines: Array<{
+        keyRole: "active" | "previous";
+        generation: number;
+        deadline: string | null;
+      }> = [
+        { keyRole: "active", generation: service.generation, deadline: service.active.expiresAt },
+        {
+          keyRole: "previous",
+          generation: service.previous?.generation ?? 0,
+          deadline: service.previous ? effectivePreviousDeadline(service.previous) : null,
+        },
+      ];
+
+      for (const item of deadlines) {
+        if (!item.deadline || item.generation <= 0) continue;
+        const remainingSeconds = (new Date(item.deadline).getTime() - now.getTime()) / 1000;
+        const threshold = remainingSeconds <= 0
+          ? "expired" as const
+          : EXPIRY_THRESHOLDS.find((candidate) => remainingSeconds <= candidate.seconds)?.name;
+        if (!threshold) continue;
+
+        candidates.push({
+          markerKey: `${serviceId}:${item.generation}:${item.keyRole}:${threshold}`,
+          serviceId,
+          generation: item.generation,
+          keyRole: item.keyRole,
+          deadline: item.deadline,
+          threshold,
+        });
+      }
+    }
+
+    return candidates.filter((candidate) => !document.notificationState[candidate.markerKey]);
+  }
+
+  private toServiceMetadata(
+    serviceId: RotatableServiceId,
+    service: M2MServiceRecord,
+    now: Date,
+  ): M2MServiceMetadata {
+    const previous = service.previous;
+    return {
+      serviceId,
+      generation: service.generation,
+      source: service.source,
+      activeCreatedAt: service.active.createdAt,
+      activeExpiresAt: service.active.expiresAt,
+      previousGeneration: previous?.generation ?? null,
+      previousCreatedAt: previous?.createdAt ?? null,
+      previousExpiresAt: previous?.expiresAt ?? null,
+      previousGraceUntil: previous?.graceUntil ?? null,
+      previousEffectiveUntil: previous ? effectivePreviousDeadline(previous) : null,
+      previousState: servicePreviousState(previous, now),
+      updatedAt: service.updatedAt,
+    };
+  }
+}
+
 const storeInstances = new Map<string, M2MKeyStoreBackend>();
 
 function configuredRegistryPath(environment: NodeJS.ProcessEnv = process.env): string {
@@ -1848,18 +2469,19 @@ function configuredRegistryPath(environment: NodeJS.ProcessEnv = process.env): s
 }
 
 export function getM2MKeyStore(): M2MKeyStoreBackend {
-  const registryPath = configuredRegistryPath();
-  const existing = storeInstances.get(registryPath);
+  const backend = (process.env.M2M_KEY_STORE_BACKEND ?? "file").toLowerCase();
+  const cacheKey = backend === "neon" ? "neon" : configuredRegistryPath();
+  const existing = storeInstances.get(cacheKey);
   if (existing) return existing;
 
-  const store = new FileM2MKeyStore();
-  storeInstances.set(registryPath, store);
+  const store = backend === "neon" ? new NeonM2MKeyStore() : new FileM2MKeyStore();
+  storeInstances.set(cacheKey, store);
   return store;
 }
 
-export function getM2MKeyStoreReadiness(): M2MRegistryReadiness {
+export async function getM2MKeyStoreReadiness(): Promise<M2MRegistryReadiness> {
   try {
-    return getM2MKeyStore().readiness();
+    return await getM2MKeyStore().readiness();
   } catch {
     recordM2MRegistryUnavailable();
     return { status: "unavailable", state: "unavailable" };

@@ -17,7 +17,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   if (authError) return authError;
 
   try {
-    const metadata = getM2MKeyStore().listMetadata(requestId);
+    const metadata = await getM2MKeyStore().listMetadata(requestId);
     return m2mJson(metadata, requestId);
   } catch (error) {
     return m2mErrorResponse(m2mStoreErrorToHttp(error), requestId);

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getM2MKeyStoreReadiness } from "@/lib/support/m2mKeyStore";
 
 export async function GET() {
-  const readiness = getM2MKeyStoreReadiness();
+  const readiness = await getM2MKeyStoreReadiness();
   const healthy = readiness.status === "healthy";
 
   return NextResponse.json({

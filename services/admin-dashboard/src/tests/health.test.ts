@@ -68,7 +68,7 @@ describe("M2M registry health readiness", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ status: "healthy" });
     expect(response.headers.get("Cache-Control")).toBe("no-store");
-    expect(getM2MKeyStoreReadiness()).toEqual({ status: "healthy", state: "valid-empty" });
+    expect(await getM2MKeyStoreReadiness()).toEqual({ status: "healthy", state: "valid-empty" });
   });
 
   it("returns 503 when production registry configuration is missing", async () => {
@@ -78,7 +78,7 @@ describe("M2M registry health readiness", () => {
     const response = await getHealth();
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ status: "unhealthy" });
-    expect(getM2MKeyStoreReadiness()).toEqual({ status: "unavailable", state: "unavailable" });
+    expect(await getM2MKeyStoreReadiness()).toEqual({ status: "unavailable", state: "unavailable" });
   });
 
   it("returns 503 for malformed production registry state", async () => {
@@ -90,13 +90,13 @@ describe("M2M registry health readiness", () => {
     const response = await getHealth();
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ status: "unhealthy" });
-    expect(getM2MKeyStoreReadiness()).toEqual({ status: "unavailable", state: "unavailable" });
+    expect(await getM2MKeyStoreReadiness()).toEqual({ status: "unavailable", state: "unavailable" });
   });
 
   it("returns 503 after recovery evidence latches the store", async () => {
     const path = registryPath("conxian-health-recovery-");
     const store = getM2MKeyStore();
-    store.listMetadata("health_bootstrap");
+    await store.listMetadata("health_bootstrap");
     const document = JSON.parse(readFileSync(path, "utf8")) as {
       lastCommitId: string;
     };
@@ -113,8 +113,8 @@ describe("M2M registry health readiness", () => {
     writeFileSync(`${path}.marker`, `${JSON.stringify(marker)}\n`, { mode: 0o600 });
     chmodSync(`${path}.marker`, 0o600);
 
-    expect(() => store.listMetadata("health_recovery_latch")).toThrow();
-    expect(getM2MKeyStoreReadiness()).toEqual({ status: "unavailable", state: "recovery-latched" });
+    await expect(store.listMetadata("health_recovery_latch")).rejects.toThrow();
+    expect(await getM2MKeyStoreReadiness()).toEqual({ status: "unavailable", state: "recovery-latched" });
 
     const response = await getHealth();
     expect(response.status).toBe(503);

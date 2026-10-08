@@ -110,16 +110,18 @@ function runRotationChild(registryPath: string): Promise<ChildRotationResult> {
       environment: { ...process.env, NODE_ENV: "test", SERVICE_KEY_GATEWAY: "race-bootstrap" },
       now: () => new Date("2026-07-22T14:00:00.000Z"),
     });
-    try {
-      const result = store.rotate({
-        serviceId: "gateway",
-        expectedGeneration: 1,
-        context: { requestId: "race-child" },
-      });
-      console.log(JSON.stringify({ outcome: "success", generation: result.generation }));
-    } catch (error) {
-      console.log(JSON.stringify({ outcome: "error", code: error?.code ?? "unknown" }));
-    }
+    (async () => {
+      try {
+        const result = await store.rotate({
+          serviceId: "gateway",
+          expectedGeneration: 1,
+          context: { requestId: "race-child" },
+        });
+        console.log(JSON.stringify({ outcome: "success", generation: result.generation }));
+      } catch (error) {
+        console.log(JSON.stringify({ outcome: "error", code: error?.code ?? "unknown" }));
+      }
+    })();
   `;
 
   return new Promise((resolve, reject) => {
@@ -163,20 +165,20 @@ afterEach(() => {
 });
 
 describe("M2M service-key rotation runtime", () => {
-  it("bootstraps legacy colon-containing secrets and persists hashes only", () => {
+  it("bootstraps legacy colon-containing secrets and persists hashes only", async () => {
     const store = makeStore({
       SERVICE_KEY_GATEWAY: "legacy:opaque:secret",
       SERVICE_KEY_ADMIN_DASHBOARD: "dashboard-service-key",
     });
 
-    const metadata = store.listMetadata("req_bootstrap");
+    const metadata = await store.listMetadata("req_bootstrap");
     expect(metadata.revision).toBe(1);
     expect(metadata.services.map((service) => service.serviceId)).toEqual([
       "gateway",
       "admin-dashboard",
     ]);
 
-    const gateway = store.validateServiceSecret("gateway", "legacy:opaque:secret");
+    const gateway = await store.validateServiceSecret("gateway", "legacy:opaque:secret");
     expect(gateway.valid).toBe(true);
     expect(gateway.generation).toBe(1);
 
@@ -186,10 +188,10 @@ describe("M2M service-key rotation runtime", () => {
     expect(persisted).toMatch(/sha256:[0-9a-f]{64}/);
   });
 
-  it("rotates with a one-time 32-byte base64url secret and rejects stale generations", () => {
+  it("rotates with a one-time 32-byte base64url secret and rejects stale generations", async () => {
     const store = makeStore({ SERVICE_KEY_GATEWAY: "gateway-bootstrap" });
 
-    const result = store.rotate({
+    const result = await store.rotate({
       serviceId: "gateway",
       expectedGeneration: 1,
       gracePeriodSeconds: 7200,
@@ -198,18 +200,18 @@ describe("M2M service-key rotation runtime", () => {
 
     expect(Buffer.from(result.secret, "base64url")).toHaveLength(32);
     expect(result.secret).not.toMatch(/[:\s]/);
-    expect(store.validateServiceSecret("gateway", result.secret).valid).toBe(true);
-    expect(store.validateServiceSecret("gateway", "gateway-bootstrap").valid).toBe(true);
+    expect((await store.validateServiceSecret("gateway", result.secret)).valid).toBe(true);
+    expect((await store.validateServiceSecret("gateway", "gateway-bootstrap")).valid).toBe(true);
 
-    expect(() =>
+    await expect(
       store.rotate({
         serviceId: "gateway",
         expectedGeneration: 1,
         context: { requestId: "req_stale" },
       }),
-    ).toThrowError(/generation precondition failed/);
+    ).rejects.toThrowError(/generation precondition failed/);
 
-    const metadata = store.listMetadata("req_metadata");
+    const metadata = await store.listMetadata("req_metadata");
     expect(metadata.revision).toBe(3);
     expect(metadata.services[0]).toMatchObject({
       serviceId: "gateway",
@@ -222,16 +224,16 @@ describe("M2M service-key rotation runtime", () => {
     expect(persisted).not.toContain(result.secret);
   });
 
-  it("rolls back a lost response without reusing a generation or returning plaintext", () => {
+  it("rolls back a lost response without reusing a generation or returning plaintext", async () => {
     const store = makeStore({ SERVICE_KEY_GATEWAY: "gateway-bootstrap" });
-    const rotation = store.rotate({
+    const rotation = await store.rotate({
       serviceId: "gateway",
       expectedGeneration: 1,
       gracePeriodSeconds: 300,
       context: { requestId: "req_rotate" },
     });
 
-    const rollback = store.rollback({
+    const rollback = await store.rollback({
       serviceId: "gateway",
       expectedGeneration: 2,
       targetGeneration: 1,
@@ -245,9 +247,9 @@ describe("M2M service-key rotation runtime", () => {
       rollbackTargetGeneration: 1,
       source: "rollback",
     });
-    expect(store.validateServiceSecret("gateway", "gateway-bootstrap").valid).toBe(true);
-    expect(store.validateServiceSecret("gateway", rotation.secret).valid).toBe(false);
-    expect(() =>
+    expect((await store.validateServiceSecret("gateway", "gateway-bootstrap")).valid).toBe(true);
+    expect((await store.validateServiceSecret("gateway", rotation.secret)).valid).toBe(false);
+    await expect(
       store.rollback({
         serviceId: "gateway",
         expectedGeneration: 2,
@@ -255,10 +257,10 @@ describe("M2M service-key rotation runtime", () => {
         reason: "duplicate rollback",
         context: { requestId: "req_duplicate" },
       }),
-    ).toThrowError(/generation precondition failed/);
+    ).rejects.toThrowError(/generation precondition failed/);
   });
 
-  it("keeps the registry authoritative across environment drift and expiry boundaries", () => {
+  it("keeps the registry authoritative across environment drift and expiry boundaries", async () => {
     const directory = mkdtempSync(join(tmpdir(), "conxian-m2m-authority-"));
     tempDirectories.push(directory);
     const registryPath = join(directory, "registry.json");
@@ -268,7 +270,7 @@ describe("M2M service-key rotation runtime", () => {
       environment: { ...process.env, NODE_ENV: "test", SERVICE_KEY_GATEWAY: "original-key" },
       now: () => new Date(now),
     });
-    first.rotate({
+    await first.rotate({
       serviceId: "gateway",
       expectedGeneration: 1,
       gracePeriodSeconds: 300,
@@ -280,15 +282,15 @@ describe("M2M service-key rotation runtime", () => {
       environment: { ...process.env, NODE_ENV: "test", SERVICE_KEY_GATEWAY: "drifted-key" },
       now: () => new Date(now),
     });
-    expect(restarted.validateServiceSecret("gateway", "original-key").valid).toBe(true);
-    expect(restarted.validateServiceSecret("gateway", "drifted-key").valid).toBe(false);
+    expect((await restarted.validateServiceSecret("gateway", "original-key")).valid).toBe(true);
+    expect((await restarted.validateServiceSecret("gateway", "drifted-key")).valid).toBe(false);
 
     now = new Date(now.getTime() + 301_000);
-    expect(restarted.validateServiceSecret("gateway", "original-key").valid).toBe(false);
-    expect(restarted.listMetadata("req_expired").services[0]?.previousState).toBe("expired");
+    expect((await restarted.validateServiceSecret("gateway", "original-key")).valid).toBe(false);
+    expect((await restarted.listMetadata("req_expired")).services[0]?.previousState).toBe("expired");
   });
 
-  it("does not import a newly configured service into an existing empty registry", () => {
+  it("does not import a newly configured service into an existing empty registry", async () => {
     const directory = mkdtempSync(join(tmpdir(), "conxian-m2m-empty-"));
     tempDirectories.push(directory);
     const registryPath = join(directory, "registry.json");
@@ -297,15 +299,15 @@ describe("M2M service-key rotation runtime", () => {
       environment: { ...process.env, NODE_ENV: "test" },
       now: () => new Date(fixedNow),
     });
-    expect(empty.listMetadata("req_empty").services).toEqual([]);
+    expect((await empty.listMetadata("req_empty")).services).toEqual([]);
 
     const restarted = new FileM2MKeyStore({
       registryPath,
       environment: { ...process.env, NODE_ENV: "test", SERVICE_KEY_GATEWAY: "late-key" },
       now: () => new Date(fixedNow),
     });
-    expect(restarted.listMetadata("req_drift").services).toEqual([]);
-    expect(restarted.validateServiceSecret("gateway", "late-key").valid).toBe(false);
+    expect((await restarted.listMetadata("req_drift")).services).toEqual([]);
+    expect((await restarted.validateServiceSecret("gateway", "late-key")).valid).toBe(false);
   });
 
   it("requires the admin API key and redacts metadata responses", async () => {
@@ -368,11 +370,11 @@ describe("M2M service-key rotation runtime", () => {
     }
   });
 
-  it("enforces exact active/previous expiry boundaries and caps grace at the earlier expiry", () => {
+  it("enforces exact active/previous expiry boundaries and caps grace at the earlier expiry", async () => {
     const clock = { current: new Date(fixedNow) };
     const store = makeStoreWithClock(clock, { SERVICE_KEY_GATEWAY: "gateway-bootstrap" });
     const activeExpiresAt = new Date(fixedNow.getTime() + 600_000).toISOString();
-    const rotation = store.rotate({
+    const rotation = await store.rotate({
       serviceId: "gateway",
       expectedGeneration: 1,
       gracePeriodSeconds: 300,
@@ -381,28 +383,28 @@ describe("M2M service-key rotation runtime", () => {
     });
 
     clock.current = new Date(fixedNow.getTime() + 299_999);
-    expect(store.validateServiceSecret("gateway", "gateway-bootstrap").valid).toBe(true);
-    expect(store.validateServiceSecret("gateway", rotation.secret).valid).toBe(true);
+    expect((await store.validateServiceSecret("gateway", "gateway-bootstrap")).valid).toBe(true);
+    expect((await store.validateServiceSecret("gateway", rotation.secret)).valid).toBe(true);
 
     clock.current = new Date(fixedNow.getTime() + 300_000);
-    expect(store.validateServiceSecret("gateway", "gateway-bootstrap").valid).toBe(false);
-    expect(store.validateServiceSecret("gateway", rotation.secret).valid).toBe(true);
+    expect((await store.validateServiceSecret("gateway", "gateway-bootstrap")).valid).toBe(false);
+    expect((await store.validateServiceSecret("gateway", rotation.secret)).valid).toBe(true);
 
     clock.current = new Date(fixedNow.getTime() + 599_999);
-    expect(store.validateServiceSecret("gateway", rotation.secret).valid).toBe(true);
+    expect((await store.validateServiceSecret("gateway", rotation.secret)).valid).toBe(true);
     clock.current = new Date(fixedNow.getTime() + 600_000);
-    expect(store.validateServiceSecret("gateway", rotation.secret).valid).toBe(false);
+    expect((await store.validateServiceSecret("gateway", rotation.secret)).valid).toBe(false);
 
     const cappedClock = { current: new Date(fixedNow) };
     const capped = makeStoreWithClock(cappedClock, { SERVICE_KEY_GATEWAY: "oldest-key" });
-    const first = capped.rotate({
+    const first = await capped.rotate({
       serviceId: "gateway",
       expectedGeneration: 1,
       gracePeriodSeconds: 300,
       expiresAt: new Date(fixedNow.getTime() + 120_000).toISOString(),
       context: { requestId: "req_first" },
     });
-    const second = capped.rotate({
+    const second = await capped.rotate({
       serviceId: "gateway",
       expectedGeneration: 2,
       gracePeriodSeconds: 300,
@@ -410,22 +412,22 @@ describe("M2M service-key rotation runtime", () => {
     });
 
     expect(second.previousGraceUntil).toBe(new Date(fixedNow.getTime() + 120_000).toISOString());
-    expect(capped.validateServiceSecret("gateway", "oldest-key").valid).toBe(false);
-    expect(capped.validateServiceSecret("gateway", first.secret).valid).toBe(true);
-    expect(capped.validateServiceSecret("gateway", second.secret).valid).toBe(true);
+    expect((await capped.validateServiceSecret("gateway", "oldest-key")).valid).toBe(false);
+    expect((await capped.validateServiceSecret("gateway", first.secret)).valid).toBe(true);
+    expect((await capped.validateServiceSecret("gateway", second.secret)).valid).toBe(true);
   });
 
-  it("caps rollback expiry, rejects the exact window boundary, and never repeats a rollback", () => {
+  it("caps rollback expiry, rejects the exact window boundary, and never repeats a rollback", async () => {
     const expiredClock = { current: new Date(fixedNow) };
     const expiredStore = makeStoreWithClock(expiredClock, { SERVICE_KEY_GATEWAY: "expired-target" });
-    expiredStore.rotate({
+    await expiredStore.rotate({
       serviceId: "gateway",
       expectedGeneration: 1,
       gracePeriodSeconds: 300,
       context: { requestId: "req_expired_rotation" },
     });
     expiredClock.current = new Date(fixedNow.getTime() + 300_000);
-    expect(() =>
+    await expect(
       expiredStore.rollback({
         serviceId: "gateway",
         expectedGeneration: 2,
@@ -433,17 +435,17 @@ describe("M2M service-key rotation runtime", () => {
         reason: "window closed",
         context: { requestId: "req_expired_rollback" },
       }),
-    ).toThrowError(/Rollback window has expired/);
+    ).rejects.toThrowError(/Rollback window has expired/);
 
     const clock = { current: new Date(fixedNow) };
     const store = makeStoreWithClock(clock, { SERVICE_KEY_GATEWAY: "rollback-target" });
-    const rotation = store.rotate({
+    const rotation = await store.rotate({
       serviceId: "gateway",
       expectedGeneration: 1,
       gracePeriodSeconds: 300,
       context: { requestId: "req_rotation" },
     });
-    const rollback = store.rollback({
+    const rollback = await store.rollback({
       serviceId: "gateway",
       expectedGeneration: 2,
       targetGeneration: 1,
@@ -452,12 +454,12 @@ describe("M2M service-key rotation runtime", () => {
     });
 
     expect(rollback.activeExpiresAt).toBe(new Date(fixedNow.getTime() + 300_000).toISOString());
-    expect(store.validateServiceSecret("gateway", "rollback-target").valid).toBe(true);
-    expect(store.validateServiceSecret("gateway", rotation.secret).valid).toBe(false);
+    expect((await store.validateServiceSecret("gateway", "rollback-target")).valid).toBe(true);
+    expect((await store.validateServiceSecret("gateway", rotation.secret)).valid).toBe(false);
 
     clock.current = new Date(fixedNow.getTime() + 300_000);
-    expect(store.validateServiceSecret("gateway", "rollback-target").valid).toBe(false);
-    expect(() =>
+    expect((await store.validateServiceSecret("gateway", "rollback-target")).valid).toBe(false);
+    await expect(
       store.rollback({
         serviceId: "gateway",
         expectedGeneration: 3,
@@ -465,9 +467,9 @@ describe("M2M service-key rotation runtime", () => {
         reason: "window closed",
         context: { requestId: "req_expired_rollback" },
       }),
-    ).toThrowError(/Rollback target is not the current previous generation/);
+    ).rejects.toThrowError(/Rollback target is not the current previous generation/);
 
-    expect(() =>
+    await expect(
       store.rollback({
         serviceId: "gateway",
         expectedGeneration: 2,
@@ -475,10 +477,10 @@ describe("M2M service-key rotation runtime", () => {
         reason: "duplicate rollback",
         context: { requestId: "req_duplicate_rollback" },
       }),
-    ).toThrowError(/generation precondition failed/);
+    ).rejects.toThrowError(/generation precondition failed/);
   });
 
-  it("fails closed on malformed and incompatible registries without environment fallback", () => {
+  it("fails closed on malformed and incompatible registries without environment fallback", async () => {
     const payloads = ["not-json", JSON.stringify({ schemaVersion: 99 })];
 
     for (const payload of payloads) {
@@ -500,7 +502,7 @@ describe("M2M service-key rotation runtime", () => {
 
       let caught: unknown;
       try {
-        store.validateServiceSecret("gateway", "must-not-fallback");
+        await store.validateServiceSecret("gateway", "must-not-fallback");
       } catch (error) {
         caught = error;
       }
@@ -514,9 +516,9 @@ describe("M2M service-key rotation runtime", () => {
     });
   });
 
-  it("fails closed when a commit marker has no matching recovery artifacts", () => {
+  it("fails closed when a commit marker has no matching recovery artifacts", async () => {
     const store = makeStore({ SERVICE_KEY_GATEWAY: "marker-bootstrap" });
-    store.listMetadata("req_marker_bootstrap");
+    await store.listMetadata("req_marker_bootstrap");
     const markerCommitId = "commit_00000000-0000-0000-0000-000000000000";
     const marker = {
       schemaVersion: 1,
@@ -540,7 +542,7 @@ describe("M2M service-key rotation runtime", () => {
     });
     let caught: unknown;
     try {
-      restarted.validateServiceSecret("gateway", "marker-bootstrap");
+      await restarted.validateServiceSecret("gateway", "marker-bootstrap");
     } catch (error) {
       caught = error;
     }
@@ -564,11 +566,11 @@ describe("M2M service-key rotation runtime", () => {
     expect(snapshot).not.toContain("m2m_service_key_registry_revision");
   });
 
-  it("latches when active marker state has no matching journal", () => {
+  it("latches when active marker state has no matching journal", async () => {
     const store = makeStore({ SERVICE_KEY_GATEWAY: "active-marker-bootstrap" });
-    store.listMetadata("req_active_marker_bootstrap");
+    await store.listMetadata("req_active_marker_bootstrap");
     const predecessor = readRegistry(store);
-    store.rotate({
+    await store.rotate({
       serviceId: "gateway",
       expectedGeneration: 1,
       context: { requestId: "req_active_marker_rotate" },
@@ -583,16 +585,16 @@ describe("M2M service-key rotation runtime", () => {
       now: () => new Date(fixedNow),
     });
 
-    expect(() => restarted.listMetadata("req_active_marker_recovery")).toThrow(M2MKeyStoreError);
-    expect(restarted.readiness()).toEqual({ status: "unavailable", state: "recovery-latched" });
+    await expect(restarted.listMetadata("req_active_marker_recovery")).rejects.toThrow(M2MKeyStoreError);
+    expect(await restarted.readiness()).toEqual({ status: "unavailable", state: "recovery-latched" });
     expect(readFileSync(`${store.getPath()}.marker`, "utf8")).toContain(marker.commitId);
   });
 
-  it("latches when the recovery journal does not match the marker document", () => {
+  it("latches when the recovery journal does not match the marker document", async () => {
     const store = makeStore({ SERVICE_KEY_GATEWAY: "mismatched-journal-bootstrap" });
-    store.listMetadata("req_mismatched_journal_bootstrap");
+    await store.listMetadata("req_mismatched_journal_bootstrap");
     const predecessor = readRegistry(store);
-    store.rotate({
+    await store.rotate({
       serviceId: "gateway",
       expectedGeneration: 1,
       context: { requestId: "req_mismatched_journal_rotate" },
@@ -608,18 +610,18 @@ describe("M2M service-key rotation runtime", () => {
       now: () => new Date(fixedNow),
     });
 
-    expect(() => restarted.listMetadata("req_mismatched_journal_recovery")).toThrow(M2MKeyStoreError);
-    expect(restarted.readiness()).toEqual({ status: "unavailable", state: "recovery-latched" });
+    await expect(restarted.listMetadata("req_mismatched_journal_recovery")).rejects.toThrow(M2MKeyStoreError);
+    expect(await restarted.readiness()).toEqual({ status: "unavailable", state: "recovery-latched" });
     expect(readFileSync(join(dirname(store.getPath()), marker.journalFile), "utf8")).not.toContain(
       committed.lastCommitId,
     );
   });
 
-  it("latches when a predecessor-qualified marker has no candidate artifact", () => {
+  it("latches when a predecessor-qualified marker has no candidate artifact", async () => {
     const store = makeStore({ SERVICE_KEY_GATEWAY: "missing-candidate-bootstrap" });
-    store.listMetadata("req_missing_candidate_bootstrap");
+    await store.listMetadata("req_missing_candidate_bootstrap");
     const predecessor = readRegistry(store);
-    store.rotate({
+    await store.rotate({
       serviceId: "gateway",
       expectedGeneration: 1,
       context: { requestId: "req_missing_candidate_rotate" },
@@ -636,16 +638,16 @@ describe("M2M service-key rotation runtime", () => {
       now: () => new Date(fixedNow),
     });
 
-    expect(() => restarted.listMetadata("req_missing_candidate_recovery")).toThrow(M2MKeyStoreError);
-    expect(restarted.readiness()).toEqual({ status: "unavailable", state: "recovery-latched" });
+    await expect(restarted.listMetadata("req_missing_candidate_recovery")).rejects.toThrow(M2MKeyStoreError);
+    expect(await restarted.readiness()).toEqual({ status: "unavailable", state: "recovery-latched" });
     expect(readFileSync(`${store.getPath()}.marker`, "utf8")).toContain(marker.commitId);
   });
 
-  it("latches when candidate and journal lack the marker mutation audit evidence", () => {
+  it("latches when candidate and journal lack the marker mutation audit evidence", async () => {
     const store = makeStore({ SERVICE_KEY_GATEWAY: "unrelated-audit-bootstrap" });
-    store.listMetadata("req_unrelated_audit_bootstrap");
+    await store.listMetadata("req_unrelated_audit_bootstrap");
     const predecessor = readRegistry(store);
-    store.rotate({
+    await store.rotate({
       serviceId: "gateway",
       expectedGeneration: 1,
       context: { requestId: "req_unrelated_audit_rotate" },
@@ -668,19 +670,19 @@ describe("M2M service-key rotation runtime", () => {
       now: () => new Date(fixedNow),
     });
 
-    expect(() => restarted.listMetadata("req_unrelated_audit_recovery")).toThrow(M2MKeyStoreError);
-    expect(restarted.readiness()).toEqual({ status: "unavailable", state: "recovery-latched" });
+    await expect(restarted.listMetadata("req_unrelated_audit_recovery")).rejects.toThrow(M2MKeyStoreError);
+    expect(await restarted.readiness()).toEqual({ status: "unavailable", state: "recovery-latched" });
     expect(readFileSync(join(dirname(store.getPath()), marker.candidateFile), "utf8")).toContain(
       marker.commitId,
     );
   });
 
-  it("recovers initial bootstrap documents with multiple matching bootstrap events", () => {
+  it("recovers initial bootstrap documents with multiple matching bootstrap events", async () => {
     const store = makeStore({
       SERVICE_KEY_GATEWAY: "initial-recovery-gateway",
       SERVICE_KEY_ADMIN_DASHBOARD: "initial-recovery-dashboard",
     });
-    store.listMetadata("req_initial_recovery_bootstrap");
+    await store.listMetadata("req_initial_recovery_bootstrap");
     const initial = readRegistry(store);
     const marker = markerFor(store, initial, null);
     rmSync(store.getPath(), { force: true });
@@ -694,7 +696,7 @@ describe("M2M service-key rotation runtime", () => {
       now: () => new Date(fixedNow),
     });
 
-    expect(restarted.listMetadata("req_initial_recovery_complete").revision).toBe(2);
+    expect((await restarted.listMetadata("req_initial_recovery_complete")).revision).toBe(2);
     const recovered = readRegistry(restarted);
     expect(recovered.auditEvents.some(
       (event) =>
@@ -703,11 +705,11 @@ describe("M2M service-key rotation runtime", () => {
     )).toBe(true);
   });
 
-  it("completes valid post-rename recovery with a mandatory journal", () => {
+  it("completes valid post-rename recovery with a mandatory journal", async () => {
     const store = makeStore({ SERVICE_KEY_GATEWAY: "post-rename-bootstrap" });
-    store.listMetadata("req_post_rename_bootstrap");
+    await store.listMetadata("req_post_rename_bootstrap");
     const predecessor = readRegistry(store);
-    store.rotate({
+    await store.rotate({
       serviceId: "gateway",
       expectedGeneration: 1,
       context: { requestId: "req_post_rename_rotate" },
@@ -723,7 +725,7 @@ describe("M2M service-key rotation runtime", () => {
       now: () => new Date(fixedNow),
     });
 
-    expect(restarted.readiness()).toEqual({ status: "healthy", state: "ready" });
+    expect(await restarted.readiness()).toEqual({ status: "healthy", state: "ready" });
     const recovered = readRegistry(restarted);
     expect(recovered.revision).toBe(3);
     expect(recovered.auditEvents.some(
@@ -734,11 +736,11 @@ describe("M2M service-key rotation runtime", () => {
     expect(() => readFileSync(`${store.getPath()}.marker`)).toThrow();
   });
 
-  it("cleans a marker left after the recovery event without appending again", () => {
+  it("cleans a marker left after the recovery event without appending again", async () => {
     const store = makeStore({ SERVICE_KEY_GATEWAY: "recovery-event-bootstrap" });
-    store.listMetadata("req_recovery_event_bootstrap");
+    await store.listMetadata("req_recovery_event_bootstrap");
     const predecessor = readRegistry(store);
-    store.rotate({
+    await store.rotate({
       serviceId: "gateway",
       expectedGeneration: 1,
       context: { requestId: "req_recovery_event_rotate" },
@@ -773,7 +775,7 @@ describe("M2M service-key rotation runtime", () => {
       now: () => new Date(fixedNow),
     });
 
-    expect(restarted.readiness()).toEqual({ status: "healthy", state: "ready" });
+    expect(await restarted.readiness()).toEqual({ status: "healthy", state: "ready" });
     const persisted = readRegistry(restarted);
     expect(persisted.revision).toBe(3);
     expect(persisted.auditEvents.filter(
@@ -936,19 +938,19 @@ describe("M2M service-key rotation runtime", () => {
   it("persists expiry markers idempotently and exports bounded M2M metrics", async () => {
     const clock = { current: new Date(fixedNow) };
     const store = makeStoreWithClock(clock, { SERVICE_KEY_GATEWAY: "metrics-bootstrap" });
-    const rotation = store.rotate({
+    const rotation = await store.rotate({
       serviceId: "gateway",
       expectedGeneration: 1,
       gracePeriodSeconds: 300,
       expiresAt: new Date(fixedNow.getTime() + 3_600_000).toISOString(),
       context: { requestId: "req_metrics_rotation" },
     });
-    expect(store.validateServiceSecret("gateway", rotation.secret).valid).toBe(true);
-    expect(store.validateServiceSecret("gateway", "not-the-key").valid).toBe(false);
+    expect((await store.validateServiceSecret("gateway", rotation.secret)).valid).toBe(true);
+    expect((await store.validateServiceSecret("gateway", "not-the-key")).valid).toBe(false);
 
     clock.current = new Date(fixedNow.getTime() + 3_600_000);
-    const firstMetadata = store.listMetadata("req_metrics_threshold");
-    const secondMetadata = store.listMetadata("req_metrics_threshold_repeat");
+    const firstMetadata = await store.listMetadata("req_metrics_threshold");
+    const secondMetadata = await store.listMetadata("req_metrics_threshold_repeat");
     expect(firstMetadata.revision).toBe(3);
     expect(secondMetadata.revision).toBe(3);
 

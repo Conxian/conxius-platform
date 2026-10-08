@@ -21,6 +21,7 @@ This document tracks alignment between `conxius-platform` (public) and `conxian-
 | `docs/OPERATING_MODEL_LIFECYCLE_CONTROL_OWNERSHIP.md` | Lifecycle control gates | Implement per spec |
 | `apps/control-plane` scaffold | BOS admin interface | Align API contracts |
 | PR #702 | Lifecycle control | Review and implement |
+| Issue #1317 | Org upgrade, 30 bps fee model & turnkey framework | Integrated into  and OpenSpec  |
 
 ### From conxius-platform
 

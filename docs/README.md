@@ -7,6 +7,7 @@ This index routes readers through the four-tier model defined by the [Informatio
 - [Conxian Unified Theory v2](./CONXIAN_UNIFIED_THEORY_v2.md) — canonical documentation router
 - [System Architecture](./architecture/SOVEREIGN_REPR_2026.md) — current architecture baseline
 - [Strategic Alignment](./architecture/ALIGNMENT.md) — ecosystem positioning
+- [Conxian Strategic Analysis Research (CON-1317)](./architecture/CONXIAN_STRATEGIC_ANALYSIS_RESEARCH_1317.md) — ecosystem taxonomy, quantitative fee models, BitVM2/3 cost targets, and turnkey enterprise framework
 - [Repository Taxonomy](./REPOSITORY_TAXONOMY.md) — repository inventory and boundaries
 - [Organization PaaS Blueprint](./architecture/ORGANIZATION_PAAS_BLUEPRINT_2026.md) — platform role, contracts, and delivery roadmap
 - [Upgrade Alignment Contract](./architecture/UPGRADE_ALIGNMENT_CONTRACT_2026.md) — versioning, capabilities, evidence, and neutral M2M boundaries

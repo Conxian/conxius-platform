@@ -12,6 +12,24 @@
 6. **Routing Only**: Conxian is a routing/infrastructure layer — we never touch user data or funds directly. We route payments, settlements, and messages between protocols. We do not hold custody, manage wallets, or execute trades.
 7. **Protocol Handoff**: The Conxian protocol/DeFi system creates regulatory risks for Conxian-Labs. Community should own the protocol — conxius-platform manages infrastructure, not the DeFi protocol itself.
 
+## Organization Repository Status
+
+> Canonical source of truth: `.github-private/docs/ECOSYSTEM_REGISTRY.json`. This table is a convenience mirror; on drift the registry wins.
+
+| Repo | Strategic Role | Layer | Status (2026-10-08) |
+|------|---------------|-------|----------------------|
+| `conxius-wallet` | The Vault | Product | Beta (partial) — native L1 sign+broadcast done; BDK sync-only + 12 non-L1 managers fail-closed (#1283) |
+| `conxian-nexus` | The Engine | Infra | Beta (approaching Stable) |
+| `conxian-gateway` | The Pipe | Infra | Code-complete, undeployed (~11 owner secrets, #466) |
+| `conxius-platform` | The UI | Product | Active |
+| `lib-conxian-core` | — | SDK | Stable |
+| `conxius-enclave-sdk` | — | SDK | Beta / conditional (no value-bearing signing) |
+| `conxian_market` | — | Product | Active (`@conxian/market-sdk` published) |
+
+**Layer map**: SDK (`lib-conxian-core`, `conxius-enclave-sdk`) → Infra (`conxian-gateway`, `conxian-nexus`) → Product (`conxius-wallet`, `conxian_market`, `conxius-platform`, `conxian-labs-site`, `conxian.github.io`) → Governance (`conxian-business`, `.github`, `.github-private`).
+
+**Protocol Handoff status** (Directive #7): infrastructure-only ownership is codified; the community-owned protocol structure, contract transfer, and legal docs remain deferred to #1167 (owner/legal decision — not agent-executable).
+
 ## Implementation Patterns
 
 - **Rust (Gateway)**: Use Actix-web for the API and `tokio` for background orchestration. Maintain modular module boundaries (Mesh, Nexus, Compliance).

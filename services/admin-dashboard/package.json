@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@conxian/market-sdk": "^0.2.4",
+    "@neondatabase/serverless": "^1.2.0",
     "imapflow": "^2.0.7",
     "jose": "^6.2.12",
     "mailparser": "^3.9.28",

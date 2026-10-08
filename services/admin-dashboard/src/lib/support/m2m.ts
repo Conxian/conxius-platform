@@ -13,7 +13,7 @@ import { NextResponse } from "next/server";
 import { getApiTokenStore, isValidTokenFormat } from "./apiTokens";
 import { getM2MKeyStore, parseM2MServiceKeyHeader } from "./m2mKeyStore";
 import { timingSafeStringEqual } from "./m2mKeyHttp";
-import { isRotatableServiceId, type RotatableServiceId } from "./m2mKeyTypes";
+import { isRotatableServiceId, type M2MServiceValidationResult, type RotatableServiceId } from "./m2mKeyTypes";
 
 // Service identifiers for the platform.
 export const SERVICE_IDS = [
@@ -532,7 +532,7 @@ export class M2MAuthenticator {
   }
 
   /** Validate a registry-backed service key from X-Service-Key: <service-id>:<secret>. */
-  validateServiceKey(headerValue: string | null, expectedServiceId?: RotatableServiceId): AuthResult {
+  async validateServiceKey(headerValue: string | null, expectedServiceId?: RotatableServiceId): Promise<AuthResult> {
     if (!headerValue) {
       return { valid: false, error: "Missing service key" };
     }
@@ -551,9 +551,9 @@ export class M2MAuthenticator {
       return { valid: false, error: "Invalid service key format" };
     }
 
-    let validation: ReturnType<ReturnType<typeof getM2MKeyStore>["validateServiceSecret"]>;
+    let validation: M2MServiceValidationResult;
     try {
-      validation = getM2MKeyStore().validateServiceSecret(parsed.serviceId, parsed.secret);
+      validation = await getM2MKeyStore().validateServiceSecret(parsed.serviceId, parsed.secret);
     } catch {
       return { valid: false, error: "Service key registry unavailable", unavailable: true };
     }
@@ -745,7 +745,7 @@ export class M2MAuthenticator {
     const apiKeyResult = this.validateApiKey(request.headers.get("X-Admin-API-Key"));
     if (apiKeyResult.valid) return apiKeyResult;
 
-    const serviceKeyResult = this.validateServiceKey(request.headers.get("X-Service-Key"));
+    const serviceKeyResult = await this.validateServiceKey(request.headers.get("X-Service-Key"));
     if (serviceKeyResult.valid) return serviceKeyResult;
 
     const externalKeyResult = this.validateExternalKey(request.headers.get("X-External-Key"));

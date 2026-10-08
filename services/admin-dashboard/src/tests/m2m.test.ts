@@ -138,26 +138,26 @@ describe("M2M authentication", () => {
   });
 
   describe("legacy credential compatibility", () => {
-    it("compares legacy API keys in constant time across length differences", () => {
+    it("compares legacy API keys in constant time across length differences", async () => {
       expect(timingSafeStringEqual("test-admin-key", "test-admin-key")).toBe(true);
       expect(timingSafeStringEqual("test-admin-key", "test-admin-key-extra")).toBe(false);
       expect(timingSafeStringEqual("wrong-admin-key", "test-admin-key")).toBe(false);
     });
 
-    it("validates the configured admin API key", () => {
+    it("validates the configured admin API key", async () => {
       const result = authenticator.validateApiKey("test-admin-key");
       expect(result).toMatchObject({ valid: true, source: "api-key" });
       expect(result.scopes).toContain("m2m:internal");
     });
 
-    it("validates service keys and preserves their permission ceilings", () => {
-      const result = authenticator.validateServiceKey("gateway:test-gateway-key");
+    it("validates service keys and preserves their permission ceilings", async () => {
+      const result = await authenticator.validateServiceKey("gateway:test-gateway-key");
       expect(result).toMatchObject({ valid: true, serviceId: "gateway", source: "service-key" });
       expect(result.scopes).toEqual([...SERVICE_PERMISSIONS.gateway]);
-      expect(authenticator.validateServiceKey("gateway:wrong-key").valid).toBe(false);
+      expect((await authenticator.validateServiceKey("gateway:wrong-key")).valid).toBe(false);
     });
 
-    it("validates external keys with explicit scopes", () => {
+    it("validates external keys with explicit scopes", async () => {
       const result = authenticator.validateExternalKey("external-key-1");
       expect(result).toMatchObject({ valid: true, serviceId: "external", source: "external-key" });
       expect(result.scopes).toEqual(["read:admin", "read:metrics"]);
@@ -380,7 +380,7 @@ describe("M2M authentication", () => {
   });
 
   describe("adversarial JWT input handling", () => {
-    it("accepts the exact maximum token size and rejects one byte over the limit", () => {
+    it("accepts the exact maximum token size and rejects one byte over the limit", async () => {
       const tokenAtLimit = `${"a".repeat(MAX_BEARER_TOKEN_BYTES - 4)}.b.c`;
       const tokenOverLimit = `${"a".repeat(MAX_BEARER_TOKEN_BYTES - 3)}.b.c`;
 
@@ -388,7 +388,7 @@ describe("M2M authentication", () => {
       expect(parseBearerToken(`Bearer ${tokenOverLimit}`).valid).toBe(false);
     });
 
-    it("requires exactly one Bearer separator and rejects unusual surrounding whitespace", () => {
+    it("requires exactly one Bearer separator and rejects unusual surrounding whitespace", async () => {
       const validToken = "a.b.c";
 
       expect(parseBearerToken(`bearer ${validToken}`)).toMatchObject({ valid: true, token: validToken });

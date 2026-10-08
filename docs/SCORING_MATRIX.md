@@ -99,3 +99,4 @@ allocation, beneficiary, custody model, payout route, or deployment state.
 - **G-59** remains a future read-only Gateway/Nexus integration, requiring a
   separate OpenSpec change.
 | **G-71** | **Autonomous Cross-Repository Knowledge Store & OpenSpec Alignment Diagnostic Engine** | 10 | 6 | 10 | **26** | [Repository Taxonomy](./REPOSITORY_TAXONOMY.md) |
+| **G-72** | **Turnkey Enterprise Infrastructure & Quantitative Economics Alignment** | 9 | 8 | 9 | **26** | [Strategic Analysis Research](./architecture/CONXIAN_STRATEGIC_ANALYSIS_RESEARCH_1317.md) — verified by OpenSpec proposal  |

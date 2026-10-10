@@ -13,27 +13,28 @@ Ownership authority remains defined in each repository's root `CODEOWNERS` file.
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | [`Conxian/.github-private`](https://github.com/Conxian/.github-private) | Internal organization administrators and security maintainers | Private | TBD (owner confirmation required; `CODEOWNERS` not found) | Organization governance (private) | Hosts private organization defaults, policy automation, and internal templates | Active (not archived; last push 2026-06-08). Required control snapshot: [`docs/runbooks/GITHUB_PRIVATE_CONTROL_SNAPSHOT.md`](./runbooks/GITHUB_PRIVATE_CONTROL_SNAPSHOT.md). |
 | [`Conxian/.github`](https://github.com/Conxian/.github) | Conxian maintainers and external contributors using shared templates | Public | `@Conxian/Admins` | Organization governance (public) | Provides shared community health files, issue templates, and contribution defaults | Active (not archived; last push 2026-04-18) |
-| [`Conxian/Conxian`](https://github.com/Conxian/Conxian) | Protocol engineers, integrators, and auditors | Public | `@botshelomokoka`, `@admin-conxian-labs` | Flagship protocol/contracts | Implements the Stacks-native automated monetary platform core | Baseline v0.2.4 (Active; last push 2026-06-20) |
-| [`Conxian/conxian_ui`](https://github.com/Conxian/conxian_ui) | Institutional dashboard users and frontend engineers | Public | `@botshelomokoka`, `@admin-conxian-labs` | Product UI | Delivers the primary web dashboard/user interface surface | Baseline v0.2.4 (Active; last push 2026-06-20) |
-| [`Conxian/conxius-orbit`](https://github.com/Conxian/conxius-orbit) | DevOps engineers and release operators | Public | `@botshelomokoka`, `@admin-conxian-labs` | Deployment tooling (GUI/CLI) | Provides contract deployment and operator tooling for the ecosystem | Baseline v0.2.4 (Active; last push 2026-06-20) |
+| [`Conxian/Conxian`](https://github.com/Conxian/Conxian) | Protocol engineers, integrators, and auditors | Public | `@botshelomokoka`, `@admin-conxian-labs` | Flagship protocol/contracts | Implements the Stacks-native automated monetary platform core | **Deprecated (deleted — HTTP 404)** |
+| [`Conxian/conxian_ui`](https://github.com/Conxian/conxian_ui) | Institutional dashboard users and frontend engineers | Public | `@botshelomokoka`, `@admin-conxian-labs` | Product UI | Delivers the primary web dashboard/user interface surface | **Deprecated (deleted — HTTP 404)** |
+| [`Conxian/conxius-orbit`](https://github.com/Conxian/conxius-orbit) | DevOps engineers and release operators | Public | `@botshelomokoka`, `@admin-conxian-labs` | Deployment tooling (GUI/CLI) | Provides contract deployment and operator tooling for the ecosystem | **Deprecated (deleted — HTTP 404)** |
 | [`Conxian/conxius-wallet`](https://github.com/Conxian/conxius-wallet) | Wallet users plus mobile/security engineers | Public | `@botshelomokoka`, `@admin-conxian-labs` | Product wallet client | Delivers sovereign wallet functionality with secure enclave signing flows | Baseline v0.2.4 (Active; last push 2026-06-20) |
 | [`Conxian/conxian-labs-site`](https://github.com/Conxian/conxian-labs-site) | Public ecosystem audience, partners, and communications team | Public | `@botshelomokoka`, `@admin-conxian-labs` | Public website | Publishes Conxian Labs web presence and public-facing messaging | Baseline v0.2.4 (Active; last push 2026-06-20) |
 | [`Conxian/conxian-gateway`](https://github.com/Conxian/conxian-gateway) | Backend/API engineers and integration partners | Public | `@botshelomokoka`, `@admin-conxian-labs` | Middleware/API service | Exposes middleware bridging Bitcoin/Stacks flows with institutional interfaces | Baseline v0.2.4 (Active; last push 2026-06-20) |
 | [`Conxian/lib-conxian-core`](https://github.com/Conxian/lib-conxian-core) | Core protocol developers and SDK consumers | Public | `@botshelomokoka`, `@admin-conxian-labs`, `@Conxian/mobile` | Shared core library/SDK | Provides shared protocol primitives and reusable core logic | Baseline v0.2.4 (Active; last push 2026-06-20) |
 | [`Conxian/conxius-platform`](https://github.com/Conxian/conxius-platform) | Platform/infrastructure engineers and operators | Public | `@botshelomokoka`, `@admin-conxian-labs` | Control plane/orchestration | Operates the local-first control plane, orchestration, and operational topology | Baseline v0.2.5 (Active; last push 2026-06-20) |
 | [`Conxian/conxian-nexus`](https://github.com/Conxian/conxian-nexus) | State/indexing engineers and backend maintainers | Public | `@Conxian/core-devs`, `@botshelomokoka`, `@admin-conxian-labs` | State/indexing service | Maintains the Nexus/Glass Node API bridge and state synchronization surface | Baseline v0.2.4 (Active; last push 2026-06-20) |
-| [`Conxian/elizaos-plugin-conxian`](https://github.com/Conxian/elizaos-plugin-conxian) | AI agent developers and integrators | Public | `@botshelomokoka`, `@admin-conxian-labs` | AI plugin (Platform Service) | ElizaOS plugin for Conxian Gateway and multidimensional metrics | Baseline v0.2.5 (Active; last push 2026-07-03) |
+| [`Conxian/elizaos-plugin-conxian`](https://github.com/Conxian/elizaos-plugin-conxian) | AI agent developers and integrators | Public | `@botshelomokoka`, `@admin-conxian-labs` | AI plugin (Platform Service) | ElizaOS plugin for Conxian Gateway and multidimensional metrics | **Deprecated (deleted — HTTP 404)** |
 | [`Conxian/conxian-business`](https://github.com/Conxian/conxian-business) | Internal leadership, strategy, legal, and operations teams | Private | `@botshelomokoka`, `@admin-conxian-labs` | Business operations (private) | Stores non-public strategic, legal, and operational documentation; scaffolds `apps/control-plane` for BOS admin interface; coordinates lifecycle control with conxius-platform | Baseline v0.2.4 (Active; last push 2026-06-20) |
 | [`Conxian/conxius-enclave-sdk`](https://github.com/Conxian/conxius-enclave-sdk) | Security/mobile engineers integrating hardware enclave capabilities | Public | `@botshelomokoka`, `@admin-conxian-labs` | Security/enclave SDK | Provides cross-platform enclave abstractions for sovereign computing | Baseline v0.2.4 (Active; last push 2026-06-20) |
-| [`Conxian/demo-repository`](https://github.com/Conxian/demo-repository) | Demo/scaffold audience, contributors evaluating Conxian ecosystem | Public | `@botshelomokoka`, `@admin-conxian-labs` | Demo/scaffold | Minimal scaffold repository for demonstrating Conxian ecosystem integration patterns | Active (pending hardening per [conxius-platform#1064](https://github.com/Conxian/conxius-platform/issues/1064)): governance files and lock file required before investor-ready status. |
+| [`Conxian/demo-repository`](https://github.com/Conxian/demo-repository) | Demo/scaffold audience, contributors evaluating Conxian ecosystem | Public | `@botshelomokoka`, `@admin-conxian-labs` | Demo/scaffold | Minimal scaffold repository for demonstrating Conxian ecosystem integration patterns | **Deprecated (deleted — HTTP 404; supersedes [conxius-platform#1064](https://github.com/Conxian/conxius-platform/issues/1064))** |
+| [`Conxian/conxian_market`](https://github.com/Conxian/conxian_market) | AI-agent developers and marketplace integrators | Public | `@botshelomokoka`, `@admin-conxian-labs` | Market / settlement service | Discovery, deployment, settlement, and escrow for autonomous AI labor | Active (not archived) |
+| [`Conxian/conxian.github.io`](https://github.com/Conxian/conxian.github.io) | Public ecosystem audience | Public | `@botshelomokoka`, `@admin-conxian-labs` | Organization GitHub Pages site | Hosts the Conxian organization GitHub Pages site | Active (not archived) |
+| [`Conxian/conxian-org-site`](https://github.com/Conxian/conxian-org-site) | Public ecosystem audience | Public | `@botshelomokoka`, `@admin-conxian-labs` | Organization website (MDX) | Publishes the Conxian organization website (`https://www.conxian.org`) | Active (not archived) |
 
 ## Narrative taxonomy (summary)
 
 ### 1. Platform, product, and protocol surfaces
-- `Conxian/Conxian`
 - `Conxian/conxius-platform`
-- `Conxian/elizaos-plugin-conxian`
-- `Conxian/conxian_ui`
+- `Conxian/conxian_market`
 - `Conxian/conxius-wallet`
 
 ### 2. Infrastructure, middleware, and shared runtime
@@ -41,7 +42,6 @@ Ownership authority remains defined in each repository's root `CODEOWNERS` file.
 - `Conxian/conxian-nexus`
 - `Conxian/lib-conxian-core`
 - `Conxian/conxius-enclave-sdk`
-- `Conxian/conxius-orbit`
 
 ### 3. Organization governance and operations
 - `Conxian/.github`
@@ -50,9 +50,15 @@ Ownership authority remains defined in each repository's root `CODEOWNERS` file.
 
 ### 4. Public communications surface
 - `Conxian/conxian-labs-site`
+- `Conxian/conxian.github.io`
+- `Conxian/conxian-org-site`
 
-### 5. Demo/scaffold surfaces
-- `Conxian/demo-repository` (pending hardening per [conxius-platform#1064](https://github.com/Conxian/conxius-platform/issues/1064))
+### 5. Deprecated / deleted repositories (historical)
+- `Conxian/Conxian` (flagship protocol/contracts — deleted)
+- `Conxian/conxian_ui` (product UI — deleted)
+- `Conxian/conxius-orbit` (deployment tooling — deleted)
+- `Conxian/elizaos-plugin-conxian` (AI plugin — deleted)
+- `Conxian/demo-repository` (demo/scaffold — deleted)
 
 ## Mandatory governance control-review inclusion (do not omit)
 
@@ -64,7 +70,7 @@ Control-review passes must include the repositories and snapshot evidence below.
 
 ## Control inheritance for chain-specific deployment repos
 
-Chain-specific deployment/operator repositories (including `Conxian/conxius-orbit` for Conxius Orbit) inherit parent control expectations from `Conxian/conxius-platform`:
+Chain-specific deployment/operator repositories inherit parent control expectations from `Conxian/conxius-platform` (the former `Conxian/conxius-orbit` deployment-tooling repository has been deleted):
 
 - lifecycle and governance controls in [`GOVERNANCE.md`](../GOVERNANCE.md),
 - production-boundary and operator-safety constraints in [`docs/PRODUCTION_BOUNDARY.md`](./PRODUCTION_BOUNDARY.md), and
@@ -94,6 +100,6 @@ All entries in this register belong to the **live execution lane** (active work 
 | `lib-conxian-core` | `Conxian` | Live execution | Transitional protocol standardization (planned/in progress) | Redesign defines this repository as shared source of truth for cryptographic/protocol logic, compiled to Wasm for client and middleware reuse. | Unified shared primitives/Wasm SDK across UI, wallet, and BFF components. | Phase 7 Sovereign Redesign (`2026-Q3` target). | `docs/architecture/SOVEREIGN_REPR_2026.md`; `GAPS.md` §4 |
 | `conxian-nexus` | `Conxian` | Live execution | Transitional indexer redesign (planned) | Phase 7 tracks Nexus transition from current indexer role to IVC-based Nexus OS design. | Nexus OS / IVC-driven verifiable off-chain computation interface. | Phase 7 Sovereign Redesign (`2026-Q3` target). | `GAPS.md` §4; `SYSTEM_GRAPH.md` repository roles |
 | `admin-pulse-bos` | `Conxian` | Live execution | Intentional dev-only exception (active) | Explicitly designated as dev-only and excluded from production boundary wiring. | Remain isolated from production unless production-boundary policy is explicitly revised. | `TBD` (review cadence not yet documented). | `docs/PRODUCTION_BOUNDARY.md` (Dev-only surfaces) |
-| `demo-repository` | `Conxian` | Live execution | Investor-readiness hardening (in progress) | Live repo review found missing governance files, no lock file, and unpinned workflows. | Governance-hardened demo repo with lock file, SHA-pinned actions, and proper READMEs. | `conxius-platform#1064` resolution | `conxius-platform#1064` |
+| `demo-repository` | `Conxian` | Historical context | Deleted (repository removed) | Live repo review found missing governance files, no lock file, and unpinned workflows; the repository has since been deleted (HTTP 404). | N/A — repository removed. | Superseded by deletion | `conxius-platform#1064` |
 | `conxian-business` | `Conxian` | Live execution | Approved Private Visibility | Proprietary business operations, strategic roadmap, legal/financial records, and administrative control-plane scaffolds must remain confidential. | Maintain private visibility boundary; prevent exposure of business secrets. | Quarterly audit | `docs/BUSINESS_REPO_ALIGNMENT.md` (`CON-324`) |
 | `.github-private` | `Conxian` | Live execution | Approved Private Visibility | Private default templates, sensitive workflow runner overrides, and internal policy automation configs are restricted to org admins. | Maintain private visibility boundary; prevent exposure of administrative infra. | Quarterly audit | `docs/runbooks/GITHUB_PRIVATE_CONTROL_SNAPSHOT.md` (`CON-324`) |

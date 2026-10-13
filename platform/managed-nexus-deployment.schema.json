@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://conxian-labs.com/schemas/managed-nexus-deployment.v1.json",
+  "title": "Managed Nexus Deployment Intent",
+  "type": "object",
+  "required": ["schemaVersion", "tenantId", "environment", "provider", "release", "topology", "bitcoin", "zkvm", "secrets", "sla", "evidence"],
+  "properties": {
+    "schemaVersion": { "const": "conxian.managed-nexus-deployment.v1" },
+    "tenantId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{2,62}$" },
+    "environment": { "enum": ["development", "staged", "production"] },
+    "provider": {
+      "type": "object",
+      "required": ["name", "region", "failureDomains"],
+      "properties": {
+        "name": { "enum": ["aws", "gcp"] },
+        "region": { "type": "string", "minLength": 2, "maxLength": 64 },
+        "failureDomains": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 2, "maxLength": 128 } }
+      },
+      "additionalProperties": false
+    },
+    "release": {
+      "type": "object",
+      "required": ["image", "imageDigest", "sourceCommit"],
+      "properties": {
+        "image": { "type": "string", "minLength": 3, "maxLength": 512 },
+        "imageDigest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "sourceCommit": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+      },
+      "additionalProperties": false
+    },
+    "topology": {
+      "type": "object",
+      "required": ["replicas", "nodePublicIngress", "loadBalancer", "healthPath"],
+      "properties": {
+        "replicas": { "type": "integer", "minimum": 1, "maximum": 64 },
+        "nodePublicIngress": { "const": false },
+        "loadBalancer": { "type": "boolean" },
+        "healthPath": { "type": "string", "pattern": "^/[A-Za-z0-9_./-]{1,127}$" }
+      },
+      "additionalProperties": false
+    },
+    "bitcoin": {
+      "type": "object",
+      "required": ["network", "minimumConfirmations", "headerSource"],
+      "properties": {
+        "network": { "enum": ["mainnet", "testnet", "signet"] },
+        "minimumConfirmations": { "type": "integer", "minimum": 1, "maximum": 144 },
+        "headerSource": { "type": "string", "format": "uri", "pattern": "^https://" }
+      },
+      "additionalProperties": false
+    },
+    "zkvm": {
+      "type": "object",
+      "required": ["backends", "programDigests"],
+      "properties": {
+        "backends": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["sp1", "risc0"] } },
+        "programDigests": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "secrets": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "type": "string", "pattern": "^ref://[A-Za-z0-9_./:-]{3,512}$" }
+    },
+    "sla": {
+      "type": "object",
+      "required": ["availabilityTarget", "rtoMinutes", "rpoMinutes"],
+      "properties": {
+        "availabilityTarget": { "type": "number", "minimum": 0.9, "maximum": 0.99999 },
+        "rtoMinutes": { "type": "integer", "minimum": 1, "maximum": 1440 },
+        "rpoMinutes": { "type": "integer", "minimum": 0, "maximum": 1440 }
+      },
+      "additionalProperties": false
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["sink", "retentionDays"],
+      "properties": {
+        "sink": { "type": "string", "pattern": "^ref://[A-Za-z0-9_./:-]{3,512}$" },
+        "retentionDays": { "type": "integer", "minimum": 30, "maximum": 3650 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

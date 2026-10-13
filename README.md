@@ -12,6 +12,8 @@ This repository uses formal versioned releases tracked in `CHANGELOG.md` and pub
 
 Conxian provides non-custodial control and orchestration surfaces; it does not take possession of customer funds or operate as a raw customer-data system of record.
 
+Conxian is tokenless and uses Bitcoin L1 as the production verification root. Public protocol components belong to their `conxian.org` owner repositories. This repository owns the commercial `conxian-labs.com` deployment intent, tenant operations, evidence, and SLA surfaces; it does not absorb Nexus proof logic, Gateway routing, or Enclave signing.
+
 ## Purpose
 
 Provide platform configuration, orchestration, CI/release automation, and environment scaffolding for contributors and maintainers working across the Conxian ecosystem.

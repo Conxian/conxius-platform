@@ -14,6 +14,8 @@ Conxian provides non-custodial control and orchestration surfaces; it does not t
 
 Conxian is tokenless and uses Bitcoin L1 as the production verification root. Public protocol components belong to their `conxian.org` owner repositories. This repository owns the commercial `conxian-labs.com` deployment intent, tenant operations, evidence, and SLA surfaces; it does not absorb Nexus proof logic, Gateway routing, or Enclave signing.
 
+The system serves universal chains, networks, layers, and assets. [Provider registration discovery](docs/architecture/PROVIDER_REGISTRATION_DISCOVERY_2026.md) keeps process registrations separate from health and production-qualified operations; inventory counts cannot authorize signing or deployment.
+
 ## Purpose
 
 Provide platform configuration, orchestration, CI/release automation, and environment scaffolding for contributors and maintainers working across the Conxian ecosystem.

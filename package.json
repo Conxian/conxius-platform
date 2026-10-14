@@ -21,6 +21,7 @@
     "check:dependencies": "pnpm run check:dependency-consistency",
     "check:lifecycle-control": "bash scripts/ci/run-lifecycle-control-gates.sh",
     "check:service-catalog": "python3 scripts/verify_service_catalog.py",
+    "check:managed-nexus-deployment": "python3 scripts/verify_managed_nexus_deployment.py",
     "check:org-readiness": "python3 scripts/verify_org_readiness.py",
     "check:repository-references": "python3 scripts/verify_repository_references.py",
     "test:org-readiness": "tsx --test scripts/verify_org_readiness.test.ts",

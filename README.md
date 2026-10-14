@@ -87,7 +87,7 @@ This repository is maintained by Conxian Labs. It supports development and opera
 
 ## Quick start
 
-Last verified: 2026-07-27
+Last verified: 2026-09-30
 
 ```bash
 make init
@@ -109,9 +109,20 @@ provisions local credentials (`ADMIN_DASHBOARD_API_KEY` and `SERVICE_KEY_*` valu
 generated using secure 32-byte hex entropy) for development and testing, but it does
 not establish production deployment authentication or retrieve external secrets. Do not commit real credentials.
 
-`make deploy` is not a guaranteed deployment path: it delegates to an
-externally installed `conxius-orbit` binary when present and otherwise only
-prints fallback messages. See [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md).
+### Quality & Governance Verification
+
+To verify platform hygiene, documentation consistency, and service type safety, run:
+
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+python3 scripts/maintenance/system_audit.py
+python3 scripts/maintenance/hardened_audit.py
+python3 scripts/verify_documentation.py
+```
+
+`make deploy` executes a deterministic local deployment pre-flight validation script (`scripts/validate-local-deployment.sh`) that checks environment configuration, workspace consistency, Docker Compose setup, and hygiene audit rules. See [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md).
 
 ## Release posture
 

@@ -48,11 +48,14 @@ To maintain the security of this platform:
 - **Language**: TypeScript
 - **UI Components**: Earthy Corporate Design System (Forest Green #2E403B, Nakamoto Gold #D4A017)
 
-## Development
+## Development & Verification
 
 ```bash
-# Install dependencies
+# Install workspace dependencies
 pnpm install
+
+# Run type checking
+pnpm --filter admin-dashboard run typecheck
 
 # Run development server (on port 3001)
 pnpm dev
@@ -67,6 +70,16 @@ pnpm test
 # Run Phase 7 alignment tests
 pnpm test:phase7
 ```
+
+## Environment Setup
+
+Copy `.env.admin.example` to `.env.admin` and populate required local configuration values:
+
+```bash
+cp .env.admin.example .env.admin
+```
+
+Do not commit `.env.admin` or `.env.admin.local` to Git.
 
 ## Support Expectations
 

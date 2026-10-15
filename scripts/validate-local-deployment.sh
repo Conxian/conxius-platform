@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # scripts/validate-local-deployment.sh
-# Deterministic local deployment pre-flight validation routine when conxius-orbit is absent.
+# Local configuration checks only; no deployment or runtime-health evidence.
 
 set -euo pipefail
 
@@ -54,12 +54,13 @@ fi
 
 # Check 4: Docker Compose Configuration Validation
 echo -n "[Check 4/5] Docker Compose Specification... "
-if command -v docker >/dev/null 2>&1 && docker compose config >/dev/null 2>&1; then
+if ! command -v docker >/dev/null 2>&1; then
+  echo "❌ FAIL (Docker Compose validation unavailable: docker is not installed)"
+  FAILED=$((FAILED + 1))
+elif docker compose config >/dev/null 2>&1; then
   echo "✅ PASS (docker-compose.yml valid)"
-elif [[ -f "docker-compose.yml" ]]; then
-  echo "✅ PASS (docker-compose.yml present)"
 else
-  echo "❌ FAIL (docker-compose.yml missing)"
+  echo "❌ FAIL (Docker Compose configuration validation failed)"
   FAILED=$((FAILED + 1))
 fi
 
@@ -78,4 +79,5 @@ if [[ $FAILED -eq 0 ]]; then
   echo "ℹ️  Note: For orchestrated multi-service deployment, trigger the platform CI/CD pipeline."
 else
   echo "❌ FAILURE: $FAILED pre-flight validation check(s) failed."
+  exit 1
 fi

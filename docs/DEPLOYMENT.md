@@ -70,3 +70,11 @@ implemented and accepted at their owning boundary.
 The unresolved Protocol/Nexus/Gateway/Platform authority coordination is
 deferred to issue [#1167](https://github.com/Conxian/conxius-platform/issues/1167);
 this deployment guide does not choose an owner.
+
+## Local preflight result
+
+The preflight checks configuration-entry presence, workspace dependency
+consistency, `docker compose config`, and the repository hygiene audit. A missing
+Docker executable or any failed check returns nonzero. File presence alone is
+not Compose validation. Successful preflight does not contact Gateway/Nexus,
+start containers, verify credentials or establish production readiness.

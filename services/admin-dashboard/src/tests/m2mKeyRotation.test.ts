@@ -125,7 +125,7 @@ function runRotationChild(registryPath: string): Promise<ChildRotationResult> {
   `;
 
   return new Promise((resolve, reject) => {
-    const child = spawn("pnpm", ["exec", "tsx", "--eval", script], {
+    const child = spawn(process.execPath, ["--import", "tsx", "--input-type=module", "--eval", script], {
       cwd: process.cwd(),
       env: {
         ...process.env,

@@ -1,0 +1,4 @@
+- [x] Implement strict registration parser and bounded provider reader.
+- [x] Attach diagnostic evidence beside existing health status.
+- [x] Verify negative boundaries and dashboard regression suite (343 tests; typecheck passed).
+- [x] Record qualified Core operation negotiation and live deployment as remaining gates.

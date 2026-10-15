@@ -14,8 +14,7 @@ Conxian provides non-custodial control and orchestration surfaces; it does not t
 
 Conxian is tokenless and uses Bitcoin L1 as the production verification root. Public protocol components belong to their `conxian.org` owner repositories. This repository owns the commercial `conxian-labs.com` deployment intent, tenant operations, evidence, and SLA surfaces; it does not absorb Nexus proof logic, Gateway routing, or Enclave signing.
 
-The system serves universal chains, networks, layers, and assets. [Provider registration discovery](docs/architecture/PROVIDER_REGISTRATION_DISCOVERY_2026.md) keeps process registrations separate from health and production-qualified operations; inventory counts cannot authorize signing or deployment.
-
+Last verified: 2026-07-27
 ## Purpose
 
 Provide platform configuration, orchestration, CI/release automation, and environment scaffolding for contributors and maintainers working across the Conxian ecosystem.
@@ -91,7 +90,7 @@ This repository is maintained by Conxian Labs. It supports development and opera
 
 ## Quick start
 
-Last verified: 2026-07-27
+Last verified: 2026-09-30
 
 ```bash
 make init
@@ -113,9 +112,23 @@ provisions local credentials (`ADMIN_DASHBOARD_API_KEY` and `SERVICE_KEY_*` valu
 generated using secure 32-byte hex entropy) for development and testing, but it does
 not establish production deployment authentication or retrieve external secrets. Do not commit real credentials.
 
-`make deploy` is not a guaranteed deployment path: it delegates to an
-externally installed `conxius-orbit` binary when present and otherwise only
-prints fallback messages. See [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md).
+### Quality & Governance Verification
+
+To verify platform hygiene, documentation consistency, and service type safety, run:
+
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+python3 scripts/maintenance/system_audit.py
+python3 scripts/maintenance/hardened_audit.py
+python3 scripts/verify_documentation.py
+```
+
+`make deploy` runs local preflight checks for required configuration entries,
+workspace consistency, Docker Compose configuration and repository hygiene. It
+returns nonzero when a check fails or Docker is unavailable. It does not deploy
+services or prove runtime health. See [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md).
 
 ## Release posture
 

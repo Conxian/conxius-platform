@@ -21,14 +21,14 @@ The core component, `SovereignFinancialOffice.tsx`, is a command pulse for:
 - **SBC (Sovereign Business Cells)**: Managing individual business unit statuses (e.g., Conxian-Core, Nexus-Labs).
 - **SYI (Sovereign Yield Index)**: Tracking and harvesting yields across the ecosystem.
 
-## Development
+## Development & Verification
 
 ```bash
-# Install dependencies
+# Install workspace dependencies
 pnpm install
 
 # Run typecheck
-pnpm typecheck
+pnpm --filter admin-pulse-bos run typecheck
 ```
 
 ## Testing

@@ -123,6 +123,7 @@ pnpm test
 python3 scripts/maintenance/system_audit.py
 python3 scripts/maintenance/hardened_audit.py
 python3 scripts/verify_documentation.py
+python3 -m unittest tests.test_validate_local_deployment
 ```
 
 `make deploy` runs local preflight checks for required configuration entries,

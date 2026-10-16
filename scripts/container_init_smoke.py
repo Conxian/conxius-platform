@@ -76,6 +76,8 @@ def main():
             digest = hashlib.sha256(registry.read_bytes()).digest()
             CURRENT_PHASE = "restart-preservation"
             docker("restart", name)
+            port = docker("port", name, "10000/tcp").rsplit(":", 1)[1]
+            base = "http://127.0.0.1:" + port
             wait_for_health(base, 200, "healthy")
             if hashlib.sha256(registry.read_bytes()).digest() != digest:
                 raise RuntimeError("Restart changed the registry")
@@ -83,6 +85,8 @@ def main():
             registry.write_text("{invalid\n", encoding="utf-8")
             registry.chmod(0o600)
             docker("restart", name)
+            port = docker("port", name, "10000/tcp").rsplit(":", 1)[1]
+            base = "http://127.0.0.1:" + port
             wait_for_health(base, 503, "unhealthy")
             if registry.read_text(encoding="utf-8") != "{invalid\n":
                 raise RuntimeError("Malformed registry was silently replaced")

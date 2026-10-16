@@ -131,3 +131,8 @@ To transform core repositories into turnkey enterprise deployments, optimization
 ## 8. Conclusion & Verification Bounds
 
 The Conxian ecosystem establishes a resilient, non-custodial operating system bridging legacy global banking (ISO 20022) with machine-to-machine agentic commerce (x402) and Bitcoin L2 settlement (BitVM2/3, Ark, sBTC). By maintaining strict separation between quantitative financial engineering (`conxian-business`) and memory-safe consensus layers (`lib-conxian-core`, `conxian-gateway`), the platform achieves high profitability, regulatory compliance, and architectural plasticity.
+
+
+### 5.4. BitVM3 Garbled-Circuit Fraud Proofs (CXIP-1317)
+- **Universal Verification Alignment**: Upgraded BitVM3 verifier adapters in `services/admin-dashboard/src/lib/support/bitvm3.ts` to support garbled-circuit fraud proofs (gate validation, wire evaluations, and disproved gate indexes).
+- **Nexus v0.4.23 Alignment**: Enables light-client bridge verifiers to validate optimistic garbled circuits with trust-minimized fraud proof resolution.

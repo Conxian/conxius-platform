@@ -40,3 +40,57 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 }
+
+
+export type CloudSurfaceHealth = {
+  surface: 'supabase_bos' | 'neon_postgres' | 'render_deployment';
+  status: 'healthy' | 'degraded' | 'offline';
+  uptimePercentage: number; // e.g. 99.95
+  latencyMs: number;
+};
+
+export type YieldSplittingResult = {
+  totalYieldEarnedSats: number;
+  lpAllocationSats: number;     // 80%
+  reservePoolSats: number;      // 10%
+  operationsUbiSats: number;    // 10%
+  slaCompliant: boolean;
+  penaltySlashedSats: number;
+};
+
+export function calculateYieldSplitting(
+  totalYieldEarnedSats: number,
+  surfaces: CloudSurfaceHealth[]
+): YieldSplittingResult {
+  if (totalYieldEarnedSats < 0) {
+    throw new Error('Total yield earned cannot be negative');
+  }
+
+  // Evaluate SLA compliance across multi-cloud surfaces
+  const isSlaCompliant = surfaces.every(
+    (s) => s.status !== 'offline' && s.uptimePercentage >= 99.0 && s.latencyMs <= 500
+  );
+
+  let penaltySlashedSats = 0;
+  let effectiveYield = totalYieldEarnedSats;
+
+  // Apply SLA breach slashing penalty of 5% to operations/reserve pool if non-compliant
+  if (!isSlaCompliant) {
+    penaltySlashedSats = Math.round(totalYieldEarnedSats * 0.05);
+    effectiveYield = totalYieldEarnedSats - penaltySlashedSats;
+  }
+
+  // 80 / 10 / 10 Yield Splitting Ratio
+  const lpAllocationSats = Math.round(effectiveYield * 0.80);
+  const reservePoolSats = Math.round(effectiveYield * 0.10);
+  const operationsUbiSats = effectiveYield - lpAllocationSats - reservePoolSats;
+
+  return {
+    totalYieldEarnedSats,
+    lpAllocationSats,
+    reservePoolSats,
+    operationsUbiSats,
+    slaCompliant: isSlaCompliant,
+    penaltySlashedSats,
+  };
+}

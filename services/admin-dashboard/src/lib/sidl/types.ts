@@ -236,3 +236,11 @@ export type FrontendRegistry = {
   frontends: Record<string, FrontendEntry>;
   updatedAtIso: string;
 };
+
+
+export type Erc8183EscrowState = {
+  totalEscrowedSats: number;
+  activeEscrowCount: number;
+  completedEscrowCount: number;
+  disputedEscrowCount: number;
+};

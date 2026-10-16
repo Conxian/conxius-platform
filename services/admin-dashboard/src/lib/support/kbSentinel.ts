@@ -27,6 +27,26 @@ export interface GapEntry {
   rustTarget?: string;
 }
 
+
+export interface RealWorldScoringInputs {
+  x402VolumeSats: number;
+  erc8183EscrowState: {
+    totalEscrowedSats: number;
+    activeEscrowCount: number;
+    completedEscrowCount: number;
+    disputedEscrowCount: number;
+  };
+  baseWps: number; // 0 to 100
+}
+
+export interface ValuationImpactResult {
+  weightedPerformanceScore: number; // 0 to 100
+  valuationImpactUsd: number;        // e.g. .0B baseline
+  effectiveVolumeSats: number;
+  escrowHealthRatio: number;        // 0.0 to 1.0
+  source: 'x402_erc8183_telemetry';
+}
+
 export interface CandidateMetrics {
   gapCoverage: number;           // 1 to 10
   implementationCost: number;    // 1 to 10
@@ -104,6 +124,38 @@ export class KBSentinelEngine {
    * - testabilityScore: 15%
    * - architectureAlignment: 15%
    */
+
+  /**
+   * Refactored Multi-Dimensional Scoring Engine (CON-1437 / CON-1440 / CON-1436)
+   * Consumes live x402 transaction volume and ERC-8183 escrow state to calculate
+   * the Weighted Performance Score (WPS) and dynamic valuation impact.
+   */
+  public calculateWeightedPerformanceScore(inputs: RealWorldScoringInputs): ValuationImpactResult {
+    const { x402VolumeSats, erc8183EscrowState, baseWps } = inputs;
+    if (x402VolumeSats < 0) {
+      throw new Error('[kb-sentinel] x402VolumeSats cannot be negative.');
+    }
+    const totalEscrows = erc8183EscrowState.activeEscrowCount + erc8183EscrowState.completedEscrowCount + erc8183EscrowState.disputedEscrowCount;
+    const escrowHealthRatio = totalEscrows > 0
+      ? (erc8183EscrowState.completedEscrowCount + erc8183EscrowState.activeEscrowCount * 0.8) / totalEscrows
+      : 1.0;
+
+    // Base valuation multiplier: 1 sat x402 volume adds scaling weight
+    const volumeWeight = Math.min(x402VolumeSats / 1_000_000, 1.5); // cap volume boost at +50%
+    const adjustedWps = Math.min(100, Number((baseWps * (0.5 + 0.5 * escrowHealthRatio) * (1 + volumeWeight * 0.2)).toFixed(2)));
+
+    // Valuation impact calculation (baseline .0B at WPS = 100)
+    const valuationImpactUsd = Math.round((adjustedWps / 100) * 1_000_000_000);
+
+    return {
+      weightedPerformanceScore: adjustedWps,
+      valuationImpactUsd,
+      effectiveVolumeSats: x402VolumeSats,
+      escrowHealthRatio: Number(escrowHealthRatio.toFixed(4)),
+      source: 'x402_erc8183_telemetry',
+    };
+  }
+
   public calculateWeightedScore(gapId: string, metrics: CandidateMetrics): WeightedScoreResult {
     const validateMetric = (name: string, val: number) => {
       if (typeof val !== "number" || isNaN(val) || val < 1 || val > 10) {

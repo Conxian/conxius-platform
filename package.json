@@ -21,6 +21,7 @@
     "check:dependencies": "pnpm run check:dependency-consistency",
     "check:lifecycle-control": "bash scripts/ci/run-lifecycle-control-gates.sh",
     "check:service-catalog": "python3 scripts/verify_service_catalog.py",
+    "check:managed-nexus-deployment": "python3 scripts/verify_managed_nexus_deployment.py",
     "check:org-readiness": "python3 scripts/verify_org_readiness.py",
     "check:repository-references": "python3 scripts/verify_repository_references.py",
     "test:org-readiness": "tsx --test scripts/verify_org_readiness.test.ts",
@@ -39,21 +40,21 @@
     "node": ">=20.19.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.63.0",
+    "@playwright/test": "^1.64.0",
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",
     "typescript": "6.0.3",
     "tsx": "4.23.15",
-    "vite": "8.3.2"
+    "vite": "8.3.4"
   },
   "pnpm": {
     "overrides": {
-      "next": "16.3.5",
+      "next": "16.4.0",
       "ip-address": ">=10.1.1",
       "postcss": ">=8.5.10",
       "langsmith": ">=0.5.19",
       "uuid": ">=13.0.1",
-      "vite": "8.3.2"
+      "vite": "8.3.4"
     }
   }
 }

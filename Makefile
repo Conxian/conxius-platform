@@ -12,7 +12,7 @@ help:
 	@echo "  make update-all  - Pull the latest main branches for all submodules"
 	@echo "  make logs        - Tail logs for all services"
 	@echo "  make bench       - Run automated performance benchmarks"
-	@echo "  make deploy      - Run deployment workflows (Conxius Orbit/GCP)"
+	@echo "  make deploy      - Run local configuration preflight (no deployment)"
 
 init:
 	@echo "Initializing submodules..."

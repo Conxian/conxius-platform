@@ -1,4 +1,5 @@
 import "server-only";
+import { readRegistrationEvidence, type RegistrationEvidence } from "./provider-registration";
 
 export type LiveState = "reachable" | "degraded" | "unavailable" | "not-configured";
 
@@ -9,6 +10,7 @@ export type LiveProviderStatus = {
   latencyMs: number | null;
   detail: string;
   source: "live-probe" | "configuration";
+  registrationDiscovery?: RegistrationEvidence;
 };
 
 type ProbeRequest = { url: string; headers?: HeadersInit };
@@ -73,12 +75,17 @@ async function probe(provider: Provider): Promise<LiveProviderStatus> {
 }
 
 export async function getLiveProviderStatus(): Promise<LiveProviderStatus[]> {
-  return Promise.all(providers.map(probe));
+  return Promise.all(providers.map(async (provider) => {
+    const discovery = provider.name === "Gateway" ? readRegistrationEvidence("gateway", process.env.GATEWAY_URL, process.env.GATEWAY_API_TOKEN)
+      : provider.name === "Nexus" ? readRegistrationEvidence("nexus", process.env.NEXUS_URL, process.env.NEXUS_ADMIN_API_TOKEN) : undefined;
+    const [status, registrationDiscovery] = await Promise.all([probe(provider), discovery]);
+    return registrationDiscovery ? { ...status, registrationDiscovery } : status;
+  }));
 }
 
 export const providerNames = providers.map(({ name }) => name);
 export const canonicalProviderEnvironment = providers.map(({ name, env }) => ({ name, env }));
 
 export function redactProviderStatus(status: LiveProviderStatus[]) {
-  return status.map(({ name, state, checkedAt, latencyMs, detail, source }) => ({ name, state, checkedAt, latencyMs, detail, source }));
+  return status.map(({ name, state, checkedAt, latencyMs, detail, source, registrationDiscovery }) => ({ name, state, checkedAt, latencyMs, detail, source, registrationDiscovery }));
 }

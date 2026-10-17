@@ -12,10 +12,10 @@
   },
   {
     "section": "Complete API Surface",
-    "current": "(40 admin routes + 2 public frames)",
-    "proposed": "(~40 admin routes + 2 public frames)",
+    "current": "(41 admin routes + 2 public frames)",
+    "proposed": "(~41 admin routes + 2 public frames)",
     "evidence": [
-      "Auto-detected: 40 API routes"
+      "Auto-detected: 41 API routes"
     ],
     "confidence": 0.98,
     "priority": "low"
@@ -23,9 +23,9 @@
   {
     "section": "CI Workflows",
     "current": "17 custom",
-    "proposed": "~19 custom",
+    "proposed": "~23 custom",
     "evidence": [
-      "Auto-detected: 19 workflow files"
+      "Auto-detected: 23 workflow files"
     ],
     "confidence": 0.98,
     "priority": "low"
@@ -33,9 +33,9 @@
   {
     "section": "Test Coverage",
     "current": "20 test files",
-    "proposed": "~48 test files",
+    "proposed": "~53 test files",
     "evidence": [
-      "Auto-detected: 48 test files, 197 TS files"
+      "Auto-detected: 53 test files, 208 TS files"
     ],
     "confidence": 0.98,
     "priority": "low"

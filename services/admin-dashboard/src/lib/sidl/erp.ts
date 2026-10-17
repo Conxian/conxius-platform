@@ -71,6 +71,12 @@ export async function getErpDashboardData(): Promise<ErpDashboardData> {
     erpnextUrl: "https://sandbox-conxian.frappe.cloud",
     latencyMs: 120,
     faultInjectionActive: false,
+    erc8183EscrowState: {
+      totalEscrowedSats: 1500000,
+      activeEscrowCount: 12,
+      completedEscrowCount: 85,
+      disputedEscrowCount: 1
+    },
     x402Mandates: [
       {
         mandateId: "mandate-erp-1004",

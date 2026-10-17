@@ -102,6 +102,7 @@ export type Digest = `sha256:${string}`;
 export type ProofSystem =
   | "bitvm2"
   | "bitvm3-recursive"
+  | "bitvm3-garbled-circuit"
   | "groth16"
   | "plonk"
   | "stark";
@@ -624,6 +625,7 @@ export function isProvenance(value: unknown): value is Provenance {
 function isProofSystem(value: unknown): value is ProofSystem {
   return value === "bitvm2"
     || value === "bitvm3-recursive"
+    || value === "bitvm3-garbled-circuit"
     || value === "groth16"
     || value === "plonk"
     || value === "stark";

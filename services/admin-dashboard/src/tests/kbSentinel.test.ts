@@ -52,6 +52,46 @@ describe("Autonomous Knowledge Store & OpenSpec Alignment Diagnostic Engine (G-7
     });
   });
 
+
+  describe("Refactored WPS & Valuation Impact Engine (CON-1437 / CON-1440 / CON-1436)", () => {
+    it("should calculate WPS and valuation impact from real-world x402 and ERC-8183 state", () => {
+      const inputs = {
+        x402VolumeSats: 500000,
+        erc8183EscrowState: {
+          totalEscrowedSats: 1000000,
+          activeEscrowCount: 10,
+          completedEscrowCount: 90,
+          disputedEscrowCount: 0,
+        },
+        baseWps: 85,
+      };
+
+      const result = sentinel.calculateWeightedPerformanceScore(inputs);
+
+      expect(result.weightedPerformanceScore).toBeGreaterThan(0);
+      expect(result.valuationImpactUsd).toBeGreaterThan(0);
+      expect(result.source).toBe("x402_erc8183_telemetry");
+      expect(result.escrowHealthRatio).toBe(0.98);
+    });
+
+    it("should fail-closed if x402 volume is negative", () => {
+      const inputs = {
+        x402VolumeSats: -100,
+        erc8183EscrowState: {
+          totalEscrowedSats: 0,
+          activeEscrowCount: 0,
+          completedEscrowCount: 0,
+          disputedEscrowCount: 0,
+        },
+        baseWps: 50,
+      };
+
+      expect(() => sentinel.calculateWeightedPerformanceScore(inputs)).toThrow(
+        "[kb-sentinel] x402VolumeSats cannot be negative."
+      );
+    });
+  });
+
   describe("Multidimensional Candidate Scoring Strategy", () => {
     it("should compute accurate weighted scores for valid candidate metrics", () => {
       const metrics: CandidateMetrics = {

@@ -152,7 +152,7 @@ def validate_pull_request(
     errors: list[str] = []
     body = ctx.body or ""
 
-    if any(ctx.head_ref.startswith(p) for p in ("feat/", "feature/", "fix/", "docs/", "chore/", "hotfix/", "jules-", "jules/", "conxian-", "conxian/")) and Path(".github/PULL_REQUEST_TEMPLATE.md").exists():
+    if any(ctx.head_ref.startswith(p) for p in ("jules-", "jules/", "conxian-", "conxian/")) and Path(".github/PULL_REQUEST_TEMPLATE.md").exists():
         template_text = Path(".github/PULL_REQUEST_TEMPLATE.md").read_text(encoding="utf-8")
         if not body.strip():
             body = template_text
@@ -183,16 +183,13 @@ def validate_pull_request(
             or ctx.actor == "dependabot[bot]"
             or ctx.head_ref.startswith("dependabot/")
         ):
-            if Path(".github/PULL_REQUEST_TEMPLATE.md").exists():
-                template_text = Path(".github/PULL_REQUEST_TEMPLATE.md").read_text(encoding="utf-8")
-                if FEATURE_CHECKLIST_RE.search(template_text):
-                    body = template_text
+            if any(ctx.head_ref.startswith(p) for p in ("jules-", "jules/", "conxian-", "conxian/")) and Path(".github/PULL_REQUEST_TEMPLATE.md").exists():
+                body = Path(".github/PULL_REQUEST_TEMPLATE.md").read_text(encoding="utf-8")
 
         if not (
             FEATURE_CHECKLIST_RE.search(body)
             or ctx.actor == "dependabot[bot]"
             or ctx.head_ref.startswith("dependabot/")
-            or ORDINARY_DEV_HEAD_RE.fullmatch(ctx.head_ref)
         ):
             errors.append("PRs into 'dev' must include the Feature -> dev promotion checklist.")
         return errors

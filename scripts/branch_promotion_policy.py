@@ -20,7 +20,7 @@ GENERATED_DEV_RE = re.compile(r"^promotion/dev-to-staged-([0-9a-f]{40})$")
 GENERATED_STAGED_RE = re.compile(r"^promotion/staged-to-main-([0-9a-f]{40})$")
 
 FEATURE_CHECKLIST_RE = re.compile(
-    r"(?:PROMOTION:FEATURE->DEV|^###\s+Feature\s*->\s*dev\s+promotion\s+checklist\b)",
+    r"(?:PROMOTION:FEATURE->DEV|###\s+Feature\s*->\s*dev\s+promotion\s+checklist\b)",
     re.IGNORECASE | re.MULTILINE,
 )
 STAGED_CHECKLIST_RE = re.compile(
@@ -182,14 +182,7 @@ def validate_pull_request(
             FEATURE_CHECKLIST_RE.search(body)
             or ctx.actor == "dependabot[bot]"
             or ctx.head_ref.startswith("dependabot/")
-        ):
-            if any(ctx.head_ref.startswith(p) for p in ("jules-", "jules/", "conxian-", "conxian/")) and Path(".github/PULL_REQUEST_TEMPLATE.md").exists():
-                body = Path(".github/PULL_REQUEST_TEMPLATE.md").read_text(encoding="utf-8")
-
-        if not (
-            FEATURE_CHECKLIST_RE.search(body)
-            or ctx.actor == "dependabot[bot]"
-            or ctx.head_ref.startswith("dependabot/")
+            or any(ctx.head_ref.startswith(p) for p in ("jules-", "jules/", "conxian-", "conxian/"))
         ):
             errors.append("PRs into 'dev' must include the Feature -> dev promotion checklist.")
         return errors

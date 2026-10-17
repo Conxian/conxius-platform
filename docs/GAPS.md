@@ -36,6 +36,14 @@ repository; it does not implement a proof backend.
   - **Hardened Security Audit**: Enhanced ZSE checks and automated secret scanning.
   - **Deterministic Blueprint**: AI-agent readable deployment metadata.
 
+### G-41 Taproot Assets Protocol Engine
+- **Status**: 🏗️ Active Scaffolding & Unit Verified.
+- **Implemented**:
+  - Deterministic asset ID generation from genesis outpoint and asset parameters.
+  - Multi-asset minting, transfer execution, and Sparse Merkle Sum Tree (SMST) proof verification.
+  - Fail-closed capacity limits (`MAX_TAPROOT_ASSETS_CAPACITY = 1000`) and tombstoning.
+  - Verified by unit tests in `services/admin-dashboard/src/tests/taprootAssets.test.ts`.
+
 ### Conxian Gateway & Nexus (Phase 6 Core Alignment)
 - **Status**: Historical Phase 6 alignment claims require owner reconciliation;
   current authority selection is deferred to issue #1167 and is not a

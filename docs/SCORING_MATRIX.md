@@ -37,7 +37,7 @@ This matrix scores the identified gaps based on Strategic Alignment, Implementat
 | **G-23** | **Ark V-UTXO Protocol** | 8 | 8 | 7 | **23** | [Ark Research](./architecture/ARK_RESEARCH.md) — active scaffolding & unit verified in `ark.ts` and `ark.test.ts` |
 | **G-41** | **Taproot Assets** | 8 | 6 | 8 | **22** | [Taproot Assets Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#41) |
 | **G-42** | **PTLCs** | 9 | 7 | 6 | **22** | [PTLC Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#42) |
-| **G-43** | **Babylon Bitcoin Staking** | 9 | 8 | 7 | **24** | [Babylon Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#43) |
+| **G-43** | **Babylon Bitcoin Staking** | 9 | 8 | 7 | **24** | [Babylon Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#43) — active scaffolding & unit verified in `babylon.ts` and `babylon.test.ts` |
 | **G-44** | **BitVMX Computation** | 10 | 9 | 6 | **25** | [BitVMX Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#44) |
 | **G-45** | **BOLT-12 Offers** | 8 | 7 | 8 | **23** | [BOLT-12 Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#45) |
 | **G-46** | **RGB++ Protocol** | 7 | 8 | 6 | **21** | [RGB++ Research](./architecture/FULL_STACK_BITCOIN_RESEARCH.md#46) |

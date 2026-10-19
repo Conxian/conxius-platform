@@ -29,6 +29,7 @@ function urlRequest(value: string | undefined, suffix = ""): ProbeRequest | null
   if (!value) return null;
   try {
     const url = new URL(value);
+    if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.search || url.hash) return null;
     url.pathname = `${url.pathname.replace(/\/$/, "")}${suffix}` || "/";
     return { url: url.toString() };
   } catch {
@@ -42,7 +43,14 @@ function providerRequest(value: string | undefined, suffix = "", headers?: Heade
 }
 
 const providers: Provider[] = [
-  { name: "Gateway", env: ["GATEWAY_URL"], request: () => providerRequest(process.env.GATEWAY_URL, "/health") },
+  { name: "Gateway", env: ["GATEWAY_URL"], request: () => {
+    const request = urlRequest(process.env.GATEWAY_URL);
+    if (!request) return null;
+    const url = new URL(request.url);
+    if (!["", "/api/v1"].includes(url.pathname.replace(/\/+$/, ""))) return null;
+    url.pathname = "/api/v1/health";
+    return { url: url.toString() };
+  } },
   { name: "Nexus", env: ["NEXUS_ADMIN_API_TOKEN", "NEXUS_URL"], request: () => providerRequest(process.env.NEXUS_URL, "/health", { Authorization: `Bearer ${process.env.NEXUS_ADMIN_API_TOKEN ?? ""}` }) },
   { name: "Neon", env: ["NEON_DATABASE_URL", "DATABASE_URL"], configurationOnly: true },
   { name: "AWS Aurora PostgreSQL", env: ["AWS_APG_AWS_RESOURCE_ARN", "AWS_APG_PGHOST"], configurationOnly: true },
@@ -65,10 +73,11 @@ async function probe(provider: Provider): Promise<LiveProviderStatus> {
   if (!request) return { name: provider.name, state: "degraded", checkedAt, latencyMs: null, detail: "Configured, but the endpoint URL is missing or invalid.", source: "configuration" };
   const started = Date.now();
   try {
-    const response = await fetch(request.url, { method: "GET", headers: request.headers, cache: "no-store", signal: AbortSignal.timeout(5000) });
+    const response = await fetch(request.url, { method: "GET", headers: request.headers, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(5000) });
     const latencyMs = Date.now() - started;
-    const state: LiveState = response.status >= 500 ? "degraded" : response.status >= 400 ? "unavailable" : "reachable";
-    return { name: provider.name, state, checkedAt, latencyMs, detail: `Live probe HTTP ${response.status}; response body withheld.`, source: "live-probe" };
+    const state: LiveState = response.status >= 500 ? "degraded" : response.status >= 200 && response.status < 300 ? "reachable" : "unavailable";
+    await response.body?.cancel();
+    return { name: provider.name, state, checkedAt, latencyMs, detail: `Live probe HTTP ${response.status}; response body withheld. Liveness only; operation and production qualification not established.`, source: "live-probe" };
   } catch {
     return { name: provider.name, state: "unavailable", checkedAt, latencyMs: Date.now() - started, detail: "Live probe failed or timed out; credentials and response body withheld.", source: "live-probe" };
   }

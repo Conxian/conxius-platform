@@ -17,6 +17,7 @@ type ProbeRequest = { url: string; headers?: HeadersInit };
 type Provider = {
   name: string;
   env: string[];
+  requiredEnv?: string[][];
   request?: () => ProbeRequest | null;
   configurationOnly?: boolean;
 };
@@ -51,13 +52,13 @@ const providers: Provider[] = [
     url.pathname = "/api/v1/health";
     return { url: url.toString() };
   } },
-  { name: "Nexus", env: ["NEXUS_ADMIN_API_TOKEN", "NEXUS_URL"], request: () => providerRequest(process.env.NEXUS_URL, "/health", { Authorization: `Bearer ${process.env.NEXUS_ADMIN_API_TOKEN ?? ""}` }) },
+  { name: "Nexus", env: ["NEXUS_ADMIN_API_TOKEN", "NEXUS_URL"], requiredEnv: [["NEXUS_URL"], ["NEXUS_ADMIN_API_TOKEN"]], request: () => providerRequest(process.env.NEXUS_URL, "/health", { Authorization: `Bearer ${process.env.NEXUS_ADMIN_API_TOKEN ?? ""}` }) },
   { name: "Neon", env: ["NEON_DATABASE_URL", "DATABASE_URL"], configurationOnly: true },
   { name: "AWS Aurora PostgreSQL", env: ["AWS_APG_AWS_RESOURCE_ARN", "AWS_APG_PGHOST"], configurationOnly: true },
   { name: "ERP attestation", env: ["ERP_ATTESTATION_TRUSTED_KEYS_JSON"], configurationOnly: true },
   { name: "Nostr relays", env: ["NOSTR_RELAYS"], request: () => providerRequest(firstEnv("NOSTR_RELAYS")?.split(",")[0], "", { Accept: "application/nostr+json" }) },
-  { name: "Supabase", env: ["SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL"], request: () => providerRequest(firstEnv("SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL"), "/rest/v1/", { apikey: firstEnv("SUPABASE_ANON_KEY", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY") ?? "" }) },
-  { name: "Upstash", env: ["UPSTASH_KV_KV_REST_API_URL", "UPSTASH_KV_KV_REST_API_TOKEN"], request: () => providerRequest(process.env.UPSTASH_KV_KV_REST_API_URL, "/ping", { Authorization: `Bearer ${process.env.UPSTASH_KV_KV_REST_API_TOKEN ?? ""}` }) },
+  { name: "Supabase", env: ["SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_ANON_KEY", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"], requiredEnv: [["SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL"], ["SUPABASE_ANON_KEY", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"]], request: () => providerRequest(firstEnv("SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL"), "/rest/v1/", { apikey: firstEnv("SUPABASE_ANON_KEY", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY") ?? "" }) },
+  { name: "Upstash", env: ["UPSTASH_KV_KV_REST_API_URL", "UPSTASH_KV_KV_REST_API_TOKEN"], requiredEnv: [["UPSTASH_KV_KV_REST_API_URL"], ["UPSTASH_KV_KV_REST_API_TOKEN"]], request: () => providerRequest(process.env.UPSTASH_KV_KV_REST_API_URL, "/ping", { Authorization: `Bearer ${process.env.UPSTASH_KV_KV_REST_API_TOKEN ?? ""}` }) },
   { name: "Stacks", env: ["STACKS_NODE_RPC_URL"], request: () => providerRequest(process.env.STACKS_NODE_RPC_URL, "/v3/health") },
   { name: "Oracle", env: ["ORACLE_ENDPOINT_URL"], request: () => providerRequest(process.env.ORACLE_ENDPOINT_URL, "/health") },
   { name: "Tableland", env: ["TABLELAND_BASE_URL"], request: () => providerRequest(process.env.TABLELAND_BASE_URL, "/api/v1/health") },
@@ -66,8 +67,11 @@ const providers: Provider[] = [
 
 async function probe(provider: Provider): Promise<LiveProviderStatus> {
   const checkedAt = new Date().toISOString();
+  const missing = (provider.requiredEnv ?? [provider.env]).filter((keys) => !firstEnv(...keys));
+  const missingNames = missing.map((keys) => keys.join(" or ")).join("; ");
   const configured = provider.env.some((key) => Boolean(process.env[key]?.trim()));
-  if (!configured) return { name: provider.name, state: "not-configured", checkedAt, latencyMs: null, detail: `Missing ${provider.env.join(" or ")}.`, source: "configuration" };
+  if (!configured) return { name: provider.name, state: "not-configured", checkedAt, latencyMs: null, detail: `Missing ${missingNames}.`, source: "configuration" };
+  if (missing.length) return { name: provider.name, state: "degraded", checkedAt, latencyMs: null, detail: `Incomplete configuration. Missing ${missingNames}. No probe attempted.`, source: "configuration" };
   if (provider.configurationOnly) return { name: provider.name, state: "degraded", checkedAt, latencyMs: null, detail: "Configured, but no verified runtime health contract is available.", source: "configuration" };
   const request = provider.request?.();
   if (!request) return { name: provider.name, state: "degraded", checkedAt, latencyMs: null, detail: "Configured, but the endpoint URL is missing or invalid.", source: "configuration" };
@@ -93,7 +97,7 @@ export async function getLiveProviderStatus(): Promise<LiveProviderStatus[]> {
 }
 
 export const providerNames = providers.map(({ name }) => name);
-export const canonicalProviderEnvironment = providers.map(({ name, env }) => ({ name, env }));
+export const canonicalProviderEnvironment = providers.map(({ name, env, requiredEnv }) => ({ name, env, requiredEnv: requiredEnv ?? [env] }));
 
 export function redactProviderStatus(status: LiveProviderStatus[]) {
   return status.map(({ name, state, checkedAt, latencyMs, detail, source, registrationDiscovery }) => ({ name, state, checkedAt, latencyMs, detail, source, registrationDiscovery }));

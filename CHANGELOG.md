@@ -1,5 +1,7 @@
 # Changelog
 
+- Require complete endpoint/credential groups before Nexus, Upstash and Supabase diagnostic probes; report missing names without making partial or anonymous requests. Preserve independent provider and M2M readiness boundaries.
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),

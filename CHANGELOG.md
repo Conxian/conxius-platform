@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Provider liveness evidence**: Probe Gateway at `/api/v1/health`, reject redirects and ambiguous endpoint URLs, withhold response bodies, and distinguish HTTP liveness from operation and production qualification.
 - **Next.js Turbopack Dynamic Tracing Build Warnings**: Added `/*turbopackIgnore: true*/` annotations to dynamic `path.resolve` calls in `services/admin-dashboard/src/lib/support/m2mKeyStore.ts`, `services/admin-dashboard/src/lib/sidl/stateStore.ts`, and `services/admin-dashboard/src/lib/governance/claims.ts`, suppressing project tracing warnings for a 100% clean production build.
 - **Root Ignore Rules & CI Hygiene**: Hardened root `.gitignore` with `out/`, `coverage/`, `.turbo/`, and `*.tmp` patterns to prevent untracked build artifacts or temporary files across workspace packages.
 

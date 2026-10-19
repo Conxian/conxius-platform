@@ -1,0 +1,28 @@
+name: Environment preflight regression tests
+
+on:
+  pull_request:
+    branches: [dev, staged, main]
+    paths:
+      - 'scripts/validate-production-env.sh'
+      - 'scripts/tests/test_production_env_diagnostics.py'
+      - '.github/workflows/environment-preflight-tests.yml'
+  push:
+    branches: [dev, staged, main]
+    paths:
+      - 'scripts/validate-production-env.sh'
+      - 'scripts/tests/test_production_env_diagnostics.py'
+      - '.github/workflows/environment-preflight-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # ratchet:actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - run: python3 -m unittest discover -s scripts/tests -p 'test_production_env_diagnostics.py' -v

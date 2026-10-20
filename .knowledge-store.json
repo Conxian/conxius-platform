@@ -585,13 +585,13 @@
       "category": "metric",
       "source": "internal",
       "data": {
-        "totalFiles": 713,
-        "tsFiles": 197,
-        "testFiles": 48,
-        "apiRoutes": 40,
+        "totalFiles": 765,
+        "tsFiles": 208,
+        "testFiles": 53,
+        "apiRoutes": 41,
         "pages": 19,
-        "workflows": 19,
-        "avgFileSize": 6355.500701262272,
+        "workflows": 23,
+        "avgFileSize": 6227.887581699347,
         "largestFiles": [
           {
             "path": "docs/archive/AGENTS_archive_session_58.md",
@@ -611,22 +611,22 @@
           },
           {
             "path": "services/admin-dashboard/src/lib/support/m2mKeyStore.ts",
-            "sizeKB": 62
+            "sizeKB": 84
           }
         ],
         "avgFileSizeKB": 6
       },
       "confidence": 0.98,
-      "lastUpdated": "2026-09-26T21:19:16.261Z",
+      "lastUpdated": "2026-10-17T09:13:41.392Z",
       "tags": [
         "codebase",
         "metrics",
         "structure"
       ],
       "evidence": [
-        "713 total files",
-        "197 TypeScript files",
-        "19 CI workflows"
+        "765 total files",
+        "208 TypeScript files",
+        "23 CI workflows"
       ]
     },
     "gap-synthesis-test-coverage": {
@@ -635,21 +635,21 @@
       "source": "synthesis",
       "data": {
         "type": "test-coverage",
-        "coverage": 0.2436548223350254,
+        "coverage": 0.2548076923076923,
         "threshold": 0.5,
-        "deficit": 0.2563451776649746,
+        "deficit": 0.2451923076923077,
         "recommendation": "Increase test coverage to >50%"
       },
       "confidence": 0.95,
-      "lastUpdated": "2026-09-26T21:19:16.262Z",
+      "lastUpdated": "2026-10-17T09:13:41.393Z",
       "tags": [
         "testing",
         "coverage",
         "gap"
       ],
       "evidence": [
-        "48 tests for 197 TypeScript files",
-        "Coverage: 24.4%"
+        "53 tests for 208 TypeScript files",
+        "Coverage: 25.5%"
       ]
     },
     "pattern-internal-api-auth": {
@@ -658,12 +658,12 @@
       "source": "internal",
       "data": {
         "type": "api-auth",
-        "apiRoutes": 40,
+        "apiRoutes": 41,
         "pattern": "validateAdminAuth",
         "convention": "All API routes protected with validateAdminAuth()"
       },
       "confidence": 0.9,
-      "lastUpdated": "2026-09-26T21:19:16.263Z",
+      "lastUpdated": "2026-10-17T09:13:41.394Z",
       "tags": [
         "api",
         "auth",
@@ -671,7 +671,7 @@
         "convention"
       ],
       "evidence": [
-        "40 API routes with consistent auth pattern"
+        "41 API routes with consistent auth pattern"
       ]
     },
     "pattern-internal-ci-workflows": {
@@ -680,12 +680,12 @@
       "source": "internal",
       "data": {
         "type": "ci-workflows",
-        "count": 19,
+        "count": 23,
         "maturity": "high",
         "description": "Extensive CI/CD pipeline with multiple specialized workflows"
       },
       "confidence": 0.85,
-      "lastUpdated": "2026-09-26T21:19:16.263Z",
+      "lastUpdated": "2026-10-17T09:13:41.395Z",
       "tags": [
         "ci",
         "workflows",
@@ -693,7 +693,7 @@
         "maturity"
       ],
       "evidence": [
-        "19 workflow files detected"
+        "23 workflow files detected"
       ]
     },
     "pattern-musig2-aggregation-g10": {
@@ -739,6 +739,6 @@
     "pattern-internal-api-auth": [],
     "pattern-internal-ci-workflows": []
   },
-  "version": 109,
-  "lastSync": "2026-09-26T21:19:16.263Z"
+  "version": 113,
+  "lastSync": "2026-10-17T09:13:41.395Z"
 }

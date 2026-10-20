@@ -44,17 +44,17 @@ const runtime = new AgentRuntime({
 });
 ```
 
-## Development
+## Development & Verification
 
 ```bash
-# Install dependencies
+# Install workspace dependencies
 pnpm install
 
 # Build plugin distribution
-pnpm build
+pnpm --filter @conxian/elizaos-plugin-conxian run build
 
 # Run type checking
-pnpm typecheck
+pnpm --filter @conxian/elizaos-plugin-conxian run typecheck
 ```
 
 ## Testing

@@ -36,6 +36,13 @@ repository; it does not implement a proof backend.
   - **Hardened Security Audit**: Enhanced ZSE checks and automated secret scanning.
   - **Deterministic Blueprint**: AI-agent readable deployment metadata.
 
+### G-41 Taproot Assets provider qualification — OPEN
+- **Status**: Research model only; production provider and SMST verification unavailable.
+- `TaprootAssetsModel` preserves bounded in-memory simulation. Records carry `simulationOnly: true`; transfer receipts say `simulated`. Local IDs and roots are not protocol identifiers or commitments.
+- `TaprootAssetsEngine` fails closed for mint/transfer/burn/tombstone operations, always rejects proofs and creates no records.
+- Negative tests cover arbitrary strings, exact local roots, unavailable operations and isolated simulation. These do not qualify real protocol operations.
+- Remaining P1: Core/SDK/Nexus-owned provider and verifier, authenticated proof-file/input/asset/network/finality binding, replay and authorization rules. Platform only orchestrates bounded provider calls after independent acceptance.
+
 ### Conxian Gateway & Nexus (Phase 6 Core Alignment)
 - **Status**: Historical Phase 6 alignment claims require owner reconciliation;
   current authority selection is deferred to issue #1167 and is not a

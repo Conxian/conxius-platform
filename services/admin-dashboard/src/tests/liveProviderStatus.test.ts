@@ -19,6 +19,64 @@ afterEach(() => {
 });
 
 describe("provider liveness contract", () => {
+  it.each([
+    ["Nexus", "NEXUS_URL", "https://nexus.example", "NEXUS_ADMIN_API_TOKEN"],
+    ["Nexus", "NEXUS_ADMIN_API_TOKEN", "private-token-value", "NEXUS_URL"],
+    ["Upstash", "UPSTASH_KV_KV_REST_API_URL", "https://upstash.example", "UPSTASH_KV_KV_REST_API_TOKEN"],
+    ["Upstash", "UPSTASH_KV_KV_REST_API_TOKEN", "private-token-value", "UPSTASH_KV_KV_REST_API_URL"],
+    ["Supabase", "SUPABASE_URL", "https://supabase.example", "SUPABASE_ANON_KEY"],
+    ["Supabase", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "private-token-value", "SUPABASE_URL"],
+  ])("does not request a partially configured %s using only %s", async (name, key, value, missing) => {
+    vi.stubEnv(key, value);
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const row = (await getLiveProviderStatus()).find((status) => status.name === name)!;
+    expect(row).toMatchObject({ state: "degraded", source: "configuration", latencyMs: null });
+    expect(row.detail).toContain(missing);
+    expect(row.detail).toContain("No probe attempted");
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(JSON.stringify(row)).not.toContain(value);
+  });
+
+  it("treats whitespace credentials as missing and keeps another provider usable", async () => {
+    vi.stubEnv("UPSTASH_KV_KV_REST_API_URL", "https://upstash.example");
+    vi.stubEnv("UPSTASH_KV_KV_REST_API_TOKEN", "   ");
+    vi.stubEnv("GATEWAY_URL", "https://gateway.example");
+    const fetchMock = vi.fn().mockResolvedValue(new Response("private-body"));
+    vi.stubGlobal("fetch", fetchMock);
+    const rows = await getLiveProviderStatus();
+    expect(rows.find((row) => row.name === "Upstash")?.state).toBe("degraded");
+    expect(rows.find((row) => row.name === "Gateway")?.state).toBe("reachable");
+    expect(fetchMock).toHaveBeenCalledExactlyOnceWith("https://gateway.example/api/v1/health", expect.any(Object));
+  });
+
+  it.each(["SUPABASE_ANON_KEY", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"])(
+    "accepts the existing Supabase alternative %s and recovers after missing configuration", async (key) => {
+      vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://supabase.example");
+      const fetchMock = vi.fn().mockResolvedValue(new Response("private-body"));
+      vi.stubGlobal("fetch", fetchMock);
+      expect((await getLiveProviderStatus()).find((row) => row.name === "Supabase")?.state).toBe("degraded");
+      expect(fetchMock).not.toHaveBeenCalled();
+      vi.stubEnv(key, "private-key-value");
+      const row = (await getLiveProviderStatus()).find((status) => status.name === "Supabase")!;
+      expect(fetchMock).toHaveBeenCalledExactlyOnceWith("https://supabase.example/rest/v1/", expect.objectContaining({ headers: { apikey: "private-key-value" } }));
+      expect(row.state).toBe("reachable");
+      expect(row.detail).toContain("qualification not established");
+      expect(JSON.stringify(row)).not.toContain("private-");
+    },
+  );
+
+  it("uses complete Upstash credentials without exposing them", async () => {
+    vi.stubEnv("UPSTASH_KV_KV_REST_API_URL", "https://upstash.example");
+    vi.stubEnv("UPSTASH_KV_KV_REST_API_TOKEN", "private-token-value");
+    const fetchMock = vi.fn().mockResolvedValue(new Response("private-body"));
+    vi.stubGlobal("fetch", fetchMock);
+    const row = (await getLiveProviderStatus()).find((status) => status.name === "Upstash")!;
+    expect(fetchMock).toHaveBeenCalledExactlyOnceWith("https://upstash.example/ping", expect.objectContaining({ headers: { Authorization: "Bearer private-token-value" } }));
+    expect(row.state).toBe("reachable");
+    expect(JSON.stringify(row)).not.toContain("private-");
+  });
+
   it.each(["https://gateway.example", "https://gateway.example/", "https://gateway.example/api/v1/"])(
     "uses the Gateway-owned liveness route for %s", async (base) => {
       vi.stubEnv("GATEWAY_URL", base);

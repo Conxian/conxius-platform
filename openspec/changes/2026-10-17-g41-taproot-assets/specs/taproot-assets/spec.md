@@ -1,3 +1,5 @@
+> Unimplemented protocol acceptance requirements. Local simulation does not satisfy these requirements; no engine operation or proof may report success without an independently qualified provider. See change `2026-10-19-taproot-provider-boundary`.
+
 # OpenSpec Specification: Taproot Assets Protocol Engine
 
 ## Requirements

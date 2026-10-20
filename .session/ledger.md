@@ -1,3 +1,7 @@
+## 2026-10-19 qualification correction
+
+G-41 below was selected and modeled, not implemented as a real protocol provider. Its research is preserved as TaprootAssetsModel; the compatibility engine fails closed. Provider qualification, real proof verification and authenticated finality evidence remain open. Tests only establish local model/evidence boundaries.
+
 # Session Ledger
 **Session Start:** 2026-10-17T09:15:00Z
 **Session End:** 2026-10-17T09:16:00Z

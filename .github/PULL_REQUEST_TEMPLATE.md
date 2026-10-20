@@ -20,14 +20,6 @@ Provide a concise summary of the changes made in this pull request and the probl
 
 ---
 
-### Feature -> dev promotion checklist
-
-- [x] Code reviewed and tested
-- [x] Security & hygiene checks passed
-- [x] Zero secret egress verified
-
----
-
 ## Security & Hygiene Checklist
 
 - [ ] **Zero Secret Egress (ZSE)**: Verified no hardcoded credentials, API keys, or private keys are introduced.

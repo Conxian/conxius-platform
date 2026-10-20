@@ -1,3 +1,5 @@
+> Qualification correction (2026-10-19): the original requirements below are a proposal, not implemented protocol support. Current code preserves only an explicit local simulator. The engine is unavailable pending provider qualification; see `2026-10-19-taproot-provider-boundary`. G-41 remains open.
+
 # OpenSpec Proposal: G-41 Taproot Assets Protocol Engine (BIP-Taproot Assets / Taproot-Engine)
 
 **Change ID:** `2026-10-17-g41-taproot-assets`

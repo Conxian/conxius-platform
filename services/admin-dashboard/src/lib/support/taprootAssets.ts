@@ -1,8 +1,8 @@
 /**
- * Taproot Assets Protocol Engine (G-41)
+ * Taproot Assets local research model and unavailable provider boundary (G-41)
  *
- * Implements fail-closed Taproot Assets issuance, minting, multi-asset transfers,
- * Sparse Merkle Tree (SMST) proof validation, capacity enforcement, and tombstoning.
+ * This module does not implement issuance, SMST verification or transactions.
+ * The model only simulates local state; the engine requires a qualified provider.
  */
 
 import { createLogger } from "./logger";
@@ -23,6 +23,7 @@ export type TaprootAssetState =
   | "tombstoned";
 
 export interface TaprootAsset {
+  readonly simulationOnly: true;
   assetId: string;
   name: string;
   type: TaprootAssetType;
@@ -50,15 +51,17 @@ export interface TaprootAssetTransferResult {
   senderPubkey: string;
   recipientScript: string;
   newRootHash: string;
-  status: "completed" | "failed";
+  status: "simulated";
   timestampIso: string;
 }
 
-export class TaprootAssetsEngine {
+/** In-memory research only. No signing, broadcast, ownership or finality evidence. */
+export class TaprootAssetsModel {
+  readonly simulationOnly = true as const;
   private assets: Map<string, TaprootAsset> = new Map();
 
   /**
-   * Calculates deterministic SHA-256 asset ID from genesis outpoint, asset name, and type.
+   * Calculates a local model identifier, not a protocol asset ID.
    */
   public static calculateAssetId(
     genesisOutpoint: string,
@@ -106,7 +109,7 @@ export class TaprootAssetsEngine {
       throw new Error("Capacity limit exceeded");
     }
 
-    const assetId = TaprootAssetsEngine.calculateAssetId(
+    const assetId = TaprootAssetsModel.calculateAssetId(
       params.genesisOutpoint,
       params.name,
       params.type
@@ -123,6 +126,7 @@ export class TaprootAssetsEngine {
 
     const now = new Date().toISOString();
     const asset: TaprootAsset = {
+      simulationOnly: true,
       assetId,
       name: params.name,
       type: params.type,
@@ -136,7 +140,7 @@ export class TaprootAssetsEngine {
     };
 
     this.assets.set(assetId, asset);
-    logger.info(`[G-41] Taproot Asset minted successfully: ${assetId} (${params.name})`);
+    logger.info(`[G-41] Taproot Asset mint simulated: ${assetId} (${params.name})`);
     return asset;
   }
 
@@ -194,7 +198,7 @@ export class TaprootAssetsEngine {
     asset.state = "transferred";
     asset.updatedAtIso = new Date().toISOString();
 
-    logger.info(`[G-41] Taproot Asset ${payload.assetId} transferred successfully (tx: ${transferId})`);
+    logger.info(`[G-41] Taproot Asset ${payload.assetId} transfer simulated (local ID: ${transferId})`);
 
     return {
       transferId,
@@ -203,7 +207,7 @@ export class TaprootAssetsEngine {
       senderPubkey: payload.senderPubkey,
       recipientScript: payload.recipientScript,
       newRootHash,
-      status: "completed",
+      status: "simulated",
       timestampIso: asset.updatedAtIso,
     };
   }
@@ -212,20 +216,11 @@ export class TaprootAssetsEngine {
    * Verifies Sparse Merkle Tree (SMST) commitment proof.
    */
   public verifyProof(assetId: string, proofSmstHash: string): boolean {
-    const asset = this.assets.get(assetId);
-    if (!asset) {
-      return false;
-    }
-
-    if (!proofSmstHash || proofSmstHash.length !== 64) {
-      return false;
-    }
-
-    // A valid proof hash must match current asset rootHash or a derived cryptographic commit
-    return (
-      proofSmstHash === asset.rootHash ||
-      createHash("sha256").update(`${asset.assetId}:${proofSmstHash}`).digest("hex").length === 64
-    );
+    // Neither local root equality nor hash shape is a protocol proof.
+    // The research model has no verifier and must never assert verification.
+    void assetId;
+    void proofSmstHash;
+    return false;
   }
 
   /**
@@ -278,5 +273,42 @@ export class TaprootAssetsEngine {
     asset.updatedAtIso = new Date().toISOString();
     logger.warn(`[G-41] Asset ${assetId} has been tombstoned`);
     return asset;
+  }
+}
+
+/** Compatibility API: unavailable until an independently qualified provider exists. */
+export class TaprootAssetsEngine {
+  static calculateAssetId = TaprootAssetsModel.calculateAssetId;
+
+  private unavailable(): never {
+    throw new Error("Taproot Assets provider unavailable: qualified protocol provider required");
+  }
+
+  mintAsset(_params: Parameters<TaprootAssetsModel["mintAsset"]>[0]): TaprootAsset {
+    return this.unavailable();
+  }
+
+  transferAsset(_payload: TaprootTransferPayload): TaprootAssetTransferResult {
+    return this.unavailable();
+  }
+
+  burnAsset(_assetId: string, _amount: bigint): TaprootAsset {
+    return this.unavailable();
+  }
+
+  tombstoneAsset(_assetId: string): TaprootAsset {
+    return this.unavailable();
+  }
+
+  verifyProof(_assetId: string, _proofSmstHash: string): boolean {
+    return false;
+  }
+
+  getAsset(_assetId: string): TaprootAsset | undefined {
+    return undefined;
+  }
+
+  listAssets(): TaprootAsset[] {
+    return [];
   }
 }

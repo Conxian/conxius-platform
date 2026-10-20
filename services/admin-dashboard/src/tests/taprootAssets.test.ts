@@ -1,23 +1,23 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import {
-  TaprootAssetsEngine,
+  TaprootAssetsModel,
   MAX_TAPROOT_ASSETS_CAPACITY,
 } from "../lib/support/taprootAssets";
 
-describe("Taproot Assets Protocol Engine (G-41)", () => {
-  let engine: TaprootAssetsEngine;
+describe("Taproot Assets local research model (G-41)", () => {
+  let engine: TaprootAssetsModel;
 
   beforeEach(() => {
-    engine = new TaprootAssetsEngine();
+    engine = new TaprootAssetsModel();
   });
 
   it("should calculate deterministic asset ID", () => {
-    const id1 = TaprootAssetsEngine.calculateAssetId(
+    const id1 = TaprootAssetsModel.calculateAssetId(
       "txid123:0",
       "USD-Taro",
       "normal"
     );
-    const id2 = TaprootAssetsEngine.calculateAssetId(
+    const id2 = TaprootAssetsModel.calculateAssetId(
       "txid123:0",
       "USD-Taro",
       "normal"
@@ -108,7 +108,7 @@ describe("Taproot Assets Protocol Engine (G-41)", () => {
       recipientScript: "51200000000000000000000000000000000000000000000000000000000000000000",
     });
 
-    expect(transferResult.status).toBe("completed");
+    expect(transferResult.status).toBe("simulated");
     expect(transferResult.transferId).toContain("tapr-tx");
 
     const updatedAsset = engine.getAsset(asset.assetId);
@@ -124,8 +124,9 @@ describe("Taproot Assets Protocol Engine (G-41)", () => {
       genesisOutpoint: "proof-txid:0",
     });
 
-    expect(engine.verifyProof(asset.assetId, asset.rootHash)).toBe(true);
-    expect(engine.verifyProof(asset.assetId, "0000000000000000000000000000000000000000000000000000000000000000")).toBe(true);
+    expect(asset.simulationOnly).toBe(true);
+    expect(engine.verifyProof(asset.assetId, asset.rootHash)).toBe(false);
+    expect(engine.verifyProof(asset.assetId, "0000000000000000000000000000000000000000000000000000000000000000")).toBe(false);
     expect(engine.verifyProof(asset.assetId, "invalid-proof")).toBe(false);
   });
 

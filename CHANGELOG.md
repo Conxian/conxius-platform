@@ -1,5 +1,7 @@
 # Changelog
 
+- Require complete endpoint/credential groups before Nexus, Upstash and Supabase diagnostic probes; report missing names without making partial or anonymous requests. Preserve independent provider and M2M readiness boundaries.
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
@@ -8,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- Keep production environment preflight diagnostics redacted while preserving all existing validation and failure gates; add black-box canary regression tests and scoped CI.
 - **Provider liveness evidence**: Probe Gateway at `/api/v1/health`, reject redirects and ambiguous endpoint URLs, withhold response bodies, and distinguish HTTP liveness from operation and production qualification.
 - **Next.js Turbopack Dynamic Tracing Build Warnings**: Added `/*turbopackIgnore: true*/` annotations to dynamic `path.resolve` calls in `services/admin-dashboard/src/lib/support/m2mKeyStore.ts`, `services/admin-dashboard/src/lib/sidl/stateStore.ts`, and `services/admin-dashboard/src/lib/governance/claims.ts`, suppressing project tracing warnings for a 100% clean production build.
 - **Root Ignore Rules & CI Hygiene**: Hardened root `.gitignore` with `out/`, `coverage/`, `.turbo/`, and `*.tmp` patterns to prevent untracked build artifacts or temporary files across workspace packages.

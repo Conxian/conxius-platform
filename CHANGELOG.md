@@ -1,3 +1,8 @@
+# 2026-10-19 — Taproot provider evidence boundary
+
+- Preserve G-41 as explicit simulation research; production engine operations and proof verification remain unavailable pending a qualified provider.
+- Restore trusted dev promotion policy/template and add negative evidence fixtures.
+
 # Changelog
 
 - Require complete endpoint/credential groups before Nexus, Upstash and Supabase diagnostic probes; report missing names without making partial or anonymous requests. Preserve independent provider and M2M readiness boundaries.

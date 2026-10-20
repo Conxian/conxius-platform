@@ -1,0 +1,3 @@
+# Reconcile grouped dependency update with workspace ownership
+
+Continue PR #1466 without discarding its useful dependency fixes. Hosted failures identify a Next manifest/lock mismatch: the dashboard requests 16.4.2 while the root override and importer still pin 16.4.0. Align the existing root ownership override to the already selected dashboard version, then regenerate using repository-pinned pnpm 9.15.5. Preserve other intentional overrides and policy checks. Verify dependency consistency, frozen install, service tests/typechecks/builds and hosted checks; do not weaken checks or approve release evidence from version metadata alone. Track under Business #1414/#1390.

@@ -23,6 +23,27 @@ function readJson(relativePath) {
   }
 }
 
+// pnpm 11+ reads overrides from pnpm-workspace.yaml, not package.json's (now
+// ignored) "pnpm" field. Parse the top-level `overrides:` mapping so this check
+// follows the real source of truth and no mirror copy is needed.
+function readWorkspaceOverrides() {
+  let text;
+  try {
+    text = readFileSync(resolve(repositoryRoot, 'pnpm-workspace.yaml'), 'utf8');
+  } catch {
+    return undefined;
+  }
+  const marker = /^overrides:\s*$/m.exec(text);
+  if (marker === null) return undefined;
+  const overrides = {};
+  for (const line of text.slice(marker.index + marker[0].length).split('\n')) {
+    if (line.trim() !== '' && !line.startsWith('  ')) break;
+    const match = /^\s{2}([A-Za-z0-9@/._-]+):\s*(.+)$/.exec(line);
+    if (match !== null) overrides[match[1]] = unquote(match[2].trim());
+  }
+  return overrides;
+}
+
 function unquote(value) {
   const trimmed = value.trim();
   if (
@@ -78,13 +99,14 @@ function resolvedVersion(version) {
   return version.split('(', 1)[0];
 }
 
-const rootNextOverride = rootPackage.pnpm?.overrides?.next;
+const workspaceOverrides = readWorkspaceOverrides();
+const rootNextOverride = workspaceOverrides?.next ?? rootPackage.pnpm?.overrides?.next;
 const dashboardNextSpecifier = dashboardPackage.dependencies?.next;
 const lockNextOverrideMatch = /^  next:\s*(.+)$/m.exec(lockfile);
 const lockNextOverride = lockNextOverrideMatch === null ? undefined : unquote(lockNextOverrideMatch[1]);
 
 if (typeof rootNextOverride !== 'string') {
-  errors.push("package.json must declare pnpm.overrides.next.");
+  errors.push("pnpm-workspace.yaml must declare overrides.next.");
 }
 if (typeof dashboardNextSpecifier !== 'string') {
   errors.push("services/admin-dashboard/package.json must declare dependencies.next.");
@@ -92,13 +114,13 @@ if (typeof dashboardNextSpecifier !== 'string') {
 if (typeof rootNextOverride === 'string' && typeof dashboardNextSpecifier === 'string') {
   if (rootNextOverride !== dashboardNextSpecifier) {
     errors.push(
-      `Next.js policy mismatch: package.json pnpm.overrides.next is '${rootNextOverride}', ` +
+      `Next.js policy mismatch: pnpm-workspace.yaml overrides.next is '${rootNextOverride}', ` +
         `but services/admin-dashboard/package.json declares '${dashboardNextSpecifier}'.`,
     );
   }
   if (lockNextOverride !== rootNextOverride) {
     errors.push(
-      `Next.js lockfile mismatch: package.json pnpm.overrides.next is '${rootNextOverride}', ` +
+      `Next.js lockfile mismatch: pnpm-workspace.yaml overrides.next is '${rootNextOverride}', ` +
         `but pnpm-lock.yaml overrides.next is '${lockNextOverride ?? '<missing>'}'.`,
     );
   }

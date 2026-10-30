@@ -1,5 +1,17 @@
 packages:
   - "services/*"
 
+overrides:
+  next: 16.4.3
+  ip-address: ">=10.1.1"
+  postcss: ">=8.5.10"
+  langsmith: ">=0.5.19"
+  uuid: ">=13.0.1"
+  vite: 8.3.5
+
 onlyBuiltDependencies:
   - sharp
+  - esbuild
+
+allowBuilds:
+  esbuild: true

@@ -20,20 +20,21 @@
       "description": "B2B enterprise licensing, legal compliance, business operations, and sovereign control plane.",
       "routes": {
         "conxian-business": "bos.conxian-labs.com",
+        "conxius-platform": "bos.conxian-labs.com",
         "conxian-labs-site": "www.conxian-labs.com"
       }
     }
   },
   "surfaces": [
     {
-      "host": "www.conxian-labs.com",
+      "host": "bos.conxian-labs.com",
       "pathPrefix": "/",
       "serviceId": "admin-dashboard",
       "repository": "Conxian/conxius-platform",
       "deployment": "Vercel project prj_rr37DgbJsfl1Hfoh2MUhOx6pUVHf",
       "auth": "admin-api-auth for protected data routes",
       "healthEvidence": "/api/health must return 200; provider data remains evidence-scoped",
-      "owner": "Conxian platform operations"
+      "owner": "Conxian platform operations (control plane)"
     }
   ],
   "externalSurfaces": [

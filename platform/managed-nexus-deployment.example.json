@@ -1,0 +1,21 @@
+{
+  "$schema": "./managed-nexus-deployment.schema.json",
+  "schemaVersion": "conxian.managed-nexus-deployment.v1",
+  "tenantId": "example-bank",
+  "environment": "staged",
+  "provider": { "name": "gcp", "region": "africa-south1", "failureDomains": ["africa-south1-a", "africa-south1-b"] },
+  "release": {
+    "image": "registry.example.invalid/conxian/nexus",
+    "imageDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "sourceCommit": "0000000000000000000000000000000000000000"
+  },
+  "topology": { "replicas": 3, "nodePublicIngress": false, "loadBalancer": true, "healthPath": "/health" },
+  "bitcoin": { "network": "signet", "minimumConfirmations": 6, "headerSource": "https://bitcoin.example.invalid/headers" },
+  "zkvm": {
+    "backends": ["sp1", "risc0"],
+    "programDigests": { "bitcoin-state-v1": "sha256:0000000000000000000000000000000000000000000000000000000000000000" }
+  },
+  "secrets": { "database": "ref://example/staged/nexus/database" },
+  "sla": { "availabilityTarget": 0.999, "rtoMinutes": 30, "rpoMinutes": 5 },
+  "evidence": { "sink": "ref://example/staged/nexus/evidence", "retentionDays": 365 }
+}

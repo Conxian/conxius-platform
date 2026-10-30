@@ -48,25 +48,39 @@ To maintain the security of this platform:
 - **Language**: TypeScript
 - **UI Components**: Earthy Corporate Design System (Forest Green #2E403B, Nakamoto Gold #D4A017)
 
-## Development
+## Development & Verification
 
 ```bash
-# Install dependencies
-pnpm install
+# From the repository root, install the pinned workspace
+pnpm install --frozen-lockfile
+
+# Run type checking
+pnpm --filter admin-dashboard run typecheck
 
 # Run development server (on port 3001)
-pnpm dev
+pnpm --filter admin-dashboard dev
 ```
 
 ## Testing
 
 ```bash
 # Run unit tests
-pnpm test
+pnpm --filter admin-dashboard test
 
 # Run Phase 7 alignment tests
-pnpm test:phase7
+pnpm --filter admin-dashboard test:phase7
 ```
+
+## Environment Setup
+
+From the repository root, copy the dashboard template and populate the required
+local configuration values. This file is separate from the Compose root `.env`:
+
+```bash
+cp services/admin-dashboard/.env.admin.example services/admin-dashboard/.env.admin
+```
+
+Do not commit `.env.admin` or `.env.admin.local` to Git.
 
 ## Support Expectations
 

@@ -1,0 +1,23 @@
+name: Container initialization
+
+on:
+  pull_request:
+    branches: [dev, staged, main]
+    paths: ['services/admin-dashboard/**', 'services/admin-pulse-bos/package.json', 'services/elizaos-plugin-conxian/package.json', package.json, pnpm-lock.yaml, pnpm-workspace.yaml, .dockerignore, 'scripts/check-dependency-consistency.mjs', 'scripts/container_init_smoke.py', '.github/workflows/container-init.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  initialize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Build dashboard image
+        run: docker build --file services/admin-dashboard/Dockerfile --tag conxius-platform:init .
+      - name: Exercise startup, durable registry restart and unavailable states
+        run: python3 scripts/container_init_smoke.py --image conxius-platform:init

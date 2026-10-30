@@ -20,7 +20,7 @@
 |------|---------------|-------|----------------------|
 | `conxius-wallet` | The Vault | Product | Beta (partial) — native L1 sign+broadcast done; BDK sync-only + 12 non-L1 managers fail-closed (#1283) |
 | `conxian-nexus` | The Engine | Infra | Beta (approaching Stable) |
-| `conxian-gateway` | The Pipe | Infra | Code-complete, undeployed (~11 owner secrets, #466) |
+| `conxian-gateway` | The Pipe | Infra | Hosted qualification unverified; use the exact candidate's Gateway startup contract and #466 receipts, not a fixed secret count |
 | `conxius-platform` | The UI | Product | Active |
 | `lib-conxian-core` | — | SDK | Stable |
 | `conxius-enclave-sdk` | — | SDK | Beta / conditional (no value-bearing signing) |

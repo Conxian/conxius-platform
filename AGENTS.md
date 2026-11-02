@@ -26,7 +26,7 @@
 | `conxius-enclave-sdk` | — | SDK | Beta / conditional (no value-bearing signing) |
 | `conxian_market` | — | Product | Active (`@conxian/market-sdk` published) |
 
-**Layer map**: SDK (`lib-conxian-core`, `conxius-enclave-sdk`) → Infra (`conxian-gateway`, `conxian-nexus`) → Product (`conxius-wallet`, `conxian_market`, `conxius-platform`, `conxian-labs-site`, `conxian.github.io`) → Governance (`conxian-business`, `.github`, `.github-private`).
+**Layer map**: SDK (`lib-conxian-core`, `conxius-enclave-sdk`) → Infra (`conxian-gateway`, `conxian-nexus`) → Product (`conxius-wallet`, `conxian_market`, `conxius-platform`, `conxian-labs-site`, `conxian.github.io` (archived)) → Governance (`conxian-business`, `.github`, `.github-private`).
 
 **Protocol Handoff status** (Directive #7): infrastructure-only ownership is codified; the community-owned protocol structure, contract transfer, and legal docs remain deferred to #1167 (owner/legal decision — not agent-executable).
 

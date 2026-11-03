@@ -70,7 +70,32 @@ class StagedDwellTests(unittest.TestCase):
     def test_rejects_single_parent_staged_head(self) -> None:
         result = self.run_validator("12", self.root, 2_000_000)
         self.assertEqual(result.returncode, 4)
-        self.assertIn("staged-entry evidence is unavailable", result.stderr)
+        self.assertIn("two-parent merge commit", result.stderr)
+
+    def test_rejects_octopus_staged_head(self) -> None:
+        git(self.repo, "checkout", "-q", "-b", "octopus-one", self.root)
+        commit(self.repo, "octopus-one", 1_000_110)
+        git(self.repo, "checkout", "-q", "-b", "octopus-two", self.root)
+        commit(self.repo, "octopus-two", 1_000_120)
+        git(self.repo, "checkout", "-q", "-b", "octopus-base", self.root)
+        env = os.environ | {
+            "GIT_AUTHOR_DATE": "@1000300 +0000",
+            "GIT_COMMITTER_DATE": "@1000300 +0000",
+        }
+        git(
+            self.repo,
+            "merge",
+            "--no-ff",
+            "octopus-one",
+            "octopus-two",
+            "-m",
+            "octopus staged entry",
+            env=env,
+        )
+        octopus_sha = git(self.repo, "rev-parse", "HEAD")
+        result = self.run_validator("12", octopus_sha, 2_000_000)
+        self.assertEqual(result.returncode, 4)
+        self.assertIn("two-parent merge commit", result.stderr)
 
     def test_reports_ineligible_before_boundary(self) -> None:
         result = self.run_validator("12", self.merge_sha, 1_000_200 + 12 * 3600 - 1)

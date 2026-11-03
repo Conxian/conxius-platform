@@ -33,9 +33,8 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/'))
     env:
-      # Minimum soak time (hours) a staged head must age before it may be
-      # promoted to main. Override via the repo variable MIN_MAINNET_DWELL_HOURS
-      # (set to 0 to disable the dwell gate).
+      # Minimum soak time (hours) for an exact staged-entry merge commit.
+      # Values below 12 or invalid values fail closed.
       MIN_MAINNET_DWELL_HOURS: ${{ vars.MIN_MAINNET_DWELL_HOURS || '12' }}
     steps:
       - name: Determine promotion lane
@@ -106,17 +105,23 @@ jobs:
             exit 0
           fi
 
-          # Minimum dwell (soak) gate for staged -> main releases. The staged
-          # head must have aged at least MIN_MAINNET_DWELL_HOURS before it may
-          # be promoted to main (which fires the production deploy).
+          # Fail-closed dwell gate for staged -> main. The exact staged head
+          # must itself be a merge commit, which supplies immutable staged-entry
+          # evidence; invalid or sub-12-hour configuration is rejected.
           if [ "$SOURCE" = "staged" ] && [ "$TARGET" = "main" ]; then
-            SOURCE_HEAD_TIME=$(git log -1 --format=%ct "$SOURCE_SHA")
-            NOW=$(date +%s)
-            AGE_SECONDS=$(( NOW - SOURCE_HEAD_TIME ))
-            MIN_SECONDS=$(( MIN_MAINNET_DWELL_HOURS * 3600 ))
-            if [ "$AGE_SECONDS" -lt "$MIN_SECONDS" ]; then
+            if ! DWELL_OUTPUT=$(bash scripts/validate_staged_dwell.sh \
+              "$MIN_MAINNET_DWELL_HOURS" "$SOURCE_SHA" "$(date +%s)"); then
+              echo "::error::Unable to establish fail-closed staged dwell evidence."
+              exit 1
+            fi
+            printf '%s\n' "$DWELL_OUTPUT" >> "$GITHUB_OUTPUT"
+            ELIGIBLE=$(printf '%s\n' "$DWELL_OUTPUT" | sed -n 's/^eligible=//p')
+            AGE_SECONDS=$(printf '%s\n' "$DWELL_OUTPUT" | sed -n 's/^age_seconds=//p')
+            MIN_SECONDS=$(printf '%s\n' "$DWELL_OUTPUT" | sed -n 's/^minimum_seconds=//p')
+            STAGED_ENTRY_EPOCH=$(printf '%s\n' "$DWELL_OUTPUT" | sed -n 's/^staged_entry_epoch=//p')
+            if [ "$ELIGIBLE" != "true" ]; then
               echo "skip=true" >> "$GITHUB_OUTPUT"
-              echo "::notice::staged->main dwell not yet met: source commit ${SOURCE_SHA} is ${AGE_SECONDS}s old (< ${MIN_SECONDS}s = ${MIN_MAINNET_DWELL_HOURS}h). Re-checking on the next schedule."
+              echo "::notice::staged->main dwell not yet met: exact staged-entry merge ${SOURCE_SHA} entered staged at ${STAGED_ENTRY_EPOCH}; age ${AGE_SECONDS}s (< ${MIN_SECONDS}s). Re-checking on the next schedule."
               exit 0
             fi
           fi

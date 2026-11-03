@@ -49,8 +49,17 @@ jobs:
           DELETE_BRANCHES=""
           ACTIVE_COUNT=0
 
-          for branch in $(git branch -r --format='%(refname:short)' | grep -v 'HEAD'); do
+          for branch in $(git for-each-ref --format='%(refname:short)' refs/remotes/origin/ | grep -v 'HEAD'); do
             local_name="${branch#origin/}"
+
+            # Skip anything that is not a real remote-tracking branch under
+            # origin/ (e.g. a bare `origin` ref or a symbolic HEAD). Without
+            # this guard such an entry resolves to timestamp 0 and is reported
+            # as a 1970-01-01 deletion candidate.
+            if [[ "$local_name" == "$branch" || -z "$local_name" ]] \
+              || ! git rev-parse --verify --quiet "refs/remotes/origin/${local_name}" >/dev/null; then
+              continue
+            fi
 
             # Skip protected branches (exact match)
             skip=false

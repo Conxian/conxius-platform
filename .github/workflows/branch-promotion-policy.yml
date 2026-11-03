@@ -36,5 +36,10 @@ jobs:
         run: |
           # Fetch commit metadata only. Never check out or execute PR-head code.
           git fetch --no-tags --depth=2 origin "$SOURCE_SHA"
-          bash scripts/validate_staged_dwell.sh \
-            "$MIN_MAINNET_DWELL_HOURS" "$SOURCE_SHA" "$(date +%s)"
+          DWELL_OUTPUT=$(bash scripts/validate_staged_dwell.sh \
+            "$MIN_MAINNET_DWELL_HOURS" "$SOURCE_SHA" "$(date +%s)")
+          printf '%s\n' "$DWELL_OUTPUT"
+          if ! grep -qx 'eligible=true' <<< "$DWELL_OUTPUT"; then
+            echo "::error::Exact staged-entry dwell is incomplete."
+            exit 1
+          fi

@@ -1,6 +1,5 @@
 """Tests for the Citrea adapter."""
 
-import asyncio
 from unittest.mock import AsyncMock, patch
 
 import pytest

@@ -11,10 +11,9 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import AsyncIterator
-from typing import Optional
 
 from conxian_nexus.adapters.base import BaseAdapter
-from conxian_nexus.types import BlockData, RollupType, ShadowEvent, TransactionData
+from conxian_nexus.types import BlockData, RollupType, ShadowEvent
 
 logger = logging.getLogger(__name__)
 

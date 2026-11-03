@@ -21,7 +21,7 @@ import json
 import os
 import sys
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 try:
     import requests

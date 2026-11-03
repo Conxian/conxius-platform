@@ -2,7 +2,6 @@ import os
 import json
 import re
 import subprocess
-import sys
 
 def run_command(command):
     try:

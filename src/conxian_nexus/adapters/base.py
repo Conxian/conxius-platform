@@ -1,7 +1,6 @@
 """Base adapter interface for T1 rollup protocols."""
 
 from abc import ABC, abstractmethod
-from typing import Optional
 
 from conxian_nexus.types import (
     BlockData,

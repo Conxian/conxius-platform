@@ -12,6 +12,8 @@ class PromotionDwellWorkflowTests(unittest.TestCase):
         self.assertIn("github.event.pull_request.base.ref == 'main'", workflow)
         self.assertIn('git fetch --no-tags --depth=2 origin "$SOURCE_SHA"', workflow)
         self.assertIn("bash scripts/validate_staged_dwell.sh", workflow)
+        self.assertIn("grep -qx 'eligible=true'", workflow)
+        self.assertIn("Exact staged-entry dwell is incomplete", workflow)
         self.assertIn("MIN_MAINNET_DWELL_HOURS", workflow)
         self.assertLess(
             workflow.index("Enforce exact route and evidence matrix"),

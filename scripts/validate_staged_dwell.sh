@@ -33,8 +33,8 @@ read -r _ FIRST_PARENT SECOND_PARENT EXTRA <<EOF
 $(git rev-list --parents -n 1 "$SOURCE_SHA")
 EOF
 
-if [ -z "${FIRST_PARENT:-}" ] || [ -z "${SECOND_PARENT:-}" ]; then
-  echo "error=staged head is not a merge commit; staged-entry evidence is unavailable" >&2
+if [ -z "${FIRST_PARENT:-}" ] || [ -z "${SECOND_PARENT:-}" ] || [ -n "${EXTRA:-}" ]; then
+  echo "error=staged head must be an exact two-parent merge commit; staged-entry evidence is unavailable" >&2
   exit 4
 fi
 

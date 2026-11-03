@@ -27,3 +27,19 @@ jobs:
         env:
           PYTHONDONTWRITEBYTECODE: '1'
         run: python3 scripts/branch_promotion_policy.py --event-path "$GITHUB_EVENT_PATH"
+
+      - name: Enforce immutable staged dwell on main promotions
+        if: github.event.pull_request.base.ref == 'main'
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+          MIN_MAINNET_DWELL_HOURS: ${{ vars.MIN_MAINNET_DWELL_HOURS || '12' }}
+        run: |
+          # Fetch commit metadata only. Never check out or execute PR-head code.
+          git fetch --no-tags --depth=2 origin "$SOURCE_SHA"
+          DWELL_OUTPUT=$(bash scripts/validate_staged_dwell.sh \
+            "$MIN_MAINNET_DWELL_HOURS" "$SOURCE_SHA" "$(date +%s)")
+          printf '%s\n' "$DWELL_OUTPUT"
+          if ! grep -qx 'eligible=true' <<< "$DWELL_OUTPUT"; then
+            echo "::error::Exact staged-entry dwell is incomplete."
+            exit 1
+          fi

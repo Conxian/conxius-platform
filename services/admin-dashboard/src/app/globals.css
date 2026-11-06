@@ -137,6 +137,7 @@ button { min-height: 2.5rem; }
 .service-tile__owner { color: var(--forest) !important; }
 .service-state { flex: 0 0 auto; padding: .2rem .4rem; border: 1px solid var(--line); color: var(--muted); font-family: var(--font-mono); font-size: .62rem; text-transform: uppercase; }
 .service-state--active { border-color: var(--forest); color: var(--forest); }
+.service-state--evidence-scoped { border-color: var(--forest); }
 .service-state--external { border-color: var(--gold); color: var(--gold); }
 .service-state--archived { opacity: .65; }
 .reality-status {

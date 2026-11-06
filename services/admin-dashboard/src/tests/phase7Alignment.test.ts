@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { FDC3Resolver, CJCSJob } from '../lib/fdc3/resolver';
 import { UsageValidator, UsageEvent } from '../lib/sidl/usageValidation';
 import { BitVMBridge, UnavailableBitVMVerifier } from '../lib/support/bitvm';
@@ -88,11 +88,19 @@ describe('Phase 7 Alignment: BitVM2 Floor Manager', () => {
 });
 
 describe('Phase 7 Alignment: BIP-322 USI Intents', () => {
-  it('should verify a valid USI intent signature', async () => {
+  afterEach(() => {
+    Bip322Bridge.configureVerifier(null);
+  });
+
+  it('verifies a USI intent signature only via an injected verifier', async () => {
     const address = 'bc1qtestaddress';
     const intent = { type: 'usi:settlement', amount: 1000 };
     const signature = 'base64signaturelongerthan10';
 
+    const before = await Bip322Bridge.verify(address, JSON.stringify(intent), signature);
+    expect(before.valid).toBe(false);
+
+    Bip322Bridge.configureVerifier({ verify: () => true });
     const result = await Bip322Bridge.verify(address, JSON.stringify(intent), signature);
     expect(result.valid).toBe(true);
     expect(result.intent_type).toBe('usi:settlement');

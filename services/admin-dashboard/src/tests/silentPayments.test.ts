@@ -41,10 +41,9 @@ describe("SilentPaymentsEngine (G-05)", () => {
     expect(() => engine.parseAddress("sp1qinvalid")).toThrow("Invalid BIP-352 Silent Payment address");
   });
 
-  it("should tweak spend keys deterministically", () => {
+  it("fails closed instead of returning an untweaked spend key", () => {
     const tweak = "0000000000000000000000000000000000000000000000000000000000000005";
-    const tweaked = engine.tweakSpendKey(validSpendKey, tweak);
-    expect(tweaked).toBe(validSpendKey.toLowerCase());
+    expect(() => engine.tweakSpendKey(validSpendKey, tweak)).toThrow(/not implemented/);
 
     expect(() => engine.tweakSpendKey("invalid", tweak)).toThrow("Invalid public key or tweak hex format");
   });

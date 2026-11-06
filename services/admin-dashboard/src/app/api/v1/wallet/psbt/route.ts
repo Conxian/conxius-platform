@@ -18,11 +18,20 @@ export async function POST(req: Request) {
     }
 
     if (action === "sign") {
-      return NextResponse.json({
-        success: true,
-        signed_psbt: "base64-signed-psbt-stub",
-        attestation: "sig:..."
-      });
+      // Value signing is not performed here. The signer is the wallet/enclave
+      // (conxius-wallet `services/psbt.ts` / the enclave value-operation gate),
+      // not this dashboard route. Returning a fabricated signed PSBT and
+      // attestation would be fail-open: a client could treat the stub as an
+      // authorized treasury signature.
+      return NextResponse.json(
+        {
+          success: false,
+          error: "psbt_signing_not_available",
+          message:
+            "This route does not sign PSBTs. Signing is performed by the wallet/enclave value-operation gate.",
+        },
+        { status: 501 }
+      );
     }
 
     return NextResponse.json({

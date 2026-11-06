@@ -330,6 +330,25 @@ export function proposeClaim(input: {
 /**
  * Transitions a claim's status with event-logging and validation checks.
  */
+const UNSAFE_ENTRY_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+
+/**
+ * Resolve a claim ledger entry by id, rejecting prototype-polluting keys and
+ * inherited properties so a crafted entryId cannot mutate Object.prototype.
+ */
+function resolveClaimEntry(state: ClaimsState, entryId: string): ClaimLedgerEntry {
+  if (typeof entryId !== "string" || UNSAFE_ENTRY_KEYS.has(entryId)) {
+    throw new Error(`Invalid claim ledger entry id: ${entryId}`);
+  }
+  const entry = Object.prototype.hasOwnProperty.call(state.entries, entryId)
+    ? state.entries[entryId]
+    : undefined;
+  if (!entry) {
+    throw new Error(`Claim ledger entry ${entryId} not found.`);
+  }
+  return entry;
+}
+
 export function transitionClaimStatus(
   entryId: string,
   newStatus: ClaimStatus,
@@ -343,10 +362,7 @@ export function transitionClaimStatus(
 
   return withWriteLock(() => {
     const state = loadClaimsState();
-    const entry = state.entries[entryId];
-    if (!entry) {
-      throw new Error(`Claim ledger entry ${entryId} not found.`);
-    }
+    const entry = resolveClaimEntry(state, entryId);
 
     if (entry.status === "revoked") {
       throw new Error("Cannot transition a revoked claim.");
@@ -419,10 +435,7 @@ export function disputeClaim(entryId: string, actorId: string, rationale: string
   const occurredAt = new Date().toISOString();
   return withWriteLock(() => {
     const state = loadClaimsState();
-    const entry = state.entries[entryId];
-    if (!entry) {
-      throw new Error(`Claim ledger entry ${entryId} not found.`);
-    }
+    const entry = resolveClaimEntry(state, entryId);
 
     if (entry.status !== "approved" && entry.status !== "recognized" && entry.status !== "convertible") {
       throw new Error(`Cannot dispute a claim in status ${entry.status}.`);

@@ -84,15 +84,20 @@ export class SilentPaymentsEngine {
   }
 
   /**
-   * Computes a simulated tweaked spend public key for spending output scriptPubKeys.
+   * Computes the tweaked spend public key for spending output scriptPubKeys.
+   *
+   * Not implemented: BIP-352 requires an EC point addition (`P_spend + t·G`)
+   * which this bridge cannot perform without an audited curve implementation.
+   * It fails closed rather than returning the untweaked key, because a caller
+   * that received the input key unchanged would derive the wrong output script
+   * and silently miss its own payments.
    */
   public tweakSpendKey(spendPubKeyHex: string, tweakHex: string): string {
     if (!this.isValidHexKey(spendPubKeyHex) || !this.isValidHexKey(tweakHex)) {
       throw new Error("Invalid public key or tweak hex format");
     }
-    // Deterministic mock tweak simulation for BIP-352 spend key adjustment
-    log.info(`Tweaking spend public key ${spendPubKeyHex.slice(0, 8)}... with tweak ${tweakHex.slice(0, 8)}...`);
-    return spendPubKeyHex.toLowerCase();
+    log.error(`tweakSpendKey is not implemented (fail-closed) for ${spendPubKeyHex.slice(0, 8)}...`);
+    throw new Error("BIP-352 spend key tweaking is not implemented; refusing to return an untweaked key");
   }
 
   /**

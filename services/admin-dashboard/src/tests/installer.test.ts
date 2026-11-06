@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   validateInstallerConfig,
   generateDeploymentManifest,
@@ -111,5 +111,18 @@ describe('Client System Installer & Diagnostics Engine (G-66 & G-67)', () => {
 
     const m2mComp = report.components.find((c) => c.component === 'm2m-token');
     expect(m2mComp?.status).toBe('unauthorized');
+  });
+
+  it('never reports the gateway healthy when it was not probed', async () => {
+    vi.stubGlobal('fetch', undefined);
+    try {
+      const report = await runPreFlightDiagnostics(validConfig);
+      const gwComp = report.components.find((c) => c.component === 'gateway');
+      expect(gwComp?.status).toBe('unreachable');
+      expect(gwComp?.details).toContain('not probed');
+      expect(report.passed).toBe(false);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

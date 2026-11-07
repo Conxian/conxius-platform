@@ -201,9 +201,9 @@ export async function runPreFlightDiagnostics(
   } else {
     components.push({
       component: 'gateway',
-      status: 'healthy',
-      latencyMs: Date.now() - gwStart,
-      details: 'Gateway endpoint mock verified (no fetch in runtime).',
+      status: 'unreachable',
+      latencyMs: 0,
+      details: 'No fetch implementation available; gateway was not probed.',
     });
   }
 

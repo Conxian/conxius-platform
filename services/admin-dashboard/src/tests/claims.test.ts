@@ -232,6 +232,30 @@ describe("CON-483: Contributor Claim Ledger and Activation Policy Tests", () => 
       expect(revoked.stateReason).toBe("PLAGIARISM");
       expect(revoked.reviewers.revokedBy).toBe("steward-council");
     });
+
+    it("should reject prototype-polluting entry ids instead of resolving inherited properties", () => {
+      const claim = proposeClaim({
+        contributorId: "ubi:btc:contributor-1",
+        artifactRef: { system: "GitHub", id: "pr-1", url: "https://github.com/1" },
+        category: "CORE_PROTOCOL_CODE",
+        impactMultiplierBps: IMPACT_MULTIPLIERS.STANDARD,
+        qualityMultiplierBps: QUALITY_MULTIPLIERS.ACCEPTED,
+        evidence: [{ type: "doc", uri: "https://github.com/1", capturedAt: new Date().toISOString() }],
+        proposedBy: "steward-alice",
+      });
+      transitionClaimStatus(claim.entryId, "verified", "steward-bob");
+
+      expect(() => transitionClaimStatus("__proto__", "approved", "steward-bob")).toThrow(
+        /Invalid claim ledger entry id/,
+      );
+      expect(() => disputeClaim("constructor", "challenger-dave", "x")).toThrow(
+        /Invalid claim ledger entry id/,
+      );
+      expect(() => transitionClaimStatus("entry-does-not-exist", "approved", "steward-bob")).toThrow(
+        /not found/,
+      );
+      expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    });
   });
 
   describe("AC-6: Fail-Closed Activation Gates", () => {

@@ -5,9 +5,9 @@ name: CI Baseline
 
 on:
   pull_request:
-    branches: [ main, develop, dev, 'release/**' ]
+    branches: [ main, staged, develop, dev, 'release/**' ]
   push:
-    branches: [ main, develop, dev, 'release/**' ]
+    branches: [ main, staged, develop, dev, 'release/**' ]
 
 permissions:
   contents: read

@@ -98,7 +98,7 @@ describe("provider liveness contract", () => {
     },
   );
 
-  it.each([[302, "unavailable"], [401, "unavailable"], [429, "unavailable"], [503, "degraded"]])(
+  it.each([[302, "unavailable"], [401, "unavailable"], [429, "rate-limited"], [503, "degraded"]])(
     "does not classify HTTP %s as reachable", async (status, state) => {
       vi.stubEnv("GATEWAY_URL", "https://gateway.example");
       vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("private-body", { status: Number(status) })));
@@ -107,6 +107,15 @@ describe("provider liveness contract", () => {
       expect(JSON.stringify(gateway)).not.toContain("private-body");
     },
   );
+
+  it("classifies HTTP 429 as rate-limited, not an outage", async () => {
+    vi.stubEnv("GATEWAY_URL", "https://gateway.example");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("private-body", { status: 429 })));
+    const gateway = (await getLiveProviderStatus()).find((row) => row.name === "Gateway")!;
+    expect(gateway.state).toBe("rate-limited");
+    expect(gateway.detail).toContain("not an outage");
+    expect(JSON.stringify(gateway)).not.toContain("private-body");
+  });
 
   it.each(["https://private-value@gateway.example", "https://gateway.example?private-value", "https://gateway.example#private-value", "https://gateway.example/private-value", "file:///private-value"])(
     "rejects ambiguous Gateway base configuration without fetching", async (base) => {

@@ -1,14 +1,14 @@
 import { getConnectionEvidence } from "../../lib/connection-evidence";
 import { getLiveProviderStatus, type LiveState } from "../../lib/live-provider-status";
 
-const labels: Record<LiveState, string> = { reachable: "Reachable", degraded: "Degraded", unavailable: "Unavailable", "not-configured": "Not configured" };
+const labels: Record<LiveState, string> = { reachable: "Reachable", "rate-limited": "Rate limited", degraded: "Degraded", unavailable: "Unavailable", "not-configured": "Not configured" };
 
 export const dynamic = "force-dynamic";
 
 export default async function ConxianStatusPage() {
   const [evidence, live] = await Promise.all([Promise.resolve(getConnectionEvidence()), getLiveProviderStatus()]);
   const liveByName = new Map(live.map((item) => [item.name, item]));
-  const reachable = live.filter((item) => item.state === "reachable").length;
+  const reachable = live.filter((item) => item.state === "reachable" || item.state === "rate-limited").length;
 
   return (
     <main className="settings-page status-page">

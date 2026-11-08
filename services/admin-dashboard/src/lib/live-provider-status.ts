@@ -1,7 +1,10 @@
 import "server-only";
 import { readRegistrationEvidence, type RegistrationEvidence } from "./provider-registration";
 
-export type LiveState = "reachable" | "degraded" | "unavailable" | "not-configured";
+// A 429 proves DNS, routing, TLS and the application edge answered; the service
+// is reachable and merely rate-limited, so it is not an outage. Collapsing 429
+// into "unavailable" inflates incident counts and reports a false red.
+export type LiveState = "reachable" | "rate-limited" | "degraded" | "unavailable" | "not-configured";
 
 export type LiveProviderStatus = {
   name: string;
@@ -79,9 +82,15 @@ async function probe(provider: Provider): Promise<LiveProviderStatus> {
   try {
     const response = await fetch(request.url, { method: "GET", headers: request.headers, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(5000) });
     const latencyMs = Date.now() - started;
-    const state: LiveState = response.status >= 500 ? "degraded" : response.status >= 200 && response.status < 300 ? "reachable" : "unavailable";
+    const state: LiveState = response.status === 429 ? "rate-limited"
+      : response.status >= 500 ? "degraded"
+      : response.status >= 200 && response.status < 300 ? "reachable"
+      : "unavailable";
     await response.body?.cancel();
-    return { name: provider.name, state, checkedAt, latencyMs, detail: `Live probe HTTP ${response.status}; response body withheld. Liveness only; operation and production qualification not established.`, source: "live-probe" };
+    const detail = response.status === 429
+      ? "Live probe HTTP 429; rate-limited but reachable, so not an outage. Liveness only; operation and production qualification not established."
+      : `Live probe HTTP ${response.status}; response body withheld. Liveness only; operation and production qualification not established.`;
+    return { name: provider.name, state, checkedAt, latencyMs, detail, source: "live-probe" };
   } catch {
     return { name: provider.name, state: "unavailable", checkedAt, latencyMs: Date.now() - started, detail: "Live probe failed or timed out; credentials and response body withheld.", source: "live-probe" };
   }

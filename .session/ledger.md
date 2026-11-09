@@ -20,7 +20,7 @@ G-41 below was selected and modeled, not implemented as a real protocol provider
 
 ### Reconnaissance & Gap Analysis (Phase 2)
 - Codebase Mapping: Monorepo with `services/admin-dashboard`, `services/admin-pulse-bos`, `services/elizaos-plugin-conxian`, and `src/conxian_nexus`.
-- Neon Cloud Databases: 6 active projects listed under 'Conxian Labs' (`org-silent-sun-00457600`).
+- Neon Cloud Databases: 6 active projects listed under 'Conxian Labs' (`org-neon-project-<redacted>`).
 - Gap Selected: **G-41 (Taproot Assets Protocol Engine)** - Composite Score: 25.
 
 ### Production Code Initiation & Verification (Phase 3 - Phase 6)

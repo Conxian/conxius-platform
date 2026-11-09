@@ -23,7 +23,7 @@ The platform is transitioning to a multidimensional operational model, integrati
 - **Deployment Strategy**: Transitioning to declarative NixOS (Phase 7 roadmap).
 
 ## 4. Risks & Remediation
-- **Render Port Binding**: Analysis complete; manual correction required for srv-d7b0el3uibrs73b2qjg0.
+- **Render Port Binding**: Analysis complete; manual correction required for srv-<redacted>.
 - **CI Billing Lock**: Managed via self-hosted runners and local hygiene guards.
 - **Audit Drift**: Remediated via modernization of `system_audit.py`.
 

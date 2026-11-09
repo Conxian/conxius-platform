@@ -54,7 +54,7 @@ repository; it does not implement a proof backend.
   - **ALEX Readiness (Method B)**: Direct contract-call transaction construction.
 
 ## 2. Identified Frictions & Roadmap (Phase 7)
-- [x] **Render Deployment Remediation**: Analysis complete. srv-d7b0el3uibrs73b2qjg0 requires removal of the trailing colon in the --listen binding. srv-d8fmr7v40ujc73b7ba8g requires correcting Npm to npm in the build command.
+- [x] **Render Deployment Remediation**: Analysis complete. srv-<redacted> requires removal of the trailing colon in the --listen binding. srv-<redacted> requires correcting Npm to npm in the build command.
 - [ ] **Declarative NixOS Migration**: Target/proposed. No supported NixOS node
   deployment is implemented in this repository; `provision-secrets.sh` remains
   the current local helper.

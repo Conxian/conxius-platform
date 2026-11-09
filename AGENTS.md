@@ -321,7 +321,7 @@
 
 | Crate | Path | Role |
 |-------|------|------|
-| `conxius-enclave-sdk` | `../conxius-enclave-sdk` | Production Vault SDK (v2.0.17) — hardware signing, attestation |
+| `conxius-enclave-sdk` | `../conxius-enclave-sdk` | Production Vault SDK (v2.1.0) — hardware signing, attestation |
 | `lib-conxian-core` | `../lib-conxian-core` | Shared protocol primitives (v0.3.3) |
 | `conxian-gateway` | `../conxian-gateway` | Runtime orchestration + middleware (v0.1.5) |
 | `conxian-nexus` | `../conxian-nexus` | Glass Node proof layer (v0.4.23) |

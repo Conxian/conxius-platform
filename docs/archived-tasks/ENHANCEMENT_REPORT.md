@@ -4,12 +4,12 @@ This report documents the research into the Render deployment surface, repositor
 
 ## 1. Render Deployment Surface Analysis
 
-### conxian-ui (srv-d7b0el3uibrs73b2qjg0)
+### conxian-ui (srv-<redacted>)
 - **Current Status**: Failing deployments due to port binding errors.
 - **Identified Issue**: Logged error `Error: Unknown --listen endpoint scheme (protocol): 0.0.0.0:` suggests a misconfiguration in how the `PORT` or host is passed to the `serve` or `next start` command.
 - **Recommendation**: Update the start command in Render to explicitly use the `PORT` environment variable without a colon prefix if using `serve`, or ensure `pnpm start` correctly binds. Ref: CON-761 completed similar work but the UI still seems to struggle.
 
-### conxian-labs-site (srv-d8fmkcd8nd3s738pmbgg)
+### conxian-labs-site (srv-<redacted>)
 - **Current Status**: Active, but configured as a static site with a build command `Npm run dev` which is likely incorrect for a production build.
 - **Recommendation**: Correct the build and start commands to reflect a production build (`pnpm build`) and serving the static output.
 

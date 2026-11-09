@@ -1,6 +1,6 @@
 # Organization-Wide Functionality Map & Master Architecture Audit Report
 
-**Organization**: Conxian Labs (`org-silent-sun-00457600`)
+**Organization**: Conxian Labs (`org-neon-project-<redacted>`)
 **Platform Baseline**: v0.2.5
 **Audit Date**: September 2026 / Q3 2026
 **Lead Systems Engineer**: Jules (Autonomous Platform Engineer)
@@ -37,21 +37,21 @@ Conxian maintains a strict legal and architectural firewall between open-source 
 ## 2. Cloud Infrastructure & Service Topology Map
 
 ### 2.1 Neon Cloud Database Portfolio
-- **Organization**: Conxian Labs (`org-silent-sun-00457600`)
+- **Organization**: Conxian Labs (`org-neon-project-<redacted>`)
 - **Total Provisioned Projects**: 6
 
 | Project ID | Project Name | Region | PG Version | Database Schemas & Active Tables | Purpose / Domain |
 |---|---|---|---|---|---|
-| `sparkling-sunset-69236559` | `corelibs` | `aws-us-east-2` | 18 | `neondb` (0 user tables) | Core Library Dev & Experiments |
-| `weathered-night-98492579` | `Software dev kit` | `aws-us-east-2` | 18 | `neondb` (0 user tables) | SDK Testing & Provisioning |
-| `noisy-flower-17484435` | `Business Operating System` | `aws-us-east-2` | 18 | `affiliate`, `cnx_bos`, `erp_mock`, `neon_auth`, `public` | Production BOS & ERP Simulation Data |
-| `small-math-44741750` | `market` | `aws-eu-central-1` | 18 | `affiliate`, `cnx_bos`, `erp_mock`, `neon_auth`, `public` | Decentralized Market Engine |
-| `noisy-cloud-41146057` | `Gateway` | `aws-ap-southeast-1` | 18 | `public.mmr_nodes` | Conxian Gateway State & MMR Nodes |
-| `orange-paper-76209725` | `Conxian Nexus` | `aws-eu-central-1` | 17 | `affiliate`, `cnx_bos`, `erp_mock`, `neon_auth`, `public` (`_sqlx_migrations`, `local_cache`, `mmr_nodes`) | Conxian Nexus Cross-Chain Hub |
+| `neon-project-<redacted>` | `corelibs` | `aws-us-east-2` | 18 | `neondb` (0 user tables) | Core Library Dev & Experiments |
+| `neon-project-<redacted>` | `Software dev kit` | `aws-us-east-2` | 18 | `neondb` (0 user tables) | SDK Testing & Provisioning |
+| `neon-project-<redacted>` | `Business Operating System` | `aws-us-east-2` | 18 | `affiliate`, `cnx_bos`, `erp_mock`, `neon_auth`, `public` | Production BOS & ERP Simulation Data |
+| `neon-project-<redacted>` | `market` | `aws-eu-central-1` | 18 | `affiliate`, `cnx_bos`, `erp_mock`, `neon_auth`, `public` | Decentralized Market Engine |
+| `neon-project-<redacted>` | `Gateway` | `aws-ap-southeast-1` | 18 | `public.mmr_nodes` | Conxian Gateway State & MMR Nodes |
+| `neon-project-<redacted>` | `Conxian Nexus` | `aws-eu-central-1` | 17 | `affiliate`, `cnx_bos`, `erp_mock`, `neon_auth`, `public` (`_sqlx_migrations`, `local_cache`, `mmr_nodes`) | Conxian Nexus Cross-Chain Hub |
 
 ### 2.2 Render Hosting & Deployment Architecture
-- **Workspace**: My Workspace (`tea-d4ufhh8gjchc73c80mu0`, Team)
-- **Active Web Service**: `srv-d9ndhr2jnfac73as7te0` (`conxian-labs-site`, `https://conxian-labs-site-xhqq.onrender.com`)
+- **Workspace**: My Workspace (`tea-<redacted>`, Team)
+- **Active Web Service**: `srv-<redacted>` (`conxian-labs-site`, `https://conxian-labs-site-xhqq.onrender.com`)
   - **Runtime**: Node.js
   - **Build Command**: `npm install`
   - **Start Command**: `npm start`

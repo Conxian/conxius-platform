@@ -18,12 +18,12 @@
   "dependencies": {
     "@conxian/market-sdk": "^0.2.4",
     "@neondatabase/serverless": "^1.2.0",
-    "imapflow": "^2.10.0",
-    "jose": "^6.2.14",
-    "mailparser": "^3.14.1",
-    "next": "16.4.3",
+    "imapflow": "^2.11.0",
+    "jose": "^6.2.15",
+    "mailparser": "^3.14.2",
+    "next": "16.4.5",
     "nodemailer": "^10.3.1",
-    "nostr-tools": "^2.25.4",
+    "nostr-tools": "^2.26.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "server-only": "^0.0.1"
@@ -35,6 +35,6 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "typescript": "^6.0.3",
-    "vitest": "^5.0.5"
+    "vitest": "^5.1.0"
   }
 }

@@ -80,7 +80,7 @@ def check_render_configs():
             else:
                 print("WARNING: 'admin-dashboard' start script missing explicit 0.0.0.0 host binding.")
     print("REMARK: Ensure Render services use correct PORT binding and production build commands.")
-    print("REMARK: 'conxian-ui' should bind to 0.0.0.0 and use the PORT env var.")
+    print("REMARK: services should bind to 0.0.0.0 and use the PORT env var.")
 
 if __name__ == "__main__":
     check_secrets()

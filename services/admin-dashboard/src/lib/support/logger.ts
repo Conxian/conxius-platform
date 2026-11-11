@@ -19,19 +19,31 @@ function shouldLog(level: string): boolean {
   return (LEVELS[level] ?? 99) >= currentLevel;
 }
 
+// Strip CR/LF/NUL so a user-controlled value can never forge additional log
+// lines. Callers may interpolate request data into `msg`, so sanitizing here is
+// the single choke point that keeps every log line intact.
+function sanitizeLogMessage(value: string): string {
+  return value.replace(/[\r\n\u0000]/g, "");
+}
+
+function sanitizeArg(arg: unknown): unknown {
+  return typeof arg === "string" ? sanitizeLogMessage(arg) : arg;
+}
+
 export function createLogger(tag: string) {
+  const safeTag = sanitizeLogMessage(tag);
   return {
     debug: (msg: string, ...args: unknown[]) => {
-      if (shouldLog("debug")) console.debug(`[${tag}] ${msg}`, ...args);
+      if (shouldLog("debug")) console.debug(`[${safeTag}] ${sanitizeLogMessage(msg)}`, ...args.map(sanitizeArg));
     },
     info: (msg: string, ...args: unknown[]) => {
-      if (shouldLog("info")) console.info(`[${tag}] ${msg}`, ...args);
+      if (shouldLog("info")) console.info(`[${safeTag}] ${sanitizeLogMessage(msg)}`, ...args.map(sanitizeArg));
     },
     warn: (msg: string, ...args: unknown[]) => {
-      if (shouldLog("warn")) console.warn(`[${tag}] ${msg}`, ...args);
+      if (shouldLog("warn")) console.warn(`[${safeTag}] ${sanitizeLogMessage(msg)}`, ...args.map(sanitizeArg));
     },
     error: (msg: string, ...args: unknown[]) => {
-      console.error(`[${tag}] ${msg}`, ...args);
+      console.error(`[${safeTag}] ${sanitizeLogMessage(msg)}`, ...args.map(sanitizeArg));
     },
   };
 }

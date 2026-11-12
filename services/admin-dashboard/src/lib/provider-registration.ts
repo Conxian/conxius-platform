@@ -9,11 +9,26 @@ export type RegistrationEvidence = {
 
 const MAX_BODY_BYTES = 32768;
 const repositories = { gateway: "Conxian/conxian-gateway", nexus: "Conxian/conxian-nexus" };
-const outerKeys = new Set(["schema_version", "manifest_kind", "repository", "version", "trust_root", "scope", "native_conxian_token", "source", "adapters"]);
-const rowKeys = new Set(["adapter_id", "runtime_state", "health", "production_support", "qualified_operations"]);
+const outerKeys = new Set(["schema_version", "manifest_kind", "repository", "version", "trust_root", "scope", "native_conxian_token", "source", "taxonomy_version", "adapters"]);
+const rowKeys = new Set(["adapter_id", "runtime_state", "health", "production_support", "qualified_operations", "operation_classes", "chain", "family", "finality", "evidence", "no_custody"]);
+const evidenceKeys = new Set(["api", "implementation", "integration", "independent_review", "production_support", "references"]);
+const NOT_EVIDENCED = "not_evidenced";
 
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function nullableString(value: unknown): value is string | null {
+  return value === null || typeof value === "string";
+}
+
+/** Structural evidence must be entirely unclaimed; any evidence claim is rejected. */
+function evidenceUnclaimed(value: unknown): boolean {
+  if (!record(value) || Object.keys(value).some((key) => !evidenceKeys.has(key))) return false;
+  for (const key of ["api", "implementation", "integration", "independent_review", "production_support"]) {
+    if (value[key] !== NOT_EVIDENCED) return false;
+  }
+  return Array.isArray(value.references) && value.references.every((ref) => typeof ref === "string");
 }
 
 /** Structural diagnostic validation; this cannot authenticate hardware or authorize operations. */
@@ -22,6 +37,7 @@ export function validateRegistrationManifest(value: unknown, owner: Registration
       value.schema_version !== 1 || value.manifest_kind !== "adapter_registration" ||
       value.repository !== repositories[owner] || value.trust_root !== "bitcoin-l1" ||
       value.scope !== "universal-chain" || value.native_conxian_token !== false ||
+      typeof value.taxonomy_version !== "string" || value.taxonomy_version.length === 0 || value.taxonomy_version.length > 64 ||
       !Array.isArray(value.adapters) || value.adapters.length > 256) {
     throw new Error("incompatible registration manifest");
   }
@@ -35,7 +51,10 @@ export function validateRegistrationManifest(value: unknown, owner: Registration
         typeof row.adapter_id !== "string" || !/^[a-z0-9_-]{1,64}$/.test(row.adapter_id) ||
         ids.has(row.adapter_id) || row.runtime_state !== "registered" ||
         row.health !== "not-observed" || row.production_support !== "not-evidenced" ||
-        !Array.isArray(row.qualified_operations) || row.qualified_operations.length !== 0) {
+        !Array.isArray(row.qualified_operations) || row.qualified_operations.length !== 0 ||
+        !Array.isArray(row.operation_classes) || row.operation_classes.some((op) => typeof op !== "string") ||
+        !nullableString(row.chain) || !nullableString(row.family) || !nullableString(row.finality) ||
+        !evidenceUnclaimed(row.evidence) || row.no_custody !== true) {
       throw new Error("incompatible adapter registration");
     }
     ids.add(row.adapter_id);

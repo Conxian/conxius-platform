@@ -1,5 +1,12 @@
 # Orbit CLI Canonical Surface Contract
 
+> **Status reconciliation (2026-11-12, conxius-platform#1450):** `conxius-orbit` is
+> recorded in `platform/services.catalog.json` as
+> `role: "archived-compatibility-reference", state: "archived"`. This document is a
+> **historical/compatibility** description of the Orbit CLI surface, retained for
+> reference only. It is **not** an active supported provider, and nothing in it may
+> be read as current production availability. Do not cite Orbit as a live runtime.
+
 This document defines the canonical CLI surface for `conxius-orbit` and
 clarifies the Python/Node role split. It is the authoritative reference for
 operators, agents, and CI/automation paths that interact with Orbit.

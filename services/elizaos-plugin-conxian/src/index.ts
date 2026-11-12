@@ -31,7 +31,6 @@ const conxianPlugin: Plugin = {
   providers: [],
   evaluators: [],
   services: [],
-  routes: [],
   events: {},
 };
 

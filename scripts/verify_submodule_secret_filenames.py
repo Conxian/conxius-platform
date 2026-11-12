@@ -8,6 +8,7 @@ Prevents credentials from being committed under recognizable filenames such as
 
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -32,6 +33,16 @@ EXACT_NAMES = {
     ".htpasswd",
 }
 
+# Config files that are only a problem when they carry a credential. A tracked
+# `.npmrc`/`.pypirc`/`.netrc` that sets non-secret options (e.g. engine-strict)
+# is fine; one that carries a token is not. Matched case-insensitively.
+CREDENTIAL_WHEN_POPULATED = {".npmrc", ".pypirc", ".netrc"}
+# A line that sets a credential: an auth token, password, or a _auth-ish key.
+CREDENTIAL_LINE_RE = re.compile(
+    r"(?im)^\s*[^#\s].*?(_auth|_authToken|_password|:password|token|api[_-]?key|"
+    r"//[^\s]+:_|password\s*=)",
+)
+
 SECRET_SUFFIXES = (".pem", ".key", ".p12", ".pfx", ".p8")
 
 SECRET_INFIXES = ("serviceaccount", "service-account", "-credentials", "credentials.")
@@ -48,6 +59,16 @@ def main() -> int:
     for file_path in git_ls_files():
         name = file_path.rsplit("/", 1)[-1]
         lower = name.lower()
+
+        if lower in CREDENTIAL_WHEN_POPULATED:
+            # Only a violation if the config actually carries a credential.
+            try:
+                content = (REPO_ROOT / file_path).read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                content = ""
+            if CREDENTIAL_LINE_RE.search(content):
+                violations.append(file_path)
+            continue
 
         if lower in EXACT_NAMES:
             violations.append(file_path)

@@ -4,7 +4,11 @@ import { readRegistrationEvidence, validateRegistrationManifest } from "../lib/p
 function manifest() {
   return { schema_version: 1, manifest_kind: "adapter_registration", repository: "Conxian/conxian-gateway",
     version: "0.1.5", source: "runtime-adapter-map", trust_root: "bitcoin-l1", scope: "universal-chain", native_conxian_token: false,
-    adapters: [{ adapter_id: "evm", runtime_state: "registered", health: "not-observed", production_support: "not-evidenced", qualified_operations: [] as string[] }] };
+    taxonomy_version: "1.0.0",
+    adapters: [{ adapter_id: "evm", runtime_state: "registered", health: "not-observed", production_support: "not-evidenced", qualified_operations: [] as string[],
+      operation_classes: ["observe", "route", "prepare"], chain: "evm", family: "evm", finality: null,
+      evidence: { api: "not_evidenced", implementation: "not_evidenced", integration: "not_evidenced", independent_review: "not_evidenced", production_support: "not_evidenced", references: ["GET /api/v1/capabilities"] },
+      no_custody: true }] };
 }
 
 describe("provider registration evidence", () => {
@@ -24,6 +28,16 @@ describe("provider registration evidence", () => {
     }
     expect(() => validateRegistrationManifest({ ...manifest(), adapters: [manifest().adapters[0], manifest().adapters[0]] }, "gateway")).toThrow();
     expect(() => validateRegistrationManifest({ ...manifest(), adapters: Array(257).fill(manifest().adapters[0]) }, "gateway")).toThrow();
+  });
+  it("rejects claimed structural evidence, custody, and missing taxonomy binding", () => {
+    // A claimed evidence field is not `not_evidenced` → fail closed.
+    expect(() => validateRegistrationManifest({ ...manifest(), adapters: [{ ...manifest().adapters[0],
+      evidence: { ...manifest().adapters[0].evidence, implementation: "evidenced" } }] }, "gateway")).toThrow();
+    // no_custody must be explicitly true.
+    expect(() => validateRegistrationManifest({ ...manifest(), adapters: [{ ...manifest().adapters[0], no_custody: false }] }, "gateway")).toThrow();
+    // taxonomy_version is required and bounded.
+    expect(() => validateRegistrationManifest({ ...manifest(), taxonomy_version: "" }, "gateway")).toThrow();
+    expect(() => validateRegistrationManifest({ ...manifest(), taxonomy_version: undefined }, "gateway")).toThrow();
   });
   it("binds authenticated no-store reads to configured HTTPS endpoints", async () => {
     const fetchImpl: typeof fetch = async (input, init) => {

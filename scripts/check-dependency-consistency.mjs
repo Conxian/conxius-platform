@@ -10,8 +10,8 @@ const lockfile = readFileSync(lockfilePath, 'utf8');
 const rootPackage = readJson('package.json');
 const dashboardPackage = readJson('services/admin-dashboard/package.json');
 
-const expectedTypeScriptVersion = '6.0.3';
-const expectedWorkspaceTypeScriptSpecifier = '^6.0.3';
+const expectedTypeScriptVersion = '7.0.2';
+const expectedWorkspaceTypeScriptSpecifier = '^7.0.2';
 
 function readJson(relativePath) {
   try {

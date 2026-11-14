@@ -2,6 +2,14 @@ import { NextResponse } from "next/server";
 import { UsageValidator, UsageEvent } from "../../../../lib/sidl/usageValidation";
 import { validateAdminAuth } from "@/lib/support/auth";
 
+// Strip control characters (notably CR/LF) and bound the length before a
+// user-controlled value reaches a log line, so a crafted value cannot forge
+// log entries.
+function safeLogField(value: unknown, max = 64): string {
+  if (typeof value !== "string") return "invalid";
+  return value.replace(/[\u0000-\u001f\u007f]/g, "").slice(0, max);
+}
+
 export async function POST(req: Request) {
   const authError = await validateAdminAuth(req, "write:admin");
   if (authError) return authError;
@@ -23,11 +31,11 @@ export async function POST(req: Request) {
     const score = UsageValidator.scoreEvent(usageEvent);
     const triage = UsageValidator.warrantsTriage(score);
 
-    console.log(`[UsageValidation] Received ${event} from ${identity_hash}. Score: ${score}. Triage: ${triage}`);
+    console.log(`[UsageValidation] Received ${safeLogField(event)} from ${safeLogField(identity_hash)}. Score: ${score}. Triage: ${triage}`);
 
     // In a real scenario, this would route to Linear if triage is true
     if (triage) {
-      console.log(`[UsageValidation] SIGNAL HIGH: Routing to Linear Triage for ${identity_hash}`);
+      console.log(`[UsageValidation] SIGNAL HIGH: Routing to Linear Triage for ${safeLogField(identity_hash)}`);
     }
 
     return NextResponse.json({

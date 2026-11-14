@@ -8,8 +8,8 @@ The platform has successfully moved the Conxian Gateway, UI, and Nexus into exte
 ## 2. Render Deployment Remediation
 Based on logs from the **Conxian-Business** workspace:
 
-- **conxian-ui (srv-d7b0el3uibrs73b2qjg0)**: Currently failing with `Port scan timeout`. The start command must be hardened to ensure the Next.js/serve process binds correctly to `0.0.0.0:${PORT}`.
-- **conxian-labs-site (srv-d8fmr7v40ujc73b7ba8g)**: Deployment is active but uses `npm run build` (with a capitalized 'N'), leading to `command not found` errors in build logs.
+- **conxian-ui (srv-<redacted>)**: Currently failing with `Port scan timeout`. The start command must be hardened to ensure the Next.js/serve process binds correctly to `0.0.0.0:${PORT}`.
+- **conxian-labs-site (srv-<redacted>)**: Deployment is active but uses `npm run build` (with a capitalized 'N'), leading to `command not found` errors in build logs.
 - **Recommended Action**: Update Render blueprints to use `pnpm build && pnpm start` with explicit port binding.
 
 ## 3. Repository Topology & Boundaries

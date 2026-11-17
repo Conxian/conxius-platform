@@ -17,7 +17,7 @@
     "prepublishOnly": "node -e \"console.error('pnpm publish is disabled for now in this repository; use Git tags and GitHub Releases.'); process.exit(1)\""
   },
   "dependencies": {
-    "@elizaos/core": "2.0.4",
+    "@elizaos/core": "2.0.5",
     "zod": "^4.6.7"
   },
   "devDependencies": {

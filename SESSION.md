@@ -1,6 +1,8 @@
 # Session Operating Model
 
-Standing governance control for Conxian-Labs work. Live enforcement anchor: [Issue #932](https://github.com/Conxian/conxius-platform/issues/932).
+Standing governance control for Conxian-Labs work. GitHub Issues and pull requests are the sole
+work record; the original enforcement anchor ([Issue #932](https://github.com/Conxian/conxius-platform/issues/932))
+is closed, and amendments are tracked in a new issue.
 
 ## Session Standard
 
@@ -43,7 +45,7 @@ Whenever a session changes repo classification, controls posture, release postur
 
 - **Issues**: Open or update GitHub issues to reflect the new state.
 - **Documents**: Update the affected canonical documents (SESSION.md, README, governance docs, etc.).
-- **Linear**: Ensure the linked Linear issue (if any) reflects the current status.
+- **GitHub**: Ensure the linked issue and pull request reflect the current status.
 
 ## Session Operating Checklist
 
@@ -52,7 +54,7 @@ Whenever a session changes repo classification, controls posture, release postur
 - [ ] Review the target issue and confirm scope is understood.
 - [ ] Check repository state: current branch, latest commit, open PRs.
 - [ ] Identify and resolve any stale assumptions from prior sessions.
-- [ ] Confirm grounding against canonical records (issues, docs, Linear).
+- [ ] Confirm grounding against canonical records (issues, docs, pull requests).
 - [ ] Assign an explicit classification to the expected work.
 
 ### End of Session
@@ -70,7 +72,7 @@ Every 14 days, perform a retrospective review of the session operating model:
 
 1. **Audit sessions**: Review sessions completed since the last review.
 2. **Check enforcement**: Verify each session followed the checklist and classification requirements.
-3. **Update canonical records**: Apply any corrections to issues, documents, or Linear state.
+3. **Update canonical records**: Apply any corrections to issues, documents, or pull-request state.
 4. **Refine the standard**: Propose improvements to this document based on observed gaps or friction.
 5. **File findings**: Open or update an issue documenting the review outcome.
 
@@ -82,7 +84,7 @@ This document is the enforcement baseline. Treat it as a live control, not a one
 
 - Reference it at the start and end of every session.
 - Update it when the operating model evolves.
-- Use [Issue #932](https://github.com/Conxian/conxius-platform/issues/932) as the change-tracking anchor for amendments.
+- Open a new GitHub issue to track amendments; the original anchor (#932) is closed.
 
 
 ## Session Entry — MuSig2 (G-10) Production Implementation

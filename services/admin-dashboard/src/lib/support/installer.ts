@@ -38,7 +38,7 @@ export interface InstallerConfig {
   gatewayAdminKey: string;
   gatewayJwtSecret: string;
   enclaveKmsKeyArn?: string;
-  /** Base URL of the gateway under test, e.g. http://127.0.0.1:3000 */
+  /** Base URL of the gateway under test, e.g. the loopback origin on port 3000 */
   gatewayBaseUrl?: string;
   /** Base URL of the nexus node under test */
   nexusBaseUrl?: string;
@@ -47,10 +47,6 @@ export interface InstallerConfig {
   /** Optional enclave/KMS HTTP surface */
   enclaveKmsUrl?: string;
   target: DeploymentTarget;
-  gatewayBaseUrl?: string;
-  nexusBaseUrl?: string;
-  redisUrl?: string;
-  enclaveKmsUrl?: string;
   gatewayFiatWebhookSecret?: string;
   gatewaySettlementIngressSecret?: string;
   gatewayApiToken?: string;

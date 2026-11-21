@@ -17,8 +17,15 @@ describe('Client System Installer & Diagnostics Engine (G-66 & G-67)', () => {
     gatewayAdminKey: 'admin_key_placeholder_for_tests',
     gatewayJwtSecret: 'jwt_secret_placeholder_for_tests_32_chars',
     enclaveKmsKeyArn: 'arn:aws:kms:us-east-2:000000000000:key/00000000-0000-0000-0000-000000000000',
+    gatewayBaseUrl: 'http://127.0.0.1:3000',
+    nexusBaseUrl: 'http://127.0.0.1:3001',
+    redisUrl: 'redis://127.0.0.1:6379',
+    enclaveKmsUrl: 'http://127.0.0.1:8081',
     target: 'nixos',
   };
+
+  const okFetch = async () =>
+    new Response(JSON.stringify({ result: 1, status: 'ready' }), { status: 200 });
 
   it('validates a complete and correct installer configuration', () => {
     const result = validateInstallerConfig(validConfig);
@@ -68,58 +75,103 @@ describe('Client System Installer & Diagnostics Engine (G-66 & G-67)', () => {
     );
   });
 
-  it('runs pre-flight connectivity diagnostics and passes for a healthy configuration', async () => {
-    const mockFetch = async () => new Response(JSON.stringify({ status: 'ready' }), { status: 200 });
-
-    const report = await runPreFlightDiagnostics(validConfig, mockFetch as unknown as typeof fetch);
-    expect(report.passed).toBe(true);
-    expect(report.overallScore).toBe(100);
-    expect(report.components).toHaveLength(6);
-
-    const components = report.components.map((c) => c.component);
-    expect(components).toContain('database');
-    expect(components).toContain('gateway');
-    expect(components).toContain('nexus');
-    expect(components).toContain('bitcoin-rpc');
-    expect(components).toContain('stacks-rpc');
-    expect(components).toContain('m2m-token');
-
-    for (const comp of report.components) {
-      expect(comp.status).toBe('healthy');
-    }
+  it('supports a systemd target for bare-metal client installs', () => {
+    const manifest = generateDeploymentManifest({ ...validConfig, target: 'systemd' });
+    expect(manifest.target).toBe('systemd');
   });
 
-  it('flags failures when diagnostic probes fail or tokens are unauthorized', async () => {
-    const badConfig: InstallerConfig = {
-      ...validConfig,
-      coreDbUri: 'invalid-uri',
-      m2mToken: 'unauthorized_token',
-      kwilDbUrl: undefined,
+  it('reports every configured component when the probes succeed', async () => {
+    const report = await runPreFlightDiagnostics(validConfig, okFetch as unknown as typeof fetch);
+
+    const byName = Object.fromEntries(report.components.map((c) => [c.component, c]));
+    expect(Object.keys(byName).sort()).toEqual(
+      ['bitcoin-rpc', 'cache', 'database', 'enclave', 'gateway', 'm2m-token', 'nexus', 'stacks-rpc'].sort()
+    );
+
+    expect(byName.gateway.status).toBe('healthy');
+    expect(byName.nexus.status).toBe('healthy');
+    expect(byName['stacks-rpc'].status).toBe('healthy');
+    expect(byName['bitcoin-rpc'].status).toBe('healthy');
+    expect(byName.enclave.status).toBe('healthy');
+    expect(byName['m2m-token'].status).toBe('healthy');
+  });
+
+  it('never reports the gateway healthy when the gateway endpoint is not configured', async () => {
+    const report = await runPreFlightDiagnostics(
+      { ...validConfig, gatewayBaseUrl: undefined },
+      okFetch as unknown as typeof fetch
+    );
+
+    const gateway = report.components.find((c) => c.component === 'gateway');
+    expect(gateway?.status).toBe('misconfigured');
+    expect(report.passed).toBe(false);
+  });
+
+  it('probes the gateway health path the gateway actually serves', async () => {
+    const requested: string[] = [];
+    const recordingFetch = async (input: RequestInfo | URL) => {
+      requested.push(String(input));
+      return new Response(JSON.stringify({ status: 'ok' }), { status: 200 });
     };
 
-    const mockFetchFail = async () => new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401 });
-
-    const report = await runPreFlightDiagnostics(badConfig, mockFetchFail as unknown as typeof fetch);
-    expect(report.passed).toBe(false);
-    expect(report.overallScore).toBeLessThan(100);
-
-    const dbComp = report.components.find((c) => c.component === 'database');
-    expect(dbComp?.status).toBe('misconfigured');
-
-    const gwComp = report.components.find((c) => c.component === 'gateway');
-    expect(gwComp?.status).toBe('unreachable');
-
-    const m2mComp = report.components.find((c) => c.component === 'm2m-token');
-    expect(m2mComp?.status).toBe('unauthorized');
+    await runPreFlightDiagnostics(validConfig, recordingFetch as unknown as typeof fetch);
+    expect(requested).toContain('http://127.0.0.1:3000/api/v1/health');
   });
 
-  it('never reports the gateway healthy when it was not probed', async () => {
+  it('reports a well-formed but unreachable database as unreachable, not healthy', async () => {
+    const report = await runPreFlightDiagnostics(
+      { ...validConfig, coreDbUri: 'postgresql://user:pass@127.0.0.1:1/nonexistent' },
+      okFetch as unknown as typeof fetch
+    );
+
+    const database = report.components.find((c) => c.component === 'database');
+    expect(database?.status).toBe('unreachable');
+    expect(report.passed).toBe(false);
+  });
+
+  it('reports an unreachable cache as unreachable', async () => {
+    const report = await runPreFlightDiagnostics(
+      { ...validConfig, redisUrl: 'redis://127.0.0.1:1' },
+      okFetch as unknown as typeof fetch
+    );
+
+    const cache = report.components.find((c) => c.component === 'cache');
+    expect(cache?.status).toBe('unreachable');
+  });
+
+  it('fails closed when the database and services are all dead', async () => {
+    const deadConfig: InstallerConfig = {
+      ...validConfig,
+      coreDbUri: 'postgresql://user:pass@127.0.0.1:1/nonexistent',
+      redisUrl: 'redis://127.0.0.1:1',
+      gatewayBaseUrl: 'http://127.0.0.1:1',
+      nexusBaseUrl: 'http://127.0.0.1:1',
+    };
+
+    const report = await runPreFlightDiagnostics(deadConfig, okFetch as unknown as typeof fetch);
+    expect(report.passed).toBe(false);
+    expect(report.overallScore).toBeLessThan(100);
+  });
+
+  it('flags an unauthorized M2M token', async () => {
+    const report = await runPreFlightDiagnostics(
+      { ...validConfig, m2mToken: 'unauthorized_token' },
+      okFetch as unknown as typeof fetch
+    );
+
+    const m2m = report.components.find((c) => c.component === 'm2m-token');
+    expect(m2m?.status).toBe('unauthorized');
+    expect(report.passed).toBe(false);
+  });
+
+  it('never reports a probed component healthy when no fetch implementation exists', async () => {
     vi.stubGlobal('fetch', undefined);
     try {
       const report = await runPreFlightDiagnostics(validConfig);
-      const gwComp = report.components.find((c) => c.component === 'gateway');
-      expect(gwComp?.status).toBe('unreachable');
-      expect(gwComp?.details).toContain('not probed');
+      for (const name of ['gateway', 'nexus', 'stacks-rpc', 'bitcoin-rpc', 'enclave'] as const) {
+        const comp = report.components.find((c) => c.component === name);
+        expect(comp?.status).not.toBe('healthy');
+      }
       expect(report.passed).toBe(false);
     } finally {
       vi.unstubAllGlobals();

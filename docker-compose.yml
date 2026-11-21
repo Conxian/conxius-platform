@@ -107,14 +107,14 @@ services:
       - conxian-network
 
   db:
-    image: postgres:15-alpine
+    image: postgres:19-alpine
     restart: unless-stopped
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     networks:
       - conxian-network
     healthcheck:

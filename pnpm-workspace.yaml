@@ -2,7 +2,7 @@ packages:
   - "services/*"
 
 overrides:
-  next: 16.4.3
+  next: 16.4.6
   ip-address: ">=10.1.1"
   postcss: ">=8.5.10"
   langsmith: ">=0.5.19"

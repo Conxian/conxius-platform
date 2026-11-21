@@ -3,6 +3,8 @@ import {
   validateInstallerConfig,
   generateDeploymentManifest,
   runPreFlightDiagnostics,
+  GATEWAY_REQUIRED_ENV_KEYS,
+  GATEWAY_PERSISTENCE_MODE,
   InstallerConfig,
 } from '../lib/support/installer';
 
@@ -57,7 +59,7 @@ describe('Client System Installer & Diagnostics Engine (G-66 & G-67)', () => {
 
   it('generates a structured deployment manifest for valid installer config', () => {
     const manifest = generateDeploymentManifest(validConfig);
-    expect(manifest.version).toBe('2026.1.0');
+    expect(manifest.version).toBe('2026.2.0');
     expect(manifest.environment).toBe('production');
     expect(manifest.target).toBe('nixos');
     expect(manifest.services).toBeDefined();
@@ -67,6 +69,38 @@ describe('Client System Installer & Diagnostics Engine (G-66 & G-67)', () => {
     expect(services.gateway.m2mToken).toBe(validConfig.m2mToken);
     expect(services.nexus.bitcoinRpc).toBe(validConfig.bitcoinRpcUrl);
     expect(services.dashboard.coreDbUri).toBe(validConfig.coreDbUri);
+  });
+
+  it('emits every secret the gateway refuses to start without', () => {
+    const manifest = generateDeploymentManifest(validConfig);
+    const services = manifest.services as Record<string, Record<string, unknown>>;
+    const env = services.gateway.env as Record<string, string>;
+
+    for (const key of GATEWAY_REQUIRED_ENV_KEYS) {
+      expect(typeof env[key]).toBe('string');
+      expect(env[key].length).toBeGreaterThanOrEqual(32);
+    }
+    expect(services.gateway.persistenceMode).toBe(GATEWAY_PERSISTENCE_MODE);
+  });
+
+  it('generates a distinct secret per key instead of reusing one value', () => {
+    const manifest = generateDeploymentManifest(validConfig);
+    const services = manifest.services as Record<string, Record<string, unknown>>;
+    const env = services.gateway.env as Record<string, string>;
+
+    const values = GATEWAY_REQUIRED_ENV_KEYS.map((key) => env[key]);
+    expect(new Set(values).size).toBe(GATEWAY_REQUIRED_ENV_KEYS.length);
+  });
+
+  it('honours supplied gateway secrets and rejects short ones', () => {
+    const supplied = 'a'.repeat(40);
+    const manifest = generateDeploymentManifest({ ...validConfig, gatewayHmacSecret: supplied });
+    const services = manifest.services as Record<string, Record<string, unknown>>;
+    expect((services.gateway.env as Record<string, string>).HMAC_SECRET).toBe(supplied);
+
+    expect(() => generateDeploymentManifest({ ...validConfig, gatewayHmacSecret: 'too-short' })).toThrow(
+      /HMAC_SECRET/
+    );
   });
 
   it('throws an error when generating a deployment manifest from invalid config', () => {

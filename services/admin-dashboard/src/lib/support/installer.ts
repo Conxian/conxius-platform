@@ -13,6 +13,21 @@ const logger = createLogger('installer');
 export type DeploymentTarget = 'nixos' | 'docker-compose' | 'helm' | 'systemd';
 export type Environment = 'production' | 'staging' | 'development';
 
+/**
+ * Secrets the gateway refuses to start without. Each maps to an environment
+ * variable the gateway reads in `cmd/gateway/src/config.rs`.
+ */
+export const GATEWAY_REQUIRED_ENV_KEYS = [
+  'FIAT_WEBHOOK_SECRET',
+  'SETTLEMENT_INGRESS_SECRET',
+  'API_TOKEN',
+  'HMAC_SECRET',
+  'OFFLINE_QUEUE_SECRET',
+] as const;
+
+/** The only persistence mode the gateway accepts for file-backed state. */
+export const GATEWAY_PERSISTENCE_MODE = 'exclusive-local-writer';
+
 export interface InstallerConfig {
   environment: Environment;
   coreDbUri: string;
@@ -32,6 +47,20 @@ export interface InstallerConfig {
   /** Optional enclave/KMS HTTP surface */
   enclaveKmsUrl?: string;
   target: DeploymentTarget;
+  gatewayBaseUrl?: string;
+  nexusBaseUrl?: string;
+  redisUrl?: string;
+  enclaveKmsUrl?: string;
+  gatewayFiatWebhookSecret?: string;
+  gatewaySettlementIngressSecret?: string;
+  gatewayApiToken?: string;
+  gatewayHmacSecret?: string;
+  gatewayOfflineQueueSecret?: string;
+}
+
+export interface ManifestOptions {
+  /** Injected in tests; defaults to a CSPRNG-backed generator. */
+  generateSecret?: () => string;
 }
 
 export interface InstallerValidationResult {
@@ -115,6 +144,19 @@ export function validateInstallerConfig(config: Partial<InstallerConfig>): Insta
     warnings.push('kwilDbUrl not specified; Nexus Glass Node will operate with local fallback state.');
   }
 
+  const suppliedGatewaySecrets: Array<[string, string | undefined]> = [
+    ['FIAT_WEBHOOK_SECRET', config.gatewayFiatWebhookSecret],
+    ['SETTLEMENT_INGRESS_SECRET', config.gatewaySettlementIngressSecret],
+    ['API_TOKEN', config.gatewayApiToken],
+    ['HMAC_SECRET', config.gatewayHmacSecret],
+    ['OFFLINE_QUEUE_SECRET', config.gatewayOfflineQueueSecret],
+  ];
+  for (const [key, value] of suppliedGatewaySecrets) {
+    if (value !== undefined && value.length < 32) {
+      errors.push(`Insecure ${key}: Must be at least 32 characters in length when supplied.`);
+    }
+  }
+
   if (!config.enclaveKmsKeyArn) {
     warnings.push('enclaveKmsKeyArn not specified; hardware enclave signing will run in software mode.');
   }
@@ -129,14 +171,31 @@ export function validateInstallerConfig(config: Partial<InstallerConfig>): Insta
 /**
  * Generates a deployment manifest object for client infrastructure automation (NixOS/Docker/Helm).
  */
-export function generateDeploymentManifest(config: InstallerConfig): Record<string, unknown> {
+export function generateDeploymentManifest(
+  config: InstallerConfig,
+  options: ManifestOptions = {}
+): Record<string, unknown> {
   const validation = validateInstallerConfig(config);
   if (!validation.valid) {
     throw new Error(`Cannot generate deployment manifest from invalid configuration: ${validation.errors.join('; ')}`);
   }
 
+  const generateSecret = options.generateSecret ?? defaultSecretGenerator;
+  const supplied: Record<(typeof GATEWAY_REQUIRED_ENV_KEYS)[number], string | undefined> = {
+    FIAT_WEBHOOK_SECRET: config.gatewayFiatWebhookSecret,
+    SETTLEMENT_INGRESS_SECRET: config.gatewaySettlementIngressSecret,
+    API_TOKEN: config.gatewayApiToken,
+    HMAC_SECRET: config.gatewayHmacSecret,
+    OFFLINE_QUEUE_SECRET: config.gatewayOfflineQueueSecret,
+  };
+
+  const gatewayEnv: Record<string, string> = {};
+  for (const key of GATEWAY_REQUIRED_ENV_KEYS) {
+    gatewayEnv[key] = supplied[key] ?? generateSecret();
+  }
+
   return {
-    version: '2026.1.0',
+    version: '2026.2.0',
     generatedAt: new Date().toISOString(),
     environment: config.environment,
     target: config.target,
@@ -146,6 +205,8 @@ export function generateDeploymentManifest(config: InstallerConfig): Record<stri
         jwtSecret: config.gatewayJwtSecret,
         adminKey: config.gatewayAdminKey,
         m2mToken: config.m2mToken,
+        persistenceMode: GATEWAY_PERSISTENCE_MODE,
+        env: gatewayEnv,
       },
       nexus: {
         enabled: true,
@@ -163,6 +224,16 @@ export function generateDeploymentManifest(config: InstallerConfig): Record<stri
       tokenPrefix: config.m2mToken.substring(0, 8),
     },
   };
+}
+
+function defaultSecretGenerator(): string {
+  const webCrypto = globalThis.crypto;
+  if (!webCrypto?.getRandomValues) {
+    throw new Error('No CSPRNG available to generate gateway secrets');
+  }
+  const bytes = new Uint8Array(32);
+  webCrypto.getRandomValues(bytes);
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 /**

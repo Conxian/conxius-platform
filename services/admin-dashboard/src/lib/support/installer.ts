@@ -10,7 +10,7 @@ import { createLogger } from './logger';
 
 const logger = createLogger('installer');
 
-export type DeploymentTarget = 'nixos' | 'docker-compose' | 'helm';
+export type DeploymentTarget = 'nixos' | 'docker-compose' | 'helm' | 'systemd';
 export type Environment = 'production' | 'staging' | 'development';
 
 export interface InstallerConfig {
@@ -23,6 +23,14 @@ export interface InstallerConfig {
   gatewayAdminKey: string;
   gatewayJwtSecret: string;
   enclaveKmsKeyArn?: string;
+  /** Base URL of the gateway under test, e.g. http://127.0.0.1:3000 */
+  gatewayBaseUrl?: string;
+  /** Base URL of the nexus node under test */
+  nexusBaseUrl?: string;
+  /** Redis connection string used for the cache reachability probe */
+  redisUrl?: string;
+  /** Optional enclave/KMS HTTP surface */
+  enclaveKmsUrl?: string;
   target: DeploymentTarget;
 }
 
@@ -33,7 +41,15 @@ export interface InstallerValidationResult {
 }
 
 export interface ComponentDiagnosticStatus {
-  component: 'database' | 'gateway' | 'nexus' | 'bitcoin-rpc' | 'stacks-rpc' | 'm2m-token';
+  component:
+    | 'database'
+    | 'gateway'
+    | 'nexus'
+    | 'cache'
+    | 'bitcoin-rpc'
+    | 'stacks-rpc'
+    | 'enclave'
+    | 'm2m-token';
   status: 'healthy' | 'unreachable' | 'misconfigured' | 'unauthorized';
   latencyMs: number;
   details: string;
@@ -153,6 +169,156 @@ export function generateDeploymentManifest(config: InstallerConfig): Record<stri
  * Executes an end-to-end 6-point pre-flight connectivity diagnostic check across all client assets.
  * Evaluates DB, Gateway, Nexus, RPC nodes, and M2M authorization status before boot.
  */
+
+const DIAG_TIMEOUT_MS = 3000;
+
+type DiagStatus = ComponentDiagnosticStatus['status'];
+
+interface ProbeResult {
+  status: DiagStatus;
+  latencyMs: number;
+  details: string;
+}
+
+function isHttpUrl(value?: string): value is string {
+  return !!value && (value.startsWith('http://') || value.startsWith('https://'));
+}
+
+function defaultPortFor(protocol: string): number {
+  if (protocol === 'postgres:' || protocol === 'postgresql:') return 5432;
+  if (protocol === 'redis:') return 6379;
+  return 0;
+}
+
+/**
+ * Establishes a real TCP connection. A connection string that merely *looks* valid is not
+ * evidence that the endpoint exists, so this never reports healthy without a completed connect.
+ */
+async function tcpProbe(uri: string | undefined, timeoutMs = DIAG_TIMEOUT_MS): Promise<ProbeResult> {
+  if (!uri) {
+    return { status: 'misconfigured', latencyMs: 0, details: 'No connection URI configured.' };
+  }
+
+  let host: string;
+  let port: number;
+  try {
+    const parsed = new URL(uri);
+    host = parsed.hostname;
+    port = Number(parsed.port) || defaultPortFor(parsed.protocol);
+  } catch {
+    return { status: 'misconfigured', latencyMs: 0, details: 'Connection URI is not parseable.' };
+  }
+
+  if (!host || !port) {
+    return { status: 'misconfigured', latencyMs: 0, details: 'Connection URI has no resolvable host or port.' };
+  }
+
+  const started = Date.now();
+  try {
+    const net = await import('node:net');
+    await new Promise<void>((resolve, reject) => {
+      const socket = net.connect({ host, port });
+      const finish = (error?: Error) => {
+        socket.destroy();
+        if (error) reject(error);
+        else resolve();
+      };
+      socket.setTimeout(timeoutMs);
+      socket.once('connect', () => finish());
+      socket.once('timeout', () => finish(new Error(`timed out after ${timeoutMs}ms`)));
+      socket.once('error', (error: Error) => finish(error));
+    });
+    return {
+      status: 'healthy',
+      latencyMs: Date.now() - started,
+      details: `TCP connection to ${host}:${port} established.`,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const runtimeCannotProbe = /node:net|Cannot find module|not implemented/i.test(message);
+    return {
+      status: runtimeCannotProbe ? 'misconfigured' : 'unreachable',
+      latencyMs: Date.now() - started,
+      details: runtimeCannotProbe
+        ? 'TCP probing is unavailable in this runtime; the endpoint could not be verified.'
+        : `TCP connection to ${host}:${port} failed: ${message}`,
+    };
+  }
+}
+
+async function httpProbe(
+  component: ComponentDiagnosticStatus['component'],
+  baseUrl: string | undefined,
+  path: string,
+  fetchImpl: typeof fetch | null,
+  timeoutMs = DIAG_TIMEOUT_MS
+): Promise<ComponentDiagnosticStatus> {
+  if (!isHttpUrl(baseUrl)) {
+    return { component, status: 'misconfigured', latencyMs: 0, details: `No HTTP endpoint configured for ${component}.` };
+  }
+  if (!fetchImpl) {
+    return { component, status: 'unreachable', latencyMs: 0, details: `No fetch implementation available; ${component} was not probed.` };
+  }
+
+  const started = Date.now();
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+  try {
+    const res = await fetchImpl(`${baseUrl.replace(/\/$/, '')}${path}`, {
+      method: 'GET',
+      signal: controller?.signal,
+    });
+    if (timer) clearTimeout(timer);
+    return {
+      component,
+      status: res.ok ? 'healthy' : 'unreachable',
+      latencyMs: Date.now() - started,
+      details: `${component} responded HTTP ${res.status}.`,
+    };
+  } catch (error) {
+    if (timer) clearTimeout(timer);
+    const message = error instanceof Error ? error.message : String(error);
+    return { component, status: 'unreachable', latencyMs: Date.now() - started, details: `${component} probe failed: ${message}` };
+  }
+}
+
+async function jsonRpcProbe(
+  component: ComponentDiagnosticStatus['component'],
+  url: string | undefined,
+  method: string,
+  fetchImpl: typeof fetch | null,
+  timeoutMs = DIAG_TIMEOUT_MS
+): Promise<ComponentDiagnosticStatus> {
+  if (!isHttpUrl(url)) {
+    return { component, status: 'misconfigured', latencyMs: 0, details: `No HTTP endpoint configured for ${component}.` };
+  }
+  if (!fetchImpl) {
+    return { component, status: 'unreachable', latencyMs: 0, details: `No fetch implementation available; ${component} was not probed.` };
+  }
+
+  const started = Date.now();
+  try {
+    const res = await fetchImpl(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '1.0', id: 'preflight', method, params: [] }),
+      signal: typeof AbortSignal !== 'undefined' ? AbortSignal.timeout(timeoutMs) : undefined,
+    });
+    const latencyMs = Date.now() - started;
+    if (!res.ok) {
+      return { component, status: 'unreachable', latencyMs, details: `${component} responded HTTP ${res.status}.` };
+    }
+    const body = (await res.json()) as { result?: unknown; error?: unknown };
+    if (body.error) {
+      return { component, status: 'misconfigured', latencyMs, details: `${component} returned a JSON-RPC error for ${method}.` };
+    }
+    return { component, status: 'healthy', latencyMs, details: `${component} answered ${method}.` };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { component, status: 'unreachable', latencyMs: Date.now() - started, details: `${component} probe failed: ${message}` };
+  }
+}
+
 export async function runPreFlightDiagnostics(
   config: InstallerConfig,
   customFetch?: typeof fetch
@@ -160,88 +326,49 @@ export async function runPreFlightDiagnostics(
   const fetchImpl = customFetch || (typeof fetch !== 'undefined' ? fetch : null);
   const components: ComponentDiagnosticStatus[] = [];
 
-  // 1. Database Diagnostic Check
-  const dbStart = Date.now();
-  if (config.coreDbUri && (config.coreDbUri.startsWith('postgres://') || config.coreDbUri.startsWith('postgresql://'))) {
-    components.push({
-      component: 'database',
-      status: 'healthy',
-      latencyMs: Date.now() - dbStart,
-      version: '0.2.5',
-      details: 'PostgreSQL / Neon database connection string valid and formatted.',
-    });
-  } else {
-    components.push({
-      component: 'database',
-      status: 'misconfigured',
-      latencyMs: Date.now() - dbStart,
-      details: 'PostgreSQL / Neon database URI missing or invalid format.',
-    });
-  }
+  // 1. Database — real TCP reachability. A well-formed URI is not evidence of a live server.
+  const db = await tcpProbe(config.coreDbUri);
+  components.push({ component: 'database', ...db });
 
-  // 2. Gateway API Probe
-  const gwStart = Date.now();
-  if (fetchImpl) {
-    try {
-      const res = await fetchImpl(`${config.stacksRpcUrl}/v2/info`, { method: 'GET' });
-      components.push({
-        component: 'gateway',
-        status: res.ok ? 'healthy' : 'unreachable',
-        latencyMs: Date.now() - gwStart,
-        details: res.ok ? 'Gateway RPC endpoint reachable.' : `Gateway responded with HTTP ${res.status}`,
-      });
-    } catch {
-      components.push({
-        component: 'gateway',
-        status: 'unreachable',
-        latencyMs: Date.now() - gwStart,
-        details: 'Failed to connect to Gateway RPC endpoint.',
-      });
-    }
-  } else {
-    components.push({
-      component: 'gateway',
-      status: 'unreachable',
-      latencyMs: 0,
-      details: 'No fetch implementation available; gateway was not probed.',
-    });
-  }
+  // 2. Gateway API — the gateway itself. Probing the Stacks node and calling it the gateway
+  //    reported a dead gateway as healthy.
+  components.push(await httpProbe('gateway', config.gatewayBaseUrl, '/health', fetchImpl));
 
-  // 3. Nexus Glass Node Diagnostic
-  const nexusStart = Date.now();
-  components.push({
-    component: 'nexus',
-    status: config.kwilDbUrl ? 'healthy' : 'misconfigured',
-    latencyMs: Date.now() - nexusStart,
-    details: config.kwilDbUrl ? 'Nexus Kwil DB endpoint configured.' : 'Nexus Kwil DB endpoint omitted; fallback enabled.',
-  });
+  // 3. Nexus Glass Node
+  components.push(await httpProbe('nexus', config.nexusBaseUrl, '/health', fetchImpl));
 
-  // 4. Bitcoin L1 RPC Diagnostic
-  const btcStart = Date.now();
-  components.push({
-    component: 'bitcoin-rpc',
-    status: config.bitcoinRpcUrl.startsWith('http') ? 'healthy' : 'misconfigured',
-    latencyMs: Date.now() - btcStart,
-    details: `Bitcoin RPC URL set to ${config.bitcoinRpcUrl.substring(0, 20)}...`,
-  });
+  // 4. Cache (Redis) reachability
+  const cache = await tcpProbe(config.redisUrl, 2000);
+  components.push({ component: 'cache', ...cache });
 
-  // 5. Stacks L2 RPC Diagnostic
-  const stacksStart = Date.now();
-  components.push({
-    component: 'stacks-rpc',
-    status: config.stacksRpcUrl.startsWith('http') ? 'healthy' : 'misconfigured',
-    latencyMs: Date.now() - stacksStart,
-    details: `Stacks RPC URL set to ${config.stacksRpcUrl.substring(0, 20)}...`,
-  });
+  // 5. Bitcoin L1 RPC — a real JSON-RPC round trip.
+  components.push(await jsonRpcProbe('bitcoin-rpc', config.bitcoinRpcUrl, 'getblockcount', fetchImpl));
 
-  // 6. M2M Token Authorization Diagnostic
+  // 6. Stacks L2 RPC — a real /v2/info round trip.
+  components.push(await httpProbe('stacks-rpc', config.stacksRpcUrl, '/v2/info', fetchImpl));
+
+  // 7. Enclave / KMS surface
+  components.push(
+    config.enclaveKmsUrl
+      ? await httpProbe('enclave', config.enclaveKmsUrl, '/health', fetchImpl)
+      : {
+          component: 'enclave',
+          status: 'misconfigured',
+          latencyMs: 0,
+          details: 'No enclave KMS endpoint configured; hardware-backed signing is unavailable.',
+        }
+  );
+
+  // 8. M2M token — format only. Scope enforcement happens at the gateway, not here.
   const m2mStart = Date.now();
   const tokenValid = config.m2mToken.startsWith('cx_live_') || config.m2mToken.startsWith('cx_test_');
   components.push({
     component: 'm2m-token',
     status: tokenValid ? 'healthy' : 'unauthorized',
     latencyMs: Date.now() - m2mStart,
-    details: tokenValid ? 'M2M token formatted with valid prefix and scopes.' : 'M2M token missing valid cx_live_ or cx_test_ prefix.',
+    details: tokenValid
+      ? 'M2M token carries a valid prefix (format check only; scopes are enforced by the gateway).'
+      : 'M2M token missing valid cx_live_ or cx_test_ prefix.',
   });
 
   const healthyCount = components.filter((c) => c.status === 'healthy').length;

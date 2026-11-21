@@ -107,6 +107,17 @@ describe('Client System Installer & Diagnostics Engine (G-66 & G-67)', () => {
     expect(report.passed).toBe(false);
   });
 
+  it('probes the gateway health path the gateway actually serves', async () => {
+    const requested: string[] = [];
+    const recordingFetch = async (input: RequestInfo | URL) => {
+      requested.push(String(input));
+      return new Response(JSON.stringify({ status: 'ok' }), { status: 200 });
+    };
+
+    await runPreFlightDiagnostics(validConfig, recordingFetch as unknown as typeof fetch);
+    expect(requested).toContain('http://127.0.0.1:3000/api/v1/health');
+  });
+
   it('reports a well-formed but unreachable database as unreachable, not healthy', async () => {
     const report = await runPreFlightDiagnostics(
       { ...validConfig, coreDbUri: 'postgresql://user:pass@127.0.0.1:1/nonexistent' },

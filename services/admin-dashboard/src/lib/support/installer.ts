@@ -332,7 +332,7 @@ export async function runPreFlightDiagnostics(
 
   // 2. Gateway API — the gateway itself. Probing the Stacks node and calling it the gateway
   //    reported a dead gateway as healthy.
-  components.push(await httpProbe('gateway', config.gatewayBaseUrl, '/health', fetchImpl));
+  components.push(await httpProbe('gateway', config.gatewayBaseUrl, '/api/v1/health', fetchImpl));
 
   // 3. Nexus Glass Node
   components.push(await httpProbe('nexus', config.nexusBaseUrl, '/health', fetchImpl));

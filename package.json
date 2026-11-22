@@ -34,7 +34,7 @@
     "kb:update": "tsx scripts/kb/generate-updates.ts",
     "kb:status": "tsx -e \"import {knowledgeStore} from './scripts/kb/knowledge-store'; console.log(JSON.stringify(knowledgeStore.getStats(), null, 2))\""
   },
-  "packageManager": "pnpm@11.28.9",
+  "packageManager": "pnpm@12.21.0",
   "engines": {
     "node": ">=26 <27"
   },

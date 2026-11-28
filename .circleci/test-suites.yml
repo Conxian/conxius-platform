@@ -1,0 +1,12 @@
+---
+name: scripts
+discover: ls scripts/*.test.ts
+run: |
+  set +e
+  pnpm exec tsx --test --test-reporter=junit --test-reporter-destination="$PWD/.junit-raw.xml" << test.atoms >>
+  rc=$?
+  python3 .circleci/junit-normalize.py "$PWD/.junit-raw.xml" "<< outputs.junit >>" "$PWD/"
+  rm -f "$PWD/.junit-raw.xml"
+  exit $rc
+options:
+  store-test-results: true
